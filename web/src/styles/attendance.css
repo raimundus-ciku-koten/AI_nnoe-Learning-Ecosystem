@@ -1,0 +1,76 @@
+.attendance-page {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 1180px);
+  margin: 0 auto;
+}
+
+.attendance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(1.15rem, 3vw, 1.8rem);
+  border: 1px solid #dce7f2;
+  border-radius: 1.1rem;
+  background: linear-gradient(130deg, #fff, #f1f8ff);
+}
+
+.attendance-header h1 { margin: .2rem 0; color: #18233d; font-size: clamp(1.5rem, 3vw, 2rem); }
+.attendance-header p { margin: .35rem 0 0; color: #59677d; }
+.attendance-kicker { display: flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 700; text-transform: uppercase; }
+.attendance-kicker .ale-ikon { width: 1rem; height: 1rem; color: #168b7e; }
+.attendance-cta, .attendance-reload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  min-height: 2.65rem;
+  padding: .55rem .8rem;
+  border: 1px solid #cbd8e8;
+  border-radius: .7rem;
+  background: #fff;
+  color: #263651;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.attendance-cta { border-color: #157c77; background: #157c77; color: #fff; }
+.attendance-cta .ale-ikon, .attendance-reload .ale-ikon { width: 1rem; height: 1rem; }
+.attendance-reload:disabled { opacity: .6; cursor: wait; }
+.attendance-load-more { display: block; margin: 1rem auto 0; padding: .6rem .9rem; border: 1px solid #cbd8e8; border-radius: .65rem; background: #fff; color: #263651; font: inherit; font-weight: 700; cursor: pointer; }
+.attendance-load-more:disabled { opacity: .6; cursor: wait; }
+
+.attendance-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
+.attendance-stat { display: grid; gap: .35rem; padding: 1rem 1.15rem; }
+.attendance-stat span { color: #607089; font-size: .82rem; }
+.attendance-stat strong { color: #1c2b45; font-size: 1.5rem; }
+
+.attendance-panel { min-width: 0; padding: clamp(1rem, 2.5vw, 1.4rem); }
+.attendance-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.attendance-panel-heading h2 { margin: 0; color: #1c2b45; font-size: 1.12rem; }
+.attendance-panel-heading p { margin: .35rem 0 0; color: #68768b; font-size: .84rem; }
+.attendance-filters { display: grid; grid-template-columns: minmax(140px, .7fr) minmax(150px, .8fr) minmax(200px, 1.2fr); gap: .75rem; margin: 1.1rem 0; }
+.attendance-filters label { display: grid; gap: .35rem; color: #46556d; font-size: .8rem; font-weight: 700; }
+.attendance-filters input, .attendance-filters select { width: 100%; min-height: 2.55rem; padding: .5rem .65rem; border: 1px solid #d4deea; border-radius: .55rem; background: #fff; color: #263651; font: inherit; }
+.attendance-table-wrap { overflow-x: auto; }
+.attendance-table { width: 100%; border-collapse: collapse; text-align: left; }
+.attendance-table th, .attendance-table td { padding: .75rem .65rem; border-bottom: 1px solid #edf1f6; white-space: nowrap; }
+.attendance-table th { color: #66758a; font-size: .76rem; font-weight: 750; }
+.attendance-table td { color: #293951; font-size: .87rem; }
+.attendance-status { display: inline-flex; padding: .22rem .55rem; border-radius: 999px; background: #e9f8f1; color: #17734f; font-size: .76rem; font-weight: 750; }
+.attendance-message, .attendance-error { padding: .8rem; border-radius: .65rem; background: #f1f5f9; color: #506078; }
+.attendance-error { background: #fff2f1; color: #a22c22; }
+.attendance-empty { padding: 2rem 1rem; color: #617089; text-align: center; }
+.attendance-empty > .ale-ikon { width: 1.7rem; height: 1.7rem; color: #6c7d95; }
+.attendance-empty h3, .attendance-empty h2 { margin: .55rem 0 .3rem; color: #25344d; }
+.attendance-empty p { margin: 0; }
+
+@media (max-width: 650px) {
+  .attendance-header { align-items: stretch; flex-direction: column; }
+  .attendance-cta { align-self: flex-start; }
+  .attendance-summary { grid-template-columns: 1fr; }
+  .attendance-filters { grid-template-columns: 1fr; }
+  .attendance-panel-heading { align-items: flex-start; flex-direction: column; }
+}

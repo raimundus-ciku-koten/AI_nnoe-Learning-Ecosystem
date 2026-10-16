@@ -1,0 +1,25 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /chat/{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    match /fotoProfil/{fileName} {
+      function pemilik() {
+        return request.auth != null
+          && fileName == request.auth.uid + '.jpg';
+      }
+
+      allow read: if request.auth != null;
+      allow create, update: if pemilik()
+        && request.resource.size <= 128 * 1024
+        && request.resource.contentType == 'image/jpeg';
+      allow delete: if pemilik();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

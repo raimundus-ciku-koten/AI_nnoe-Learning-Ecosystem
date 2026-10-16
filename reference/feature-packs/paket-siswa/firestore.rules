@@ -1,0 +1,92 @@
+rules_version = '2';
+
+// Firestore Security Rules — koleksi guru/{uid}/siswa/{siswaId}
+//
+// Jika proyek Anda SUDAH punya firestore.rules, jangan menimpanya: salin blok
+// `match /guru/{uid}/siswa/{siswaId}` beserta fungsi `login()` & `pemilik()`.
+//
+// Prinsip
+//   - Hanya pemilik (uid di path == request.auth.uid) yang boleh membaca/menulis.
+//   - CREATE ketat: kolom persis sesuai skema, tipe & panjang divalidasi,
+//     dibuat/diperbarui harus waktu server.
+//   - UPDATE hanya boleh mengubah kolom yang diizinkan (diff.affectedKeys), jadi
+//     dokumen lama dengan kolom tambahan tetap bisa diedit.
+//     kodeUnik immutable begitu terisi; `dibuat` tidak bisa diubah.
+//   - Selain path di atas: ditolak (default deny).
+//
+// Penyesuaian yang mungkin perlu:
+//   - Jika `buatKodeSiswa` / `urlScanKode` (umum.js) menghasilkan format lain,
+//     ubah regex di kodeValid() dan urlValid().
+//   - Jika fitur lain menulis kolom tambahan ke dokumen siswa, tambahkan di
+//     kolomBoleh().
+//   - Keunikan NISN TIDAK dapat ditegakkan oleh rules (tanpa indeks terpisah);
+//     pemeriksaannya ada di klien.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function login() {
+      return request.auth != null;
+    }
+
+    function pemilik(uid) {
+      return login() && request.auth.uid == uid;
+    }
+
+    match /guru/{uid}/siswa/{siswaId} {
+
+      function kolomBoleh() {
+        return ['nama', 'nisn', 'jk', 'kelas', 'kodeUnik', 'urlScan', 'dibuat', 'diperbarui'];
+      }
+
+      function teks(nilai, min, maks) {
+        return nilai is string && nilai.size() >= min && nilai.size() <= maks;
+      }
+
+      // Kolom yang divalidasi pada hasil akhir dokumen (create & update).
+      function dasarValid(minKelas) {
+        let d = request.resource.data;
+        return teks(d.nama, 1, 100)
+          && teks(d.get('kelas', ''), minKelas, 30)
+          && teks(d.get('nisn', ''), 0, 20)
+          && d.get('nisn', '').matches('[0-9]*')
+          && d.get('jk', '') in ['', 'L', 'P']
+          && d.diperbarui == request.time;
+      }
+
+      function kodeValid() {
+        let d = request.resource.data;
+        return !('kodeUnik' in d)
+          || (teks(d.kodeUnik, 5, 120) && d.kodeUnik.matches('ALE-.+'));
+      }
+
+      function urlValid() {
+        let d = request.resource.data;
+        return !('urlScan' in d)
+          || (teks(d.urlScan, 10, 400) && d.urlScan.matches('https?://[^ ]+#/scan/[^ ]+'));
+      }
+
+      allow get, list: if pemilik(uid);
+
+      allow create: if pemilik(uid)
+        && siswaId.size() <= 128
+        && request.resource.data.keys().hasOnly(kolomBoleh())
+        && request.resource.data.keys().hasAll(kolomBoleh())
+        && dasarValid(1)
+        && kodeValid()
+        && urlValid()
+        && request.resource.data.dibuat == request.time;
+
+      allow update: if pemilik(uid)
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['nama', 'nisn', 'jk', 'kelas', 'kodeUnik', 'urlScan', 'diperbarui'])
+        && dasarValid(0)
+        && kodeValid()
+        && urlValid()
+        // kodeUnik immutable begitu terisi; dokumen lama boleh mengisinya sekali.
+        && (!('kodeUnik' in resource.data)
+            || request.resource.data.kodeUnik == resource.data.kodeUnik);
+
+      allow delete: if pemilik(uid);
+    }
+  }
+}

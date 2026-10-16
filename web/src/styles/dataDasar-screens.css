@@ -1,0 +1,320 @@
+/* =========================================================
+   dataDasarLayar.css — Tampilan layar semua sub-menu Data Dasar
+   (profil, ta, kelas, siswa, barcode, jadwal, denah).
+
+   Melengkapi dataDasar.css: mendefinisikan kelas `ale-*` yang
+   dipakai dataDasar.js & tab*.js. Semua dibatasi di bawah
+   `.dd-page` agar tidak bocor ke halaman lain. Nilai fallback
+   memakai token logo ALE bila token global belum ada.
+
+   Impor sesudah dataDasar-page.css dari halaman Data Dasar:
+     import '../styles/dataDasar-page.css';
+     import '../styles/dataDasar-screens.css';
+   ========================================================= */
+
+.dd-page {
+  --l-ungu:  var(--dd-ungu, #3c267b);
+  --l-teal:  var(--dd-teal, #0f766e);
+  --l-hijau: var(--dd-hijau, #039f6f);
+  --l-tinta: var(--dd-tinta, #0f4c5c);
+  --l-latar: var(--dd-latar, #f4f8fa);
+  --l-garis: var(--dd-garis, #dbe5ea);
+  --l-bahaya: var(--dd-bahaya, #c0392b);
+  --l-redam: #6b8590;
+  --l-radius: 14px;
+  --l-bayang: 0 2px 10px rgb(15 76 92 / .08);
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-top: .25rem;
+}
+.dd-panel { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- Kartu ---------- */
+.dd-page .ale-kartu {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--l-garis);
+  border-radius: var(--l-radius);
+  box-shadow: var(--l-bayang);
+  padding: 1.25rem 1.35rem 1.4rem;
+  overflow: hidden;
+}
+.dd-page .ale-kartu::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: linear-gradient(90deg, var(--l-ungu), var(--l-teal));
+}
+.dd-page .ale-aksen-teal::before  { background: linear-gradient(90deg, #0f766e, #14b8a6); }
+.dd-page .ale-aksen-grape::before { background: linear-gradient(90deg, #6d28d9, #8b5cf6); }
+.dd-page .ale-aksen-amber::before { background: linear-gradient(90deg, #b45309, #f59e0b); }
+
+.dd-page .ale-kartu-kepala {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem;
+}
+.dd-page .ale-kartu-judul {
+  display: inline-flex; align-items: center; gap: .5rem; margin: 0;
+  font-size: 1.02rem; font-weight: 700; color: var(--l-tinta);
+}
+.dd-page .ale-kartu-judul svg,
+.dd-page .ale-kartu-judul i { color: var(--l-teal); width: 1.15em; height: 1.15em; flex: none; }
+.dd-page .ale-sub-judul { margin: 0 0 .75rem; font-size: .95rem; font-weight: 700; color: var(--l-ungu); }
+
+/* ---------- Chip, teks bantu, kosong ---------- */
+.dd-page .ale-chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .22rem .7rem; border-radius: 999px;
+  font-size: .76rem; font-weight: 700; letter-spacing: .02em; white-space: nowrap;
+  background: #eef2f7; color: #475569;
+}
+.dd-page .ale-chip-admin { background: #d9f3f1; color: #0f766e; }
+.dd-page .ale-chip-kunci { background: #fef3c7; color: #92400e; }
+
+.dd-page .ale-info-teks { margin: 0 0 1rem; font-size: .86rem; line-height: 1.55; color: var(--l-redam); }
+.dd-page small.ale-info-teks { display: block; margin: .3rem 0 0; font-size: .78rem; }
+.dd-page .ale-info-teks a { color: var(--l-teal); font-weight: 600; }
+.dd-page .ale-kosong { margin: 0; padding: .9rem; text-align: center; font-size: .9rem; color: var(--l-redam); }
+.dd-page .ale-memuat { opacity: .6; animation: ddKedip 1.2s ease-in-out infinite; }
+@keyframes ddKedip { 50% { opacity: .25; } }
+
+/* ---------- Form dasar (fallback berbobot nol; global menang) ---------- */
+:where(.dd-page) .field { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+:where(.dd-page) .field label { font-size: .82rem; font-weight: 600; color: #475569; }
+:where(.dd-page) .input {
+  box-sizing: border-box; width: 100%; padding: .55rem .7rem; font: inherit; color: var(--l-tinta);
+  background: #fff; border: 1px solid var(--l-garis); border-radius: 10px;
+}
+:where(.dd-page) .input:focus {
+  outline: 0; border-color: var(--l-teal); box-shadow: 0 0 0 3px rgb(34 175 167 / .18);
+}
+:where(.dd-page) .input[readonly] { background: var(--l-latar); color: var(--l-ungu); font-family: ui-monospace, Menlo, monospace; }
+:where(.dd-page) .input:disabled { background: #f1f5f9; cursor: not-allowed; }
+:where(.dd-page) textarea.input { resize: vertical; min-height: 120px; }
+:where(.dd-page) .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .35rem;
+  box-sizing: border-box; min-height: 2.75rem; padding: .5rem 1rem; text-decoration: none;
+  font-family: inherit; font-size: .9rem; font-weight: 600; line-height: 1.2;
+  color: var(--l-tinta); background: #fff; border: 1px solid var(--l-garis);
+  border-radius: 10px; cursor: pointer;
+}
+:where(.dd-page) .btn:hover:not(:disabled) { background: var(--l-latar); }
+:where(.dd-page) .btn:disabled { opacity: .6; cursor: not-allowed; }
+:where(.dd-page) .btn-primary { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--l-ungu), var(--l-teal)); }
+:where(.dd-page) .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, var(--l-ungu), var(--l-teal)); filter: brightness(1.08); }
+:where(.dd-page) .btn-sm { min-height: 2.75rem; padding: .3rem .7rem; font-size: .82rem; }
+.dd-page .ale-btn-bahaya { color: var(--l-bahaya); border-color: #fecaca; }
+.dd-page .ale-btn-bahaya:hover:not(:disabled) { background: #fee2e2; }
+
+.dd-page .ale-form { display: flex; flex-direction: column; gap: 1rem; }
+.dd-page .ale-form-grid {
+  display: grid; gap: .9rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.dd-page .ale-form-aksi { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; }
+.dd-page .ale-panel-form {
+  display: flex; flex-direction: column; gap: .9rem;
+  margin: 0 0 1.1rem; padding: 1rem 1.1rem;
+  background: var(--l-latar); border: 1px solid var(--l-garis); border-radius: 12px;
+}
+.dd-page .ale-panel-form[hidden] { display: none; }
+.dd-page .ale-panel-form .ale-sub-judul { margin: 0; }
+.dd-page .ale-panel-form .ale-info-teks { margin: 0; }
+.dd-page .ale-panel-form .ale-form-aksi { justify-content: flex-start; }
+
+/* ---------- Toolbar ---------- */
+.dd-page .ale-toolbar { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end; margin-bottom: 1rem; }
+.dd-page .ale-toolbar .field { flex: 1 1 190px; max-width: 340px; }
+.dd-page .ale-toolbar .field:has(input[type="number"]) { flex: 0 1 130px; }
+.dd-page .ale-toolbar-aksi { display: flex; flex-wrap: wrap; gap: .5rem; margin-left: auto; }
+
+/* ---------- Profil: daftar definisi & kartu mapel ---------- */
+.dd-page .ale-dl { display: grid; gap: .1rem; margin: 0; }
+.dd-page .ale-dl > div {
+  display: grid; grid-template-columns: 160px 1fr; gap: .6rem;
+  padding: .6rem 0; border-bottom: 1px dashed var(--l-garis);
+}
+.dd-page .ale-dl > div:last-child { border-bottom: 0; }
+.dd-page .ale-dl dt { color: var(--l-redam); font-size: .84rem; }
+.dd-page .ale-dl dd { margin: 0; font-weight: 600; color: var(--l-tinta); overflow-wrap: anywhere; }
+
+.dd-page .ale-grid-mapel { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.dd-page .ale-card-item {
+  display: flex; flex-direction: column; gap: .25rem; padding: .85rem 1rem;
+  border: 1px solid var(--l-garis); border-left: 4px solid var(--l-teal); border-radius: 10px;
+  background: linear-gradient(180deg, #fff, var(--l-latar));
+}
+.dd-page .ale-card-item strong { color: var(--l-ungu); font-size: .95rem; }
+.dd-page .ale-card-item span { font-size: .82rem; color: var(--l-redam); }
+
+/* ---------- Tabel siswa ---------- */
+.dd-page .ale-tabel-wrap { overflow-x: auto; background: #fff; border: 1px solid var(--l-garis); border-radius: 10px; }
+.dd-page .ale-tabel { width: 100%; border-collapse: collapse; }
+.dd-page .ale-tabel th, .dd-page .ale-tabel td {
+  padding: .6rem .75rem; text-align: left; font-size: .9rem; vertical-align: middle;
+  border-bottom: 1px solid var(--l-garis);
+}
+.dd-page .ale-tabel thead th {
+  position: sticky; top: 0; background: var(--l-latar); color: var(--l-redam);
+  font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap;
+}
+.dd-page .ale-tabel tbody tr:last-child td { border-bottom: 0; }
+.dd-page .ale-tabel tbody tr:hover { background: rgb(34 175 167 / .05); }
+.dd-page .ale-tabel td.ale-tabel-aksi { display: table-cell; text-align: right; white-space: nowrap; }
+.dd-page .ale-tabel td.ale-tabel-aksi .btn + .btn { margin-left: .3rem; }
+.dd-page .ale-tabel td.ale-kosong { padding: 1.4rem; }
+.dd-page .ale-tabel code.dd-kode { white-space: nowrap; }
+
+/* ---------- Jadwal pekanan ---------- */
+.dd-page .ale-jadwal-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.dd-page .ale-jadwal-hari { padding: .75rem .85rem; background: #fff; border: 1px solid var(--l-garis); border-radius: 12px; }
+.dd-page .ale-jadwal-hari.hari-ini { border-color: var(--l-teal); background: rgb(34 175 167 / .05); }
+.dd-page .ale-jadwal-hari h3 {
+  display: flex; align-items: center; justify-content: space-between; gap: .4rem;
+  margin: 0 0 .6rem; font-size: .92rem; color: var(--l-tinta);
+}
+.dd-page .ale-jadwal-hari ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .45rem; }
+.dd-page .ale-jadwal-hari .ale-kosong { padding: .5rem 0; text-align: left; font-size: .84rem; }
+.dd-page .ale-jadwal-item {
+  display: flex; flex-direction: column; gap: .45rem; padding: .55rem .65rem;
+  background: var(--l-latar); border-left: 3px solid var(--l-teal); border-radius: 8px;
+}
+.dd-page .ale-jadwal-item strong { display: block; font-size: .86rem; color: var(--l-ungu); font-variant-numeric: tabular-nums; }
+.dd-page .ale-jadwal-item span { display: block; font-size: .8rem; color: var(--l-redam); overflow-wrap: anywhere; }
+.dd-page .ale-jadwal-item .ale-tabel-aksi { display: flex; gap: .3rem; }
+
+/* ---------- Denah duduk ---------- */
+.dd-page .ale-denah-tata { display: grid; grid-template-columns: minmax(190px, 250px) minmax(0, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
+.dd-page .ale-denah-samping {
+  align-self: start; max-height: 520px; overflow-y: auto;
+  padding: .85rem; background: var(--l-latar); border: 1px solid var(--l-garis); border-radius: 12px;
+}
+.dd-page .ale-siswa-daftar { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
+.dd-page .ale-siswa-chip {
+  width: 100%; text-align: left; padding: .45rem .65rem; font: inherit; font-size: .86rem;
+  color: var(--l-tinta); background: #fff; border: 1px solid var(--l-garis); border-radius: 8px; cursor: pointer;
+}
+.dd-page .ale-siswa-chip:hover { border-color: var(--l-teal); }
+.dd-page .ale-siswa-chip.dipilih { color: #fff; background: var(--l-ungu); border-color: var(--l-ungu); }
+.dd-page .ale-denah-papan { display: flex; flex-direction: column; gap: .7rem; min-width: 0; overflow-x: auto; padding-bottom: .25rem; }
+.dd-page .ale-papan-tulis {
+  text-align: center; padding: .5rem; font-size: .8rem; letter-spacing: .06em;
+  color: #e2e8f0; background: #0f172a; border-radius: 8px;
+}
+.dd-page .ale-kursi-grid { display: grid; gap: .45rem; }
+.dd-page .ale-kursi {
+  --kel: var(--l-garis);
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15rem;
+  min-height: 66px; padding: .4rem; font: inherit; font-size: .8rem; color: var(--l-tinta);
+  background: #fff; border: 1px dashed var(--l-garis); border-radius: 10px; cursor: pointer;
+  transition: border-color .12s, background .12s, transform .1s;
+}
+.dd-page .ale-kursi:hover { border-color: var(--l-teal); }
+.dd-page .ale-kursi:active { transform: translateY(1px); }
+.dd-page .ale-kursi.terisi { border-style: solid; border-color: var(--kel); background: linear-gradient(180deg, #fff, #f1f5f9); }
+.dd-page .ale-kursi.siap { border-color: var(--l-teal); background: rgb(34 175 167 / .07); }
+.dd-page .ale-kursi-nama { font-weight: 600; text-align: center; line-height: 1.15; overflow-wrap: anywhere; }
+.dd-page .ale-kursi-kosong { font-size: 1.2rem; color: #94a3b8; }
+.dd-page .ale-kursi-kel {
+  padding: 0 .4rem; font-size: .68rem; font-weight: 800; color: #fff; background: var(--kel); border-radius: 999px;
+}
+.dd-page .ale-kursi:focus-visible, .dd-page .ale-siswa-chip:focus-visible { outline: 2px solid var(--l-ungu); outline-offset: 2px; }
+
+.dd-page .ale-kelompok-bar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem;
+  padding: .9rem 1rem; margin-bottom: 1rem;
+  background: var(--l-latar); border: 1px solid var(--l-garis); border-radius: 12px;
+}
+.dd-page .ale-kelompok-bar .field { flex: 0 1 200px; }
+.dd-page .ale-kelompok-ringkas { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.dd-page .ale-kelompok-kartu {
+  --kel: var(--l-teal);
+  padding: .75rem .9rem; background: #fff; border: 1px solid var(--l-garis); border-top: 4px solid var(--kel); border-radius: 10px;
+}
+.dd-page .ale-kelompok-kartu h4 { margin: 0 0 .4rem; font-size: .9rem; color: var(--kel); }
+.dd-page .ale-kelompok-kartu h4 small { color: var(--l-redam); font-weight: 600; }
+.dd-page .ale-kelompok-kartu ul { margin: 0; padding-left: 1.1rem; font-size: .84rem; color: var(--l-tinta); }
+.dd-page .ale-kelompok-kartu .ale-kosong { padding: 0; text-align: left; list-style: none; margin-left: -1.1rem; }
+
+.dd-page .ale-kel-0 { --kel: #0d9488; } .dd-page .ale-kel-1 { --kel: #7c3aed; }
+.dd-page .ale-kel-2 { --kel: #d97706; } .dd-page .ale-kel-3 { --kel: #2563eb; }
+.dd-page .ale-kel-4 { --kel: #db2777; } .dd-page .ale-kel-5 { --kel: #059669; }
+.dd-page .ale-kel-6 { --kel: #dc2626; } .dd-page .ale-kel-7 { --kel: #4f46e5; }
+
+/* ---------- Barcode: kartu siswa (token dengan fallback) ---------- */
+.dd .dd-kartu-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+.dd .dd-kartu-siswa {
+  background: #fff; border: 1px solid var(--l-garis); border-left: 4px solid var(--l-teal);
+  border-radius: 12px; box-shadow: var(--l-bayang); break-inside: avoid;
+}
+.dd .dd-kartu-kepala { margin: 0; color: var(--l-redam); font-size: .72rem; }
+.dd .dd-kartu-brand { color: var(--l-ungu); font-weight: 800; }
+.dd .dd-kartu-kelas { color: var(--l-tinta); }
+.dd .dd-kartu-nama { color: var(--l-tinta); font-size: 1rem; }
+.dd .dd-kartu-nisn { color: var(--l-redam); font-size: .8rem; }
+.dd .dd-kartu-url { color: var(--l-redam); }
+.dd .dd-kartu-kaki { border-top: 1px dashed var(--l-garis); }
+.dd .dd-kode { background: var(--l-latar); color: var(--l-ungu); }
+
+/* ---------- Responsif ---------- */
+@media (max-width: 860px) {
+  .dd-page .ale-denah-tata { grid-template-columns: 1fr; }
+  .dd-page .ale-denah-samping { max-height: 220px; }
+}
+@media (max-width: 720px) {
+  .dd-page .ale-kartu { padding: 1rem 1rem 1.15rem; }
+  .dd-page .ale-toolbar .field { max-width: none; flex-basis: 100%; }
+  .dd-page .ale-toolbar-aksi { margin-left: 0; width: 100%; }
+  .dd-page .ale-toolbar-aksi .btn { flex: 1 1 auto; }
+  .dd-page .ale-dl > div { grid-template-columns: 1fr; gap: .15rem; }
+  .dd-page .ale-form-aksi { justify-content: stretch; }
+  .dd-page .ale-form-aksi .btn { flex: 1; }
+
+  .dd-page .ale-tabel-wrap { border: 0; background: transparent; }
+  .dd-page .ale-tabel thead { display: none; }
+  .dd-page .ale-tabel, .dd-page .ale-tabel tbody { display: block; }
+  .dd-page .ale-tabel tr {
+    display: block; margin-bottom: .6rem; padding: .35rem 0;
+    background: #fff; border: 1px solid var(--l-garis); border-radius: 10px;
+  }
+  .dd-page .ale-tabel td {
+    display: grid; grid-template-columns: 38% 1fr; gap: .5rem; border: 0; padding: .25rem .8rem;
+  }
+  .dd-page .ale-tabel td[data-label]::before { content: attr(data-label); font-weight: 600; color: var(--l-redam); }
+  .dd-page .ale-tabel td.ale-tabel-aksi { display: flex; justify-content: flex-end; padding-top: .5rem; }
+  .dd-page .ale-tabel td.ale-kosong { display: block; }
+}
+
+/* ---------- Cetak kartu barcode ----------
+   Perbaikan: aturan lama menyembunyikan seluruh body kecuali
+   `.dd-barcode-grid` (kelas itu tidak dipakai tabBarcode), sehingga
+   hasil cetak kosong. Di sini yang ditampilkan adalah `.dd-kartu-grid`. */
+@media print {
+  body * { visibility: hidden !important; }
+  .dd-kartu-grid, .dd-kartu-grid * { visibility: visible !important; }
+  .dd-kartu-grid {
+    position: absolute; left: 0; top: 0; width: 100%; margin: 0;
+    grid-template-columns: repeat(2, 1fr) !important; gap: 8mm !important;
+  }
+  .dd .dd-kartu-kaki { display: none !important; }
+  .dd .dd-kartu-siswa { box-shadow: none; border: 1px solid #333; border-left-width: 4px; break-inside: avoid; }
+  @page { margin: 12mm; }
+}
+
+/* Atribut hidden harus selalu menang atas display bawaan tombol/form. */
+.dd-page [hidden] { display: none !important; }
+
+/* ---------- Banner galat muat data ---------- */
+.dd-page .dd-banner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1rem;
+  padding: .85rem 1rem; background: #fffbeb; border: 1px solid #fcd34d; border-left: 4px solid #f59e0b;
+  border-radius: 12px; color: #78350f;
+}
+.dd-page .dd-banner-teks { display: flex; flex-direction: column; gap: .2rem; min-width: 0; flex: 1 1 280px; }
+.dd-page .dd-banner-teks strong { font-size: .92rem; }
+.dd-page .dd-banner-teks span { font-size: .84rem; line-height: 1.5; }
+.dd-page .ale-kartu > .dd-banner { margin: 0; }
+.dd-panel > .dd-banner { margin: 0; }

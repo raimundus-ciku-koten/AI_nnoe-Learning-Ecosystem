@@ -1,0 +1,42 @@
+{
+  "name": "ainnoe-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ainnoe Learning Ecosystem — Frontend (Vite + Supabase JS SDK)",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "test": "npm run test:unit && npm run test:vitest",
+    "test:unit": "node --test tests/code128.test.mjs tests/engine.test.js tests/lib.test.mjs tests/scan-util.test.js tests/chatUtil.test.js tests/siswa-csv-tulis.test.js tests/siswa-impor.test.js tests/siswa-tulis.test.js tests/i18n.test.js tests/navigation.test.mjs tests/menu-routes.test.mjs tests/teacher-workspace.test.js tests/planning-ai-schema.test.js src/pages/dataDasar/jadwalUtil.test.js src/pages/dataDasar/denahLogika.test.mjs src/services/googleWorkspace.test.js src/utils/nama.test.js",
+    "test:vitest": "vitest run src/pages/dataDasar/umum.test.js src/pages/SubMenuPage.test.js",
+    "test:rules": "node --test tests/firestore.rules.test.mjs tests/rules/siswa.rules.test.js",
+    "test:users-rules": "node --test --test-name-pattern=\"direktori pengguna tenant\" tests/firestore.rules.test.mjs",
+    "test:attendance-rules": "node --test --test-name-pattern=\"presensi per pemilik\" tests/firestore.rules.test.mjs",
+    "test:rtdb": "node --test tests/database.rules.test.mjs",
+    "test:storage-rules": "node --test tests/storage.rules.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.76.1",
+    "bootstrap-icons": "^1.13.2",
+    "firebase": "^11.0.0",
+    "jsbarcode": "^3.12.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.6"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "vite": "^6.0.0",
+    "vitest": "^5.0.4"
+  },
+  "browserslist": [
+    "last 2 versions",
+    "not dead",
+    "not IE 11"
+  ]
+}
