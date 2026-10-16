@@ -30,7 +30,7 @@ import { LINK_PERENCANAAN } from '../config.js';
 import { menuUntuk } from '../menu.js';
 import { logout } from '../auth.js';
 import { hentikanChat } from '../services/chatSync.js';
-import { jalankanAksi } from './profilAksi.js';
+import { jalankanAksi } from './profilaksi.js';
 import { pasangFotoTerlindung } from '../services/protectedMedia.js';
 import {
   esc, ikon, inisial, namaDariUser, ambilProfil,
