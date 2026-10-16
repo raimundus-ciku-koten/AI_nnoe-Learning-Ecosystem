@@ -12,7 +12,7 @@ security headers. GitHub Actions runs the web build and tests; connect the
 GitHub repository to Vercel to create preview and production deployments.
 
 The first Supabase migration is `supabase/migrations/20261016000100_identity_foundation.sql`.
-Apply both SQL files in `supabase/migrations/` in order, then run
+Apply the SQL files in `supabase/migrations/` in order, then run
 `supabase/seed.sql`. The seed grants the supplied owner email
 `kotenraimundusc@gmail.com` the initial superadmin allowlist entry. In the
 Supabase Dashboard, configure `public.custom_access_token_hook` as the Custom
@@ -21,6 +21,10 @@ and unprovisioned unless a trusted administrator has added an active email to
 `public.user_allowlist`; role and tenant fields are not writable by browser
 clients. Provisioning and account/data import are still operator tasks and must
 be completed before switching the app's login provider.
+
+`20261016000300_platform_controls.sql` migrates the platform maintenance and AI
+feature switches to a transactionally updated Supabase table, exposes only the
+public read model, and records superadmin changes in a protected audit table.
 
 This is an infrastructure-only first stage: active application features still
 use Firebase Auth, Firestore, Realtime Database, Storage, and Cloud Functions.
