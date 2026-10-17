@@ -4,37 +4,22 @@ import { toast } from '../components/toast.js';
 import PRICING from '../../../functions/shared/pricing.json';
 
 const PESAN_AUTH = {
-  'auth/invalid-credential': 'Email atau kata sandi tidak sesuai.',
-  'auth/wrong-password': 'Email atau kata sandi tidak sesuai.',
-  'auth/user-not-found': 'Email atau kata sandi tidak sesuai.',
-  'auth/invalid-email': 'Format email tidak valid.',
-  'auth/user-disabled': 'Akun ini dinonaktifkan. Hubungi admin sekolah.',
-  'auth/too-many-requests': 'Terlalu banyak percobaan. Tunggu beberapa saat.',
+  invalid_credentials: 'Email atau kata sandi tidak sesuai.',
+  email_not_confirmed: 'Konfirmasikan alamat email Anda sebelum masuk.',
+  user_banned: 'Akun ini dinonaktifkan. Hubungi administrator sekolah.',
+  over_request_rate_limit: 'Terlalu banyak percobaan. Tunggu beberapa saat.',
   'auth/network-request-failed': 'Koneksi bermasalah. Periksa jaringan internet Anda.',
-  'auth/operation-not-allowed': 'Metode login ini belum diaktifkan. Hubungi admin.',
-  'auth/unauthorized-domain': 'Domain situs ini belum diizinkan di Firebase Authentication. Tambahkan domain Hosting pada Authentication → Settings → Authorized domains.',
-  'auth/popup-blocked': 'Browser memblokir popup Google. Izinkan popup untuk situs ini lalu coba lagi.',
-  'auth/popup-closed-by-user': 'Proses login Google dibatalkan.',
-  'auth/cancelled-popup-request': 'Proses login Google lain masih berjalan. Tutup popup yang terbuka lalu coba lagi.',
-  'auth/invalid-api-key': 'Konfigurasi Firebase API key tidak valid. Periksa konfigurasi aplikasi web di Firebase Console.',
-  'auth/persistence-unavailable': 'Browser menolak penyimpanan sesi Firebase. Izinkan penyimpanan situs atau coba browser lain.',
-  'auth/web-storage-unsupported': 'Browser tidak mendukung penyimpanan sesi yang diperlukan. Aktifkan penyimpanan situs atau gunakan browser lain.',
-  'auth/firebase-app-check-token-is-invalid': 'Firebase menolak token App Check. Periksa site key reCAPTCHA Enterprise, domain yang diizinkan, dan metrik App Check di Firebase Console.',
-  'auth/app-check-token-expired': 'Token App Check kedaluwarsa atau tidak dapat diperbarui. Muat ulang halaman dan periksa konfigurasi App Check.',
-  'auth/claims-verification-failed': 'Login Google berhasil, tetapi klaim peran akun tidak dapat dibaca. Periksa koneksi dan status akun Firebase.',
-  'auth/profile-verification-failed': 'Login Google berhasil, tetapi pemeriksaan profil Firestore gagal. Periksa Firestore Rules dan App Check; sesi dibatalkan demi keamanan.',
-  'auth/permission-denied': 'Firebase menolak akses profil. Periksa Firestore Rules, klaim superadmin, dan App Check.',
-  'permission-denied': 'Firebase menolak akses profil. Periksa Firestore Rules, klaim superadmin, dan App Check.',
-  'unavailable': 'Layanan Firebase sedang tidak tersedia. Periksa koneksi lalu coba lagi.',
-  'auth/workspace-account-not-provisioned': 'Akun Google belum terdaftar aktif. Hubungi administrator sekolah.',
+  provider_disabled: 'Metode login ini belum diaktifkan pada Supabase.',
+  'auth/workspace-account-not-provisioned': 'Akun belum terdaftar aktif. Hubungi administrator sekolah.',
+  'auth/profile-not-found': 'Profil akun belum dibuat. Hubungi administrator.',
 };
 
 function pesanLogin(error, google = false) {
   const code = error?.firebaseCode || error?.code;
   const message = PESAN_AUTH[code]
-    || (error?.code === 'auth/profile-verification-failed'
+    || (error?.code === 'auth/profile-not-found'
       ? PESAN_AUTH[error.code]
-      : google ? 'Login Google gagal. Periksa kode diagnostik dan konfigurasi Firebase.' : 'Tidak dapat masuk saat ini. Silakan coba lagi.');
+      : google ? 'Login Google gagal. Pastikan penyedia Google dan URL redirect telah dikonfigurasi di Supabase.' : 'Tidak dapat masuk saat ini. Silakan coba lagi.');
   const diagnostic = code ? ` (kode: ${code})` : '';
   return `${message}${diagnostic}`;
 }
@@ -93,17 +78,15 @@ function pilihAcak(daftar, jumlah) {
 async function muatTestimoni(wadah) {
   const target = wadah.querySelector('#testiIsi');
   try {
-    const [{ collection, getDocs, limit, query, where }, { db }] = await Promise.all([
-      import('firebase/firestore'),
-      import('../firebase/index.js'),
-    ]);
-    const daftar = await getDocs(query(
-      collection(db, 'testimonials'),
-      where('status', '==', 'published'),
-      where('consent', '==', true),
-      limit(40),
-    ));
-    const testimoni = pilihAcak(daftar.docs.map((item) => item.data()), 3);
+    const { supabase } = await import('../lib/supabase.ts');
+    const { data, error } = await supabase
+      .from('testimonials')
+      .select('quote:quote_public,displayName:display_name,role,school')
+      .eq('status', 'published')
+      .eq('consent', true)
+      .limit(40);
+    if (error) throw error;
+    const testimoni = pilihAcak(data, 3);
     if (!target?.isConnected) return;
     target.replaceChildren();
     if (!testimoni.length) {
@@ -337,7 +320,7 @@ export function halamanLogin(wadah) {
     }
     tombolMasuk.disabled = true;
     labelMasuk.textContent = 'Memeriksa...';
-    statusLogin.textContent = 'Menghubungi Firebase Authentication...';
+    statusLogin.textContent = 'Menghubungi Supabase Auth...';
     statusLogin.hidden = false;
     try {
       await login(email.value.trim(), sandi.value);

@@ -13,7 +13,7 @@
     "preview": "vite preview --port 4173",
     "test": "npm run test:unit && npm run test:vitest",
     "test:unit": "node --test tests/code128.test.mjs tests/engine.test.js tests/lib.test.mjs tests/scan-util.test.js tests/chatUtil.test.js tests/siswa-csv-tulis.test.js tests/siswa-impor.test.js tests/siswa-tulis.test.js tests/i18n.test.js tests/navigation.test.mjs tests/menu-routes.test.mjs tests/teacher-workspace.test.mjs tests/planning-ai-schema.test.mjs src/pages/dataDasar/jadwalUtil.test.js src/pages/dataDasar/denahLogika.test.mjs src/services/googleWorkspace.test.js src/utils/nama.test.js",
-    "test:vitest": "vitest run src/pages/dataDasar/umum.test.js src/pages/SubMenuPage.test.js",
+    "test:vitest": "vitest run src/pages/dataDasar/umum.test.js src/pages/SubMenuPage.test.js src/services/protectedMedia.test.js",
     "test:rules": "node --test tests/firestore.rules.test.mjs tests/rules/siswa.rules.test.js",
     "test:users-rules": "node --test --test-name-pattern=\"direktori pengguna tenant\" tests/firestore.rules.test.mjs",
     "test:attendance-rules": "node --test --test-name-pattern=\"presensi per pemilik\" tests/firestore.rules.test.mjs",
@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
+    "@vercel/analytics": "^2.0.1",
     "bootstrap-icons": "^1.13.2",
     "firebase": "^11.0.0",
     "jsbarcode": "^3.12.3",

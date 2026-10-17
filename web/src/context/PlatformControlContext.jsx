@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase/index.js';
+import { supabase } from '../lib/supabase.ts';
 import { useAuth } from './AuthContext.jsx';
 
 const DEFAULT_STATE = Object.freeze({
@@ -22,9 +21,24 @@ export function PlatformControlProvider({ children }) {
       return undefined;
     }
 
+    let active = true;
     setState((current) => ({ ...current, loading: true, error: '' }));
-    return onSnapshot(doc(db, 'publicConfig', 'platform'), (snapshot) => {
-      const data = snapshot.exists() ? snapshot.data() : {};
+    const muat = async () => {
+      const { data, error } = await supabase
+        .from('platform_public_config')
+        .select('maintenance,features')
+        .eq('id', 'platform')
+        .single();
+      if (!active) return;
+      if (error) {
+        console.error('[platform-controls] Gagal memuat konfigurasi Supabase:', error);
+        setState((current) => ({
+          ...current,
+          loading: false,
+          error: 'Status kontrol platform tidak dapat diperbarui. Perubahan server tetap berlaku.',
+        }));
+        return;
+      }
       const features = data.features && typeof data.features === 'object' ? data.features : {};
       setState({
         loading: false,
@@ -35,14 +49,14 @@ export function PlatformControlProvider({ children }) {
         },
         error: '',
       });
-    }, (error) => {
-      console.error('[platform-controls] Gagal memantau konfigurasi runtime:', error);
-      setState((current) => ({
-        ...current,
-        loading: false,
-        error: 'Status kontrol platform tidak dapat diperbarui. Perubahan server tetap berlaku.',
-      }));
-    });
+    };
+
+    void muat();
+    const interval = window.setInterval(() => void muat(), 15000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, [user?.uid]);
 
   const value = useMemo(() => state, [state]);

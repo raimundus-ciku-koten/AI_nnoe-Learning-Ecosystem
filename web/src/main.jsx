@@ -28,18 +28,3 @@ void initializeAnalyticsForConsent().catch((err) => {
   console.error('[analytics] Tidak dapat memulihkan persetujuan Analytics:', err?.message || err);
 });
 window.addEventListener('hashchange', trackAppNavigation);
-
-if (import.meta.env.PROD) {
-  const mulaiMonitoring = () => {
-    import('./firebase/core/performance.js')
-      .then(({ mulaiPerformanceMonitoring }) => mulaiPerformanceMonitoring())
-      .catch((err) => {
-        console.error('[firebase/performance] Monitoring web tidak aktif:', err?.code || err?.message || err);
-      });
-  };
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(mulaiMonitoring, { timeout: 4000 });
-  } else {
-    window.setTimeout(mulaiMonitoring, 0);
-  }
-}

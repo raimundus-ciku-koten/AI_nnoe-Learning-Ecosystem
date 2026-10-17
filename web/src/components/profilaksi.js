@@ -1,6 +1,5 @@
 // web/src/components/profilAksi.js
-// Aksi dari menu profil & menu titik tiga di header: foto profil, notifikasi (FCM), ulasan aplikasi.
-// Modul Storage dan Messaging dimuat saat dibutuhkan saja (dynamic import) agar bundel awal tetap ringan.
+// Aksi dari menu profil & menu titik tiga di header: foto profil, notifikasi, ulasan aplikasi.
 //
 // Peningkatan dibanding versi sebelumnya:
 //   - Aksi ganda (klik berulang) dikunci; galat tak tertangani ditangkap di satu pintu masuk.
@@ -9,15 +8,12 @@
 //   - Notifikasi: izin diminta SEBELUM import dinamis (Safari mewajibkan gestur pengguna segar),
 //     pesan saat aplikasi terbuka (foreground) ditampilkan sebagai toast.
 //   - Ulasan: isi otomatis ulasan lama tidak menimpa ketikan pengguna dan kebal balapan antar-buka.
-import { auth, db, rtdb, ambilStorage } from '../firebase/index.js';
-import { updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { ref, set, remove } from 'firebase/database';
-import { VAPID_KEY, LINK_PERENCANAAN } from '../config.js';
+import { supabase } from '../lib/supabase.ts';
+import { LINK_PERENCANAAN } from '../config.js';
 import { ambilProfil, namaDariUser, perbaruiAvatar, linkLuarAman, ikon } from '../ui.js';
 import { toast } from './toast.js';
 import { getState, setState } from '../state.js';
-import { urlFotoProfil } from '../services/protectedMedia.js';
+import { unggahFotoProfil, hapusFotoProfil } from '../services/protectedMedia.js';
 import { tokenGoogleWorkspaceAktif } from '../auth.js';
 
 // Toast kini satu sumber (toast.js). Re-export agar impor lama dari modul ini tetap jalan.
@@ -32,21 +28,12 @@ const galat = (kode, pesan) => Object.assign(new Error(pesan || kode), { code: k
 
 function pesanGalat(e) {
   const k = String((e && e.code) || '');
-  if (k === 'storage/unauthorized') return 'Foto tidak dapat diunggah karena izin akses. Hubungi admin sekolah.';
+  if (k === 'storage/unauthorized' || k === '42501') return 'Akses media ditolak oleh kebijakan Supabase. Hubungi admin sekolah.';
   if (k === 'storage/quota-exceeded') return 'Kuota penyimpanan penuh. Hubungi admin sekolah.';
   if (k === 'storage/canceled') return 'Pengunggahan dibatalkan.';
   if (/permission[-_]denied/i.test(k)) return 'Akses ditolak oleh aturan keamanan. Hubungi admin.';
-  if (k === 'ale/tanpa-vapid') return 'Notifikasi belum dapat diaktifkan di aplikasi ini. Hubungi admin sekolah.';
-  if (k === 'ale/tidak-didukung') return 'Peramban ini tidak mendukung notifikasi push.';
-  if (k === 'ale/izin-ditolak' || k === 'messaging/permission-blocked') {
-    return 'Izin notifikasi ditolak. Ubah di pengaturan situs peramban, lalu coba lagi.';
-  }
-  if (k === 'messaging/failed-service-worker-registration') {
-    return 'Layanan notifikasi gagal dimuat. Muat ulang halaman lalu coba lagi.';
-  }
   if (k === 'ale/gambar') return 'Gambar tidak dapat diproses. Pilih foto lain.';
-  if (k === 'auth/requires-recent-login') return 'Sesi perlu diperbarui. Keluar lalu masuk kembali.';
-  if (k === 'storage/retry-limit-exceeded' || k === 'auth/network-request-failed') return 'Koneksi bermasalah. Coba lagi.';
+  if (k === 'storage/retry-limit-exceeded' || k === 'auth/network-request-failed' || k === 'fetch_error') return 'Koneksi bermasalah. Coba lagi.';
   return 'Terjadi kesalahan. Silakan coba lagi.';
 }
 
@@ -126,7 +113,7 @@ async function kecilkan(berkas, sisi = SISI_FOTO) {
 
 function tambahFoto() {
   return sekali('foto', async () => {
-    const user = auth.currentUser;
+    const user = getState().user;
     if (!user) return toast('Sesi berakhir. Silakan masuk kembali.', 'galat');
     const berkas = await pilihBerkas();
     if (!berkas) return undefined;
@@ -136,17 +123,16 @@ function tambahFoto() {
     toast('Mengunggah foto…');
     try {
       const blob = await kecilkan(berkas);
-      const [{ ref: sRef, uploadBytes }, storage] = await Promise.all([
-        import('firebase/storage'),
-        ambilStorage(),
-      ]);
-      const berkasRef = sRef(storage, `fotoProfil/${user.uid}.jpg`);
       if (blob.size > UKURAN_MAKS_FOTO_KOMPRES) {
         throw galat('ale/gambar', 'Foto terkompresi melebihi batas 128 KB.');
       }
-      await uploadBytes(berkasRef, blob, { contentType: 'image/jpeg', cacheControl: 'private,no-store' });
-      const url = urlFotoProfil(user.uid);
-      await updateProfile(user, { photoURL: url });
+      const url = await unggahFotoProfil(user.uid, blob);
+      const { error } = await supabase.from('profiles')
+        .update({ photo_url: url })
+        .eq('id', user.uid)
+        .select('id')
+        .single();
+      if (error) throw error;
       setState({ user: { ...getState().user, photoURL: url } });
       perbaruiAvatar(url, namaPengguna(user));
       const tokenDrive = tokenGoogleWorkspaceAktif();
@@ -171,23 +157,22 @@ function tambahFoto() {
 
 function hapusFoto() {
   return sekali('foto', async () => {
-    const user = auth.currentUser;
+    const user = getState().user;
     if (!user) return toast('Sesi berakhir. Silakan masuk kembali.', 'galat');
     if (!user.photoURL) return toast('Anda belum memiliki foto profil.');
     if (!window.confirm('Hapus foto profil Anda?')) return undefined;
     try {
-      const [{ ref: sRef, deleteObject }, storage] = await Promise.all([
-        import('firebase/storage'),
-        ambilStorage(),
-      ]);
-      try {
-        await deleteObject(sRef(storage, `fotoProfil/${user.uid}.jpg`));
-      } catch (e) {
-        if (!e || e.code !== 'storage/object-not-found') throw e;
-      }
-      await updateProfile(user, { photoURL: null });
+      const { error: metadataError } = await supabase.auth.updateUser({ data: { avatar_url: null } });
+      if (metadataError) throw metadataError;
+      const { error } = await supabase.from('profiles')
+        .update({ photo_url: null })
+        .eq('id', user.uid)
+        .select('id')
+        .single();
+      if (error) throw error;
       setState({ user: { ...getState().user, photoURL: '' } });
       perbaruiAvatar('', namaPengguna(user));
+      await hapusFotoProfil(user.uid);
       return toast('Foto profil dihapus.', 'ok');
     } catch (e) {
       console.error('[profil] hapus foto gagal:', e);
@@ -196,67 +181,16 @@ function hapusFoto() {
   });
 }
 
-/* ---------- Notifikasi (FCM) ---------- */
-const kunciToken = (t) => t.replace(/[.#$[\]/]/g, '_'); // karakter terlarang pada jalur Realtime Database
-
-let pesanDepanTerpasang = false;
-
-/** Tampilkan notifikasi yang masuk saat aplikasi sedang terbuka (browser tidak menampilkannya sendiri). */
-async function pasangPesanDepan(pesan) {
-  if (pesanDepanTerpasang) return;
-  pesanDepanTerpasang = true;
-  const { onMessage } = await import('firebase/messaging');
-  onMessage(pesan, (payload) => {
-    const n = (payload && payload.notification) || {};
-    const teks = [n.title, n.body].filter(Boolean).join(' — ');
-    if (teks) toast(teks);
-  });
-}
-
-async function daftarkanToken({ ulang = false } = {}) {
-  const user = auth.currentUser;
-  if (!user) throw galat('ale/sesi', 'Belum masuk');
-  if (!('Notification' in window)) throw galat('ale/tidak-didukung');
-  if (!VAPID_KEY) throw galat('ale/tanpa-vapid');
-
-  // Minta izin LEBIH DULU, sebelum await apa pun yang lambat: Safari/iOS hanya menampilkan
-  // dialog izin bila dipanggil di dalam gestur pengguna yang masih "segar".
-  if (Notification.permission === 'default') await Notification.requestPermission();
-  if (Notification.permission !== 'granted') throw galat('ale/izin-ditolak');
-
-  const { getMessaging, getToken, deleteToken, isSupported } = await import('firebase/messaging');
-  if (!(await isSupported())) throw galat('ale/tidak-didukung');
-
-  const pesan = getMessaging(app);
-  if (ulang) {
-    try {
-      const lama = await getToken(pesan, { vapidKey: VAPID_KEY });
-      if (lama) await remove(ref(rtdb, `fcmTokens/${user.uid}/${kunciToken(lama)}`));
-      await deleteToken(pesan);
-    } catch (e) {
-      console.warn('[notifikasi] token lama tidak dapat dihapus, lanjut membuat token baru:', e);
-    }
-  }
-  const token = await getToken(pesan, { vapidKey: VAPID_KEY });
-  if (!token) throw galat('ale/izin-ditolak');
-  await set(ref(rtdb, `fcmTokens/${user.uid}/${kunciToken(token)}`), token);
-  await pasangPesanDepan(pesan);
-}
-
 function notifikasi(ulang) {
-  return sekali('notif', async () => {
-    try {
-      toast(ulang ? 'Mendaftarkan ulang perangkat…' : 'Mengaktifkan notifikasi…');
-      await daftarkanToken({ ulang });
-      return toast(ulang ? 'Perangkat berhasil didaftarkan ulang.' : 'Notifikasi aktif di perangkat ini.', 'ok');
-    } catch (e) {
-      console.error('[notifikasi] gagal:', e);
-      return toast(pesanGalat(e), 'galat');
-    }
-  });
+  return toast(
+    ulang
+      ? 'Pendaftaran ulang notifikasi belum tersedia. Dukungan Web Push Supabase sedang disiapkan.'
+      : 'Notifikasi push sementara tidak tersedia selama migrasi ke Supabase.',
+    'galat',
+  );
 }
 
-/* ---------- Ulasan aplikasi (Firestore: ulasan/{uid}) ---------- */
+/* ---------- Ulasan aplikasi (Supabase) ---------- */
 function buatDialogUlasan() {
   const dlg = document.createElement('dialog');
   dlg.id = 'aleUlasan';
@@ -312,7 +246,7 @@ function buatDialogUlasan() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (tombol.disabled) return;
-    const user = auth.currentUser;
+    const user = getState().user;
     const rating = nilaiRating();
     if (!user) return tampilGalat('Sesi berakhir. Silakan masuk kembali.');
     if (!rating) return tampilGalat('Pilih jumlah bintang terlebih dahulu.');
@@ -320,14 +254,13 @@ function buatDialogUlasan() {
     tombol.disabled = true;
     tombol.textContent = 'Menyimpan…';
     try {
-      const profil = ambilProfil(user.uid) || {};
-      await setDoc(doc(db, 'ulasan', user.uid), {
-        nama: namaPengguna(user),
-        sekolah: profil.sekolah || '',
+      const { error } = await supabase.from('app_reviews').upsert({
+        user_id: user.uid,
+        tenant_id: getState().tenantId || null,
         rating,
-        teks: dlg.querySelector('#aleUlasanTeks').value.trim().slice(0, PANJANG_ULASAN),
-        diperbarui: serverTimestamp(),
-      });
+        comment: dlg.querySelector('#aleUlasanTeks').value.trim().slice(0, PANJANG_ULASAN),
+      }, { onConflict: 'user_id' });
+      if (error) throw error;
       dlg.close();
       toast('Terima kasih, ulasan Anda tersimpan.', 'ok');
     } catch (ex) {
@@ -345,7 +278,7 @@ function buatDialogUlasan() {
 
 function bukaUlasan() {
   return sekali('ulasan', async () => {
-    const user = auth.currentUser;
+    const user = getState().user;
     if (!user) return toast('Sesi berakhir. Silakan masuk kembali.', 'galat');
     const dlg = document.getElementById('aleUlasan') || buatDialogUlasan();
     const sesi = (dlg._sesi = (dlg._sesi || 0) + 1);
@@ -356,14 +289,17 @@ function bukaUlasan() {
     dlg._tandai();
     if (!dlg.open) dlg.showModal();
     try { // isi otomatis dengan ulasan sebelumnya bila ada
-      const snap = await getDoc(doc(db, 'ulasan', user.uid));
+      const { data, error } = await supabase.from('app_reviews')
+        .select('rating,comment')
+        .eq('user_id', user.uid)
+        .maybeSingle();
+      if (error) throw error;
       // Lewati bila dialog ditutup/dibuka ulang, atau pengguna sudah mulai mengisi.
-      if (!snap.exists() || !dlg.open || dlg._sesi !== sesi || dlg._disentuh) return undefined;
-      const d = snap.data();
-      const nilai = Number(d.rating) || 0;
+      if (!data || !dlg.open || dlg._sesi !== sesi || dlg._disentuh) return undefined;
+      const nilai = Number(data.rating) || 0;
       const r = nilai >= 1 && nilai <= 5 ? dlg.querySelector(`input[name="rating"][value="${nilai}"]`) : null;
       if (r) r.checked = true;
-      dlg.querySelector('#aleUlasanTeks').value = typeof d.teks === 'string' ? d.teks.slice(0, PANJANG_ULASAN) : '';
+      dlg.querySelector('#aleUlasanTeks').value = typeof data.comment === 'string' ? data.comment.slice(0, PANJANG_ULASAN) : '';
       dlg._tandai();
     } catch (e) {
       console.warn('[ulasan] ulasan lama tidak terbaca:', e);

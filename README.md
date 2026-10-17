@@ -29,13 +29,44 @@ Before using `supabase db push` from a linked CLI, register versions
 feature switches to a transactionally updated Supabase table, exposes only the
 public read model, and records superadmin changes in a protected audit table.
 
-This is an infrastructure-only first stage: active application features still
-use Firebase Auth, Firestore, Realtime Database, Storage, and Cloud Functions.
-The Supabase Auth Users page currently has no migrated application users.
-Firebase accounts and application data have not been exported or imported. Do
-not disable or remove the Firebase project yet. Feature schemas and Row Level
-Security policies, identity/data migration, and production cutover must be
-completed and verified before Firebase can be retired.
+Authentication, platform controls, account administration, public
+configuration, analytics consent, and testimonials are being moved to
+Supabase. The feature-data layer is not fully migrated: active application
+areas still reference Firebase Auth, Firestore, Realtime Database, Storage,
+Messaging, and Functions. The Supabase Auth Users page showed no migrated
+application users. Firebase accounts and data have not been exported or
+imported. Do not disable Firebase or describe this as a completed cutover.
+
+The application migration adds
+`20261017000100_testimonials.sql`,
+`20261017000200_profile_media_reviews.sql`, and the
+`create-platform-user` Supabase Edge Function. Neither application migration
+has **yet** been applied to the hosted project, and the Edge Function has
+**not** been deployed. After reviewing the SQL, apply both migrations in order
+after the three foundation migrations in the Dashboard SQL Editor. The second
+migration creates a private profile-media bucket with active-tenant RLS and
+per-user write access, plus private per-user app reviews. It does not migrate
+existing Firebase avatar or review data. Set the Edge Function's `APP_ORIGINS` secret to a
+comma-separated list of exact allowed origins (for example, the production
+domain and approved Vercel preview domains), then deploy with
+`supabase functions deploy create-platform-user --project-ref jvcrmzmuxgyuetkjqady`.
+Never put a Supabase `service_role` key in the browser or a `VITE_*` variable.
+
+Password reset now returns to a dedicated page that updates the active
+Supabase recovery session. Add the local, production, and approved preview
+`/` URLs as Supabase Authentication redirect URLs, and configure the Auth
+provider callback URLs before testing password reset or Google OAuth.
+
+Chat attachment upload/download is deliberately blocked until the chat
+membership and storage authorization model is migrated; granting tenant-wide
+access to private conversation files would be unsafe. Push notifications are
+also temporarily unavailable: a Supabase-compatible Web Push service and
+server-side sender have not been implemented. Other Firebase-backed features
+remain. Before the whole migration is complete, replace the remaining Firebase
+repositories with Supabase schemas, Storage policies, Realtime channels, and
+Edge Functions. Then migrate and validate account identities and data, test
+tenant isolation, verify Vercel Preview/Production and rollback, and only then
+remove the Firebase dependencies and configuration.
 
 For local setup, copy `web/.env.example` to `web/.env.local`, then set
 `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. For Vercel, set the same
@@ -46,10 +77,14 @@ access with RLS before wiring application data to Supabase.
 
 ### GitHub and Vercel
 
-Push the repository to GitHub and import it into Vercel. Set the Vercel project
-Root Directory to `web`; `web/vercel.json` supplies the Vite build and output
-settings. The repository-root `vercel.json` also supports the monorepo root by
-installing dependencies from `web/package-lock.json` and building `web/`.
+Import the repository into Vercel. Set the Vercel project Root Directory to
+`web`; `web/vercel.json` supplies the Vite build and output settings. The
+repository-root `vercel.json` also supports the monorepo root by installing
+dependencies from `web/package-lock.json` and building `web/`. A prior Vercel
+failure was caused by running the build from the monorepo root without
+installing the web dependencies; the root configuration now addresses that
+case. The subsequent Vercel check is still failing and needs authenticated
+deployment-log inspection.
 Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to all three Vercel
 environments. GitHub Actions runs CI for pull requests and pushes to `main`;
 Vercel's Git integration handles preview and production deployments.

@@ -1,7 +1,16 @@
 // src/types/schema.ts
-import { Timestamp, FieldValue } from 'firebase/firestore';
+export type DatabaseTimestamp = string | Date;
 
-export type UserRole = 'superadmin' | 'admin_sekolah' | 'guru' | 'siswa' | 'orang_tua' | 'demo';
+export type UserRole =
+  | 'superadmin'
+  | 'admin_sekolah'
+  | 'operator'
+  | 'guru'
+  | 'siswa'
+  | 'ortu'
+  | 'orang_tua'
+  | 'demo'
+  | 'unprovisioned';
 
 export interface UserDoc {
   uid: string;
@@ -16,10 +25,10 @@ export interface UserDoc {
   telepon: string | null;
   geminiApiKey?: string; // Terenkripsi di sisi klien bila diisi
   aktif: boolean;
-  lastLogin: Timestamp | FieldValue | string;
-  createdAt: Timestamp | FieldValue | string;
-  updatedAt: Timestamp | FieldValue | string;
-  deletedAt: Timestamp | FieldValue | string | null;
+  lastLogin: DatabaseTimestamp;
+  createdAt: DatabaseTimestamp;
+  updatedAt: DatabaseTimestamp;
+  deletedAt: DatabaseTimestamp | null;
 }
 
 export interface SekolahDoc {
@@ -35,8 +44,8 @@ export interface SekolahDoc {
   semesterAktif: 'ganjil' | 'genap';
   paket: 'free' | 'premium';
   aktif: boolean;
-  createdAt: Timestamp | FieldValue | string;
-  updatedAt: Timestamp | FieldValue | string;
+  createdAt: DatabaseTimestamp;
+  updatedAt: DatabaseTimestamp;
 }
 
 export interface TahunAjaranDoc {
@@ -57,8 +66,8 @@ export interface KelasDoc {
   tahunAjaranId: string;
   jumlahSiswa: number;
   mapelIds: string[];
-  createdAt: Timestamp | FieldValue | string;
-  updatedAt: Timestamp | FieldValue | string;
+  createdAt: DatabaseTimestamp;
+  updatedAt: DatabaseTimestamp;
 }
 
 export interface SiswaDoc {
@@ -96,8 +105,8 @@ export interface PerencanaanDoc {
   status: 'draft' | 'final';
   driveFileId?: string; // ID Google Drive milik guru
   fileUrl: string | null;
-  createdAt: Timestamp | FieldValue | string;
-  updatedAt: Timestamp | FieldValue | string;
+  createdAt: DatabaseTimestamp;
+  updatedAt: DatabaseTimestamp;
 }
 
 export interface JurnalDoc {
@@ -114,8 +123,8 @@ export interface JurnalDoc {
   jumlahAbsen: number;
   catatan: string;
   fotoUrl: string | null; // Base64 terkompresi atau Drive link
-  createdAt: Timestamp | FieldValue | string;
-  updatedAt: Timestamp | FieldValue | string;
+  createdAt: DatabaseTimestamp;
+  updatedAt: DatabaseTimestamp;
 }
 
 export interface PresensiDoc {
@@ -129,7 +138,7 @@ export interface PresensiDoc {
   sakit: string[];
   izin: string[];
   alpa: string[];
-  createdAt: Timestamp | FieldValue | string;
+  createdAt: DatabaseTimestamp;
 }
 
 export interface BankSoalDoc {
@@ -148,8 +157,8 @@ export interface BankSoalDoc {
   bobot: number;
   tags: string[];
   sumber: 'AI' | 'Manual';
-  createdAt: Timestamp | FieldValue | string;
-  updatedAt: Timestamp | FieldValue | string;
+  createdAt: DatabaseTimestamp;
+  updatedAt: DatabaseTimestamp;
 }
 
 export interface UjianDoc {
@@ -162,12 +171,12 @@ export interface UjianDoc {
   acakSoal: boolean;
   acakPilihan: boolean;
   durasiMenit: number;
-  mulai: Timestamp | string;
-  selesai: Timestamp | string;
+  mulai: DatabaseTimestamp;
+  selesai: DatabaseTimestamp;
   kkm: number;
   status: 'draft' | 'aktif' | 'selesai';
-  createdAt: Timestamp | FieldValue | string;
-  updatedAt: Timestamp | FieldValue | string;
+  createdAt: DatabaseTimestamp;
+  updatedAt: DatabaseTimestamp;
 }
 
 export interface SubmissionDoc {
@@ -181,8 +190,8 @@ export interface SubmissionDoc {
   skorEssay: number;
   skorTotal: number;
   status: 'mengerjakan' | 'selesai';
-  waktuMulai: Timestamp | string;
-  waktuSelesai: Timestamp | string;
+  waktuMulai: DatabaseTimestamp;
+  waktuSelesai: DatabaseTimestamp;
   pelanggaran: string[];
-  createdAt: Timestamp | FieldValue | string;
+  createdAt: DatabaseTimestamp;
 }

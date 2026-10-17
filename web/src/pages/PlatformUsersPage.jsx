@@ -1,8 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  collection, documentId, getDocs, limit, orderBy, query, startAfter,
-} from 'firebase/firestore';
-import { db } from '../firebase/index.js';
+import { supabase } from '../lib/supabase.ts';
 import { useAuth } from '../context/AuthContext.jsx';
 import { createPlatformUser } from '../services/platformAdminApi.js';
 import '../styles/admin-users.css';
@@ -60,22 +57,28 @@ export default function PlatformUsersPage() {
     }
 
     try {
-      const daftar = query(
-        collection(db, 'users'),
-        orderBy(documentId()),
-        ...(berikutnya && cursor.current ? [startAfter(cursor.current)] : []),
-        limit(UKURAN_HALAMAN + 1),
-      );
-      const snapshot = await getDocs(daftar);
-      const dokumen = snapshot.docs.slice(0, UKURAN_HALAMAN);
-      const halaman = dokumen.map((item) => ({ uid: item.id, ...item.data() }));
+      const offset = berikutnya ? cursor.current : 0;
+      const { data, error: queryError } = await supabase
+        .from('profiles')
+        .select('id,email,nama,role,tenant_id,active')
+        .order('id')
+        .range(offset, offset + UKURAN_HALAMAN);
+      if (queryError) throw queryError;
+      const halaman = data.slice(0, UKURAN_HALAMAN).map((profile) => ({
+        uid: profile.id,
+        email: profile.email || '',
+        nama: profile.nama,
+        role: profile.role,
+        tenantId: profile.tenant_id || '',
+        aktif: profile.active,
+      }));
 
-      cursor.current = dokumen.at(-1) || cursor.current;
-      setHasMore(snapshot.docs.length > UKURAN_HALAMAN);
+      cursor.current = offset + halaman.length;
+      setHasMore(data.length > UKURAN_HALAMAN);
       setUsers((saatIni) => berikutnya ? [...saatIni, ...halaman] : halaman);
     } catch (err) {
       console.error('[platform-users] Gagal memuat akun pengguna:', err);
-      setError(err?.code === 'permission-denied'
+      setError(err?.code === '42501'
         ? 'Akses daftar pengguna ditolak. Pastikan sesi memiliki klaim superadmin yang terbaru.'
         : 'Daftar pengguna tidak dapat dimuat. Periksa koneksi lalu coba lagi.');
     } finally {

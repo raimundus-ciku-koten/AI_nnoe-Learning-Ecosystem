@@ -77,6 +77,7 @@ function LegacyPage({ render }) {
 const HalamanLogin = lazy(() => import('./pages/login.js').then(({ halamanLogin }) => ({
   default: function LoginRoute() { return <LegacyPage render={halamanLogin} />; },
 })));
+const HalamanResetPassword = lazy(() => import('./pages/PasswordRecoveryPage.jsx'));
 const HalamanDashboard = lazy(() => import('./pages/dashboard.js').then(({ halamanDashboard }) => ({
   default: function DashboardRoute() { return <LegacyPage render={halamanDashboard} />; },
 })));
@@ -148,7 +149,9 @@ function RouteWrapper() {
     return () => { active = false; };
   }, [userId]);
 
-  const publicRoute = location.pathname === '/login' || location.pathname.startsWith('/scan/');
+  const publicRoute = location.pathname === '/login'
+    || location.pathname === '/reset-password'
+    || location.pathname.startsWith('/scan/');
   if (loading && !publicRoute) {
     return <div className="app-loader">Memuat sesi...</div>;
   }
@@ -157,6 +160,7 @@ function RouteWrapper() {
     <Suspense fallback={<div className="loading-spinner">Memuat...</div>}>
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <HalamanLogin />} />
+        <Route path="/reset-password" element={<HalamanResetPassword />} />
         <Route path="/scan/:kode" element={<HalamanScan />} />
         <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
         

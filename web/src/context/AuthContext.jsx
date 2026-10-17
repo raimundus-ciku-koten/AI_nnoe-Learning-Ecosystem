@@ -9,7 +9,7 @@ import {
 
 const AuthContext = createContext(null);
 
-// Jaring pengaman: bila Firebase tak kunjung merespons, jangan tahan UI selamanya.
+// Jaring pengaman: jangan tahan UI selamanya bila layanan Auth tidak merespons.
 const BATAS_AUTH_SIAP_MS = 12000;
 
 export function AuthProvider({ children }) {

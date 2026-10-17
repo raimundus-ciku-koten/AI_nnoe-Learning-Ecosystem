@@ -1,46 +1,27 @@
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions';
-import { app } from '../firebase/core/app.js';
-import { auth } from '../firebase/core/auth.js';
-
-const REGION = import.meta.env.VITE_FUNCTIONS_REGION || 'asia-southeast2';
-
-let functions;
-let emulatorConnected = false;
-
-function getPlatformFunctions() {
-  if (!functions) functions = getFunctions(app, REGION);
-  if (!emulatorConnected && import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS === 'true') {
-    connectFunctionsEmulator(functions, '127.0.0.1', 5001);
-    emulatorConnected = true;
-  }
-  return functions;
-}
+import { supabase } from '../lib/supabase.ts';
 
 export async function setPlatformControl(setting) {
-  const call = httpsCallable(getPlatformFunctions(), 'setPlatformControl', { timeout: 20_000 });
-  const { data } = await call(setting);
+  const { data, error } = await supabase.rpc('set_platform_control', {
+    p_setting: setting.setting,
+    p_enabled: setting.enabled,
+    p_feature: setting.feature || null,
+  });
+  if (error) throw error;
   if (!data || typeof data.changed !== 'boolean' || !data.state) {
-    throw new Error('Respons kontrol platform tidak valid.');
+    throw new Error('Respons kontrol platform Supabase tidak valid.');
   }
   return data;
 }
 
 export async function createPlatformUser(input) {
-  const call = httpsCallable(getPlatformFunctions(), 'createPlatformUser', { timeout: 30_000 });
-  const { data } = await call(input);
+  const { data, error } = await supabase.functions.invoke('create-platform-user', {
+    body: input,
+  });
+  if (error) throw error;
   if (!data || typeof data.uid !== 'string' || typeof data.email !== 'string' ||
       typeof data.role !== 'string' || typeof data.tenantId !== 'string') {
-    throw new Error('Respons pembuatan akun tidak valid.');
+    throw new Error('Respons pembuatan akun Supabase tidak valid.');
   }
 
-  let resetEmailSent = true;
-  try {
-    await sendPasswordResetEmail(auth, data.email);
-  } catch (error) {
-    console.error('[platform-users] Akun dibuat, tetapi email setel sandi gagal dikirim:', error);
-    resetEmailSent = false;
-  }
-
-  return { ...data, resetEmailSent };
+  return { ...data, resetEmailSent: data.invitationEmailSent === true };
 }
