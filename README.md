@@ -50,15 +50,18 @@ Vercel environments. GitHub Actions runs CI for pull requests and pushes to
 
 Keep Firebase enabled while preparing a recoverable, local-only export. These
 commands require an operator account with the appropriate Firebase/GCP roles.
-Replace the placeholders with the existing Firebase project ID and a private
-Cloud Storage backup bucket; do not put credentials or exports in Git or chat.
+The existing Firebase project ID is `ainnoe-learning-ecosyste-f7432`, and its
+Storage bucket is `ainnoe-learning-ecosyste-f7432.firebasestorage.app`.
+Replace `<PRIVATE_BACKUP_BUCKET>` with a separate private Cloud Storage bucket
+in a location compatible with the Firestore database; do not put credentials
+or exports in Git or chat.
 
 ```powershell
 New-Item -ItemType Directory -Force .\firebase-export
-firebase auth:export .\firebase-export\auth-users.json --project <FIREBASE_PROJECT_ID> --format=json
-firebase database:get / --project <FIREBASE_PROJECT_ID> > .\firebase-export\realtime-database.json
-gcloud firestore export gs://<PRIVATE_BACKUP_BUCKET>/firestore/initial --project=<FIREBASE_PROJECT_ID>
-gcloud storage rsync --recursive gs://<FIREBASE_STORAGE_BUCKET> .\firebase-export\storage
+firebase auth:export .\firebase-export\auth-users.json --project ainnoe-learning-ecosyste-f7432 --format=json
+cmd.exe /d /c 'firebase database:get / --project ainnoe-learning-ecosyste-f7432 > firebase-export\realtime-database.json'
+gcloud firestore export gs://<PRIVATE_BACKUP_BUCKET>/firestore/initial --project=ainnoe-learning-ecosyste-f7432
+gcloud storage rsync --recursive gs://ainnoe-learning-ecosyste-f7432.firebasestorage.app .\firebase-export\storage
 ```
 
 The Firestore command creates a native Firestore backup in Cloud Storage; it is
