@@ -5,22 +5,19 @@ services.
 
 ## Backend migration status
 
-The Supabase and Vercel foundation is being introduced in stages for project
-`jvcrmzmuxgyuetkjqady` (`ap-south-1`). The Supabase browser client is available
-at `web/src/lib/supabase.ts`, and `web/vercel.json` configures SPA routing and
-security headers. GitHub Actions runs the web build and tests; connect the
-GitHub repository to Vercel to create preview and production deployments.
+The staged Supabase foundation is applied to project `jvcrmzmuxgyuetkjqady`
+(`ap-south-1`). The Supabase browser client is available at
+`web/src/lib/supabase.ts`, and `web/vercel.json` configures SPA routing and
+security headers. GitHub Actions runs the web build and tests; Vercel preview
+and production deployment still need to be verified.
 
-The first Supabase migration is `supabase/migrations/20261016000100_identity_foundation.sql`.
-Apply the SQL files in `supabase/migrations/` in order, then run
-`supabase/seed.sql`. The seed grants the supplied owner email
-`kotenraimundusc@gmail.com` the initial superadmin allowlist entry. In the
-Supabase Dashboard, configure `public.custom_access_token_hook` as the Custom
-Access Token Hook under Authentication → Hooks. New identities start inactive
-and unprovisioned unless a trusted administrator has added an active email to
-`public.user_allowlist`; role and tenant fields are not writable by browser
-clients. Provisioning and account/data import are still operator tasks and must
-be completed before switching the app's login provider.
+The migrations in `supabase/migrations/` were applied in order, followed by
+`supabase/seed.sql`. The owner email `kotenraimundusc@gmail.com` has the initial
+superadmin allowlist entry. The `public.custom_access_token_hook` Postgres
+function is enabled under Authentication → Hooks. New identities start
+inactive and unprovisioned unless a trusted administrator has added an active
+email to `public.user_allowlist`; role and tenant fields are not writable by
+browser clients.
 
 `20261016000300_platform_controls.sql` migrates the platform maintenance and AI
 feature switches to a transactionally updated Supabase table, exposes only the
@@ -28,8 +25,10 @@ public read model, and records superadmin changes in a protected audit table.
 
 This is an infrastructure-only first stage: active application features still
 use Firebase Auth, Firestore, Realtime Database, Storage, and Cloud Functions.
-Do not disable or remove the Firebase project yet. Supabase schema, Row Level
-Security policies, feature/data migration, and the production cutover must be
+The Supabase Auth Users page currently has no migrated application users.
+Firebase accounts and application data have not been exported or imported. Do
+not disable or remove the Firebase project yet. Feature schemas and Row Level
+Security policies, identity/data migration, and production cutover must be
 completed and verified before Firebase can be retired.
 
 For local setup, copy `web/.env.example` to `web/.env.local`, then set
@@ -46,6 +45,35 @@ Root Directory to `web`; `web/vercel.json` supplies the Vite build and output
 settings. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to all three
 Vercel environments. GitHub Actions runs CI for pull requests and pushes to
 `main`; Vercel's Git integration handles preview and production deployments.
+
+### Exporting legacy Firebase data safely
+
+Keep Firebase enabled while preparing a recoverable, local-only export. These
+commands require an operator account with the appropriate Firebase/GCP roles.
+Replace the placeholders with the existing Firebase project ID and a private
+Cloud Storage backup bucket; do not put credentials or exports in Git or chat.
+
+```powershell
+New-Item -ItemType Directory -Force .\firebase-export
+firebase auth:export .\firebase-export\auth-users.json --project <FIREBASE_PROJECT_ID> --format=json
+firebase database:get / --project <FIREBASE_PROJECT_ID> > .\firebase-export\realtime-database.json
+gcloud firestore export gs://<PRIVATE_BACKUP_BUCKET>/firestore/initial --project=<FIREBASE_PROJECT_ID>
+gcloud storage rsync --recursive gs://<FIREBASE_STORAGE_BUCKET> .\firebase-export\storage
+```
+
+The Firestore command creates a native Firestore backup in Cloud Storage; it is
+not a JSON dump and cannot be imported directly into PostgreSQL. Preserve it as
+a recovery copy and create a separate, reviewed document export for the
+collection-to-table mapping. Confirm that Realtime Database and Storage exports
+completed and are readable before starting any import.
+
+The Auth export contains sensitive account identifiers and may contain password
+hash material. Store it on an access-controlled, encrypted drive and restrict
+its lifetime. Firebase password credentials are not automatically portable
+to Supabase; validate a supported hash-import path before attempting it, or
+plan a verified password-reset/OAuth re-link flow. Preserve each Firebase UID
+in `profiles.legacy_uid` during migration, and never move a service-account or
+`service_role` secret into browser code, a `VITE_*` variable, or the repository.
 
 ## Workspace map
 

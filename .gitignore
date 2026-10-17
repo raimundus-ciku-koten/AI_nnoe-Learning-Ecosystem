@@ -2,6 +2,8 @@
 service-account*.json
 *service-account*.json
 node.js.json
+/firebase-export/
+/supabase-export/
 ale-web/
 functions/.secret.local
 .firebase.spark.*.json
