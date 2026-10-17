@@ -1,28 +1,27 @@
-# Firebase build and deployment files
-/firebase-debug.log
-/firebase-debug.*.log
-.firebaserc
-
-# Firebase Hosting
-/firebase.json
-*.cache
-hosting/.cache
-
-# Firebase Functions
-/functions/node_modules/
-/functions/.env
-/functions/package-lock.json
-
-# Firebase Emulators
-/firebase-*.zip
-/.firebase/
-/emulator-ui/
-
-# Logs
+*-service-account.json
+service-account*.json
+*service-account*.json
+node.js.json
+/firebase-export/
+/supabase-export/
+ale-web/
+functions/.secret.local
+.firebase.spark.*.json
+.firebase/
+node_modules/
+dist/
+__pycache__/
+*.py[cod]
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Environment files (local configs)
-/.env.*
+web/.env.local
+web/.env.*.local
+web/.env.production
+*.apk
+*.aab
+android-apk/.gradle/
+android-apk/build/
+android-apk/app/build/
+android-apk/*.jks
+android-apk/*.keystore
+android-apk/keystore.properties
+web/.vercel/

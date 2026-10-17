@@ -1,0 +1,44 @@
+{
+  "monthlyDivisor": 10,
+  "school": [
+    {
+      "id": "sekolah-basic",
+      "name": "Sekolah Basic",
+      "annualPrice": 3500000,
+      "students": 100,
+      "teachers": 20,
+      "features": "100 siswa, 20 guru"
+    },
+    {
+      "id": "sekolah-pro",
+      "name": "Sekolah Pro",
+      "annualPrice": 7500000,
+      "students": 500,
+      "teachers": 100,
+      "features": "500 siswa, 100 guru"
+    },
+    {
+      "id": "sekolah-enterprise",
+      "name": "Sekolah Enterprise",
+      "annualPrice": 15000000,
+      "students": 1500,
+      "teachers": null,
+      "features": "1.500 siswa, jumlah guru tanpa batas"
+    }
+  ],
+  "student": [
+    { "id": "siswa-basic", "name": "Siswa Basic", "annualPrice": 149000, "features": "Ujian online, materi ringkas, nilai, 1 mapel pilihan" },
+    { "id": "siswa-pro", "name": "Siswa Pro", "annualPrice": 249000, "features": "Semua mapel, bank soal lengkap, tryout, analitik belajar" },
+    { "id": "siswa-premium", "name": "Siswa Premium", "annualPrice": 399000, "features": "AI tutor, pembahasan adaptif, prioritas materi baru" }
+  ],
+  "teacherSd": [
+    { "id": "guru-sd-basic", "name": "Guru Kelas SD Basic", "annualPrice": 199000, "features": "3 mapel, bank soal 150, 2 ujian, 1 kelas" },
+    { "id": "guru-sd-pro", "name": "Guru Kelas SD Pro", "annualPrice": 349000, "features": "6 mapel, AI Generator 200 soal/bulan, anti-curang, 3 kelas" },
+    { "id": "guru-sd-premium", "name": "Guru Kelas SD Premium", "annualPrice": 499000, "features": "Mapel dan AI tanpa batas, chat orang tua, 5 kelas, dukungan prioritas" }
+  ],
+  "teacherSubject": [
+    { "id": "guru-mapel-basic", "name": "Guru Mapel Basic", "annualPrice": 149000, "features": "1 mapel, bank soal 100, 2 ujian, 1 kelas" },
+    { "id": "guru-mapel-pro", "name": "Guru Mapel Pro", "annualPrice": 249000, "features": "1 mapel + paralel, AI Generator 200 soal/bulan, anti-curang, 5 kelas" },
+    { "id": "guru-mapel-premium", "name": "Guru Mapel Premium", "annualPrice": 399000, "features": "AI dan ujian tanpa batas, chat 1-on-1, 10 kelas, analitik lanjutan" }
+  ]
+}

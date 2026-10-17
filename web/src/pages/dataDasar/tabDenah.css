@@ -1,0 +1,204 @@
+/* web/src/pages/dataDasar/tabDenah.css
+   Gaya khusus tab "Denah Duduk & Kelompok Belajar".
+   - Semua selector berada di bawah `.dd` sehingga tidak bocor ke bagian lain aplikasi.
+   - Warna mengambil variabel tema aplikasi bila ada (--border, --surface, --surface-2, --text,
+     --text-muted, --primary); jika tidak, memakai nilai fallback di bawah.
+   - Jika stylesheet utama Anda sudah mendefinisikan kelas `ale-*` yang sama, file ini
+     boleh dilewati atau digabung secukupnya. */
+
+.dd {
+  --dd-garis: var(--border, #d6dae4);
+  --dd-latar: var(--surface, #ffffff);
+  --dd-latar-lembut: var(--surface-2, #f4f5f9);
+  --dd-teks: var(--text, #1d2135);
+  --dd-teks-redup: var(--text-muted, #5b627d);
+  --dd-aksen: var(--primary, #5b4bc4);
+  --dd-radius: 8px;
+}
+
+.dd .ale-info-teks { margin: 0.5rem 0; color: var(--dd-teks-redup); font-size: 0.9rem; line-height: 1.5; max-width: 72ch; }
+.dd .dd-ringkas { margin-top: 0; font-variant-numeric: tabular-nums; }
+.dd .dd-spasi { flex: 1 1 auto; }
+.dd .dd-cetak-judul { display: none; }
+.dd.dd-sibuk .ale-denah-tata { opacity: 0.55; pointer-events: none; }
+
+/* ---------- Tata letak ---------- */
+.dd .ale-denah-tata {
+  display: grid;
+  grid-template-columns: minmax(170px, 230px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  margin-block: 0.75rem 1.25rem;
+}
+
+.dd .ale-denah-samping {
+  border: 1px solid var(--dd-garis);
+  border-radius: var(--dd-radius);
+  background: var(--dd-latar-lembut);
+  padding: 0.75rem;
+  max-height: 34rem;
+  overflow-y: auto;
+}
+.dd .ale-sub-judul { margin: 0 0 0.5rem; font-size: 0.95rem; font-weight: 600; }
+.dd .ale-siswa-daftar { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.dd .ale-siswa-daftar .ale-kosong { font-size: 0.85rem; color: var(--dd-teks-redup); }
+
+.dd .ale-siswa-chip {
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--dd-garis);
+  border-radius: var(--dd-radius);
+  background: var(--dd-latar);
+  color: var(--dd-teks);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.dd .ale-siswa-chip:hover { border-color: var(--dd-aksen); }
+.dd .ale-siswa-chip.dipilih {
+  border-color: var(--dd-aksen);
+  background: var(--dd-aksen);
+  color: #fff;
+}
+
+.dd .ale-denah-papan { min-width: 0; overflow-x: auto; padding-bottom: 0.25rem; }
+.dd .ale-papan-tulis {
+  margin: 0 auto 0.75rem;
+  max-width: 28rem;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--dd-teks-redup);
+  background: var(--dd-latar-lembut);
+  border: 1px dashed var(--dd-garis);
+  border-radius: var(--dd-radius);
+}
+
+/* ---------- Kursi ---------- */
+.dd .ale-kursi-grid { display: grid; gap: 0.5rem; min-width: min-content; }
+
+.dd .ale-kursi {
+  --kel: var(--dd-garis);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  min-height: 4.25rem;
+  padding: 0.4rem 0.35rem;
+  border: 1.5px dashed var(--dd-garis);
+  border-radius: var(--dd-radius);
+  background: var(--dd-latar);
+  color: var(--dd-teks);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
+}
+.dd .ale-kursi:hover { border-color: var(--dd-aksen); }
+.dd .ale-kursi.terisi { border-style: solid; background: var(--dd-latar-lembut); }
+.dd .ale-kursi.siap { border-color: var(--dd-aksen); background: color-mix(in srgb, var(--dd-aksen) 8%, var(--dd-latar)); }
+.dd .ale-kursi.tukar { border-style: solid; border-color: var(--dd-aksen); }
+.dd .ale-kursi.diangkat { border-color: var(--dd-aksen); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dd-aksen) 35%, transparent); }
+
+.dd .ale-kursi-nama { font-size: 0.82rem; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+.dd .ale-kursi-kosong { font-size: 1.1rem; color: var(--dd-teks-redup); }
+.dd .ale-kursi-kel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--kel);
+}
+
+/* Warna kelompok (8 warna, berulang bila kelompok > 8). Nomor "K#" selalu tampil,
+   jadi warna bukan satu-satunya pembeda. */
+.dd .ale-kel-0 { --kel: #4560d6; }
+.dd .ale-kel-1 { --kel: #c76a12; }
+.dd .ale-kel-2 { --kel: #23855d; }
+.dd .ale-kel-3 { --kel: #b23a82; }
+.dd .ale-kel-4 { --kel: #7a55c4; }
+.dd .ale-kel-5 { --kel: #0e8497; }
+.dd .ale-kel-6 { --kel: #8f6f00; }
+.dd .ale-kel-7 { --kel: #c23b34; }
+
+.dd .ale-kursi[class*='ale-kel-'] { border-color: var(--kel); border-style: solid; }
+@supports (background: color-mix(in srgb, red 10%, white)) {
+  .dd .ale-kursi[class*='ale-kel-'] { background: color-mix(in srgb, var(--kel) 12%, var(--dd-latar)); }
+}
+
+/* ---------- Ringkasan kelompok ---------- */
+.dd .ale-kelompok-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.5rem 0.75rem; }
+.dd .ale-kelompok-ringkas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.dd .ale-kelompok-kartu {
+  --kel: var(--dd-garis);
+  border: 1px solid var(--dd-garis);
+  border-top: 4px solid var(--kel);
+  border-radius: var(--dd-radius);
+  background: var(--dd-latar);
+  padding: 0.65rem 0.8rem;
+  break-inside: avoid;
+}
+.dd .ale-kelompok-kartu h4 { margin: 0 0 0.4rem; font-size: 0.95rem; }
+.dd .ale-kelompok-kartu h4 small { font-weight: 400; color: var(--dd-teks-redup); }
+.dd .ale-kelompok-kartu ul { margin: 0; padding-left: 1.1rem; font-size: 0.88rem; line-height: 1.55; }
+.dd .ale-kelompok-kartu .ale-kosong { list-style: none; margin-left: -1.1rem; color: var(--dd-teks-redup); }
+
+/* ---------- Aksesibilitas ---------- */
+.dd .ale-kursi:focus-visible,
+.dd .ale-siswa-chip:focus-visible {
+  outline: 2px solid var(--dd-aksen);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dd .ale-kursi { transition: none; }
+}
+
+/* ---------- Layar sempit ---------- */
+@media (max-width: 760px) {
+  .dd .ale-denah-tata { grid-template-columns: minmax(0, 1fr); }
+  .dd .ale-denah-samping { max-height: 14rem; }
+}
+
+/* ---------- Cetak: hanya denah & kelompok, tanpa kontrol ---------- */
+@page { size: A4 landscape; margin: 12mm; }
+@media print {
+  body * { visibility: hidden !important; }
+  .dd, .dd * { visibility: visible !important; }
+  .dd {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: #fff;
+    color: #000;
+  }
+  .dd .dd-tanpa-cetak { display: none !important; }
+  .dd .dd-cetak-judul { display: block; margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 700; }
+  .dd .ale-denah-tata { display: block; }
+  .dd .ale-denah-papan { overflow: visible; }
+  .dd .ale-kursi {
+    min-height: 3.5rem;
+    border: 1px solid #000;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .dd .ale-kursi[class*='ale-kel-'] { border-color: var(--kel); border-width: 2px; }
+  .dd .ale-kursi-kosong { visibility: hidden !important; }
+  .dd .ale-kursi-kel { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .dd .ale-kelompok-kartu { -webkit-print-color-adjust: exact; print-color-adjust: exact; border-color: #000; }
+}

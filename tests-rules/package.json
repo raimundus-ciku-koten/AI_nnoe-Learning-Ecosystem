@@ -1,0 +1,7 @@
+{
+  "name": "ainnoe-rules-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "firebase emulators:exec --only firestore --project demo-ainnoe \"node --test\"" },
+  "devDependencies": { "@firebase/rules-unit-testing": "^4.0.0", "firebase": "^11.0.0" }
+}
