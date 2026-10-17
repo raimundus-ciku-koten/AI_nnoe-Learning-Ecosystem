@@ -19,6 +19,12 @@ inactive and unprovisioned unless a trusted administrator has added an active
 email to `public.user_allowlist`; role and tenant fields are not writable by
 browser clients.
 
+These foundation migrations were applied through the Dashboard SQL Editor.
+Before using `supabase db push` from a linked CLI, register versions
+`20261016000100`, `20261016000200`, and `20261016000300` as applied with
+`supabase migration repair --status applied <VERSION> --linked`. Do not run
+`supabase db reset` against the hosted project.
+
 `20261016000300_platform_controls.sql` migrates the platform maintenance and AI
 feature switches to a transactionally updated Supabase table, exposes only the
 public read model, and records superadmin changes in a protected audit table.
@@ -42,9 +48,11 @@ access with RLS before wiring application data to Supabase.
 
 Push the repository to GitHub and import it into Vercel. Set the Vercel project
 Root Directory to `web`; `web/vercel.json` supplies the Vite build and output
-settings. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to all three
-Vercel environments. GitHub Actions runs CI for pull requests and pushes to
-`main`; Vercel's Git integration handles preview and production deployments.
+settings. The repository-root `vercel.json` also supports the monorepo root by
+installing dependencies from `web/package-lock.json` and building `web/`.
+Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to all three Vercel
+environments. GitHub Actions runs CI for pull requests and pushes to `main`;
+Vercel's Git integration handles preview and production deployments.
 
 ### Exporting legacy Firebase data safely
 
