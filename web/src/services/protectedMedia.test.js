@@ -1,6 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getState, setState } from '../state.js';
 import { uidDariUrlFotoProfil, urlFotoProfil } from './protectedMedia.js';
+
+vi.mock('../lib/supabase.ts', () => ({ supabase: {} }));
 
 describe('URL foto profil Supabase', () => {
   afterEach(() => {

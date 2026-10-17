@@ -34,6 +34,7 @@ vi.mock('../services/platformAdminApi.js', () => ({
   createPlatformUser: vi.fn(),
   setPlatformControl: vi.fn(async () => ({ changed: true, state: platformControls })),
 }));
+vi.mock('../lib/supabase.ts', () => ({ supabase: {} }));
 vi.mock('../firebase/index.js', () => ({ db: {} }));
 vi.mock('firebase/firestore', () => ({
   addDoc: vi.fn(),
