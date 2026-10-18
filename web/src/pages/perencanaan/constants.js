@@ -6,7 +6,7 @@
 
 export const SCHEMA_VERSION = 1;
 
-/** Nama koleksi Firestore. */
+/** Nama koleksi Firestore lama, dipertahankan untuk rekonsiliasi data migrasi. */
 export const KOLEKSI = Object.freeze({
   ROOT: 'perencanaan',
   PAKET: 'paket',
@@ -17,6 +17,7 @@ export const KOLEKSI = Object.freeze({
 /** Jenis dokumen perangkat ajar. */
 export const JENIS = Object.freeze({
   RPE: 'rpe',
+  CP: 'cp',
   ATP: 'atp',
   PROTA: 'prota',
   PROSEM: 'prosem',
@@ -26,23 +27,24 @@ export const JENIS = Object.freeze({
 
 /** Urutan alur kerja guru (sama dengan alur menu di aplikasi GAS). */
 export const URUTAN_DOKUMEN = Object.freeze([
-  JENIS.RPE, JENIS.ATP, JENIS.PROTA, JENIS.PROSEM, JENIS.KKTP, JENIS.MODUL
+  JENIS.RPE, JENIS.CP, JENIS.ATP, JENIS.PROTA, JENIS.PROSEM, JENIS.KKTP, JENIS.MODUL
 ]);
 
 /** Dokumen yang dihitung di peramban (deterministik, tanpa AI). */
 export const DOKUMEN_MESIN = Object.freeze([JENIS.RPE, JENIS.PROTA, JENIS.PROSEM]);
 
-/** Dokumen yang dibuat lewat Cloud Function (AI). */
-export const DOKUMEN_AI = Object.freeze([JENIS.ATP, JENIS.KKTP, JENIS.MODUL]);
+/** Dokumen yang membutuhkan provider AI eksternal. */
+export const DOKUMEN_AI = Object.freeze([JENIS.KKTP, JENIS.MODUL]);
 
 /** Prasyarat tiap dokumen. */
 export const PRASYARAT = Object.freeze({
   [JENIS.RPE]: [],
-  [JENIS.ATP]: [JENIS.RPE],
+  [JENIS.CP]: [],
+  [JENIS.ATP]: [JENIS.RPE, JENIS.CP],
   [JENIS.PROTA]: [JENIS.ATP],
   [JENIS.PROSEM]: [JENIS.PROTA],
   [JENIS.KKTP]: [JENIS.ATP],
-  [JENIS.MODUL]: [JENIS.ATP, JENIS.PROTA]
+  [JENIS.MODUL]: [JENIS.ATP, JENIS.PROTA, JENIS.PROSEM]
 });
 
 /** Batas validasi (selaras dengan Security Rules). */

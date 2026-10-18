@@ -1,12 +1,7 @@
 {
-  "name": "ainnoe-functions",
+  "name": "ainnoe-legacy-functions-archive",
   "private": true,
+  "description": "Archived Firebase Functions source; not installable, tested, or deployed by this project.",
   "type": "commonjs",
-  "engines": { "node": "20" },
-  "main": "index.js",
-  "scripts": { "test": "node --test" },
-  "dependencies": {
-    "firebase-admin": "^12.0.0",
-    "firebase-functions": "^6.0.0"
-  }
+  "engines": { "node": "20" }
 }

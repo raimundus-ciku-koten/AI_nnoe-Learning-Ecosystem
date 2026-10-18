@@ -31,35 +31,9 @@ vi.mock('../context/PlatformControlContext.jsx', () => ({
   },
 }));
 vi.mock('../services/platformAdminApi.js', () => ({
-  createPlatformUser: vi.fn(),
   setPlatformControl: vi.fn(async () => ({ changed: true, state: platformControls })),
 }));
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }));
-vi.mock('../firebase/index.js', () => ({ db: {} }));
-vi.mock('firebase/firestore', () => ({
-  addDoc: vi.fn(),
-  collection: vi.fn(() => ({})),
-  deleteDoc: vi.fn(),
-  doc: vi.fn(() => ({})),
-  getDocs: vi.fn(async () => ({ docs: [] })),
-  limit: vi.fn(),
-  orderBy: vi.fn(),
-  query: vi.fn(),
-  serverTimestamp: vi.fn(),
-  startAfter: vi.fn(),
-  updateDoc: vi.fn(),
-}));
-vi.mock('../firebase/core/app.js', () => ({
-  appCheck: null,
-  firebaseEnv: {
-    projectId: 'project-test',
-    authDomain: 'auth.test',
-    storageBucket: 'bucket.test',
-    databaseURL: 'https://database.test',
-  },
-  pakaiEmulator: false,
-}));
-
 import SubMenuPage from './SubMenuPage.jsx';
 import PlatformTenantsPage from './PlatformTenantsPage.jsx';
 import PlatformUsersPage from './PlatformUsersPage.jsx';
@@ -146,7 +120,11 @@ describe('submenu platform superadmin', () => {
   const itemsPlatform = MENU_SUPERADMIN
     .flatMap((group) => group.item)
     .filter((item) => item.path.startsWith('/platform/')
-      && !['/platform/tenant/sekolah', '/platform/pengguna/admin-sekolah'].includes(item.path));
+      && ![
+        '/platform/tenant/sekolah',
+        '/platform/pengguna/admin-sekolah',
+        '/platform/supabase-users',
+      ].includes(item.path));
 
   it('merender setiap tautan platform sebagai halaman yang cocok dengan menu aktif', () => {
     expect(itemsPlatform.length).toBeGreaterThan(0);
@@ -190,16 +168,12 @@ describe('submenu platform superadmin', () => {
     expect(render()).toContain('Data tenant lintas sekolah hanya tersedia bagi superadmin.');
   });
 
-  it('membatasi direktori admin global pada superadmin', () => {
+  it('menampilkan manajemen pengguna berbasis Supabase', () => {
     auth.role = 'superadmin';
     const render = () => renderToStaticMarkup(React.createElement(PlatformUsersPage));
-    expect(render()).toContain('Tambahkan akun pengguna');
-    expect(render()).toContain('Buat akun dan kirim email setel sandi');
-    expect(render()).toContain('ID tenant sekolah');
-    expect(render()).toContain('Akun pengguna');
-
-    auth.role = 'admin_sekolah';
-    expect(render()).toContain('Direktori dan pembuatan akun lintas tenant hanya tersedia bagi superadmin.');
+    expect(render()).toContain('Manajemen pengguna platform');
+    expect(render()).toContain('Masuk sebagai superadmin');
+    expect(render()).toContain('Supabase Auth');
   });
 
   it('menangani setiap rute platform selain daftar sekolah dan direktori admin', () => {
@@ -247,7 +221,7 @@ describe('submenu platform superadmin', () => {
     expect(renderOperations('/platform/fitur/menu')).toContain('Katalog menu platform');
     expect(renderOperations('/platform/dashboard/statistik')).toContain('Statistik Global');
     expect(renderOperations('/platform/laporan/biaya'))
-      .toContain('https://console.cloud.google.com/billing?project=project-test');
+      .toContain('Data biaya billing tidak tersedia pada aplikasi ini.');
 
     auth.role = 'guru';
     expect(renderOperations('/platform/tenant/paket')).toContain('Akses platform dibatasi');

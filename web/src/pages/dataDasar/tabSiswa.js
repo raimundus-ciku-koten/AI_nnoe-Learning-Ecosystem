@@ -9,26 +9,22 @@
  *     Siap / Periksa / Dilewati beserta alasannya sebelum ditulis.
  *   - Pilih banyak siswa → hapus sekaligus (dikonfirmasi lewat <dialog>).
  *   - Ekspor daftar yang tampil ke CSV (aman dari formula injection).
- *   - "Lengkapi kode unik" untuk siswa lama yang belum punya kodeUnik.
+ *   - Pendeteksian data legacy tanpa kode unik sebelum fitur barcode dipakai.
  *
- * Skema dokumen — guru/{uid}/siswa/{id} (TIDAK berubah dari versi sebelumnya)
- *   nama, nisn, jk ('' | 'L' | 'P'), kelas,
- *   kodeUnik  → ALE-<KELAS>-<HASH4>-<IDENT>, immutable setelah dibuat,
- *   urlScan   → <origin>/#/scan/<kodeUnik>,
- *   dibuat, diperbarui (serverTimestamp).
+ * Data tersimpan pada Supabase `students` dengan owner/tenant RLS.
+ * `kode_unik` dibuat saat insert dan immutable; URL scan dibangun saat dibaca.
  *
  * Struktur modul
  *   siswa/impor.js  parser impor (murni, teruji unit)
  *   siswa/csv.js    ekspor CSV
- *   siswa/tulis.js  batch Firestore + batas waktu tunggu
+ *   siswa/tulis.js  batas waktu tunggu penulisan
  *   siswa/gaya.js   stylesheet (CSP-safe, dipasang sekali)
  *
  * Ketahanan
  *   - Kerangka & form SELALU ter-render; gagal memuat hanya menampilkan
  *     peringatan + tombol "Coba lagi".
  *   - Penulisan dibatasi waktu (BATAS_TUNGGU_MS). Bila lewat, UI dilepas,
- *     perubahan ditampilkan sementara ("Menunggu sinkron"), peramban
- *     memperingatkan sebelum tab ditutup, dan hasil akhir dilaporkan.
+ *     perubahan ditampilkan sementara sambil menunggu konfirmasi server.
  *   - Form tetap terbuka sampai penulisan diterima/tertunda, sehingga isian
  *     tidak hilang saat ditolak server (mis. aturan keamanan).
  *   - Pemuatan ulang bertingkat dilindungi nomor urut (hasil lama tidak
@@ -38,23 +34,21 @@
  * Keamanan
  *   - Seluruh teks dinamis di-escape (esc). `esc` WAJIB meng-escape & < > " '.
  *   - Tanpa <style>/style="" inline → kompatibel dengan CSP `style-src 'self'`.
- *   - Penegakan sebenarnya ada di Firestore Security Rules (firestore.rules):
- *     hanya pemilik, validasi skema, kodeUnik & dibuat immutable.
+ *   - Penegakan ada di Supabase RLS dan batasan tabel `students`.
  */
-import {
-  collection, deleteDoc, doc, serverTimestamp, setDoc, updateDoc,
-} from 'firebase/firestore';
-import { db } from '../../firebase/index.js';
 import { esc } from '../../ui.js';
 import {
-  ambilSiswa, bersih, buatId, buatKodeSiswa, urlScanKode,
+  tambahBanyakSiswa, tambahSiswa, ubahSiswa, hapusBanyakSiswa,
+} from '../../services/students.js';
+import {
+  ambilSiswa, bekukanKodeSiswa, bersih, buatKodeSiswa, urlScanKode,
   galat, ik, toast, urutUnik,
 } from './umum.js';
 import { uraiImpor as uraiImporMurni, hitungStatus, normal } from './siswa/impor.js';
 import {
   BOM, bangunCsvSiswa, namaAman, stempelTanggal, unduhBerkas,
 } from './siswa/csv.js';
-import { denganBatas, tulisBatch, tungguTulis } from './siswa/tulis.js';
+import { denganBatas, tungguTulis } from './siswa/tulis.js';
 import { pasangGaya } from './siswa/gaya.js';
 
 /** Kompatibel dengan versi lama: `uraiImpor(teks, { kelas, nisnAda, namaDiKelas })`. */
@@ -63,6 +57,11 @@ export const uraiImpor = (teks, konteks) => uraiImporMurni(teks, { bersih, ...ko
 const MAKS_IMPOR = 200;
 const MAKS_BERKAS = 1_000_000;   // 1 MB — cukup untuk ribuan baris teks
 const BATAS_MUAT_MS = 15_000;    // memuat daftar lebih lama dari ini → tampilkan peringatan
+
+function idUuidSiswa() {
+  if (!globalThis.crypto?.randomUUID) throw new Error('Peramban tidak mendukung pembuatan ID siswa yang aman.');
+  return globalThis.crypto.randomUUID();
+}
 
 const kolasiKelas = new Intl.Collator('id', { numeric: true });
 const kolasiNama = new Intl.Collator('id', { sensitivity: 'base' });
@@ -116,7 +115,6 @@ export async function tabSiswa(el, ctx) {
   }
 
   pasangGaya();
-  const koleksi = collection(db, 'guru', uid, 'siswa');
   const kelasCtx = () => (Array.isArray(ctx.kelas) ? ctx.kelas : []);
 
   /* ---------------- Status ---------------- */
@@ -359,7 +357,7 @@ export async function tabSiswa(el, ctx) {
     const lama = daftar.filter((s) => !s.kodeUnik).length;
     q('#sisLegacy').hidden = lama === 0;
     q('#sisLegacyTeks').textContent =
-      `${lama} siswa belum memiliki kode unik, sehingga kartu barcode belum permanen.`;
+      `${lama} siswa belum memiliki kode unik. Data ini perlu direkonsiliasi sebelum dapat digunakan.`;
 
     q('#sisBody').innerHTML = tampil.length
       ? tampil.map((s, i) => `
@@ -369,7 +367,7 @@ export async function tabSiswa(el, ctx) {
                    aria-label="Pilih ${esc(s.nama)}">
           </td>
           <td data-label="No">${i + 1}</td>
-          <td data-label="Nama">${esc(s.nama)}${s._menunggu ? '<span class="sis-badge">Menunggu sinkron</span>' : ''}</td>
+          <td data-label="Nama">${esc(s.nama)}${s._menunggu ? '<span class="sis-badge">Menunggu konfirmasi</span>' : ''}</td>
           <td data-label="NISN">${esc(s.nisn || '-')}</td>
           <td data-label="L/P">${esc(s.jk || '-')}</td>
           <td data-label="Kelas">${esc(s.kelas || '-')}</td>
@@ -410,7 +408,7 @@ export async function tabSiswa(el, ctx) {
   }
 
   /**
-   * Muat ulang daftar dari Firestore. Tidak melempar galat — hanya mengubah
+   * Muat ulang daftar dari Supabase. Tidak melempar galat — hanya mengubah
    * visibilitas peringatan. `true` bila sukses, `false` bila gagal.
    * Hasil yang kedaluwarsa (ada muatan yang lebih baru) dibuang.
    */
@@ -490,7 +488,7 @@ export async function tabSiswa(el, ctx) {
     }
 
     terapkanLokal(lokal, true);
-    toast('Koneksi lambat. Perubahan dikirim otomatis begitu tersambung — jangan tutup halaman ini.', 'info');
+    toast('Koneksi lambat. Perubahan ditampilkan sementara sambil menunggu konfirmasi server.', 'info');
     catatTertunda(+1);
     janji
       .then(
@@ -547,7 +545,7 @@ export async function tabSiswa(el, ctx) {
 
   function perbaruiPreviewKode() {
     if (editId) return;
-    if (!idSementara) idSementara = buatId();
+    if (!idSementara) idSementara = idUuidSiswa();
     q('#sisKode').value = buatKodeSiswa({
       id: idSementara,
       nama: q('#sisNama').value,
@@ -568,7 +566,7 @@ export async function tabSiswa(el, ctx) {
     q('#sisImporForm').hidden = true;
     pemicu = pembuka || q('#sisTambah');
     editId = s ? s.id : null;
-    idSementara = s ? null : buatId();
+    idSementara = s ? null : idUuidSiswa();
 
     q('#sisFormJudul').textContent = s ? 'Ubah Data Siswa' : 'Tambah Siswa';
     q('#sisNama').value = s ? (s.nama || '') : '';
@@ -774,6 +772,10 @@ export async function tabSiswa(el, ctx) {
       await segarkan();
       return;
     }
+    if (idEdit && !lama.kodeUnik) {
+      toast('Siswa legacy tanpa kode unik harus direkonsiliasi sebelum dapat diubah.', 'galat');
+      return;
+    }
 
     const tombol = e.submitter || q('#sisForm button[type="submit"]');
     const g = generasi;
@@ -782,38 +784,46 @@ export async function tabSiswa(el, ctx) {
     tombol.setAttribute('aria-busy', 'true');
 
     try {
-      const id = idEdit || idSementara || buatId();
+      const id = idEdit || idSementara || idUuidSiswa();
       const kodeUnik = lama?.kodeUnik || buatKodeSiswa({ id, nama, nisn, kelas });
       const berubahKode = !lama?.kodeUnik;
       const urlScan = berubahKode || !lama?.urlScan ? urlScanKode(kodeUnik) : lama.urlScan;
 
-      let janji;
       const lokal = { id, nama, nisn, jk, kelas, kodeUnik };
       if (idEdit) {
-        // updateDoc: tidak menghidupkan kembali dokumen yang dihapus di perangkat lain,
-        // dan kodeUnik/dibuat tidak ikut dikirim (immutable di Security Rules).
-        const ubah = { nama, nisn, jk, kelas, diperbarui: serverTimestamp() };
-        if (berubahKode) ubah.kodeUnik = kodeUnik;
-        if (berubahKode || !lama.urlScan) { ubah.urlScan = urlScan; lokal.urlScan = urlScan; }
-        janji = updateDoc(doc(koleksi, id), ubah);
+        lokal.urlScan = urlScan;
+        await selesaikan(ubahSiswa(uid, id, { nama, nisn, jk, kelas }), {
+          pesanOk: 'Data siswa diperbarui.',
+          judulGalat: 'Gagal menyimpan siswa',
+          lokal: { simpan: [lokal] },
+          sesudahTulis: () => {
+            if (g !== generasi) return;
+            tutupForm();
+            filter = kelas;
+          },
+        });
       } else {
         lokal.urlScan = urlScan;
-        janji = setDoc(doc(koleksi, id), {
-          nama, nisn, jk, kelas, kodeUnik, urlScan,
-          dibuat: serverTimestamp(), diperbarui: serverTimestamp(),
+        const janji = tambahSiswa({
+          ...lokal,
+          tenantId: ctx.tenantId,
+          ownerId: uid,
+        }).then((saved) => {
+          lokal.id = saved.id;
+          lokal.urlScan = saved.urlScan;
+          return saved;
+        });
+        await selesaikan(janji, {
+          pesanOk: `Siswa ditambahkan · ${kodeUnik}`,
+          judulGalat: 'Gagal menyimpan siswa',
+          lokal: { simpan: [lokal] },
+          sesudahTulis: () => {
+            if (g !== generasi) return;
+            tutupForm();
+            filter = kelas;
+          },
         });
       }
-
-      await selesaikan(janji, {
-        pesanOk: idEdit ? 'Data siswa diperbarui.' : `Siswa ditambahkan · ${kodeUnik}`,
-        judulGalat: 'Gagal menyimpan siswa',
-        lokal: { simpan: [lokal] },
-        sesudahTulis: () => {
-          if (g !== generasi) return;     // pengguna sudah menutup/membuka form lain
-          tutupForm();
-          filter = kelas;                  // tampilkan hasilnya langsung
-        },
-      });
     } catch (err) {
       // Form sengaja dibiarkan terbuka: isian tidak hilang.
       galat(err, 'Gagal menyimpan siswa');
@@ -823,12 +833,12 @@ export async function tabSiswa(el, ctx) {
     }
   };
 
-  /* ---------------- Submit impor (dua langkah) ---------------- */
+  /* ---------------- Submit impor ke Supabase (dua langkah) ---------------- */
   q('#sisImporForm').onsubmit = async (e) => {
     e.preventDefault();
     if (sedangKirim) return;
 
-    // Langkah 1: tampilkan pratinjau. Langkah 2: tulis ke Firestore.
+    // Langkah 1: tampilkan pratinjau. Langkah 2: simpan ke Supabase.
     if (!pratinjau || !pratinjau.siap) { buatPratinjau(); return; }
 
     const { kelas, teks } = pratinjau;
@@ -842,9 +852,13 @@ export async function tabSiswa(el, ctx) {
     }
 
     const baru = segar.filter((b) => b.status !== 'lewati').map((b) => {
-      const id = buatId();
+      const id = idUuidSiswa();
       const kodeUnik = buatKodeSiswa({ id, nama: b.nama, nisn: b.nisn, kelas });
-      return { id, nama: b.nama, nisn: b.nisn, jk: b.jk, kelas, kodeUnik, urlScan: urlScanKode(kodeUnik) };
+      return {
+        id, ownerId: uid, tenantId: ctx.tenantId,
+        nama: b.nama, nisn: b.nisn, jk: b.jk, kelas, kodeUnik,
+        urlScan: urlScanKode(kodeUnik),
+      };
     });
     const dilewati = segar.length - baru.length;
 
@@ -855,16 +869,20 @@ export async function tabSiswa(el, ctx) {
     tombol.setAttribute('aria-busy', 'true');
 
     try {
-      const janji = tulisBatch(db, baru, (batch, s) => batch.set(doc(koleksi, s.id), {
-        nama: s.nama, nisn: s.nisn, jk: s.jk, kelas: s.kelas,
-        kodeUnik: s.kodeUnik, urlScan: s.urlScan,
-        dibuat: serverTimestamp(), diperbarui: serverTimestamp(),
-      }));
-
+      const lokalBaru = [];
+      const janji = tambahBanyakSiswa(baru).then((saved) => {
+        const sumber = new Map(baru.map((student) => [student.kodeUnik, student]));
+        lokalBaru.splice(0, lokalBaru.length, ...saved.map((student) => ({
+          ...sumber.get(student.kodeUnik),
+          id: student.id,
+          urlScan: student.urlScan,
+        })));
+        return saved;
+      });
       await selesaikan(janji, {
         pesanOk: `${baru.length} siswa diimpor${dilewati ? `, ${dilewati} baris dilewati` : ''}.`,
         judulGalat: 'Gagal mengimpor siswa',
-        lokal: { simpan: baru },
+        lokal: { simpan: lokalBaru },
         sesudahTulis: () => {
           if (g !== generasi) return;
           filter = kelas;
@@ -888,22 +906,10 @@ export async function tabSiswa(el, ctx) {
 
     tombol.disabled = true;
     try {
-      const isi = lama.map((s) => {
-        const kodeUnik = buatKodeSiswa({ id: s.id, nama: s.nama, nisn: s.nisn || '', kelas: s.kelas || '' });
-        return { id: s.id, kodeUnik, urlScan: urlScanKode(kodeUnik) };
-      });
-      const janji = tulisBatch(db, isi, (batch, x) => batch.update(
-        doc(koleksi, x.id),
-        { kodeUnik: x.kodeUnik, urlScan: x.urlScan, diperbarui: serverTimestamp() },
-      ));
-      await selesaikan(janji, {
-        pesanOk: `${isi.length} kode unik dibuat.`,
-        judulGalat: 'Gagal membuat kode unik',
-        lokal: { simpan: isi },
-      });
+      const jumlah = await bekukanKodeSiswa(ctx, daftar);
+      if (jumlah) toast(`${jumlah} kode unik dibuat.`, 'ok');
     } catch (err) {
-      galat(err, judulSebagian('Gagal membuat kode unik', err, lama.length));
-      if (err?.jumlahTertulis > 0) await segarkan();
+      galat(err, 'Gagal melengkapi kode unik');
     } finally {
       if (hidup()) tombol.disabled = false;
     }
@@ -938,8 +944,7 @@ export async function tabSiswa(el, ctx) {
 
     tombol.disabled = true;
     try {
-      const janji = tulisBatch(db, daftarId, (batch, id) => batch.delete(doc(koleksi, id)));
-      await selesaikan(janji, {
+      await selesaikan(hapusBanyakSiswa(uid, daftarId), {
         pesanOk: `${daftarId.length} siswa dihapus.`,
         judulGalat: 'Gagal menghapus siswa',
         lokal: { hapus: daftarId },
@@ -969,7 +974,7 @@ export async function tabSiswa(el, ctx) {
 
       tombol.disabled = true;
       try {
-        await selesaikan(deleteDoc(doc(koleksi, s.id)), {
+        await selesaikan(hapusBanyakSiswa(uid, [s.id]), {
           pesanOk: 'Siswa dihapus.',
           judulGalat: 'Gagal menghapus siswa',
           lokal: { hapus: [s.id] },

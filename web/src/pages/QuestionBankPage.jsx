@@ -49,7 +49,7 @@ function siapkanSoal(form) {
 }
 
 function formatTanggal(value) {
-  const date = value?.toDate?.();
+  const date = value instanceof Date ? value : new Date(value);
   return date instanceof Date && !Number.isNaN(date.getTime())
     ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(date)
     : 'Baru saja';
@@ -67,7 +67,6 @@ export default function QuestionBankPage() {
   const [search, setSearch] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [topic, setTopic] = useState('');
-  const [sourceMode, setSourceMode] = useState('normal');
 
   const canView = ['guru', 'admin_sekolah'].includes(role);
   const canEdit = role === 'guru';
@@ -86,7 +85,7 @@ export default function QuestionBankPage() {
         if (active) setItems(result);
       } catch (err) {
         console.error('[question-bank] Gagal memuat bank soal:', err);
-        if (active) setError('Bank soal belum dapat dimuat. Periksa akses tenant dan koneksi Firestore, lalu muat ulang.');
+        if (active) setError('Bank soal belum dapat dimuat. Periksa akses tenant dan koneksi Supabase, lalu muat ulang.');
       } finally {
         if (active) setLoading(false);
       }
@@ -105,7 +104,6 @@ export default function QuestionBankPage() {
   function resetForm() {
     setForm(FORM_AWAL);
     setEditId('');
-    setSourceMode('normal');
     setTopic('');
     setError('');
     setNotice('');
@@ -113,10 +111,6 @@ export default function QuestionBankPage() {
 
   async function save(event) {
     event.preventDefault();
-    if (sourceMode !== 'normal') {
-      setError('Tautan Canva dikelola dan dibagikan dari akun Canva yang terhubung.');
-      return;
-    }
     if (!canEdit || !tenantId || !user?.uid) {
       setError('Hanya guru dalam tenant yang dapat mengelola soal.');
       return;
@@ -127,14 +121,14 @@ export default function QuestionBankPage() {
     try {
       const soal = siapkanSoal(form);
       if (editId) {
-        await ubahSoalBank(tenantId, editId, soal);
+        const updated = await ubahSoalBank(tenantId, user.uid, editId, soal);
         setItems((current) => current
-          .map((item) => item.id === editId ? { ...item, ...soal } : item)
-          .sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0)));
+          .map((item) => item.id === editId ? updated : item)
+          .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)));
         setNotice('Soal berhasil diperbarui.');
       } else {
         const result = await tambahSoalBank(tenantId, user.uid, soal);
-        setItems((current) => [{ id: result.id, ...soal, ownerUid: user.uid }, ...current].slice(0, 100));
+        setItems((current) => [result, ...current].slice(0, 100));
         setNotice('Soal berhasil ditambahkan ke bank soal.');
       }
       setForm(FORM_AWAL);
@@ -158,7 +152,6 @@ export default function QuestionBankPage() {
       pembahasan: item.pembahasan || '',
     });
     setEditId(item.id);
-    setSourceMode('normal');
     setTopic('');
     setNotice('');
     setError('');
@@ -169,7 +162,7 @@ export default function QuestionBankPage() {
     setError('');
     setNotice('');
     try {
-      await hapusSoalBank(tenantId, item.id);
+      await hapusSoalBank(tenantId, user.uid, item.id);
       setItems((current) => current.filter((entry) => entry.id !== item.id));
       if (editId === item.id) resetForm();
       setNotice('Soal berhasil dihapus.');
@@ -258,15 +251,8 @@ export default function QuestionBankPage() {
           <form onSubmit={save}>
             <div className="question-bank-fields">
               <label className="question-bank-wide">
-                Cara membuat soal
-                <select value={sourceMode} disabled={Boolean(editId)} onChange={(e) => setSourceMode(e.target.value)}>
-                  <option value="normal">Soal biasa — draf AI pilihan akun</option>
-                  <option value="canva" disabled>Soal berbentuk tautan — Canva (perlu backend OAuth dan billing)</option>
-                </select>
-              </label>
-              <label className="question-bank-wide">
                 Topik / konteks soal
-                <input value={topic} maxLength={500} required={sourceMode === 'canva'} placeholder="Contoh: persamaan linear satu variabel" onChange={(e) => setTopic(e.target.value)} />
+                <input value={topic} maxLength={500} placeholder="Contoh: persamaan linear satu variabel" onChange={(e) => setTopic(e.target.value)} />
               </label>
               <label>
                 Mata pelajaran
@@ -276,27 +262,17 @@ export default function QuestionBankPage() {
                 Kelas / fase
                 <input value={form.kelas} maxLength={30} required onChange={(e) => setForm({ ...form, kelas: e.target.value })} />
               </label>
-              {sourceMode === 'normal' && (
-                <>
-                  <label>
-                    Bentuk soal
-                    <select value={form.jenis} onChange={(e) => setForm({ ...form, jenis: e.target.value, jawaban: '' })}>
-                      <option value="pilihan_ganda">Pilihan ganda</option>
-                      <option value="uraian">Uraian</option>
-                    </select>
-                  </label>
-                  <button type="button" className="question-bank-ai-button" disabled={aiBusy || !form.mapel.trim() || !form.kelas.trim() || !topic.trim()} onClick={() => void generateAiDraft()}>
-                    {aiBusy ? 'Membuat draf…' : 'Buat draf dengan AI'}
-                  </button>
-                </>
-              )}
+              <label>
+                Bentuk soal
+                <select value={form.jenis} onChange={(e) => setForm({ ...form, jenis: e.target.value, jawaban: '' })}>
+                  <option value="pilihan_ganda">Pilihan ganda</option>
+                  <option value="uraian">Uraian</option>
+                </select>
+              </label>
+              <button type="button" className="question-bank-ai-button" disabled={aiBusy || !form.mapel.trim() || !form.kelas.trim() || !topic.trim()} onClick={() => void generateAiDraft()}>
+                {aiBusy ? 'Membuat draf…' : 'Buat draf dengan AI'}
+              </button>
             </div>
-            {sourceMode === 'canva' ? (
-              <div className="question-bank-canva">
-                <p>Canva Connect memerlukan OAuth dan backend server-side yang belum tersedia dalam mode tanpa billing.</p>
-              </div>
-            ) : (
-              <>
             <label className="question-bank-wide">
               Pertanyaan
               <textarea value={form.pertanyaan} maxLength={2000} rows={4} required onChange={(e) => setForm({ ...form, pertanyaan: e.target.value })} />
@@ -330,8 +306,6 @@ export default function QuestionBankPage() {
               <button type="submit" disabled={saving}>{saving ? 'Menyimpan…' : editId ? 'Simpan perubahan' : 'Simpan soal'}</button>
               {editId && <button type="button" className="is-secondary" onClick={resetForm} disabled={saving}>Batal ubah</button>}
             </div>
-              </>
-            )}
           </form>
         </section>
       )}

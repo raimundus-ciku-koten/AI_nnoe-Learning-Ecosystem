@@ -1,8 +1,8 @@
 /**
- * @file Generator BYOK di browser untuk perangkat ajar.
+ * @file Generator AI provider eksternal untuk perangkat ajar.
  */
 
-import { auth } from '../../../firebase/index.js';
+import { getState } from '../../../state.js';
 import { generateBrowserPlanning } from '../../../services/browserAi.js';
 
 export class AiError extends Error {
@@ -17,7 +17,7 @@ export class AiError extends Error {
 
 /** @param {{paketId:string,jenis:'atp'|'kktp'|'modul',noUnit?:number,sinyal?:AbortSignal}} p */
 export async function buatDenganAi({ paketId, jenis, noUnit, sinyal }) {
-  const uid = auth.currentUser?.uid;
+  const uid = getState().user?.uid;
   if (!uid) throw new AiError('AI_BELUM_LOGIN');
   try {
     return await generateBrowserPlanning({ uid, paketId, jenis, noUnit, sinyal });

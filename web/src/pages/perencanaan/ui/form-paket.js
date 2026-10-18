@@ -1,6 +1,6 @@
 /**
  * @file Formulir konteks paket (mapel, kelas, kalender, identitas) dalam <dialog>.
- * - Validasi langsung memakai validasiKonteks (aturan sama dengan sebelum tulis ke Firestore).
+ * - Validasi langsung memakai validasiKonteks sebelum paket dienkripsi dan disimpan ke Drive.
  * - Galat dikaitkan ke kolom lewat aria-describedby/aria-invalid; fokus pindah ke galat pertama.
  */
 
@@ -80,6 +80,20 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
   /* ------------------------------ Kalender ------------------------------ */
   const barisKal = h('div', { class: 'kal-daftar' });
   const galatKal = h('p', { class: 'galat-kolom', role: 'alert', id: `${uid}-kalender-g` });
+  const referensiKalender = [
+    {
+      href: '/referensi/kalender-pendidikan-2026-2027/pedoman-kalender-pendidikan-ntt-2026-2027.pdf',
+      label: t('form.rujukanProvinsi'),
+    },
+    {
+      href: '/referensi/kalender-pendidikan-2026-2027/sk-kalender-pendidikan-flores-timur-2026-2027.pdf',
+      label: t('form.rujukanFloresTimur'),
+    },
+    {
+      href: '/referensi/kalender-pendidikan-2026-2027/kalender-akademik-sma-frador-2026-2027.pdf',
+      label: t('form.rujukanFrador'),
+    },
+  ];
   const tambahBaris = (e = { mulai: '', selesai: '', ket: '', efektif: false }) => {
     const baris = h('div', { class: 'kal-baris' },
       h('input', { type: 'date', 'aria-label': t('form.kalMulai'), value: e.mulai, required: true, name: 'kalMulai' }),
@@ -110,7 +124,13 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
         kolom('ganjilMulai', t('form.ganjilMulai'), gm), kolom('ganjilSelesai', t('form.ganjilSelesai'), gs),
         kolom('genapMulai', t('form.genapMulai'), nm), kolom('genapSelesai', t('form.genapSelesai'), ns))),
     h('fieldset', null, h('legend', null, t('form.bagianKalender')),
-      h('p', { class: 'hint' }, t('form.kalenderHint')), barisKal, galatKal,
+      h('p', { class: 'hint' }, t('form.kalenderHint')),
+      h('nav', { 'aria-label': t('form.rujukanKalender') },
+        h('p', { class: 'rujukan-kalender-judul' }, t('form.rujukanKalender')),
+        h('ul', { class: 'tautan-rujukan-kalender' }, referensiKalender.map(({ href, label }) =>
+          h('li', null, h('a', { href, target: '_blank', rel: 'noopener noreferrer' }, label)))),
+        h('p', { class: 'hint' }, t('form.rujukanKalenderHint'))),
+      barisKal, galatKal,
       h('button', { type: 'button', class: 'tombol tombol-sekunder tombol-kecil', onClick: () => tambahBaris() }, `+ ${t('form.tambahKalender')}`)),
     h('fieldset', null, h('legend', null, t('form.bagianIdentitas')),
       h('div', { class: 'grid-form' },

@@ -1,0 +1,214 @@
+.supabase-platform-users {
+  width: min(1120px, calc(100% - 32px));
+  margin: 32px auto;
+  color: #172033;
+}
+
+.supabase-platform-users__header {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.supabase-platform-users__header > p {
+  margin: 0;
+  color: #52637d;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.supabase-platform-users__header h1,
+.supabase-platform-users__card h2 {
+  margin: 0;
+}
+
+.supabase-platform-users__header span,
+.supabase-platform-users__card > p,
+.supabase-platform-users__toolbar p {
+  color: #52637d;
+  line-height: 1.55;
+}
+
+.supabase-platform-users__card {
+  margin: 18px 0;
+  padding: 22px;
+  border: 1px solid #dbe3ef;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(23 32 51 / 5%);
+}
+
+.supabase-platform-users__card > p {
+  margin: 8px 0 18px;
+}
+
+.supabase-platform-users__card form,
+.supabase-platform-users__form {
+  display: grid;
+  gap: 14px;
+}
+
+.supabase-platform-users__form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.supabase-platform-users label {
+  display: grid;
+  gap: 6px;
+  color: #25344d;
+  font-weight: 600;
+}
+
+.supabase-platform-users input,
+.supabase-platform-users select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #b9c6d8;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+
+.supabase-platform-users input:focus,
+.supabase-platform-users select:focus {
+  outline: 3px solid rgb(37 99 235 / 20%);
+  border-color: #2563eb;
+}
+
+.supabase-platform-users button {
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid #1d4ed8;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.supabase-platform-users button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.supabase-platform-users button.is-secondary {
+  border-color: #c5d0df;
+  background: #fff;
+  color: #25344d;
+}
+
+.supabase-platform-users__checkbox {
+  display: flex !important;
+  align-items: center;
+  grid-column: 1 / -1;
+}
+
+.supabase-platform-users__checkbox input {
+  width: 18px;
+  min-height: 18px;
+}
+
+.supabase-platform-users__actions,
+.supabase-platform-users__session,
+.supabase-platform-users__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.supabase-platform-users__actions {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+}
+
+.supabase-platform-users__session {
+  margin: 16px 0;
+}
+
+.supabase-platform-users__toolbar {
+  margin-bottom: 16px;
+}
+
+.supabase-platform-users__toolbar p {
+  margin: 5px 0 0;
+}
+
+.supabase-platform-users__toolbar label {
+  flex: 1;
+  max-width: 380px;
+}
+
+.supabase-platform-users__table-wrap {
+  overflow-x: auto;
+}
+
+.supabase-platform-users table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.supabase-platform-users th,
+.supabase-platform-users td {
+  padding: 11px 10px;
+  border-bottom: 1px solid #e4eaf2;
+  vertical-align: top;
+}
+
+.supabase-platform-users th {
+  color: #52637d;
+  font-size: 0.85rem;
+}
+
+.supabase-platform-users td small {
+  display: block;
+  margin-top: 5px;
+  color: #52637d;
+}
+
+.supabase-platform-users__message {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+}
+
+.supabase-platform-users__message.is-error {
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.supabase-platform-users__message.is-notice {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
+.supabase-platform-users__empty {
+  padding: 18px 0;
+  color: #52637d;
+}
+
+@media (max-width: 720px) {
+  .supabase-platform-users__form {
+    grid-template-columns: 1fr;
+  }
+
+  .supabase-platform-users__toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .supabase-platform-users__toolbar label {
+    max-width: none;
+  }
+
+  .supabase-platform-users__session {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -29,6 +29,8 @@ legend { font-weight: 700; padding: 0 6px; }
 .baris-cek { display: flex; flex-wrap: wrap; gap: 8px 16px; }
 .cek { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; }
 .cek input { width: auto; }
+.rujukan-kalender-judul { font-weight: 600; margin: 10px 0 4px; }
+.tautan-rujukan-kalender { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 4px 0; padding-left: 20px; }
 .kal-baris { display: grid; grid-template-columns: 150px 150px 1fr 170px 40px; gap: 8px; margin-bottom: 8px; align-items: center; }
 
 /* Dialog & toast */
@@ -96,6 +98,12 @@ legend { font-weight: 700; padding: 0 6px; }
 .ringkas-jp { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 14px; border-radius: 8px; margin: 8px 0; position: sticky; top: 0; z-index: 2; }
 .ringkas-jp.ok { background: #dcfce7; color: var(--p-sukses); } .ringkas-jp.beda { background: #fef3c7; color: var(--p-peringatan); }
 .unit-editor { border: 1px solid var(--p-garis); border-radius: 10px; padding: 12px; margin: 12px 0; background: #fff; }
+.editor-dokumen { display: grid; gap: 12px; margin: 16px 0; }
+.editor-kelompok { min-width: 0; }
+.editor-lapangan { display: grid; gap: 6px; margin: 0 0 12px; }
+.editor-pilihan { display: flex; align-items: flex-start; gap: 8px; margin: 8px 0; font-weight: 400; }
+.editor-pilihan input { width: auto; margin-top: 4px; }
+.editor-dokumen textarea { resize: vertical; }
 .unit-kepala { display: grid; grid-template-columns: auto 1fr 140px auto; gap: 8px; align-items: center; }
 .unit-kepala h3 { margin: 0; }
 .modul-tata { display: grid; grid-template-columns: 240px 1fr; gap: 16px; align-items: start; }

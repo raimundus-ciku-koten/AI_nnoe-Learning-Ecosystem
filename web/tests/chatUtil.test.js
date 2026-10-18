@@ -2,37 +2,39 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  idPribadi, idValid, urlAman, formatUkuran, namaBerkasAman, periksaBerkas,
-  waktuDaftar, statusTerakhirDilihat, kunciToken, ringkas, pesanGalatChat, MAKS_BERKAS,
+  idValid, urlAman, formatUkuran, namaBerkasAman, periksaBerkas,
+  waktuDaftar, statusTerakhirDilihat, presenceMasihAktif, MASA_AKTIF_PRESENCE,
+  ringkas, pesanGalatChat, MAKS_BERKAS,
   jalurLampiranValid, jalurLampiranDariUrl, namaLampiranTampil
 } from '../src/utils/chatUtil.js';
 
-test('idPribadi sama dari kedua arah', () => {
-  assert.equal(idPribadi('b', 'a'), 'd_a_b');
-  assert.equal(idPribadi('a', 'b'), idPribadi('b', 'a'));
-});
 test('idValid menolak karakter berbahaya', () => {
   assert.ok(idValid('d_abc_DEF-1'));
   for (const x of ['', 'a/b', 'a.b', '../x', null, 'a b', 'x'.repeat(161)]) assert.equal(idValid(x), false);
 });
-test('urlAman hanya Cloud Storage / emulator', () => {
-  assert.ok(urlAman('https://firebasestorage.googleapis.com/v0/b/x/o/chat%2Fa?alt=media&token=1'));
-  assert.ok(urlAman('http://127.0.0.1:9199/v0/b/x/o/a'));
-  for (const x of ['javascript:alert(1)', 'data:text/html,x', 'https://evil.example/x', 'http://firebasestorage.googleapis.com/x', undefined])
+test('urlAman hanya Supabase Storage / loopback', () => {
+  assert.ok(urlAman('https://project.supabase.co/storage/v1/object/sign/chat/file?token=1'));
+  assert.ok(urlAman('http://127.0.0.1:54321/storage/v1/object/sign/chat/file'));
+  for (const x of ['javascript:alert(1)', 'data:text/html,x', 'https://evil.example/x', 'https://example.firebaseapp.com/storage/v1/object/sign/chat/file', undefined])
     assert.equal(urlAman(x), false);
 });
 test('validasi jalur lampiran membatasi percakapan dan pemilik unggahan', () => {
-  assert.equal(jalurLampiranValid('chat/guru-a/d_guru-a_guru-b/123_file.pdf', 'd_guru-a_guru-b', 'guru-a'), true);
-  assert.equal(jalurLampiranValid('chat/guru-a/d_guru-a_guru-b/123_file.pdf', 'd_guru-a_guru-b', 'guru-b'), false);
-  assert.equal(jalurLampiranValid('chat/guru-a/d_lain/file.pdf', 'd_guru-a_guru-b'), false);
-  assert.equal(jalurLampiranValid('chat/guru-a/d_guru-a_guru-b/../secret', 'd_guru-a_guru-b'), false);
+  const owner = '11111111-1111-4111-8111-111111111111';
+  const conversation = '22222222-2222-4222-8222-222222222222';
+  const path = `chat/${owner}/${conversation}/123_file.pdf`;
+  assert.equal(jalurLampiranValid(path, conversation, owner), true);
+  assert.equal(jalurLampiranValid(path, conversation, '33333333-3333-4333-8333-333333333333'), false);
+  assert.equal(jalurLampiranValid(`chat/${owner}/other/file.pdf`, conversation), false);
+  assert.equal(jalurLampiranValid(`chat/${owner}/${conversation}/../secret`, conversation), false);
 });
-test('migrasi URL Storage lama menerima hanya jalur lampiran chat', () => {
-  const path = 'chat/guru-a/d_guru-a_guru-b/123_file.pdf';
-  const url = `https://firebasestorage.googleapis.com/v0/b/example/o/${encodeURIComponent(path)}?alt=media&token=secret`;
-  assert.equal(jalurLampiranDariUrl(url, 'd_guru-a_guru-b'), path);
-  assert.equal(jalurLampiranDariUrl('https://evil.example/' + encodeURIComponent(path), 'd_guru-a_guru-b'), null);
-  assert.equal(jalurLampiranDariUrl(url, 'd_other'), null);
+test('migrasi URL storage menerima hanya jalur lampiran chat', () => {
+  const owner = '11111111-1111-4111-8111-111111111111';
+  const conversation = '22222222-2222-4222-8222-222222222222';
+  const path = `chat/${owner}/${conversation}/123_file.pdf`;
+  const url = `https://project.supabase.co/storage/v1/object/sign/chat-attachments/${encodeURIComponent(path)}?token=secret`;
+  assert.equal(jalurLampiranDariUrl(url, conversation), path);
+  assert.equal(jalurLampiranDariUrl(`https://evil.example/${encodeURIComponent(path)}`, conversation), null);
+  assert.equal(jalurLampiranDariUrl(url, '33333333-3333-4333-8333-333333333333'), null);
 });
 test('periksaBerkas', () => {
   assert.deepEqual(periksaBerkas({ size: 10, type: 'image/png' }), { ok: true, jenis: 'image' });
@@ -72,8 +74,15 @@ test('statusTerakhirDilihat', () => {
   assert.equal(statusTerakhirDilihat({ online: false, lastSeen: t - 5 * 60000 }, t), 'Terakhir dilihat 5 menit lalu');
   assert.equal(statusTerakhirDilihat(null), '');
 });
-test('kunciToken & ringkas', () => {
-  assert.equal(kunciToken('a.b#c$d[e]f/g'), 'a_b_c_d_e_f_g');
+test('presence kedaluwarsa setelah tiga interval heartbeat', () => {
+  const now = Date.now();
+  assert.equal(presenceMasihAktif({ online: true, lastSeen: now - MASA_AKTIF_PRESENCE }, now), true);
+  assert.equal(presenceMasihAktif({ online: true, lastSeen: now - MASA_AKTIF_PRESENCE - 1 }, now), false);
+  assert.equal(presenceMasihAktif({ online: true, lastSeen: now + 1 }, now), false);
+  assert.equal(presenceMasihAktif({ online: false, lastSeen: now }, now), false);
+  assert.equal(presenceMasihAktif({ online: true, lastSeen: NaN }, now), false);
+});
+test('ringkas', () => {
   assert.equal(ringkas('  a   b  ', 10), 'a b');
   assert.equal(ringkas('abcdef', 4), 'abc…');
 });

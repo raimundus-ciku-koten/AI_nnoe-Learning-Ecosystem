@@ -259,3 +259,15 @@ test('validasiAtp: kode ganda, JP nol, semester salah terdeteksi', () => {
   assert.equal(validasiAtp(buatAtp()).ok, true);
   assert.equal(validasiAtp({ unit: [] }).ok, false);
 });
+
+test('validasiAtp: unit harus merujuk elemen CP kanonis', () => {
+  const atp = buatAtp();
+  atp.unit[0].elemen = 'Elemen yang tidak ada';
+  const v = validasiAtp(atp);
+  assert.equal(v.ok, false);
+  assert.ok(v.galat.includes('UNIT_ELEMEN_CP_TIDAK_VALID'));
+
+  const tanpaCp = buatAtp();
+  tanpaCp.cp = [];
+  assert.ok(validasiAtp(tanpaCp).galat.includes('ATP_TANPA_CP'));
+});

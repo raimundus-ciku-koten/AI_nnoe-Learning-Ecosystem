@@ -1,16 +1,8 @@
 // src/types/schema.ts
-export type DatabaseTimestamp = string | Date;
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type TimestampLike = string | number | Date;
 
-export type UserRole =
-  | 'superadmin'
-  | 'admin_sekolah'
-  | 'operator'
-  | 'guru'
-  | 'siswa'
-  | 'ortu'
-  | 'orang_tua'
-  | 'demo'
-  | 'unprovisioned';
+export type UserRole = 'superadmin' | 'admin_sekolah' | 'guru' | 'siswa' | 'orang_tua' | 'demo';
 
 export interface UserDoc {
   uid: string;
@@ -23,12 +15,12 @@ export interface UserDoc {
   kelasIds: string[];
   fotoUrl: string | null;
   telepon: string | null;
-  geminiApiKey?: string; // Terenkripsi di sisi klien bila diisi
+  geminiApiKey?: string;
   aktif: boolean;
-  lastLogin: DatabaseTimestamp;
-  createdAt: DatabaseTimestamp;
-  updatedAt: DatabaseTimestamp;
-  deletedAt: DatabaseTimestamp | null;
+  lastLogin: TimestampLike | JsonValue;
+  createdAt: TimestampLike | JsonValue;
+  updatedAt: TimestampLike | JsonValue;
+  deletedAt: TimestampLike | JsonValue | null;
 }
 
 export interface SekolahDoc {
@@ -44,8 +36,8 @@ export interface SekolahDoc {
   semesterAktif: 'ganjil' | 'genap';
   paket: 'free' | 'premium';
   aktif: boolean;
-  createdAt: DatabaseTimestamp;
-  updatedAt: DatabaseTimestamp;
+  createdAt: TimestampLike | JsonValue;
+  updatedAt: TimestampLike | JsonValue;
 }
 
 export interface TahunAjaranDoc {
@@ -66,8 +58,8 @@ export interface KelasDoc {
   tahunAjaranId: string;
   jumlahSiswa: number;
   mapelIds: string[];
-  createdAt: DatabaseTimestamp;
-  updatedAt: DatabaseTimestamp;
+  createdAt: TimestampLike | JsonValue;
+  updatedAt: TimestampLike | JsonValue;
 }
 
 export interface SiswaDoc {
@@ -103,10 +95,10 @@ export interface PerencanaanDoc {
   konten: Record<string, unknown>;
   versi: number;
   status: 'draft' | 'final';
-  driveFileId?: string; // ID Google Drive milik guru
+  driveFileId?: string;
   fileUrl: string | null;
-  createdAt: DatabaseTimestamp;
-  updatedAt: DatabaseTimestamp;
+  createdAt: TimestampLike | JsonValue;
+  updatedAt: TimestampLike | JsonValue;
 }
 
 export interface JurnalDoc {
@@ -122,9 +114,9 @@ export interface JurnalDoc {
   jumlahHadir: number;
   jumlahAbsen: number;
   catatan: string;
-  fotoUrl: string | null; // Base64 terkompresi atau Drive link
-  createdAt: DatabaseTimestamp;
-  updatedAt: DatabaseTimestamp;
+  fotoUrl: string | null;
+  createdAt: TimestampLike | JsonValue;
+  updatedAt: TimestampLike | JsonValue;
 }
 
 export interface PresensiDoc {
@@ -138,7 +130,7 @@ export interface PresensiDoc {
   sakit: string[];
   izin: string[];
   alpa: string[];
-  createdAt: DatabaseTimestamp;
+  createdAt: TimestampLike | JsonValue;
 }
 
 export interface BankSoalDoc {
@@ -157,8 +149,8 @@ export interface BankSoalDoc {
   bobot: number;
   tags: string[];
   sumber: 'AI' | 'Manual';
-  createdAt: DatabaseTimestamp;
-  updatedAt: DatabaseTimestamp;
+  createdAt: TimestampLike | JsonValue;
+  updatedAt: TimestampLike | JsonValue;
 }
 
 export interface UjianDoc {
@@ -171,12 +163,12 @@ export interface UjianDoc {
   acakSoal: boolean;
   acakPilihan: boolean;
   durasiMenit: number;
-  mulai: DatabaseTimestamp;
-  selesai: DatabaseTimestamp;
+  mulai: TimestampLike | string;
+  selesai: TimestampLike | string;
   kkm: number;
   status: 'draft' | 'aktif' | 'selesai';
-  createdAt: DatabaseTimestamp;
-  updatedAt: DatabaseTimestamp;
+  createdAt: TimestampLike | JsonValue;
+  updatedAt: TimestampLike | JsonValue;
 }
 
 export interface SubmissionDoc {
@@ -190,8 +182,8 @@ export interface SubmissionDoc {
   skorEssay: number;
   skorTotal: number;
   status: 'mengerjakan' | 'selesai';
-  waktuMulai: DatabaseTimestamp;
-  waktuSelesai: DatabaseTimestamp;
+  waktuMulai: TimestampLike | string;
+  waktuSelesai: TimestampLike | string;
   pelanggaran: string[];
-  createdAt: DatabaseTimestamp;
+  createdAt: TimestampLike | JsonValue;
 }

@@ -1,9 +1,8 @@
 /**
- * Trigger notifikasi diekspor dari functions/index.js setelah admin.initializeApp().
- * Butuh: firebase-admin, firebase-functions v2, paket Blaze.
- *
- * Pastikan admin.initializeApp() sudah dipanggil (dengan databaseURL jika perlu).
+ * Arsip handler Firebase; entry point sengaja dinonaktifkan.
  */
+
+throw new Error('Legacy Firebase chat functions diarsipkan dan dinonaktifkan.');
 
 const { onValueCreated } = require('firebase-functions/v2/database');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');

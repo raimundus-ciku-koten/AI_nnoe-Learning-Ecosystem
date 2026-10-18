@@ -1,31 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  collection, documentId, getDocs, limit, orderBy, query, startAfter,
-} from 'firebase/firestore';
-import { db } from '../firebase/index.js';
+import { supabase } from '../lib/supabase.ts';
 import { useAuth } from '../context/AuthContext.jsx';
 import '../styles/platform-tenants.css';
 
 const UKURAN_HALAMAN = 40;
 
-function namaSekolah(data, id) {
-  return typeof data.nama === 'string' && data.nama.trim() ? data.nama.trim() : id;
-}
-
-function statusLangganan(nilai) {
-  if (!nilai || typeof nilai !== 'object') return { label: 'Belum berlangganan', className: 'is-unknown' };
-  if (nilai.aktif !== true) return { label: 'Tidak aktif', className: 'is-inactive' };
-
-  const sampai = nilai.sampai?.toDate?.();
-  if (!(sampai instanceof Date) || Number.isNaN(sampai.getTime())) {
-    return { label: 'Perlu verifikasi', className: 'is-unknown' };
-  }
-  if (sampai <= new Date()) return { label: 'Kedaluwarsa', className: 'is-inactive' };
-
-  return {
-    label: `Aktif hingga ${new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(sampai)}`,
-    className: 'is-active',
-  };
+function statusTenant(active) {
+  return active
+    ? { label: 'Aktif', className: 'is-active' }
+    : { label: 'Nonaktif', className: 'is-inactive' };
 }
 
 export default function PlatformTenantsPage() {
@@ -52,23 +35,23 @@ export default function PlatformTenantsPage() {
     }
 
     try {
-      const batas = query(
-        collection(db, 'tenants'),
-        orderBy(documentId()),
-        ...(berikutnya && cursor.current ? [startAfter(cursor.current)] : []),
-        limit(UKURAN_HALAMAN + 1),
-      );
-      const snapshot = await getDocs(batas);
-      const dokumen = snapshot.docs.slice(0, UKURAN_HALAMAN);
-      const halaman = dokumen.map((item) => ({ id: item.id, ...item.data() }));
+      let request = supabase
+        .from('tenants')
+        .select('id, name, active')
+        .order('id')
+        .limit(UKURAN_HALAMAN + 1);
+      if (berikutnya && cursor.current) request = request.gt('id', cursor.current);
+      const { data, error: queryError } = await request;
+      if (queryError) throw queryError;
 
-      cursor.current = dokumen.at(-1) || cursor.current;
-      setHasMore(snapshot.docs.length > UKURAN_HALAMAN);
-      setTenants((saatIni) => berikutnya ? [...saatIni, ...halaman] : halaman);
+      const page = data.slice(0, UKURAN_HALAMAN);
+      cursor.current = page.at(-1)?.id || cursor.current;
+      setHasMore(data.length > UKURAN_HALAMAN);
+      setTenants((current) => berikutnya ? [...current, ...page] : page);
     } catch (err) {
       console.error('[platform-tenants] Gagal memuat daftar tenant:', err);
-      setError(err?.code === 'permission-denied'
-        ? 'Akses daftar tenant ditolak. Pastikan sesi memiliki klaim superadmin yang terbaru.'
+      setError(err?.code === '42501'
+        ? 'Akses daftar tenant ditolak. Pastikan sesi superadmin aktif.'
         : 'Daftar tenant tidak dapat dimuat. Periksa koneksi lalu coba lagi.');
     } finally {
       busy.current = false;
@@ -85,8 +68,8 @@ export default function PlatformTenantsPage() {
     const kata = search.trim().toLocaleLowerCase('id');
     if (!kata) return tenants;
     return tenants.filter((tenant) =>
-      [tenant.id, namaSekolah(tenant, tenant.id), tenant.npsn, tenant.jenjang]
-        .some((nilai) => String(nilai || '').toLocaleLowerCase('id').includes(kata)));
+      [tenant.id, tenant.name].some((nilai) =>
+        String(nilai || '').toLocaleLowerCase('id').includes(kata)));
   }, [search, tenants]);
 
   if (role !== 'superadmin') {
@@ -105,7 +88,7 @@ export default function PlatformTenantsPage() {
       <header className="platform-tenants-heading">
         <p className="platform-tenants-kicker">Manajemen tenant · platform</p>
         <h1>Daftar sekolah</h1>
-        <p>Informasi tenant dan status langganan ditampilkan secara baca-saja. Perubahan langganan harus melalui alur server yang berizin.</p>
+        <p>Daftar tenant Supabase ditampilkan secara baca-saja. Status langganan dan perubahan tenant dikelola melalui alur backend berizin.</p>
       </header>
 
       <section className="platform-tenants-card" aria-labelledby="platform-tenants-title">
@@ -115,7 +98,7 @@ export default function PlatformTenantsPage() {
             <p>{tenants.length ? `${tenants.length} tenant dimuat` : 'Daftar tenant pada platform.'}</p>
           </div>
           <label className="platform-tenants-search">
-            <span>Cari nama, NPSN, atau ID tenant</span>
+            <span>Cari nama atau ID tenant</span>
             <input
               type="search"
               value={search}
@@ -147,21 +130,17 @@ export default function PlatformTenantsPage() {
                 <tr>
                   <th scope="col">Sekolah</th>
                   <th scope="col">ID tenant</th>
-                  <th scope="col">NPSN</th>
-                  <th scope="col">Jenjang</th>
-                  <th scope="col">Langganan</th>
+                  <th scope="col">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {terlihat.map((tenant) => {
-                  const langganan = statusLangganan(tenant.langganan);
+                  const status = statusTenant(tenant.active);
                   return (
                     <tr key={tenant.id}>
-                      <th scope="row">{namaSekolah(tenant, tenant.id)}</th>
+                      <th scope="row">{tenant.name || tenant.id}</th>
                       <td>{tenant.id}</td>
-                      <td>{tenant.npsn || '—'}</td>
-                      <td>{tenant.jenjang || '—'}</td>
-                      <td><span className={`platform-tenants-status ${langganan.className}`}>{langganan.label}</span></td>
+                      <td><span className={`platform-tenants-status ${status.className}`}>{status.label}</span></td>
                     </tr>
                   );
                 })}

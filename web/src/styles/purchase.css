@@ -7,9 +7,9 @@
 }
 .ale-purchase-header { display: grid; gap: .45rem; }
 .ale-purchase-header h2 { font-size: clamp(1.5rem, 3vw, 2rem); }
-.ale-purchase-header p, .ale-purchase-demo p { color: var(--ale-muted, #475569); }
+.ale-purchase-header p { color: var(--ale-muted, #475569); }
 .ale-purchase-kicker { color: var(--ale-teal-700, #0f766e); font-size: .85rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
-.ale-purchase-card, .ale-purchase-demo {
+.ale-purchase-card {
   display: grid;
   gap: 1rem;
   padding: clamp(1rem, 3vw, 1.5rem);
@@ -25,16 +25,6 @@
   border: 1px solid var(--ale-line, #cbd5e1);
   border-radius: .6rem;
   background: #fff;
-}
-.ale-purchase-summary {
-  width: 100%;
-  padding: .7rem;
-  border: 1px solid var(--ale-line, #cbd5e1);
-  border-radius: .6rem;
-  color: var(--ale-ink, #1e293b);
-  font: inherit;
-  line-height: 1.5;
-  resize: vertical;
 }
 .ale-purchase-seats { display: grid; gap: .55rem; margin: 0; padding: 0; border: 0; }
 .ale-purchase-seats legend { margin-bottom: .5rem; font-weight: 800; }
@@ -97,12 +87,22 @@
   font-weight: 800;
 }
 .ale-purchase-submit:disabled { opacity: .65; cursor: progress; }
+.ale-purchase-refresh {
+  justify-self: start;
+  padding: .4rem .65rem;
+  border: 1px solid currentColor;
+  border-radius: .5rem;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.ale-purchase-refresh:disabled { opacity: .65; cursor: progress; }
 .ale-purchase-message { padding: .7rem; border-radius: .6rem; background: #fef2f2; color: #b91c1c; }
 .ale-purchase-message-info { background: #eff6ff; color: #1e40af; }
 .ale-purchase-current { display: grid; gap: .2rem; padding: .85rem 1rem; border: 1px solid #b9e3d2; border-radius: .7rem; background: #f0fbf6; color: #1b6047; }
 .ale-purchase-current small { color: #526d63; }
 .ale-purchase-footnote { color: var(--ale-muted, #475569); font-size: .85rem; }
-.ale-purchase-demo h3 { font-size: 1.05rem; }
 @media (max-width: 560px) {
   .ale-purchase-seat { align-items: flex-start; }
   .ale-purchase-plan { flex-wrap: wrap; }

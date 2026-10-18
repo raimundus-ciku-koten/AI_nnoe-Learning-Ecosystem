@@ -18,6 +18,8 @@ web/.env.*.local
 web/.env.production
 *.apk
 *.aab
+*.apk.disabled
+*.aab.disabled
 android-apk/.gradle/
 android-apk/build/
 android-apk/app/build/

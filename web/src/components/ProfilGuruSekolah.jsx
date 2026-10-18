@@ -8,7 +8,7 @@ export default function ProfilGuruSekolah() {
   if (loading) {
     return (
       <div className="p-6 text-center text-gray-500">
-        Memuat profil dari Firestore...
+        Memuat profil dari Supabase...
       </div>
     );
   }
@@ -17,7 +17,7 @@ export default function ProfilGuruSekolah() {
     return (
       <div className="p-6 bg-red-50 text-red-600 rounded-lg border border-red-200">
         <strong>Error:</strong> {error}
-        <p className="text-sm mt-2">Periksa koneksi internet atau Security Rules Anda.</p>
+        <p className="text-sm mt-2">Periksa koneksi internet atau kebijakan akses akun Anda.</p>
       </div>
     );
   }

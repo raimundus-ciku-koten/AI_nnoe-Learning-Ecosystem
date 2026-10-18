@@ -1,5 +1,5 @@
 // web/src/pages/dataDasar/denahLogika.js
-// Logika murni (tanpa DOM, tanpa Firebase) untuk denah duduk & pembagian kelompok.
+// Logika murni (tanpa DOM atau layanan backend) untuk denah duduk & pembagian kelompok.
 // Dipisahkan dari tabDenah.js agar bisa diuji otomatis: `node --test` (lihat denahLogika.test.mjs).
 
 export const MAKS_UKURAN = 10;
@@ -44,7 +44,7 @@ export function semuaKunci(baris, kolom) {
 }
 
 /**
- * Membersihkan dokumen denah dari Firestore terhadap daftar siswa yang masih ada.
+ * Membersihkan data denah terhadap daftar siswa yang masih ada.
  * Membuang: kursi di luar grid, siswa yang sudah dihapus, siswa ganda, kunci aneh,
  * dan nomor kelompok di luar rentang. Aman terhadap data kosong / rusak.
  */

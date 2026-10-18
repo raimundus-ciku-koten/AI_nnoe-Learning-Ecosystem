@@ -1,6 +1,6 @@
 /**
  * @file Validasi & sanitasi masukan. Dipakai formulir (umpan balik cepat) DAN sebelum
- * menulis ke Firestore. Security Rules tetap menjadi penjaga terakhir di server.
+ * menyimpan ke vault Drive. Struktur tetap diperiksa kembali oleh repository sebelum enkripsi.
  * Kunci galat berupa KODE (bukan teks) agar mudah diterjemahkan lewat i18n.
  */
 
@@ -115,12 +115,18 @@ export function validasiAtp(atp) {
   const galat = [];
   if (!atp || !Array.isArray(atp.unit) || atp.unit.length === 0) return { ok: false, galat: ['ATP_TANPA_UNIT'] };
   if (atp.unit.length > BATAS.UNIT_MAKS) galat.push('UNIT_TERLALU_BANYAK');
+  const elemenCp = Array.isArray(atp.cp)
+    ? new Set(atp.cp.map((item) => bersihkanTeks(item?.elemen).toLocaleLowerCase('id-ID')).filter(Boolean))
+    : new Set();
+  if (!elemenCp.size) galat.push('ATP_TANPA_CP');
+  if (elemenCp.size !== (atp.cp?.length ?? 0)) galat.push('ELEMEN_CP_TIDAK_VALID');
 
   const kodeTerlihat = new Set();
   let jumlahTp = 0;
   atp.unit.forEach((u, i) => {
     if (!bersihkanTeks(u.nama)) galat.push(`UNIT_${i + 1}_TANPA_NAMA`);
     if (![1, 2].includes(u.semester)) galat.push(`UNIT_${i + 1}_SEMESTER_TIDAK_VALID`);
+    if (!elemenCp.has(bersihkanTeks(u.elemen).toLocaleLowerCase('id-ID'))) galat.push('UNIT_ELEMEN_CP_TIDAK_VALID');
     if (!(u.tp ?? []).length) galat.push(`UNIT_${i + 1}_TANPA_TP`);
     (u.tp ?? []).forEach((t) => {
       jumlahTp++;

@@ -10,8 +10,9 @@ import { menuUntukPeran, cariMenu } from '../navigasi.js';
 import { NAMA_APLIKASI } from '../config.js';
 import { LABEL_PERAN, inisial, sideTutupTersimpan, terapkanSideTutup, toast } from '../ui.js';
 import Ikon from './Ikon.jsx';
-import AdSenseBanner, { AD_SENSE_ENABLED } from './AdSenseBanner.jsx';
-import { uidDariUrlFotoProfil, pasangFotoTerlindung } from '../services/protectedMedia.js';
+import { urlFotoAman } from '../services/protectedMedia.js';
+import { isEconomyMode } from '../services/economyMode.js';
+import '../styles/economy-mode.css';
 
 const MQ_DESKTOP = '(min-width: 961px)';
 
@@ -34,6 +35,7 @@ function useDesktop() {
 
 export default function AppShell({ path, search = '', judulHalaman, children }) {
   const { user, profile, role, logout } = useAuth();
+  const hematData = isEconomyMode();
   const desktop = useDesktop();
   const daftarMenu = menuUntukPeran(role);
   const menu = cariMenu(path, search, role);
@@ -57,11 +59,14 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
 
   useEffect(() => {
     const image = avatarRef.current;
-    if (!image || !user?.photoURL) return undefined;
-    if (uidDariUrlFotoProfil(user.photoURL)) return pasangFotoTerlindung(image, user.photoURL);
+    if (!image) return undefined;
+    if (hematData || !urlFotoAman(user?.photoURL)) {
+      image.removeAttribute('src');
+      return undefined;
+    }
     image.src = user.photoURL;
     return undefined;
-  }, [user?.uid, user?.photoURL]);
+  }, [hematData, user?.uid, user?.photoURL]);
 
   // Tutup panel mobile & popover saat pindah halaman.
   useEffect(() => { setMobileBuka(false); setProfilBuka(false); }, [path]);
@@ -179,7 +184,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
                 <Ikon nama="badge" /> Langganan aktif
               </span>
             )}
-            {profile?.logoSekolah && (
+            {!hematData && profile?.logoSekolah && (
               <img className="ale-logo-sekolah" src={profile.logoSekolah} alt="Logo sekolah"
                    referrerPolicy="no-referrer" width="40" height="40" />
             )}
@@ -189,7 +194,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
                       aria-label={`Menu profil ${nama}`}
                       onClick={() => setProfilBuka((v) => !v)}
                       aria-haspopup="true" aria-expanded={profilBuka} aria-controls="ale-pop-profil">
-                {user?.photoURL ? (
+                {!hematData && urlFotoAman(user?.photoURL) ? (
                   <img className="ale-avatar" ref={avatarRef} alt="" referrerPolicy="no-referrer" />
                 ) : (
                   <span className="ale-avatar" aria-hidden="true">{inisial(nama)}</span>
@@ -215,10 +220,6 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
                 <button type="button" role="menuitem" className="ale-pop-item ale-pw-amber"
                         onClick={() => handleAksiProfil('notif')} disabled={!!aksiProfil}>
                   <Ikon nama="badge" /> Aktifkan notifikasi
-                </button>
-                <button type="button" role="menuitem" className="ale-pop-item ale-pw-teal"
-                        onClick={() => handleAksiProfil('fcm')} disabled={!!aksiProfil}>
-                  <Ikon nama="badge" /> Daftarkan ulang notifikasi
                 </button>
                 <button type="button" role="menuitem" className="ale-pop-item ale-pw-rose"
                         onClick={() => handleAksiProfil('foto-hapus')} disabled={!!aksiProfil}>
@@ -327,10 +328,14 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
 
         <div className="ale-tirai" hidden={!mobileBuka} onClick={() => setMobileBuka(false)} aria-hidden="true" />
 
-        <main id="ale-konten" className={`ale-main${AD_SENSE_ENABLED ? ' ale-main-with-ad' : ''}`} tabIndex={-1}>
+        <main id="ale-konten" className="ale-main" tabIndex={-1}>
+          {hematData && (
+            <p className="ale-economy-notice" role="status">
+              Mode hemat data aktif. Gambar profil eksternal dimatikan dan aktivitas online diperbarui lebih jarang.
+            </p>
+          )}
           {children}
         </main>
-        <AdSenseBanner />
       </div>
     </div>
   );

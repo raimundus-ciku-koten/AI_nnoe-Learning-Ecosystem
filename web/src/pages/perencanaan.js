@@ -15,16 +15,23 @@ import './perencanaan/perencanaan.css';
  *     topbar; sekarang keduanya sudah di shell.
  */
 import { getState } from '../state.js';
+import {
+  hubungkanGoogleDriveUntukPengguna,
+  sesiGoogleWorkspacePerPengguna,
+} from '../services/googleWorkspaceAuth.js';
+import { identitasEnkripsiDriveDalamSesi } from '../services/driveEncryption.js';
 import { h, toast, konfirmasi } from './perencanaan/ui/dom.js';
 import { t } from './perencanaan/i18n/index.js';
 import { KONTEKS_BAWAAN, bukaFormPaket } from './perencanaan/ui/form-paket.js';
 import { halamanDetail } from './perencanaan/ui/halaman-detail.js';
-import { buatPaket, dengarDaftarPaket, hapusPaket } from './perencanaan/services/repository.js';
+import {
+  buatPaket, dengarDaftarPaket, hapusPaket, pilihPaketAdminDrive,
+} from './perencanaan/services/repository.js';
 import { daftarGuruPerencanaan } from './perencanaan/services/directory.js';
 import { BATAS, JENIS } from './perencanaan/constants.js';
 
-const PERAN_BOLEH = new Set(['guru', 'admin_sekolah', 'superadmin']);
-const PERAN_ADMIN = new Set(['admin_sekolah', 'superadmin']);
+const PERAN_BOLEH = new Set(['guru', 'admin_sekolah']);
+const PERAN_ADMIN = new Set(['admin_sekolah']);
 
 // ============================================================================
 // FALLBACK — bila modul perencanaan belum siap
@@ -72,6 +79,44 @@ export function halamanPerencanaan(wadah, arg = {}) {
   if (!PERAN_BOLEH.has(role) || (role !== 'superadmin' && !tenantId) || !user?.uid) {
     wadah.append(
       h('p', { class: 'kotak kotak-galat', role: 'alert' }, t('hub.peranTidakBoleh'))
+    );
+    return () => {};
+  }
+
+  const koneksiDrive = sesiGoogleWorkspacePerPengguna(user.uid);
+  const tokenDrive = koneksiDrive?.expiresAt > Date.now() ? koneksiDrive.accessToken : '';
+  const identitasVault = identitasEnkripsiDriveDalamSesi(user.uid);
+  if (!tokenDrive || !identitasVault) {
+    const button = !tokenDrive
+      ? h('button', {
+        type: 'button',
+        class: 'tombol',
+        onClick: async (event) => {
+          event.currentTarget.disabled = true;
+          try {
+            await hubungkanGoogleDriveUntukPengguna(user);
+            halamanPerencanaan(wadah, arg);
+          } catch (error) {
+            console.error('[perencanaan] Gagal menghubungkan vault Drive:', error);
+            wadah.replaceChildren(
+              h('p', { class: 'kotak kotak-galat', role: 'alert' },
+                error?.message || 'Google Drive belum dapat dihubungkan.'),
+              h('a', { class: 'tombol tombol-sekunder', href: '#/pengaturan/google' },
+                'Buka pengaturan Google Workspace')
+            );
+          }
+        },
+      }, 'Hubungkan Google Drive')
+      : null;
+    wadah.replaceChildren(
+      h('section', { class: 'kotak kotak-info', role: 'status' },
+        h('h2', null, 'Perencanaan terenkripsi di Google Drive'),
+        h('p', null, 'Hubungkan Drive dan buka kunci vault untuk mengakses paket. Data Perencanaan lama di Firestore belum diimpor dan tidak akan ditampilkan sebagai paket kosong.'),
+        button,
+        !tokenDrive ? null : h('a', {
+          class: 'tombol tombol-sekunder',
+          href: '#/pengaturan/google',
+        }, 'Buka pengaturan Google Workspace untuk membuka atau membuat kunci vault')),
     );
     return () => {};
   }
@@ -164,7 +209,7 @@ function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, gur
       paketId: params.id,
       jenis: params.jenis,
       search: arg.search,
-      canEditPackage: admin,
+      canEditPackage: !admin,
       canGenerateDocuments: !admin,
       routeBase: baseRoute,
       guruUid,
@@ -194,6 +239,7 @@ function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, gur
     },
   });
 
+  const pemilik = !admin;
   const kartu = (p) => h('li', { class: 'kartu kartu-paket' },
     h('h3', null, p.mapel),
     h('p', { class: 'meta' },
@@ -204,7 +250,7 @@ function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, gur
         href: tautanPaket(p.id, jenisPilihan),
         'aria-label': t('hub.bukaPaket', { nama: p.mapel }),
       }, t('umum.buka')),
-      admin ? h('button', {
+      pemilik ? h('button', {
         type: 'button',
         class: 'tombol tombol-bahaya tombol-sekunder',
         'aria-label': t('hub.hapusPaket', { nama: p.mapel }),
@@ -235,7 +281,6 @@ function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, gur
       isi.append(
         h('div', { class: 'kosong-besar' },
           h('p', null, t(admin ? 'hub.kosong' : 'hub.kosongGuru')),
-          admin ? h('button', { type: 'button', class: 'tombol', onClick: baru }, t('hub.paketBaru')) : null
         )
       );
       return;
@@ -248,16 +293,32 @@ function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, gur
   wadah.append(
     h('div', { class: 'hub-kepala' },
       h('h2', null, admin ? t('hub.judulUntukGuru', { nama: guruNama }) : t('hub.judul')),
-      admin ? h('button', {
+      pemilik ? h('button', {
         type: 'button',
         class: 'tombol',
         disabled: (daftar?.length ?? 0) >= BATAS.PAKET_MAKS_PER_GURU,
         onClick: baru,
-      }, t('hub.paketBaru')) : null
+      }, t('hub.paketBaru')) : h('button', {
+        type: 'button',
+        class: 'tombol tombol-sekunder',
+        onClick: async (event) => {
+          const button = event.currentTarget;
+          button.disabled = true;
+          try {
+            const count = await pilihPaketAdminDrive(uid);
+            if (count) toast(`Berhasil menambahkan ${count} paket yang dibagikan.`, 'sukses');
+          } catch (error) {
+            toast(error?.message || t('galat.UMUM'), 'galat');
+          } finally {
+            button.disabled = false;
+          }
+        },
+      }, 'Pilih paket di Google Drive')
     ),
     admin ? h('a', { class: 'tautan-kembali', href: baseRoute }, `← ${t('hub.pilihGuru')}`) : null,
     h('p', { class: admin ? 'meta' : 'kotak kotak-info', role: admin ? null : 'note' },
       admin ? t('hub.deskripsi') : t('hub.paketTerkunci')),
+    h('p', { class: 'kotak kotak-info', role: 'note' }, t('hub.legacyBelumDiimpor')),
     isi
   );
   gambar();

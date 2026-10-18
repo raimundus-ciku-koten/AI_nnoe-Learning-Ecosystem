@@ -23,39 +23,42 @@ export function PlatformControlProvider({ children }) {
 
     let active = true;
     setState((current) => ({ ...current, loading: true, error: '' }));
-    const muat = async () => {
-      const { data, error } = await supabase
-        .from('platform_public_config')
-        .select('maintenance,features')
-        .eq('id', 'platform')
-        .single();
-      if (!active) return;
-      if (error) {
-        console.error('[platform-controls] Gagal memuat konfigurasi Supabase:', error);
+
+    async function loadPlatformConfig() {
+      try {
+        const { data, error } = await supabase
+          .from('platform_control')
+          .select('maintenance, features')
+          .eq('id', 'global')
+          .maybeSingle();
+
+        if (!active) return;
+        if (error) throw error;
+
+        const features = data?.features && typeof data.features === 'object' ? data.features : {};
+        setState({
+          loading: false,
+          maintenance: data?.maintenance === true,
+          features: {
+            aiAssistant: typeof features.aiAssistant === 'boolean' ? features.aiAssistant : true,
+            aiGeneration: typeof features.aiGeneration === 'boolean' ? features.aiGeneration : true,
+          },
+          error: '',
+        });
+      } catch (error) {
+        console.error('[platform-controls] Gagal memuat konfigurasi runtime:', error);
+        if (!active) return;
         setState((current) => ({
           ...current,
           loading: false,
           error: 'Status kontrol platform tidak dapat diperbarui. Perubahan server tetap berlaku.',
         }));
-        return;
       }
-      const features = data.features && typeof data.features === 'object' ? data.features : {};
-      setState({
-        loading: false,
-        maintenance: data.maintenance === true,
-        features: {
-          aiAssistant: typeof features.aiAssistant === 'boolean' ? features.aiAssistant : true,
-          aiGeneration: typeof features.aiGeneration === 'boolean' ? features.aiGeneration : true,
-        },
-        error: '',
-      });
-    };
+    }
 
-    void muat();
-    const interval = window.setInterval(() => void muat(), 15000);
+    void loadPlatformConfig();
     return () => {
       active = false;
-      window.clearInterval(interval);
     };
   }, [user?.uid]);
 

@@ -835,7 +835,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand-600); }
 .plan-scroller::-webkit-scrollbar { height: .55rem; }
 .plan-scroller::-webkit-scrollbar-track { border-radius: 999px; background: var(--brand-50); }
 .plan-scroller::-webkit-scrollbar-thumb { border-radius: 999px; background: var(--brand-500); }
-.demo-note, .testi-empty { color: var(--ink-600); font-size: var(--text-sm); }
+.testi-empty { color: var(--ink-600); font-size: var(--text-sm); }
 
 .testi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
 .testi { margin: 0; padding: .25rem 0 .25rem 1.1rem; border-left: 3px solid var(--brand-300); }

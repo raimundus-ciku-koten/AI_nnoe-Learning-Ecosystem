@@ -1,6 +1,6 @@
 // web/src/pages/dataDasar/barcode.js
 // Generator barcode SVG murni (tanpa dependensi): Code128-B (ISO/IEC 15417) & Code39.
-// Modul ini sengaja mandiri agar mudah diuji di Node/Vitest tanpa Firebase.
+// Modul ini sengaja mandiri agar mudah diuji di Node/Vitest.
 
 const escXml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => (

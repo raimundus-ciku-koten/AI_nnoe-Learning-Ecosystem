@@ -70,6 +70,44 @@ export function ratakanTp(atp) {
 }
 
 /**
+ * Ambil CP dan TP kanonis dari ATP untuk ditampilkan tanpa parafrasa pada Modul Ajar.
+ * @param {Atp} atp
+ * @param {UnitAtp} unit
+ */
+export function sumberBelajarModul(atp, unit, prota, prosem) {
+  const elemen = unit?.elemen;
+  const program = prota?.program?.[unit?.semester];
+  const alokasi = program?.modul?.find((item) => item.no === unit?.no);
+  const jadwal = [];
+  for (const semester of [1, 2]) {
+    for (const bulan of prosem?.[semester === 1 ? 'ganjil' : 'genap']?.bulan ?? []) {
+      for (const pekan of bulan.pekan ?? []) {
+        const segmen = (pekan.segmen ?? []).filter((item) => item.modulNo === unit?.no);
+        if (!segmen.length) continue;
+        jadwal.push({
+          semester,
+          pekan: pekan.noSemester,
+          mulai: pekan.mulai,
+          selesai: pekan.selesai,
+          jp: segmen.reduce((total, item) => total + item.jp, 0)
+        });
+      }
+    }
+  }
+  return {
+    cp: (atp?.cp ?? []).filter((item) => item.elemen === elemen),
+    tp: (unit?.tp ?? []).map(({ kode, rumusan, materi }) => ({ kode, rumusan, materi })),
+    alokasi: alokasi ? {
+      semester: unit.semester,
+      jp: alokasi.jp,
+      jpTP: alokasi.jpTP,
+      uh: alokasi.uh
+    } : null,
+    jadwal
+  };
+}
+
+/**
  * Anggaran waktu: berapa JP ulangan harian per unit dan sisa untuk TP.
  * @param {number} jumlahUnit
  * @param {number} totalJP

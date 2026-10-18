@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import {
   GalatJadwal, MAKS_ENTRI, cariBentrok, formatDurasi, formatJam, idBentrokDalamHari,
   kelompokPerHari, menit, normalisasiEntri, sarankanJamBerikutnya, terapkanOperasi,
-  totalMenit, validasiSesi,
+  sesiUntukHari, totalMenit, validasiSesi,
 } from './jadwalUtil.js';
 
 const sesi = (id, hari, mulai, selesai, kelas = '7A', mapel = 'IPA') => ({ id, hari, mulai, selesai, kelas, mapel });
@@ -147,6 +147,26 @@ describe('kelompokPerHari / totalMenit', () => {
   it('menjumlah menit mengajar', () => {
     assert.equal(totalMenit([sesi('a', 1, '07:00', '07:40'), sesi('b', 2, '08:00', '09:00')]), 100);
     assert.equal(totalMenit([]), 0);
+  });
+});
+
+describe('sesiUntukHari', () => {
+  const jadwal = [
+    sesi('late', 1, '09:00', '09:40'),
+    sesi('other-day', 2, '07:00', '07:40'),
+    sesi('early', 1, '07:00', '07:40'),
+  ];
+
+  it('returns only today sessions ordered by start time without mutating the schedule', () => {
+    const result = sesiUntukHari(jadwal, 1);
+    assert.deepEqual(result.map(({ id }) => id), ['early', 'late']);
+    assert.deepEqual(jadwal.map(({ id }) => id), ['late', 'other-day', 'early']);
+  });
+
+  it('returns an empty list for unsupported days or a non-array schedule', () => {
+    assert.deepEqual(sesiUntukHari(jadwal, 0), []);
+    assert.deepEqual(sesiUntukHari(jadwal, 7), []);
+    assert.deepEqual(sesiUntukHari(null, 1), []);
   });
 });
 

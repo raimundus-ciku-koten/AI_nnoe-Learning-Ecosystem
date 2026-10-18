@@ -1,14 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  addDoc, collection, deleteDoc, doc, getDocs, limit, orderBy, query, serverTimestamp, startAfter, updateDoc,
-} from 'firebase/firestore';
-import { db } from '../firebase/index.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
-import { catatanKeCsv, siapkanCatatanGuru } from '../services/teacherWorkspace.js';
+import { catatanKeCsv } from '../services/teacherWorkspace.js';
+import {
+  hapusCatatanGuruDrive, muatCatatanGuruDrive, tambahCatatanGuruDrive,
+  ubahCatatanGuruDrive,
+} from '../services/teacherWorkspaceDrive.js';
+import {
+  hubungkanGoogleDriveUntukPengguna,
+  sesiGoogleWorkspacePerPengguna,
+} from '../services/googleWorkspaceAuth.js';
+import { identitasEnkripsiDriveDalamSesi } from '../services/driveEncryption.js';
 import '../styles/teacher-workspace.css';
-
-const BATAS_HALAMAN = 50;
 
 function tanggalHariIni() {
   const sekarang = new Date();
@@ -24,8 +27,8 @@ function tanggalTampil(nilai) {
 }
 
 function waktuTampil(nilai) {
-  const waktu = nilai?.toDate?.();
-  return waktu instanceof Date && !Number.isNaN(waktu.getTime())
+  const waktu = new Date(nilai);
+  return !Number.isNaN(waktu.getTime())
     ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(waktu)
     : 'Baru saja';
 }
@@ -42,7 +45,7 @@ const formKosong = (path, label) => ({
 });
 
 function pesanKesalahan(err, aksi) {
-  if (err?.code === 'permission-denied') {
+  if (['permission-denied', '42501'].includes(err?.code)) {
     return `Akun ini tidak diizinkan ${aksi} catatan. Pastikan akun guru terdaftar dan langganan tenant aktif.`;
   }
   return `Catatan tidak dapat ${aksi}. Periksa koneksi, lalu coba lagi.`;
@@ -69,49 +72,75 @@ export default function TeacherWorkspacePage({ grup, item }) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const cursor = useRef(null);
+  const loadRequest = useRef(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const canUse = role === 'guru' && Boolean(user?.uid && tenantId);
-
-  const entri = useMemo(() => collection(
-    db, 'tenants', tenantId || '_', 'guruWorkspace', user?.uid || '_', 'entries',
-  ), [tenantId, user?.uid]);
+  const ownerKey = canUse ? `${tenantId}:${user.uid}` : '';
+  const [koneksi, setKoneksi] = useState(() => sesiGoogleWorkspacePerPengguna(user?.uid));
+  const [identitasVault, setIdentitasVault] = useState(() => identitasEnkripsiDriveDalamSesi(user?.uid));
+  const tokenAktif = koneksi?.expiresAt > Date.now() ? koneksi.accessToken : '';
+  const vaultSiap = Boolean(tokenAktif && identitasVault);
+  const [catatanOwnerKey, setCatatanOwnerKey] = useState('');
 
   const muat = useCallback(async ({ berikutnya = false } = {}) => {
+    const requestId = ++loadRequest.current;
     if (!canUse) {
+      cursor.current = null;
+      setCatatan([]);
+      setCatatanOwnerKey('');
+      setHasMore(false);
       setLoading(false);
+      return;
+    }
+    if (!vaultSiap) {
+      setLoading(false);
+      setLoadingMore(false);
       return;
     }
     if (berikutnya) setLoadingMore(true);
     else setLoading(true);
     setError('');
     try {
-      const batas = query(
-        entri,
-        orderBy('updatedAt', 'desc'),
-        ...(berikutnya && cursor.current ? [startAfter(cursor.current)] : []),
-        limit(BATAS_HALAMAN + 1),
+      if (!berikutnya) cursor.current = null;
+      const hasil = await muatCatatanGuruDrive(
+        tokenAktif,
+        identitasVault,
+        berikutnya ? cursor.current : '',
       );
-      const hasil = await getDocs(batas);
-      const halaman = hasil.docs.slice(0, BATAS_HALAMAN);
+      if (requestId !== loadRequest.current) return;
       setCatatan((sebelumnya) => berikutnya
-        ? [...sebelumnya, ...halaman.map((snap) => ({ id: snap.id, ...snap.data() }))]
-        : halaman.map((snap) => ({ id: snap.id, ...snap.data() })));
-      setHasMore(hasil.docs.length > BATAS_HALAMAN);
-      cursor.current = halaman.at(-1) || (berikutnya ? cursor.current : null);
+        ? [...sebelumnya, ...hasil.entries]
+        : hasil.entries);
+      setCatatanOwnerKey(ownerKey);
+      setHasMore(hasil.hasMore);
+      cursor.current = hasil.nextCursor;
     } catch (err) {
+      if (requestId !== loadRequest.current) return;
       console.error('[teacher-workspace] Gagal memuat catatan guru:', err);
-      setError(err?.code === 'permission-denied'
+      setError(['permission-denied', '42501'].includes(err?.code)
         ? 'Akses catatan pribadi ditolak. Pastikan akun guru terdaftar pada tenant dengan langganan aktif.'
         : 'Catatan belum dapat dimuat. Periksa koneksi, lalu coba lagi.');
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (requestId === loadRequest.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
-  }, [canUse, entri]);
+  }, [canUse, identitasVault, ownerKey, tenantId, tokenAktif, user?.uid, vaultSiap]);
 
+  useEffect(() => {
+    setKoneksi(sesiGoogleWorkspacePerPengguna(user?.uid));
+    setIdentitasVault(identitasEnkripsiDriveDalamSesi(user?.uid));
+    loadRequest.current += 1;
+    cursor.current = null;
+    setCatatan([]);
+    setCatatanOwnerKey('');
+    setHasMore(false);
+  }, [ownerKey, user?.uid]);
   useEffect(() => { muat(); }, [muat]);
 
   useEffect(() => {
@@ -123,11 +152,27 @@ export default function TeacherWorkspacePage({ grup, item }) {
 
   const catatanModul = useMemo(() => {
     const term = cari.trim().toLocaleLowerCase('id');
-    return catatan.filter((entry) =>
+    return (vaultSiap && catatanOwnerKey === ownerKey ? catatan : []).filter((entry) =>
       entry.modulePath === item.path
       && (!term || `${entry.judul} ${entry.kelas} ${entry.mapel} ${entry.isi}`
         .toLocaleLowerCase('id').includes(term)));
-  }, [catatan, cari, item.path]);
+  }, [catatan, catatanOwnerKey, cari, item.path, ownerKey, vaultSiap]);
+
+  async function hubungkanDrive() {
+    setConnecting(true);
+    setError('');
+    setNotice('');
+    try {
+      const session = await hubungkanGoogleDriveUntukPengguna(user);
+      setKoneksi(session);
+      setIdentitasVault(identitasEnkripsiDriveDalamSesi(user.uid));
+    } catch (err) {
+      console.error('[teacher-workspace] Gagal menghubungkan Google Drive:', err);
+      setError(err?.message || 'Google Drive tidak dapat dihubungkan.');
+    } finally {
+      setConnecting(false);
+    }
+  }
 
   function ubahForm(kunci, nilai) {
     setForm((sebelumnya) => ({ ...sebelumnya, [kunci]: nilai }));
@@ -157,22 +202,27 @@ export default function TeacherWorkspacePage({ grup, item }) {
 
   async function simpan(event) {
     event.preventDefault();
-    if (!canUse || saving) return;
+    if (!canUse || !vaultSiap || saving) return;
     setSaving(true);
     setError('');
     setNotice('');
     try {
-      const payload = siapkanCatatanGuru(form);
       if (editId) {
-        await updateDoc(doc(entri, editId), { ...payload, updatedAt: serverTimestamp() });
+        const existing = catatan.find((entry) => entry.id === editId);
+        if (!existing) throw new Error('Catatan yang akan diperbarui tidak tersedia pada halaman ini.');
+        await ubahCatatanGuruDrive(
+          tokenAktif,
+          tenantId,
+          user.uid,
+          identitasVault,
+          editId,
+          form,
+          existing.createdAt,
+          existing.ciphertextSha256,
+        );
         setNotice('Catatan berhasil diperbarui.');
       } else {
-        await addDoc(entri, {
-          ...payload,
-          ownerUid: user.uid,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+        await tambahCatatanGuruDrive(tokenAktif, tenantId, user.uid, identitasVault, form);
         setNotice('Catatan berhasil disimpan.');
       }
       setForm(formKosong(item.path, item.label));
@@ -189,17 +239,18 @@ export default function TeacherWorkspacePage({ grup, item }) {
   }
 
   async function hapus(entry) {
-    if (!canUse || !window.confirm(`Hapus catatan “${entry.judul}”? Tindakan ini tidak dapat dibatalkan.`)) return;
+    if (!canUse || !vaultSiap ||
+        !window.confirm(`Hapus catatan “${entry.judul}”? Tindakan ini tidak dapat dibatalkan.`)) return;
     setError('');
     setNotice('');
     try {
-      await deleteDoc(doc(entri, entry.id));
+      await hapusCatatanGuruDrive(tokenAktif, tenantId, user.uid, identitasVault, entry.id);
       setCatatan((sebelumnya) => sebelumnya.filter((simpanEntry) => simpanEntry.id !== entry.id));
       if (editId === entry.id) batalEdit();
       setNotice('Catatan berhasil dihapus.');
     } catch (err) {
       console.error('[teacher-workspace] Gagal menghapus catatan:', err);
-      setError(pesanKesalahan(err, 'menghapus'));
+      setError(err instanceof Error && !err.code ? err.message : pesanKesalahan(err, 'menghapus'));
     }
   }
 
@@ -228,7 +279,20 @@ export default function TeacherWorkspacePage({ grup, item }) {
         <a className="teacher-workspace-related" href="#/dashboard">
           <Ikon nama="home" /> Kembali ke Dashboard
         </a>
+        <button type="button" onClick={hubungkanDrive} disabled={connecting || !canUse}>
+          <Ikon nama="external" />
+          {connecting ? 'Menghubungkan…' : tokenAktif ? `Google Drive: ${koneksi.email}` : 'Hubungkan Google Drive'}
+        </button>
       </header>
+
+      <aside className="teacher-workspace-privacy" role="note">
+        <Ikon nama="shield" />
+        <p>
+          Isi catatan dienkripsi di browser sebelum disimpan ke Google Drive pribadi Anda.
+          Supabase hanya dipakai untuk memeriksa status langganan; tidak menerima isi catatan.
+          Catatan Firestore lama belum diimpor dan tidak akan muncul di daftar ini sampai migrasi terenkripsi selesai.
+        </p>
+      </aside>
 
       <aside className="teacher-workspace-privacy" role="note">
         <Ikon nama="badge" />
@@ -253,7 +317,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
             <label>
               Judul
               <input
-                required maxLength={120} value={form.judul}
+                required maxLength={120} value={form.judul} disabled={!vaultSiap || saving}
                 onChange={(event) => ubahForm('judul', event.target.value)}
                 placeholder="Contoh: Refleksi pembelajaran pekan ini"
               />
@@ -262,11 +326,13 @@ export default function TeacherWorkspacePage({ grup, item }) {
               <label>
                 Tanggal
                 <input required type="date" value={form.tanggal}
+                  disabled={!vaultSiap || saving}
                   onChange={(event) => ubahForm('tanggal', event.target.value)} />
               </label>
               <label>
                 Status
-                <select value={form.status} onChange={(event) => ubahForm('status', event.target.value)}>
+                <select value={form.status} disabled={!vaultSiap || saving}
+                  onChange={(event) => ubahForm('status', event.target.value)}>
                   <option value="draf">Draf</option>
                   <option value="selesai">Selesai</option>
                 </select>
@@ -276,12 +342,14 @@ export default function TeacherWorkspacePage({ grup, item }) {
               <label>
                 Kelas <span>(opsional)</span>
                 <input maxLength={80} value={form.kelas}
+                  disabled={!vaultSiap || saving}
                   onChange={(event) => ubahForm('kelas', event.target.value)}
                   placeholder="Contoh: X-1" />
               </label>
               <label>
                 Mata pelajaran <span>(opsional)</span>
                 <input maxLength={80} value={form.mapel}
+                  disabled={!vaultSiap || saving}
                   onChange={(event) => ubahForm('mapel', event.target.value)}
                   placeholder="Contoh: Matematika" />
               </label>
@@ -289,7 +357,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
             <label>
               Catatan kerja
               <textarea
-                required maxLength={6000} rows={7} value={form.isi}
+                required maxLength={6000} rows={7} value={form.isi} disabled={!vaultSiap || saving}
                 onChange={(event) => ubahForm('isi', event.target.value)}
                 placeholder="Tuliskan rencana, refleksi, atau tindak lanjut pribadi..."
               />
@@ -298,12 +366,17 @@ export default function TeacherWorkspacePage({ grup, item }) {
             {error && <p className="teacher-workspace-error" role="alert">{error}</p>}
             {notice && <p className="teacher-workspace-notice" role="status">{notice}</p>}
             <div className="teacher-workspace-actions">
-              <button type="submit" disabled={saving}>
+              <button type="submit" disabled={saving || !vaultSiap}>
                 <Ikon nama="check" /> {saving ? 'Menyimpan…' : editId ? 'Simpan perubahan' : 'Simpan catatan'}
               </button>
               {editId && <button type="button" className="teacher-workspace-secondary" onClick={batalEdit}>Batal</button>}
             </div>
           </form>
+          {!vaultSiap && (
+            <p className="teacher-workspace-loading">
+              Hubungkan Google Drive, lalu buka atau buat kunci vault di <a href="#/pengaturan/google">Pengaturan Google Workspace</a>.
+            </p>
+          )}
         </section>
 
         <section className="ale-kartu teacher-workspace-list" aria-labelledby="teacher-workspace-list-title">
@@ -332,7 +405,12 @@ export default function TeacherWorkspacePage({ grup, item }) {
 
           {error && <p className="teacher-workspace-error" role="alert">{error}</p>}
           {loading && <p className="teacher-workspace-loading" role="status">Memuat catatan…</p>}
-          {!loading && catatanModul.length === 0 && (
+          {!loading && !vaultSiap && (
+            <p className="teacher-workspace-loading" role="status">
+              Hubungkan Google Drive dan buka kunci vault untuk melihat catatan terenkripsi.
+            </p>
+          )}
+          {!loading && vaultSiap && catatanModul.length === 0 && (
             <div className="teacher-workspace-empty">
               <Ikon nama="file" />
               <h3>{cari ? 'Tidak ada catatan yang cocok' : 'Belum ada catatan pada modul ini'}</h3>

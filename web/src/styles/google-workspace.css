@@ -22,10 +22,24 @@
 .workspace-form textarea { resize: vertical; }
 .workspace-form input:disabled, .workspace-form textarea:disabled { background: #f4f6f8; }
 .workspace-description, .workspace-detail { margin: 0; color: #59677d; font-size: .86rem; line-height: 1.55; overflow-wrap: anywhere; }
+.workspace-vault-recovery { display: grid; gap: .65rem; padding: .8rem; border: 1px solid #f1d48e; border-radius: .7rem; background: #fffbeb; color: #614b18; overflow-wrap: anywhere; }
+.workspace-vault-recovery code { display: block; padding: .7rem; border-radius: .5rem; background: #fff; color: #263651; font-size: .85rem; line-height: 1.6; user-select: all; word-break: break-all; }
+.workspace-vault-recovery p { color: #735c22; }
+.workspace-vault-recovery label { font-size: .82rem; font-weight: 700; }
+.workspace-vault-recovery input, .workspace-form select { width: 100%; min-width: 0; min-height: 2.5rem; padding: .5rem .6rem; border: 1px solid #d4deea; border-radius: .55rem; background: #fff; color: #263651; font: inherit; }
+.workspace-vault-list { display: grid; gap: .55rem; }
+.workspace-vault-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .6rem; padding: .65rem; border: 1px solid #e1e8f0; border-radius: .6rem; }
+.workspace-vault-entry span { color: #59677d; font-size: .8rem; line-height: 1.45; overflow-wrap: anywhere; }
+.workspace-vault-entry button { min-height: 2.3rem; padding: .45rem .65rem; border: 1px solid #cbd8e6; border-radius: .55rem; background: #fff; color: #244b73; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
+.workspace-vault-entry button:disabled { opacity: .6; cursor: wait; }
 .workspace-message { padding: .75rem .9rem; margin: 0; border-radius: .65rem; line-height: 1.5; overflow-wrap: anywhere; }
 .workspace-message.is-error { background: #fff2f1; color: #a22c22; }
 .workspace-message.is-success { background: #eaf8f1; color: #176b4b; }
 .workspace-privacy { display: flex; align-items: flex-start; gap: .65rem; padding: .85rem; border: 1px solid #dce7f2; border-radius: .75rem; background: #f8fafc; color: #52647e; }
 .workspace-privacy .ale-ikon { width: 1.2rem; height: 1.2rem; flex: none; color: #157c77; }
 .workspace-privacy p { margin: 0; font-size: .82rem; line-height: 1.55; }
-@media (max-width: 560px) { .workspace-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 560px) {
+  .workspace-grid { grid-template-columns: minmax(0, 1fr); }
+  .workspace-vault-entry { grid-template-columns: minmax(0, 1fr); }
+  .workspace-vault-entry button { width: 100%; }
+}

@@ -206,6 +206,7 @@ export const MENU_ADMIN_SEKOLAH = [
   grup('admin-pengguna', 'Manajemen Pengguna', 'users', [
     tautan('Guru', '/admin/pengguna/guru', 'users'),
     tautan('Siswa', '/admin/pengguna/siswa', 'users'),
+    tautan('Tautkan akun siswa ke roster', '/admin/pengguna/tautkan-siswa', 'users'),
     tautan('Orang Tua', '/admin/pengguna/orang-tua', 'users'),
     tautan('Admin Sekolah', '/admin/pengguna/admin', 'user'),
     tautan('Peran dan Hak Akses', '/admin/pengguna/peran', 'settings'),
@@ -285,6 +286,7 @@ export const MENU_SUPERADMIN = [
   ]),
   grup('platform-pengguna', 'Manajemen Pengguna Global', 'users', [
     tautan('Akun Pengguna', '/platform/pengguna/admin-sekolah', 'users'),
+    tautan('Pengguna Supabase', '/platform/supabase-users', 'users'),
     tautan('Peran Global', '/platform/pengguna/peran', 'settings'),
   ]),
   grup('platform-fitur', 'Manajemen Menu dan Fitur', 'settings', [
@@ -303,18 +305,9 @@ export const MENU_SUPERADMIN = [
     tautan('Template Prompt', '/platform/ai/prompt', 'file'),
     tautan('Monitoring Penggunaan AI', '/platform/ai/monitoring', 'chart'),
   ]),
-  grup('platform-firebase', 'Manajemen Firebase', 'database', [
-    tautan('Ringkasan Firebase', '/platform/firebase', 'database'),
-    tautan('Firestore', '/platform/firebase/firestore', 'database'),
-    tautan('Storage', '/platform/firebase/storage', 'file'),
-    tautan('Functions', '/platform/firebase/functions', 'settings'),
-    tautan('Authentication', '/platform/firebase/auth', 'users'),
-    tautan('FCM', '/platform/firebase/fcm', 'chat'),
-  ]),
   grup('platform-keamanan', 'Keamanan dan Audit', 'settings', [
-    tautan('Security Rules', '/platform/keamanan/rules', 'settings'),
+    tautan('Supabase RLS', '/platform/keamanan/rules', 'settings'),
     tautan('Audit Log', '/platform/keamanan/audit', 'file'),
-    tautan('App Check', '/platform/keamanan/app-check', 'settings'),
   ]),
   grup('platform-laporan', 'Laporan dan Analitik Global', 'chart', [
     tautan('Penggunaan', '/platform/laporan/penggunaan', 'chart'),

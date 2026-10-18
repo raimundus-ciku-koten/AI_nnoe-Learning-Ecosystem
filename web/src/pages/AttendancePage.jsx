@@ -1,31 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  collection, getDocs, limit, orderBy, query, startAfter,
-} from 'firebase/firestore';
-import { db } from '../firebase/index.js';
+import React, { useEffect, useMemo, useState } from 'react';
+import { supabase } from '../lib/supabase.ts';
 import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
 import '../styles/attendance.css';
 
-const BATAS_CATATAN = 200;
 const PERAN_PENDIDIK = new Set(['admin_sekolah', 'operator', 'guru', 'demo']);
-
-function tanggalTampil(nilai) {
-  if (!nilai) return '-';
-  const [tahun, bulan, hari] = nilai.split('-').map(Number);
-  if (!tahun || !bulan || !hari) return nilai;
-  return new Intl.DateTimeFormat('id-ID', {
-    day: 'numeric', month: 'long', year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(Date.UTC(tahun, bulan - 1, hari)));
-}
-
-function waktuTampil(nilai) {
-  if (!nilai?.toDate) return '-';
-  return new Intl.DateTimeFormat('id-ID', {
-    hour: '2-digit', minute: '2-digit',
-  }).format(nilai.toDate());
-}
 
 function AttendanceAccessDenied() {
   return (
@@ -41,88 +20,62 @@ export default function AttendancePage() {
   const { user, role } = useAuth();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
-  const [cursor, setCursor] = useState(null);
   const [error, setError] = useState('');
   const [tanggal, setTanggal] = useState('');
   const [kelas, setKelas] = useState('');
   const [cari, setCari] = useState('');
 
-  const muat = useCallback(async () => {
-    if (!user?.uid) return;
-    setLoading(true);
-    setError('');
-    try {
-      const presensi = collection(db, 'guru', user.uid, 'absensi');
-      const hasil = await getDocs(query(
-        presensi,
-        orderBy('tanggal', 'desc'),
-        limit(BATAS_CATATAN + 1),
-      ));
-      const halaman = hasil.docs.slice(0, BATAS_CATATAN);
-      setRecords(halaman.map((dokumen) => ({
-        id: dokumen.id,
-        ...dokumen.data(),
-      })));
-      setHasMore(hasil.docs.length > BATAS_CATATAN);
-      setCursor(halaman.at(-1) || null);
-    } catch (err) {
-      console.error('[presensi] Gagal memuat riwayat presensi:', err);
-      setError(err?.code === 'permission-denied'
-        ? 'Akun ini belum diizinkan membaca riwayat presensi.'
-        : 'Riwayat presensi tidak dapat dimuat. Periksa koneksi, lalu coba lagi.');
-    } finally {
+  useEffect(() => {
+    if (!user?.uid || !PERAN_PENDIDIK.has(role)) {
+      setRecords([]);
       setLoading(false);
+      return undefined;
     }
-  }, [user?.uid]);
 
-  useEffect(() => { muat(); }, [muat]);
+    let active = true;
+    async function muat() {
+      setLoading(true);
+      setError('');
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('attendance_records')
+          .select('*')
+          .eq('owner_id', user.uid)
+          .order('tanggal', { ascending: false })
+          .limit(50);
 
-  const muatBerikutnya = useCallback(async () => {
-    if (!user?.uid || !cursor || loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    setError('');
-    try {
-      const presensi = collection(db, 'guru', user.uid, 'absensi');
-      const hasil = await getDocs(query(
-        presensi,
-        orderBy('tanggal', 'desc'),
-        startAfter(cursor),
-        limit(BATAS_CATATAN + 1),
-      ));
-      const halaman = hasil.docs.slice(0, BATAS_CATATAN);
-      setRecords((sebelumnya) => [
-        ...sebelumnya,
-        ...halaman.map((dokumen) => ({ id: dokumen.id, ...dokumen.data() })),
-      ]);
-      setHasMore(hasil.docs.length > BATAS_CATATAN);
-      setCursor(halaman.at(-1) || cursor);
-    } catch (err) {
-      console.error('[presensi] Gagal memuat halaman berikutnya:', err);
-      setError(err?.code === 'permission-denied'
-        ? 'Akun ini belum diizinkan membaca riwayat presensi.'
-        : 'Catatan berikutnya tidak dapat dimuat. Coba lagi.');
-    } finally {
-      setLoadingMore(false);
+        if (!active) return;
+        if (fetchError) throw fetchError;
+        setRecords(data || []);
+      } catch (err) {
+        console.error('[presensi] Gagal memuat riwayat presensi:', err);
+        if (active) setError(err?.message || 'Riwayat presensi tidak dapat dimuat.');
+      } finally {
+        if (active) setLoading(false);
+      }
     }
-  }, [cursor, hasMore, loadingMore, user?.uid]);
+
+    void muat();
+    return () => {
+      active = false;
+    };
+  }, [role, user?.uid]);
 
   const daftarKelas = useMemo(
     () => [...new Set(records.map((record) => record.kelas).filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b, 'id', { numeric: true })),
+      .sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true })),
     [records],
   );
+
   const tampil = useMemo(() => {
     const kata = cari.trim().toLocaleLowerCase('id');
     return records.filter((record) =>
       (!tanggal || record.tanggal === tanggal)
       && (!kelas || record.kelas === kelas)
       && (!kata || String(record.nama || '').toLocaleLowerCase('id').includes(kata)
-        || String(record.siswaId || '').toLocaleLowerCase('id').includes(kata)),
+        || String(record.student_id || '').toLocaleLowerCase('id').includes(kata)),
     );
   }, [records, tanggal, kelas, cari]);
-  const jumlahSiswa = new Set(tampil.map((record) => record.siswaId)).size;
 
   if (!PERAN_PENDIDIK.has(role)) return <AttendanceAccessDenied />;
 
@@ -132,7 +85,7 @@ export default function AttendancePage() {
         <div>
           <p className="attendance-kicker"><Ikon nama="check" /> Pelaksanaan pembelajaran</p>
           <h1>Presensi siswa</h1>
-          <p>Riwayat kehadiran yang tercatat melalui pemindaian kartu siswa.</p>
+          <p>Riwayat kehadiran dari Supabase. Migrasi skema hosted masih diperlukan sebelum pencatatan tersedia di produksi.</p>
         </div>
         <a className="attendance-cta" href="#/datadasar/barcode">
           <Ikon nama="qr" /> Buka kartu barcode
@@ -146,7 +99,7 @@ export default function AttendancePage() {
         </article>
         <article className="ale-kartu attendance-stat">
           <span>Siswa tercatat</span>
-          <strong>{loading ? '…' : jumlahSiswa}</strong>
+          <strong>{loading ? '…' : new Set(tampil.map((record) => record.student_id).filter(Boolean)).size}</strong>
         </article>
         <article className="ale-kartu attendance-stat">
           <span>Kelas tercatat</span>
@@ -158,11 +111,8 @@ export default function AttendancePage() {
         <div className="attendance-panel-heading">
           <div>
             <h2 id="attendance-list-title">Riwayat kehadiran</h2>
-            <p>Filter dan pencarian berlaku pada catatan yang sudah dimuat dari akun ini.</p>
+            <p>Data dibaca dari tabel Supabase `attendance_records` untuk akun aktif.</p>
           </div>
-          <button type="button" className="attendance-reload" onClick={muat} disabled={loading}>
-            <Ikon nama="refresh" /> Muat ulang
-          </button>
         </div>
 
         <div className="attendance-filters">
@@ -196,38 +146,27 @@ export default function AttendancePage() {
             <h3>{records.length ? 'Tidak ada catatan yang cocok' : 'Belum ada presensi tercatat'}</h3>
             <p>{records.length
               ? 'Ubah filter tanggal, kelas, atau pencarian.'
-              : 'Pindai QR atau barcode dari kartu siswa untuk mencatat kehadiran.'}</p>
+              : 'Belum ada data absensi di Supabase untuk akun ini.'}</p>
           </div>
         )}
         {!loading && !error && tampil.length > 0 && (
           <div className="attendance-table-wrap">
             <table className="attendance-table">
               <thead>
-                <tr><th scope="col">Siswa</th><th scope="col">Kelas</th><th scope="col">Tanggal</th><th scope="col">Waktu</th><th scope="col">Status</th></tr>
+                <tr><th scope="col">Siswa</th><th scope="col">Kelas</th><th scope="col">Tanggal</th><th scope="col">Status</th></tr>
               </thead>
               <tbody>
                 {tampil.map((record) => (
-                  <tr key={record.id}>
-                    <td>{record.nama || record.siswaId || '-'}</td>
+                  <tr key={record.id || `${record.tanggal}-${record.student_id}`}>
+                    <td>{record.nama || record.student_id || '-'}</td>
                     <td>{record.kelas || '-'}</td>
-                    <td>{tanggalTampil(record.tanggal)}</td>
-                    <td>{waktuTampil(record.waktu)}</td>
-                    <td><span className="attendance-status">{record.status === 'hadir' ? 'Hadir' : record.status || '-'}</span></td>
+                    <td>{record.tanggal || '-'}</td>
+                    <td>{record.status || 'hadir'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-        {!loading && !error && hasMore && (
-          <button
-            type="button"
-            className="attendance-load-more"
-            onClick={muatBerikutnya}
-            disabled={loadingMore}
-          >
-            {loadingMore ? 'Memuat catatan…' : 'Muat catatan berikutnya'}
-          </button>
         )}
       </section>
     </div>

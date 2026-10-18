@@ -6,17 +6,17 @@
  *
  * Alur:
  *   1. Normalisasi + validasi kode dari ctx.params.kode.
- *   2. Tunggu Firebase Auth siap (menghindari "Perlu login" palsu saat cold start).
- *   3. Cari siswa dengan kodeUnik tersebut di guru/{uid}/siswa.
- *   4. Catat kehadiran hari ini di guru/{uid}/absensi (idempoten: 1 siswa = 1 dokumen/hari).
+ *   2. Tunggu sesi Supabase siap (menghindari "Perlu login" palsu saat cold start).
+ *   3. Cari siswa dengan kode unik pada roster milik pengguna.
+ *   4. Catat kehadiran hari ini secara idempoten.
  *   5. Tampilkan hasil: tercatat / sudah tercatat / tidak dikenali / galat.
  *   6. Auto-kembali ke /datadasar/barcode agar bisa scan berikutnya tanpa klik
  *      (bisa dijeda dengan tombol "Tetap di sini").
  *
  * Keamanan:
- *   - Hanya guru yang login dapat mencari & mencatat siswanya sendiri (diperkuat Security Rules).
+ *   - Hanya pendidik yang login dapat mencari & mencatat siswanya sendiri (diperkuat RLS).
  *   - Semua nilai dinamis di-escape (esc) sebelum dirender.
- *   - Kode divalidasi (panjang & karakter) sebelum menyentuh Firestore.
+ *   - Kode divalidasi (panjang & karakter) sebelum menyentuh database.
  *   - Render usang dibatalkan bila halaman sudah berganti (token render).
  */
 import { esc } from '../ui.js';
@@ -177,11 +177,22 @@ export async function halamanScan(wadah, ctx = {}) {
 
   wadah.innerHTML = tplMemuat(kode);
 
-  // Tunggu Auth siap; state aplikasi dipakai sebagai cadangan.
+  // Tunggu sesi Supabase siap; state aplikasi dipakai sebagai cadangan.
   let user = null;
   try {
     user = await tungguPengguna(getState()?.user ?? null);
-  } catch { /* dianggap belum login */ }
+  } catch (error) {
+    console.error('[scan] gagal memulihkan sesi:', error);
+    if (usang()) return NOOP;
+    wadah.innerHTML = tplGagal({
+      ikon: '⚠',
+      judul: 'Sesi tidak dapat diperiksa',
+      pesan: esc(pesanGalat(error)),
+      info: 'Periksa koneksi lalu muat ulang halaman.',
+      detik: Math.ceil(AUTO_KEMBALI_MS.gagal / 1000),
+    });
+    return pasangAutoKembali(wadah, AUTO_KEMBALI_MS.gagal);
+  }
   if (usang()) return NOOP;
 
   if (!user?.uid) {

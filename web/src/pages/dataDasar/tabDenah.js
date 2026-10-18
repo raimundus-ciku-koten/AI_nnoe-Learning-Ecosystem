@@ -1,13 +1,17 @@
 // web/src/pages/dataDasar/tabDenah.js
 // Denah duduk interaktif + pembagian kelompok acak, per kelas.
-// Lokasi data: guru/{uid}/denah/{kunciKelas}
-//   -> { kelas, baris, kolom, kursi: {"r-c": siswaId}, kelompok: {siswaId: n}, jumlahKelompok, diperbarui }
-//
 // Gaya: tabDenah.css (lihat petunjuk pemasangan). Logika murni: denahLogika.js.
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { db } from '../../firebase/index.js';
 import { esc } from '../../ui.js';
-import { ambilSiswa, galat, ik, kunciKelas, toast, urutNama, urutUnik } from './umum.js';
+import { ambilSiswa, galat, ik, toast, urutNama, urutUnik } from './umum.js';
+import {
+  hubungkanGoogleDriveUntukPengguna,
+  sesiGoogleWorkspacePerPengguna,
+} from '../../services/googleWorkspaceAuth.js';
+import { identitasEnkripsiDriveDalamSesi } from '../../services/driveEncryption.js';
+import {
+  muatDenahGuruDrive,
+  simpanDenahGuruDrive,
+} from '../../services/teacherSeatingDrive.js';
 import {
   MAKS_KELOMPOK,
   MAKS_UKURAN,
@@ -16,7 +20,6 @@ import {
   bacaKunciKursi,
   bagiKelompok,
   batas,
-  bersihkanDenah,
   buatCsv,
   kunciKursi,
   namaBerkas,
@@ -64,11 +67,15 @@ export async function tabDenah(el, ctx) {
   pemasangan.set(el, ac);
   const { signal } = ac;
   const dispose = () => ac.abort();
+  if (!ctx?.user?.uid) {
+    el.innerHTML = '<section class="ale-kartu ale-aksen-grape dd" role="alert"><p class="ale-kosong">Sesi pengguna tidak ditemukan. Muat ulang halaman lalu masuk kembali.</p></section>';
+    return dispose;
+  }
 
   const semua = await ambilSiswa(ctx, true);
   if (signal.aborted) return dispose; // tab dirender ulang selagi data siswa dimuat
 
-  const daftarKelas = urutUnik([...ctx.kelas, ...semua.map((s) => s.kelas)]);
+  const daftarKelas = urutUnik([...(Array.isArray(ctx.kelas) ? ctx.kelas : []), ...semua.map((s) => s.kelas)]);
 
   if (!daftarKelas.length) {
     el.innerHTML = `
@@ -79,6 +86,35 @@ export async function tabDenah(el, ctx) {
     return dispose;
   }
 
+  const koneksi = sesiGoogleWorkspacePerPengguna(ctx.user.uid);
+  const token = koneksi?.expiresAt > Date.now() ? koneksi.accessToken : '';
+  const identity = identitasEnkripsiDriveDalamSesi(ctx.user.uid);
+  if (!token || !identity) {
+    el.innerHTML = `
+      <section class="ale-kartu ale-aksen-grape dd" role="status">
+        <h2 class="ale-kartu-judul">${ik('shield')}Denah terenkripsi di Google Drive</h2>
+        <p class="ale-info-teks">Hubungkan Google Drive dan buka kunci vault untuk membaca atau mengubah denah. Denah Firestore lama belum diimpor dan tidak ditampilkan sebagai denah kosong.</p>
+        <p><a class="btn btn-outline" href="#/pengaturan/google">Buka pengaturan Google Workspace untuk membuat atau memulihkan kunci vault</a></p>
+        ${!token ? '<button type="button" class="btn btn-primary" id="dnDriveConnect">Hubungkan Google Drive</button>' : ''}
+      </section>`;
+    el.querySelector('#dnDriveConnect')?.addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        await hubungkanGoogleDriveUntukPengguna(ctx.user);
+        if (signal.aborted) return;
+        await tabDenah(el, ctx);
+      } catch (err) {
+        if (signal.aborted) return;
+        galat(err, 'Gagal menghubungkan Google Drive');
+        el.innerHTML = `<section class="ale-kartu ale-aksen-grape dd" role="alert"><p class="ale-kosong">${esc(err?.message || 'Google Drive belum dapat dihubungkan.')}</p><a class="btn btn-outline" href="#/pengaturan/google">Buka pengaturan Google Workspace</a></section>`;
+      } finally {
+        if (button.isConnected) button.disabled = false;
+      }
+    }, { signal });
+    return dispose;
+  }
+
   let kelas = daftarKelas[0];
   let st = null;        // {baris, kolom, kursi, kelompok, jumlahKelompok}; null selama memuat / gagal memuat
   let dipilih = null;   // id siswa yang sedang dipegang
@@ -86,6 +122,7 @@ export async function tabDenah(el, ctx) {
   let versi = 0;        // naik setiap perubahan; dipakai agar simpan yang lambat tidak menimpa status "kotor"
   let tokenMuat = 0;    // menolak respons lama bila kelas diganti cepat-cepat
   let menyimpan = false;
+  let ciphertextSha256 = null;
   const riwayat = [];   // tumpukan snapshot untuk "Urungkan"
 
   el.innerHTML = `
@@ -94,6 +131,7 @@ export async function tabDenah(el, ctx) {
         <h2 class="ale-kartu-judul">${ik('layout')}Denah Duduk & Kelompok Belajar</h2>
         <span class="ale-chip ale-chip-admin dd-tanpa-cetak" id="dnStatus" role="status" aria-live="polite">Tersimpan</span>
       </div>
+      <p class="ale-peringatan dd-tanpa-cetak" role="note">Denah lama di Firestore belum diimpor. Denah yang tampil di sini hanya data yang sudah tersimpan di vault Google Drive akun ini.</p>
       <p class="dd-cetak-judul" id="dnCetakJudul"></p>
 
       <div class="ale-toolbar dd-tanpa-cetak">
@@ -271,9 +309,11 @@ export async function tabDenah(el, ctx) {
     tandaiKotor(false);
     setSibuk(true);
     try {
-      const snap = await getDoc(doc(db, 'guru', ctx.user.uid, 'denah', kunciKelas(kelasDimuat)));
+      const idsSiswa = semua.filter((s) => s.kelas === kelasDimuat).map((s) => s.id);
+      const vault = await muatDenahGuruDrive(token, identity, kelasDimuat, idsSiswa);
       if (signal.aborted || token !== tokenMuat) return; // respons usang
-      st = bersihkanDenah(snap.exists() ? snap.data() : {}, siswaKelas().map((s) => s.id));
+      ciphertextSha256 = vault.ciphertextSha256;
+      st = vault.data;
       sinkronInput();
       gambar();
     } catch (err) {
@@ -306,17 +346,28 @@ export async function tabDenah(el, ctx) {
       kursi: { ...st.kursi },
       kelompok: { ...st.kelompok },
       jumlahKelompok: st.jumlahKelompok,
-      diperbarui: serverTimestamp(),
+      diperbarui: new Date().toISOString(),
     };
+    q('#dnKelas').disabled = true;
     try {
-      await setDoc(doc(db, 'guru', ctx.user.uid, 'denah', kunciKelas(kelasSaat)), data);
+      const saved = await simpanDenahGuruDrive(
+        token,
+        ctx.user.uid,
+        identity,
+        data,
+        ciphertextSha256,
+      );
+      if (signal.aborted) return;
+      ciphertextSha256 = saved.ciphertextSha256;
       if (!signal.aborted && kelasSaat === kelas && versiSaat === versi) tandaiKotor(false);
       toast('Denah disimpan.', 'ok');
     } catch (err) {
+      if (signal.aborted) return;
       galat(err, 'Gagal menyimpan denah');
     } finally {
       menyimpan = false;
       tombol.disabled = false;
+      if (!signal.aborted) q('#dnKelas').disabled = false;
     }
   }
 

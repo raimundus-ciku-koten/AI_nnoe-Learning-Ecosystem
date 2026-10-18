@@ -6,8 +6,8 @@ import '../styles/testimonial.css';
 const BAHASA_POSITIF = /\b(membantu|bermanfaat|mudah|praktis|cepat|efisien|jelas|baik|bagus|puas|senang|terbantu|menghemat|meningkat|memudahkan|menyenangkan|terbaik)\b/i;
 const BAHASA_NEGATIF = /\b(tidak|belum|kurang|buruk|sulit|gagal|kecewa|masalah|lambat|susah|ribet|mengecewakan)\b/i;
 const pesanGalat = (error) => ({
-  '42501': 'Akses tidak diizinkan oleh kebijakan keamanan Supabase. Periksa peran dan sekolah Anda.',
-  'PGRST116': 'Data testimoni tidak ditemukan.',
+  'permission-denied': 'Akses tidak diizinkan oleh aturan keamanan. Periksa peran dan sekolah Anda.',
+  unavailable: 'Layanan testimoni sedang tidak tersedia. Coba lagi nanti.',
 }[error?.code] || error?.message || 'Permintaan testimoni gagal.');
 
 export default function TestimonialPage() {
@@ -20,65 +20,46 @@ export default function TestimonialPage() {
   const [anonim, setAnonim] = useState(false);
   const [status, setStatus] = useState('');
   const [sibuk, setSibuk] = useState(false);
-  const admin = role === 'admin_sekolah' || role === 'superadmin';
+  const admin = role === 'admin_sekolah';
 
   useEffect(() => {
-    if (!user?.uid || (!tenantId && role !== 'superadmin')) return undefined;
+    if (!user?.uid || !tenantId) return undefined;
     let hidup = true;
-    const muat = async () => {
+    async function muat() {
       try {
-        let authored = null;
-        if (tenantId) {
-          const { data, error: ownError } = await supabase
-            .from('testimonials')
-            .select('id,display_name,role,quote,rating,status')
-            .eq('tenant_id', tenantId)
-            .eq('user_id', user.uid)
-            .maybeSingle();
-          if (ownError) throw ownError;
-          authored = data;
-        }
-        if (hidup) {
-          setPunya(authored ? {
-            ...authored,
-            displayName: authored.display_name,
-          } : false);
-        }
+        const { data: ownSubmission, error: ownError } = await supabase
+          .from('testimonial_submissions')
+          .select('*')
+          .eq('owner_id', user.uid)
+          .maybeSingle();
+        if (ownError) throw ownError;
+        if (!hidup) return;
+        setPunya(ownSubmission || false);
+
         if (admin) {
-          let pendingQuery = supabase
-            .from('testimonials')
-            .select('id,display_name,role,quote,rating,status')
+          const { data: pending, error: pendingError } = await supabase
+            .from('testimonial_submissions')
+            .select('id, display_name, role, quote, rating, submitted_at')
             .eq('tenant_id', tenantId)
             .eq('status', 'pending')
             .order('submitted_at', { ascending: true })
             .limit(100);
-          if (role === 'superadmin') {
-            pendingQuery = supabase
-              .from('testimonials')
-              .select('id,display_name,role,quote,rating,status')
-              .eq('status', 'pending')
-              .order('submitted_at', { ascending: true })
-              .limit(100);
-          }
-          const { data: pending, error: pendingError } = await pendingQuery;
           if (pendingError) throw pendingError;
-          if (hidup) setMenunggu(pending.map((item) => ({
-            ...item,
-            displayName: item.display_name,
-          })));
+          if (hidup) {
+            setMenunggu((pending || []).map((item) => ({
+              ...item,
+              displayName: item.display_name,
+            })));
+          }
         }
       } catch (error) {
-        console.error('[testimoni] Gagal memuat data dari Supabase:', error);
+        console.error('[testimoni] Gagal memuat kiriman atau antrean moderasi:', error);
         if (hidup) setStatus(pesanGalat(error));
       }
-    };
+    }
     void muat();
-    const interval = window.setInterval(() => void muat(), 15000);
-    return () => {
-      hidup = false;
-      window.clearInterval(interval);
-    };
-  }, [user?.uid, tenantId, admin, role]);
+    return () => { hidup = false; };
+  }, [user?.uid, tenantId, admin]);
 
   async function kirim(event) {
     event.preventDefault();
@@ -94,41 +75,20 @@ export default function TestimonialPage() {
     setSibuk(true);
     setStatus('');
     try {
-      const displayName = anonim
-        ? 'Pengguna AI_nnoe'
-        : String(profile?.nama || user.displayName || 'Pengguna').slice(0, 80);
-      if (!tenantId) throw new Error('Akun ini belum terhubung dengan sekolah.');
       const data = {
+        owner_id: user.uid,
         tenant_id: tenantId,
-        user_id: user.uid,
-        display_name: displayName,
+        display_name: anonim ? 'Pengguna AI_nnoe' : String(profile?.nama || user.user_metadata?.full_name || 'Pengguna').slice(0, 80),
         role,
-        school: '',
         quote,
         rating,
         consent: true,
-        status: 'pending',
       };
-      const request = punya
-        ? supabase.from('testimonials').update({
-          display_name: data.display_name,
-          school: data.school,
-          quote: data.quote,
-          rating: data.rating,
-          consent: data.consent,
-        }).eq('id', punya.id).select('id').single()
-        : supabase.from('testimonials').insert(data).select('id').single();
-      const { data: saved, error } = await request;
+      const { error } = await supabase
+        .from('testimonial_submissions')
+        .upsert(data, { onConflict: 'owner_id' });
       if (error) throw error;
-      setPunya((current) => ({
-        ...(current || {}),
-        id: saved.id,
-        displayName,
-        role,
-        quote,
-        rating,
-        status: 'pending',
-      }));
+      setPunya({ ...data, status: 'pending' });
       setStatus('Testimoni terkirim dan menunggu peninjauan admin sekolah. Naskah publik dapat diringkas agar lugas tanpa mengubah makna.');
       setKutipan('');
     } catch (error) {
@@ -150,13 +110,13 @@ export default function TestimonialPage() {
     setSibuk(true);
     setStatus('');
     try {
-      const { error } = await supabase.rpc('set_testimonial_moderation', {
-        p_testimonial_id: item.id,
+      const { error } = await supabase.rpc('moderate_testimonial', {
+        p_submission_id: item.id,
         p_decision: keputusan,
-        p_public_quote: keputusan === 'published' ? quoteFinal : '',
+        p_quote_final: keputusan === 'published' ? quoteFinal : null,
       });
       if (error) throw error;
-      setMenunggu((current) => current.filter((row) => row.id !== item.id));
+      setMenunggu((items) => items.filter((submission) => submission.id !== item.id));
       setStatus(keputusan === 'published' ? 'Testimoni telah dipublikasikan.' : 'Testimoni ditolak.');
     } catch (error) {
       console.error('[testimoni] Gagal memoderasi testimoni:', error);
@@ -166,7 +126,7 @@ export default function TestimonialPage() {
     }
   }
 
-  if (!user || (!tenantId && role !== 'superadmin')) {
+  if (!user || !tenantId) {
     return <section className="ale-testimonials"><h2>Testimoni pengguna</h2><p>Masuk dengan akun sekolah untuk mengirim atau meninjau testimoni.</p></section>;
   }
 

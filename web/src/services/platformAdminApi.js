@@ -8,20 +8,7 @@ export async function setPlatformControl(setting) {
   });
   if (error) throw error;
   if (!data || typeof data.changed !== 'boolean' || !data.state) {
-    throw new Error('Respons kontrol platform Supabase tidak valid.');
+    throw new Error('Respons kontrol platform tidak valid.');
   }
   return data;
-}
-
-export async function createPlatformUser(input) {
-  const { data, error } = await supabase.functions.invoke('create-platform-user', {
-    body: input,
-  });
-  if (error) throw error;
-  if (!data || typeof data.uid !== 'string' || typeof data.email !== 'string' ||
-      typeof data.role !== 'string' || typeof data.tenantId !== 'string') {
-    throw new Error('Respons pembuatan akun Supabase tidak valid.');
-  }
-
-  return { ...data, resetEmailSent: data.invitationEmailSent === true };
 }

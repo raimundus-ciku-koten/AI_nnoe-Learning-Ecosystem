@@ -7,16 +7,22 @@
 import { h, initials } from '../../utils/dom.js';
 import { getState, subscribe } from '../../state.js';
 import { toast } from '../../utils/toast.js';
-import { hubungkanGoogleWorkspace } from '../../auth.js';
+import {
+  hubungkanGoogleDriveUntukPengguna,
+  hubungkanGoogleWorkspaceUntukPengguna,
+  tokenGoogleWorkspacePerPengguna,
+} from '../../services/googleWorkspaceAuth.js';
 import { unggahKeDrive } from '../../services/googleWorkspace.js';
+import { identitasEnkripsiDriveDalamSesi } from '../../services/driveEncryption.js';
 import {
   ambilMeta, pantauPesan, muatPesanLama, kirimPesan, tandaiDibaca,
   pantauBacaan, unggahBerkas, ambilLampiran
 } from '../../services/chat.js';
 import { pantauPresence } from '../../services/presence.js';
 import {
-  MAKS_TEKS, ATRIBUT_ACCEPT, idValid, jalurLampiranValid, jalurLampiranDariUrl, formatUkuran, jamMenit,
-  labelHari, kunciHari, statusTerakhirDilihat, pesanGalatChat, periksaBerkas, namaLampiranTampil
+  MAKS_TEKS, ATRIBUT_ACCEPT, idValid, formatUkuran, jamMenit,
+  labelHari, kunciHari, statusTerakhirDilihat, presenceMasihAktif, pesanGalatChat, periksaBerkas,
+  namaLampiranTampil
 } from '../../utils/chatUtil.js';
 
 // Kode Unicode agar aman di semua editor/berkas.
@@ -84,8 +90,9 @@ export async function tampilkanRuang(panel, chatId) {
 
   if (lawan) {
     pembatal.push(pantauPresence(lawan, (p) => {
-      status.textContent = statusTerakhirDilihat(p);
-      status.classList.toggle('text-success', Boolean(p?.online));
+      const statusPresence = p ? { ...p, online: presenceMasihAktif(p) } : null;
+      status.textContent = statusTerakhirDilihat(statusPresence);
+      status.classList.toggle('text-success', Boolean(statusPresence?.online));
     }));
   }
 
@@ -95,38 +102,66 @@ export async function tampilkanRuang(panel, chatId) {
   const unduhan = new Map();
   const pengendaliUnduhan = new Set();
 
-  function muatLampiran(path) {
-    if (unduhan.has(path)) return unduhan.get(path);
+  async function kredensialLampiran() {
+    const identity = identitasEnkripsiDriveDalamSesi(saya);
+    if (!identity) {
+      throw new Error('Siapkan identitas enkripsi di halaman Google Workspace sebelum membuka lampiran chat.');
+    }
+    let accessToken = tokenGoogleWorkspacePerPengguna(saya);
+    if (!accessToken) {
+      ({ accessToken } = await hubungkanGoogleDriveUntukPengguna(user));
+    }
+    return { accessToken, identity: { ...identity, userId: saya } };
+  }
+
+  function muatLampiran(pesan) {
+    if (unduhan.has(pesan.id)) return unduhan.get(pesan.id);
     const controller = new AbortController();
     pengendaliUnduhan.add(controller);
-    const pending = ambilLampiran(chatId, path, controller.signal)
-      .then((url) => {
+    const pending = kredensialLampiran()
+      .then(({ accessToken, identity }) => ambilLampiran(
+        pesan.id,
+        chatId,
+        saya,
+        accessToken,
+        identity,
+        controller.signal,
+      ))
+      .then((lampiran) => {
         if (!aktif) {
-          URL.revokeObjectURL(url);
+          URL.revokeObjectURL(lampiran.url);
           throw new DOMException('Ruang percakapan telah ditutup.', 'AbortError');
         }
-        urlLampiran.add(url);
-        return url;
+        pesan.fileName = lampiran.fileName;
+        urlLampiran.add(lampiran.url);
+        return lampiran;
       })
       .catch((error) => {
-        unduhan.delete(path);
+        unduhan.delete(pesan.id);
         throw error;
       })
       .finally(() => pengendaliUnduhan.delete(controller));
-    unduhan.set(path, pending);
+    unduhan.set(pesan.id, pending);
     return pending;
   }
 
-  async function bukaLampiran(event, path, tautan) {
+  async function bukaLampiran(event, pesan, tautan) {
     if (tautan.dataset.siap === 'true') return;
     event.preventDefault();
     const tab = window.open('about:blank', '_blank');
     if (tab) tab.opener = null;
     try {
-      const url = await muatLampiran(path);
-      tautan.href = url;
+      const lampiran = await muatLampiran(pesan);
+      tautan.href = lampiran.url;
       tautan.dataset.siap = 'true';
-      if (tab) tab.location.replace(url);
+      const gambar = tautan.querySelector('img');
+      if (gambar) {
+        gambar.src = lampiran.url;
+        gambar.alt = lampiran.fileName;
+      }
+      const label = tautan.querySelector('.chat-berkas__nama');
+      if (label) label.textContent = lampiran.fileName;
+      if (tab) tab.location.replace(lampiran.url);
       else toast('Lampiran siap dibuka. Pilih tautan sekali lagi.', 'info');
     } catch (error) {
       if (tab) tab.close();
@@ -137,18 +172,18 @@ export async function tampilkanRuang(panel, chatId) {
     }
   }
 
-  async function simpanSalinanDrive(path, nama, tombol) {
+  async function simpanSalinanDrive(pesan, tombol) {
     if (tombol.disabled) return;
     tombol.disabled = true;
     tombol.textContent = 'Menyiapkan salinan…';
     try {
-      const sesi = await hubungkanGoogleWorkspace();
-      const url = await muatLampiran(path);
-      const response = await fetch(url);
+      const sesi = await hubungkanGoogleWorkspaceUntukPengguna(user);
+      const lampiran = await muatLampiran(pesan);
+      const response = await fetch(lampiran.url);
       if (!response.ok) throw new Error(`Lampiran gagal dibaca (${response.status}).`);
       const blob = await response.blob();
-      const namaDrive = namaLampiranTampil(nama).nama;
-      const file = new File([blob], namaDrive, { type: blob.type || 'application/octet-stream' });
+      const namaDrive = namaLampiranTampil(lampiran.fileName).nama;
+      const file = new File([blob], namaDrive, { type: lampiran.mimeType || 'application/octet-stream' });
       const hasil = await unggahKeDrive(sesi.accessToken, file);
       if (!hasil.id) throw new Error('Google Drive tidak mengembalikan ID berkas.');
       const link = h('a', {
@@ -163,34 +198,6 @@ export async function tampilkanRuang(panel, chatId) {
       tombol.disabled = false;
       tombol.textContent = 'Coba simpan ke Drive lagi';
       toast(error?.message || 'Salinan tidak dapat disimpan ke Drive. Coba hubungkan ulang akun Google.', 'error');
-    }
-  }
-
-  const pengamatGambar = typeof IntersectionObserver === 'function'
-    ? new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        pengamatGambar.unobserve(entry.target);
-        void muatGambar(entry.target);
-      });
-    }, { root: daftar, rootMargin: '200px' })
-    : null;
-
-  async function muatGambar(gambar) {
-    const path = gambar.dataset.path;
-    const tautan = gambar.closest('a');
-    if (!path || !tautan) return;
-    try {
-      const url = await muatLampiran(path);
-      if (!aktif || !gambar.isConnected) return;
-      gambar.src = url;
-      tautan.href = url;
-      tautan.dataset.siap = 'true';
-    } catch (error) {
-      if (aktif && error?.name !== 'AbortError') {
-        gambar.alt = 'Lampiran tidak dapat dimuat';
-        console.error('[chat] gambar lampiran gagal dimuat:', error);
-      }
     }
   }
 
@@ -227,38 +234,28 @@ export async function tampilkanRuang(panel, chatId) {
   function elemenPesan(p) {
     const milikSaya = p.senderId === saya;
     let isi;
-    const filePath = jalurLampiranValid(p.filePath, chatId)
-      ? p.filePath
-      : jalurLampiranDariUrl(p.fileUrl, chatId);
-
-    if (p.type === 'image' && filePath) {
+    if (p.type === 'image' && p.fileId) {
       const image = h('img', {
-        alt: p.fileName || 'Foto',
+        alt: 'Foto terenkripsi',
         class: 'chat-img',
-        loading: 'lazy',
-        'data-path': filePath,
       });
       const link = h('a', {
         href: '#',
         target: '_blank',
         rel: 'noopener noreferrer',
-        onclick: (event) => bukaLampiran(event, filePath, event.currentTarget),
+        onclick: (event) => bukaLampiran(event, p, event.currentTarget),
       }, image);
-      if (pengamatGambar) pengamatGambar.observe(image);
-      else void muatGambar(image);
       isi = link;
-    } else if (p.type === 'file' && filePath) {
-      const namaLampiran = namaLampiranTampil(p.fileName);
+    } else if (p.type === 'file' && p.fileId) {
       isi = h('a', {
         href: '#',
         target: '_blank',
         rel: 'noopener noreferrer',
         class: 'chat-berkas',
-        onclick: (event) => bukaLampiran(event, filePath, event.currentTarget),
+        onclick: (event) => bukaLampiran(event, p, event.currentTarget),
       },
       h('i', { class: 'bi bi-paperclip', 'aria-hidden': 'true' }), ' ',
-      namaLampiran.nama,
-      namaLampiran.dikonversi ? h('small', { class: 'chat-berkas__ukuran' }, ' (PDF)') : null,
+      h('span', { class: 'chat-berkas__nama' }, 'Berkas terenkripsi'),
       p.fileSize ? h('small', { class: 'chat-berkas__ukuran' }, ` (${formatUkuran(p.fileSize)})`) : null);
     } else if (p.type === 'text') {
       // textContent (lewat h), BUKAN innerHTML — mencegah XSS.
@@ -273,10 +270,10 @@ export async function tampilkanRuang(panel, chatId) {
     return h('div', { class: `gelembung ${milikSaya ? 'saya' : 'lain'}` },
       !milikSaya && grup ? h('small', { class: 'pengirim' }, nama(p.senderId)) : null,
       isi,
-      filePath ? h('button', {
+      p.fileId ? h('button', {
         class: 'chat-drive-save',
         type: 'button',
-        onclick: (event) => simpanSalinanDrive(filePath, p.fileName || 'Lampiran', event.currentTarget),
+        onclick: (event) => simpanSalinanDrive(p, event.currentTarget),
       }, 'Simpan salinan di Drive saya') : null,
       h('span', { class: 'waktu' }, jamMenit(p.ts), tc ? ' ' : '', tc));
   }
@@ -366,8 +363,8 @@ export async function tampilkanRuang(panel, chatId) {
       tombolLampir.disabled = true;
       toast('Mengunggah…');
       try {
-        const hasil = await unggahBerkas(chatId, saya, berkas);
-        await kirimPesan(chatId, saya, anggota, hasil, meta);
+        const { accessToken, identity } = await kredensialLampiran();
+        await unggahBerkas(chatId, saya, berkas, accessToken, identity);
       } catch (error) {
         console.error('[chat] unggah gagal:', error);
         toast(pesanGalatChat(error, 'kirim'), 'error');
@@ -415,7 +412,7 @@ export async function tampilkanRuang(panel, chatId) {
   /* Chat pribadi hanya boleh dikirimi bila kontak masih 'accepted' (selaras Rules). */
   function terapkanStatusKontak(s) {
     if (grup || !s.kontakSiap) return;
-    const aktifKontak = (s.kontak || []).some((k) => k.id === chatId && k.status === 'accepted');
+    const aktifKontak = (s.kontak || []).some((k) => k.peerUid === lawan && k.status === 'accepted');
     catatan.hidden = aktifKontak;
     for (const el of [kolom, tombolKirim, tombolEmoji, tombolLampir]) el.disabled = !aktifKontak || (el === tombolLampir && mengunggah);
   }
@@ -440,7 +437,6 @@ export async function tampilkanRuang(panel, chatId) {
   return () => {
     aktif = false;
     clearTimeout(jadwalBaca);
-    pengamatGambar?.disconnect();
     pengendaliUnduhan.forEach((controller) => controller.abort());
     urlLampiran.forEach((url) => URL.revokeObjectURL(url));
     pembatal.forEach((fn) => { try { fn(); } catch { /* abaikan */ } });

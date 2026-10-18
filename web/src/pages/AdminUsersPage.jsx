@@ -1,10 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { db } from '../firebase/index.js';
-import {
-  collection, documentId, getDocs, limit, orderBy, query, startAfter, where,
-} from 'firebase/firestore';
+import { supabase } from '../lib/supabase.ts';
 import '../styles/admin-users.css';
 
 const UKURAN_HALAMAN = 50;
@@ -29,8 +26,8 @@ function namaPengguna(data) {
 }
 
 function statusPengguna(data) {
-  if (data.aktif === true) return { label: 'Aktif', className: 'is-active' };
-  if (data.aktif === false) return { label: 'Nonaktif', className: 'is-inactive' };
+  if (data.active === true) return { label: 'Aktif', className: 'is-active' };
+  if (data.active === false) return { label: 'Nonaktif', className: 'is-inactive' };
   return { label: 'Belum dicatat', className: 'is-unknown' };
 }
 
@@ -41,45 +38,52 @@ export default function AdminUsersPage() {
   const kategori = KATEGORI[sub];
   const pengelola = role === 'admin_sekolah';
   const [users, setUsers] = useState([]);
-  const [lastDoc, setLastDoc] = useState(null);
+  const [lastId, setLastId] = useState(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [hasMore, setHasMore] = useState(false);
 
   const ambilHalaman = useCallback(async (cursor, reset = false) => {
-    if (!tenantId) return;
+    if (!tenantId || !kategori) return;
     setLoading(true);
     setError('');
     try {
-      const akun = collection(db, 'users');
-      const constraints = [
-        where('tenantId', '==', tenantId),
-        orderBy(documentId()),
-        ...(cursor ? [startAfter(cursor)] : []),
-        limit(UKURAN_HALAMAN + 1),
-      ];
-      const snapshot = await getDocs(query(akun, ...constraints));
-      const docs = snapshot.docs.slice(0, UKURAN_HALAMAN);
+      let request = supabase
+        .from('profiles')
+        .select('id,email,nama,role,tenant_id,active')
+        .eq('tenant_id', tenantId)
+        .in('role', kategori.roles)
+        .order('id')
+        .limit(UKURAN_HALAMAN + 1);
+      if (cursor) request = request.gt('id', cursor);
+      const { data, error: queryError } = await request;
+      if (queryError) throw queryError;
+      const rows = data || [];
+      const docs = rows.slice(0, UKURAN_HALAMAN);
       setUsers((current) => {
-        const halaman = docs.map((item) => ({ uid: item.id, ...item.data() }));
+        const halaman = docs.map((item) => ({
+          uid: item.id,
+          ...item,
+          aktif: item.active,
+        }));
         return reset ? halaman : [...current, ...halaman];
       });
-      setLastDoc(docs.at(-1) || null);
-      setHasMore(snapshot.docs.length > UKURAN_HALAMAN);
+      setLastId(docs.at(-1)?.id || null);
+      setHasMore(rows.length > UKURAN_HALAMAN);
     } catch (err) {
       console.error('[admin-users] Gagal memuat pengguna tenant:', err);
-      setError(err?.code === 'permission-denied'
-        ? 'Akses daftar pengguna ditolak. Pastikan akun memiliki peran admin sekolah dan tenant yang sesuai.'
+      setError(err?.code === '42501'
+        ? 'Akses daftar pengguna ditolak. Pastikan akun admin sekolah aktif dan berada pada tenant yang sesuai.'
         : 'Daftar pengguna tidak dapat dimuat. Periksa koneksi lalu coba lagi.');
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [kategori, tenantId]);
 
   useEffect(() => {
     setUsers([]);
-    setLastDoc(null);
+    setLastId(null);
     setHasMore(false);
     setSearch('');
     if (pengelola && tenantId && kategori) ambilHalaman(null, true);
@@ -119,7 +123,7 @@ export default function AdminUsersPage() {
         <header className="ale-admin-users-heading">
           <p className="ale-admin-users-kicker">Manajemen pengguna</p>
           <h2>Peran dan hak akses</h2>
-          <p>Peran ditetapkan melalui klaim Firebase oleh administrator tepercaya. Halaman ini menjelaskan akses yang berlaku dan tidak mengubah klaim akun.</p>
+          <p>Peran ditetapkan melalui app metadata Supabase oleh administrator tepercaya. Halaman ini menjelaskan akses yang berlaku dan tidak mengubah peran akun.</p>
         </header>
         <section className="ale-admin-users-card">
           <div className="ale-admin-users-table-wrap">
@@ -197,7 +201,7 @@ export default function AdminUsersPage() {
         )}
         {hasMore && (
           <div className="ale-admin-users-more">
-            <button className="ale-admin-users-button" type="button" onClick={() => ambilHalaman(lastDoc)} disabled={loading}>
+            <button className="ale-admin-users-button" type="button" onClick={() => ambilHalaman(lastId)} disabled={loading}>
               {loading ? 'Memuat…' : 'Muat 50 berikutnya'}
             </button>
           </div>

@@ -11,83 +11,28 @@
  * halaman ini hanya mengisi `wadah` (#slot-halaman) dan mengembalikan
  * cleanup (di sini no-op karena tidak ada listener global).
  */
-import { db, rtdb } from '../firebase/index.js';
-import { collection, doc, getDoc, getDocs, query, limit, orderBy, where } from 'firebase/firestore';
-import { ref, get } from 'firebase/database';
+import { muatPercakapanTerbaruDasbor } from '../services/dashboard.js';
+import { sesiGoogleWorkspacePerPengguna } from '../services/googleWorkspaceAuth.js';
+import { identitasEnkripsiDriveDalamSesi } from '../services/driveEncryption.js';
+import { muatJadwalGuruDrive } from '../services/teacherScheduleDrive.js';
 import { getState } from '../state.js';
 import { perbaruiHeader } from '../components/sidebar.js';
 import { LINK_PERENCANAAN } from '../config.js';
 import { menuUntukPeran } from '../navigasi.js';
+import { sesiUntukHari } from './dataDasar/jadwalUtil.js';
 import {
   esc, ikon, inisial, namaDariUser, sapaanWaktu, formatWaktu,
-  simpanProfil, ambilProfil, linkLuarAman, LABEL_PERAN, SUBJUDUL_PERAN,
+  ambilProfil, linkLuarAman, LABEL_PERAN, SUBJUDUL_PERAN,
 } from '../ui.js';
-
-// ============================================================================
-// KONSTANTA & HELPER
-// ============================================================================
-const BATAS_DAFTAR  = 20;
-const BATAS_RIWAYAT = 10;
 
 const SKELETON =
   '<div class="ale-skel" aria-hidden="true"><span></span><span></span><span></span></div>' +
   '<span class="sr-only">Memuat…</span>';
 
-const LABEL_JENIS = {
-  rpe: 'RPE', atp: 'ATP', prota: 'Prota', prosem: 'Prosem',
-  kktp: 'KKTP', modul: 'Modul Ajar', cover: 'Cover',
-};
-
-function escapeHtml(s) {
-  return String(s == null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 function escapeAttr(s) {
-  return escapeHtml(s).replace(/'/g, '&#39;');
-}
-
-function waktuRelatif(ts) {
-  if (!ts) return '—';
-  const d = ts?.toDate ? ts.toDate() : new Date(ts);
-  const selisih = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (selisih < 60) return 'baru saja';
-  if (selisih < 3600) return `${Math.floor(selisih / 60)} menit lalu`;
-  if (selisih < 86400) return `${Math.floor(selisih / 3600)} jam lalu`;
-  if (selisih < 604800) return `${Math.floor(selisih / 86400)} hari lalu`;
-  return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(d);
-}
-
-function cetakDokumen(judul, htmlContent) {
-  const win = window.open('', '_blank');
-  if (!win) return;
-
-  const docTitle = escapeHtml(judul || 'Dokumen');
-  const cetakHtml = [
-    '<!doctype html>',
-    '<html>',
-    '<head>',
-    `  <title>${docTitle}</title>`,
-    '  <style>',
-    "    body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; padding: 0; margin: 0; }",
-    '    table { border-collapse: collapse; width: 100%; }',
-    '    th, td { border: 0.5pt solid #333; padding: 4pt 6pt; }',
-    '    th { background: #f3ebe0; text-align: center; }',
-    '    h1, h2, h3 { page-break-after: avoid; }',
-    '  </style>',
-    '</head>',
-    '<body>',
-    htmlContent,
-    '</body>',
-    '</html>',
-  ].join('\n');
-
-  win.document.open();
-  win.document.write(cetakHtml);
-  win.document.close();
-  win.focus();
-  setTimeout(() => win.print(), 250);
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
 }
 
 function tileStat(id, kelas, ikonNama, label, denganBar) {
@@ -158,15 +103,12 @@ function tampilan({ sapa, nama, peran, subjudul, sekarang }) {
     </section>
 
     <section class="ale-kartu ale-aksen-indigo ale-jadwal-utama"
-             id="aleKartuJadwal" aria-labelledby="hJadwal" aria-busy="true">
+             id="aleKartuJadwal" aria-labelledby="hJadwal">
       <div class="ale-kartu-kepala">
         <h2 class="ale-kartu-judul" id="hJadwal">${ikon('kalender')}Jadwal hari ini</h2>
         <span class="ale-chip" id="aleChipJadwal" hidden></span>
       </div>
-      <div data-isi>${SKELETON}</div>
-      <a class="ale-tautan" href="#/datadasar/jadwal">
-        Kelola jadwal mengajar${ikon('panah')}
-      </a>
+      <div data-isi><p class="ale-kosong">Ringkasan jadwal belum tersedia di dasbor.</p></div>
     </section>
 
     <section class="ale-kartu ale-aksen-amber ale-akses" id="aleKartuAkses" aria-labelledby="hAksi">
@@ -193,12 +135,12 @@ function tampilan({ sapa, nama, peran, subjudul, sekarang }) {
           </div>
         </section>
 
-        <section class="ale-kartu ale-aksen-amber" id="aleKartuRiwayat" aria-labelledby="hRiwayat" aria-busy="true">
+        <section class="ale-kartu ale-aksen-amber" id="aleKartuRiwayat" aria-labelledby="hRiwayat">
           <div class="ale-kartu-kepala">
             <h2 class="ale-kartu-judul" id="hRiwayat">${ikon('folder')}Riwayat terbaru</h2>
             <a class="ale-chip ale-chip-aksi" href="#/hasil">${ikon('panah')}Semua</a>
           </div>
-          <div data-isi>${SKELETON}</div>
+          <div data-isi><p class="ale-kosong">Riwayat dokumen menunggu migrasi terenkripsi.</p></div>
         </section>
 
       </div>
@@ -213,11 +155,11 @@ function tampilan({ sapa, nama, peran, subjudul, sekarang }) {
           <a class="ale-tautan" href="#/chat">Buka chat${ikon('panah')}</a>
         </section>
 
-        <section class="ale-kartu ale-aksen-emerald" id="aleKartuTugas" aria-labelledby="hTugas" aria-busy="true">
+        <section class="ale-kartu ale-aksen-emerald" id="aleKartuTugas" aria-labelledby="hTugas">
           <div class="ale-kartu-kepala">
             <h2 class="ale-kartu-judul" id="hTugas">${ikon('tugas')}Tugas tertunda</h2>
           </div>
-          <div data-isi>${SKELETON}</div>
+          <div data-isi><p class="ale-kosong">Tugas belum tersedia di penyimpanan Supabase.</p></div>
         </section>
 
       </div>
@@ -265,8 +207,8 @@ const AKSI_SUPERADMIN = [
     ket: 'Template prompt dan pemantauan pemakaian',
   },
   {
-    href: '#/platform/firebase/firestore', ikon: 'database', judul: 'Layanan Firebase',
-    ket: 'Firestore, Storage, Functions, Auth, dan FCM',
+    href: '#/platform/supabase-users', ikon: 'database', judul: 'Pengguna Supabase',
+    ket: 'Identitas, tenant, dan peran terverifikasi',
   },
   {
     href: '#/platform/keamanan/audit', ikon: 'perisai', judul: 'Keamanan dan audit',
@@ -339,8 +281,8 @@ function tampilanAdmin({ role, nama, sekolah }) {
         <div class="ale-admin-prinsip-grid">
           ${superadmin
             ? `<p><strong>Direktori platform.</strong> Tinjau sekolah dan admin sekolah secara baca-saja; perubahan langganan dan peran harus melalui backend tepercaya.</p>
-               <p><strong>Rahasia dan infrastruktur.</strong> API key AI dikelola di server. Gunakan konsol Firebase untuk status layanan operasional.</p>
-               <p><strong>Statistik dan audit.</strong> Snapshot Firestore bukan telemetry historis, audit aplikasi, metrik biaya, atau status kesehatan layanan.</p>`
+               <p><strong>Rahasia dan infrastruktur.</strong> API key AI dikelola di server. Jangan memasukkan rahasia layanan ke aplikasi browser.</p>
+               <p><strong>Statistik dan audit.</strong> Gunakan laporan sesuai sumber dan rentang data; ringkasan bukan telemetry historis atau metrik biaya.</p>`
             : `<p><strong>Akun sesuai kewenangan.</strong> Kelola guru, siswa, dan orang tua dalam tenant sekolah; persetujuan serta perubahan akun mengikuti alur resmi.</p>
                <p><strong>Dokumen dan asesmen.</strong> Tinjau status perangkat ajar yang diunggah serta monitoring ujian untuk kebutuhan operasional sekolah.</p>
                <p><strong>Privasi komunikasi.</strong> Gunakan ringkasan agregat dan laporan; isi percakapan pribadi bukan untuk dipantau bebas.</p>`}
@@ -396,38 +338,18 @@ function tampilanPortal({ role, nama }) {
     <div class="ale-grid">${daftarMenu}</div>`;
 }
 
-async function muatProfilDashboard(uid) {
-  try {
-    const snap = await getDoc(doc(db, 'users', uid));
-    if (!snap.exists()) return null;
-
-    const d = snap.data();
-    const profil = {
-      nama:        typeof d.nama        === 'string' ? d.nama.trim()        : '',
-      sekolah:     typeof d.sekolah     === 'string' ? d.sekolah.trim()     : '',
-      langganan:   d.langganan === true || d.langganan === 'aktif',
-      logoSekolah: typeof d.logoSekolah === 'string' ? d.logoSekolah.trim() : '',
-    };
-
-    simpanProfil(uid, profil);
-    return profil;
-  } catch (err) {
-    console.warn('[dashboard] profil tidak terbaca:', err);
-    return null;
-  }
-}
-
 // ============================================================================
 // LOGIKA INSIALISASI
 // ============================================================================
 export async function halamanDashboard(wadah) {
-  const { user, role, tenantId, profile } = getState();
+  const { user, role, profile } = getState();
   if (!user) return () => {};
   const uid = user.uid;
 
   const sekarang   = new Date();
   const profilAwal = ambilProfil(uid);
   const namaAwal   = (profilAwal && profilAwal.nama) || namaDariUser(user);
+  if (profile || profilAwal) perbaruiHeader(profile || profilAwal);
 
   const peran = String(role || '').toLowerCase().trim();
   if (peran === 'admin_sekolah' || peran === 'admin' || peran === 'superadmin') {
@@ -439,13 +361,12 @@ export async function halamanDashboard(wadah) {
     });
     document.title = `${LABEL_PERAN[roleDashboard]} · AI_nnoe Learning Ecosystem`;
 
-    const profil = await muatProfilDashboard(uid);
+    const profil = profile || profilAwal;
     if (profil && wadah.isConnected) {
       if (profil.nama) wadah.querySelector('#aleNamaHero').textContent = profil.nama;
       if (roleDashboard === 'admin_sekolah' && profil.sekolah) {
         wadah.querySelector('#aleAdminSekolah').textContent = profil.sekolah;
       }
-      perbaruiHeader(profil);
     }
     return () => {};
   }
@@ -468,7 +389,6 @@ export async function halamanDashboard(wadah) {
 
   // `wadah` = #slot-halaman (di-render router). Tidak ada shell di sini.
   const utama       = wadah;
-  const namaHero    = utama.querySelector('#aleNamaHero');
   const tombolUlang = utama.querySelector('#aleMuatUlang');
 
   const st = {
@@ -513,123 +433,68 @@ export async function halamanDashboard(wadah) {
   };
 
   // ------------------------------------------------------------------------
-  // Pemuat data
+  // Jadwal dibaca dari vault Drive hanya jika sesi Google dan kunci vault sudah aktif.
   // ------------------------------------------------------------------------
   const pemuat = {
     async jadwal() {
-      const snap = await getDoc(doc(db, 'guru', uid, 'pengaturan', 'jadwal'));
-      const semua = snap.exists() && Array.isArray(snap.data().entri) ? snap.data().entri : [];
+      const sesiGoogle = sesiGoogleWorkspacePerPengguna(uid);
+      const identitas = identitasEnkripsiDriveDalamSesi(uid);
+      if (!sesiGoogle || !identitas) {
+        isiStat(st.jadwal, '—', 'vault belum dibuka');
+        if (chipJadwal) chipJadwal.hidden = true;
+        kosong(
+          isi.jadwal,
+          'Hubungkan Google Drive dan buka kunci vault untuk melihat jadwal terenkripsi.',
+        );
+        isi.jadwal.insertAdjacentHTML(
+          'beforeend',
+          '<p><a class="ale-tautan" href="#/pengaturan/google">Buka Google Workspace</a></p>',
+        );
+        return;
+      }
+
+      const jadwal = await muatJadwalGuruDrive(sesiGoogle.accessToken, identitas);
       const hariIni = new Date().getDay();
-
-      if (hariIni === 0) {
-        isiStat(st.jadwal, '0', 'hari Minggu');
-        if (chipJadwal) {
-          chipJadwal.hidden = false;
-          chipJadwal.textContent = 'Hari Minggu';
-        }
-        return kosong(isi.jadwal, 'Hari ini Minggu, tidak ada jadwal mengajar.');
-      }
-
-      const daftar = semua
-        .filter((e) => e && e.hari === hariIni)
-        .sort((a, b) => String(a.mulai || '').localeCompare(String(b.mulai || '')));
-
-      isiStat(st.jadwal, String(daftar.length),
-        daftar.length ? 'sesi mengajar' : 'belum ada sesi');
-
+      const sesiHariIni = sesiUntukHari(jadwal.entries, hariIni);
+      isiStat(st.jadwal, String(sesiHariIni.length), 'sesi hari ini');
       if (chipJadwal) {
-        chipJadwal.hidden = false;
-        chipJadwal.textContent = daftar.length ? `${daftar.length} sesi` : 'Belum ada sesi';
+        chipJadwal.hidden = sesiHariIni.length === 0;
+        chipJadwal.textContent = `${sesiHariIni.length} sesi`;
       }
-
-      if (!daftar.length) {
-        return kosong(isi.jadwal, semua.length
-          ? 'Tidak ada sesi mengajar untuk hari ini.'
-          : 'Jadwal mengajar belum diisi. Tambahkan di Data Dasar → Jadwal Mengajar.');
+      if (!sesiHariIni.length) {
+        kosong(isi.jadwal, 'Tidak ada sesi pada jadwal terenkripsi untuk hari ini.');
+      } else {
+        const items = sesiHariIni.map((sesi) => `
+          <li>
+            <span class="ale-chat-isi">
+              <strong>${esc(sesi.mulai)}–${esc(sesi.selesai)}</strong>
+              <span>${esc(sesi.mapel)} · ${esc(sesi.kelas)}</span>
+            </span>
+          </li>
+        `).join('');
+        isi.jadwal.innerHTML = `
+          <ul class="ale-daftar">${items}</ul>
+          <p class="ale-kosong">Jadwal legacy Firestore belum diimpor dan tidak ditampilkan.</p>
+          <a class="ale-tautan" href="#/datadasar/jadwal">Kelola jadwal${ikon('panah')}</a>
+        `;
       }
-
-      // Status tiap sesi: selesai / sekarang / akan-datang
-      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-      const keMenit = (t) => {
-        const m = String(t || '').match(/^(\d{1,2}):(\d{2})$/);
-        return m ? Number(m[1]) * 60 + Number(m[2]) : null;
-      };
-
-      const itemsHtml = daftar.map((d) => {
-        const m1 = keMenit(d.mulai);
-        const m2 = keMenit(d.selesai);
-        let status = 'akan-datang';
-        if (m1 != null && m2 != null) {
-          if (nowMin >= m2) status = 'selesai';
-          else if (nowMin >= m1) status = 'sekarang';
-        }
-        const label = status === 'sekarang'  ? 'Berlangsung'
-                    : status === 'selesai'   ? 'Selesai'
-                    :                          'Berikutnya';
-
-        return `
-          <li class="ale-timeline-item ${status}">
-            <div class="ale-timeline-waktu">
-              <strong>${esc(d.mulai || '–')}</strong>
-              <span>${esc(d.selesai || '–')}</span>
-            </div>
-            <span class="ale-timeline-dot" aria-hidden="true"></span>
-            <div class="ale-timeline-isi">
-              <strong class="ale-timeline-judul">${esc(d.mapel || 'Tanpa judul')}</strong>
-              <span class="ale-timeline-kelas">Kelas ${esc(d.kelas || '-')}</span>
-            </div>
-            <span class="ale-timeline-status">${label}</span>
-          </li>`;
-      }).join('');
-
-      isi.jadwal.innerHTML = `<ol class="ale-timeline">${itemsHtml}</ol>`;
     },
 
     async tugas() {
-      const snap = await getDocs(
-        query(collection(db, 'dashboard', uid, 'tugas'), limit(BATAS_DAFTAR))
-      );
-      const tertunda = snap.docs.map((d) => d.data()).filter((d) => d.selesai !== true);
-      const penuh    = snap.size >= BATAS_DAFTAR;
-
-      isiStat(st.tugas, tertunda.length + (penuh ? '+' : ''),
-        tertunda.length ? 'belum selesai' : 'tidak ada yang tertunda');
-
-      if (!tertunda.length) return kosong(isi.tugas, 'Tidak ada tugas tertunda.');
-
-      const itemsHtml = tertunda.map((d) =>
-        `<li>
-          <span class="ale-cek" aria-hidden="true"></span>
-          <span>${esc(d.judul || 'Tanpa judul')}</span>
-        </li>`
-      ).join('');
-
-      isi.tugas.innerHTML = `<ul class="ale-daftar">${itemsHtml}</ul>`;
+      isiStat(st.tugas, '—', 'tidak tersedia');
+      kosong(isi.tugas, 'Data tugas belum tersedia di Supabase.');
     },
 
     async progres() {
-      const snap   = await getDoc(doc(db, 'dashboard', uid, 'ringkasan', 'progres'));
-      const mentah = snap.exists() ? Number(snap.data().persen) : NaN;
-
-      if (!Number.isFinite(mentah)) {
-        isiStat(st.progres, '–', 'belum ada data');
-        return isiBar(st.progres, null);
-      }
-      const persen = Math.max(0, Math.min(100, Math.round(mentah)));
-      isiStat(st.progres, persen + '%', 'capaian semester ini');
-      isiBar(st.progres, persen);
+      isiStat(st.progres, '—', 'menunggu migrasi');
+      isiBar(st.progres, null);
     },
 
     async chat() {
-      const snap   = await get(ref(rtdb, `userChats/${uid}`));
-      const daftar = [];
-      snap.forEach((c) => { daftar.push({ id: c.key, ...c.val() }); });
-      daftar.sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0));
-
-      const belumDibaca = daftar.reduce((n, c) => n + (Number(c.unread) || 0), 0);
+      const daftar = await muatPercakapanTerbaruDasbor();
       if (chipChat) {
-        chipChat.hidden      = belumDibaca === 0;
-        chipChat.textContent = `${belumDibaca} belum dibaca`;
+        chipChat.hidden = daftar.length === 0;
+        chipChat.textContent = `${daftar.length}${daftar.length === 20 ? '+' : ''} percakapan terbaru`;
       }
 
       if (!daftar.length) {
@@ -657,75 +522,7 @@ export async function halamanDashboard(wadah) {
     },
 
     async riwayat() {
-      if (!tenantId) {
-        return kosong(isi.riwayat, 'Tenant belum diset. Hubungi admin sekolah Anda.');
-      }
-
-      let snap;
-      try {
-        const q = query(
-          collection(db, 'tenants', tenantId, 'perencanaan'),
-          where('uid', '==', uid),
-          orderBy('createdAt', 'desc'),
-          limit(BATAS_RIWAYAT)
-        );
-        snap = await getDocs(q);
-      } catch (err) {
-        // Fallback: kalau orderBy butuh composite index yang belum dibuat
-        const q2 = query(
-          collection(db, 'tenants', tenantId, 'perencanaan'),
-          where('uid', '==', uid),
-          limit(BATAS_RIWAYAT * 2)
-        );
-        snap = await getDocs(q2);
-      }
-
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0))
-        .slice(0, BATAS_RIWAYAT);
-
-      if (!list.length) {
-        return kosong(isi.riwayat, 'Belum ada dokumen. Mulai dari menu Perencanaan.');
-      }
-
-      const itemDaftar = list.map((d) => {
-        const labelJenis   = LABEL_JENIS[d.jenis] || d.jenis || '?';
-        const inisialHuruf = esc(labelJenis.charAt(0));
-        const judulDok     = escapeHtml(d.judul || '(Tanpa judul)');
-        const teksJenis    = esc(labelJenis);
-        const teksKelas    = d.kelas ? ` · ${escapeHtml(d.kelas)}` : '';
-        const teksWaktu    = escapeHtml(waktuRelatif(d.createdAt));
-        const idDok        = escapeAttr(d.id);
-
-        return `
-          <li>
-            <a class="ale-chat-baris" href="#" data-buka="${idDok}">
-              <span class="ale-avatar-kecil" aria-hidden="true">${inisialHuruf}</span>
-              <span class="ale-chat-isi">
-                <strong>${judulDok}</strong>
-                <span>${teksJenis}${teksKelas}</span>
-              </span>
-              <span class="ale-chat-meta">
-                <time>${teksWaktu}</time>
-              </span>
-            </a>
-          </li>`;
-      }).join('');
-
-      isi.riwayat.innerHTML = `
-        <ul class="ale-daftar">${itemDaftar}</ul>
-        <div class="ale-tautan-kanan">
-          <a class="ale-tautan" href="#/hasil">Lihat semua${ikon('panah')}</a>
-        </div>`;
-
-      isi.riwayat.querySelectorAll('[data-buka]').forEach((el) => {
-        el.addEventListener('click', (e) => {
-          e.preventDefault();
-          const id = el.dataset.buka;
-          const item = list.find((x) => x.id === id);
-          if (item) tampilkanModal(item);
-        });
-      });
+      kosong(isi.riwayat, 'Metadata dokumen belum dimigrasikan ke indeks Drive terenkripsi.');
     },
   };
 
@@ -740,7 +537,7 @@ export async function halamanDashboard(wadah) {
     if (isi[nama]) {
       isi[nama].innerHTML =
         `<div class="ale-galat" role="alert">
-           <span>${escapeHtml(pesan)}</span>
+           <span>${esc(pesan)}</span>
            <button type="button" class="ale-ulang" data-ulang="${escapeAttr(nama)}">
              Coba lagi
            </button>
@@ -782,69 +579,7 @@ export async function halamanDashboard(wadah) {
     if (pemuat[nama]) { siapkanUlang(nama); jalankan(nama); }
   });
 
-  async function muatProfil() {
-    const profil = await muatProfilDashboard(uid);
-    if (!profil) return;
-    if (profil.nama && namaHero) namaHero.textContent = profil.nama;
-    perbaruiHeader(profil);
-  }
-
-  function tampilkanModal(dataDokumen) {
-    document.getElementById('modal-dokumen')?.remove();
-    const pemicu = document.activeElement;
-
-    const judul = escapeHtml(dataDokumen.judul || 'Dokumen');
-    const meta = [
-      LABEL_JENIS[dataDokumen.jenis] || dataDokumen.jenis,
-      dataDokumen.mapel, dataDokumen.kelas, dataDokumen.tahunAjaran,
-    ].filter(Boolean).map(escapeHtml).join(' · ');
-    const htmlIsi = dataDokumen.html || '<p>Dokumen kosong.</p>';
-
-    const modal = document.createElement('div');
-    modal.id = 'modal-dokumen';
-    modal.className = 'modal-backdrop';
-    modal.innerHTML = `
-      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="md-judul">
-        <div class="modal-head">
-          <div>
-            <h3 id="md-judul">${judul}</h3>
-            ${meta ? `<p>${meta}</p>` : ''}
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-outline btn-sm" id="md-print">Cetak</button>
-            <button type="button" class="btn btn-primary btn-sm" id="md-close">Tutup</button>
-          </div>
-        </div>
-        <div class="doc-preview" tabindex="0">${htmlIsi}</div>
-      </div>`;
-    document.body.appendChild(modal);
-
-    const tutup = () => {
-      modal.remove();
-      document.removeEventListener('keydown', saatTombol);
-      if (pemicu && typeof pemicu.focus === 'function') pemicu.focus();
-    };
-    const saatTombol = (e) => {
-      if (e.key === 'Escape') { tutup(); return; }
-      if (e.key !== 'Tab') return;
-      const bisaFokus = modal.querySelectorAll('button, [href], [tabindex]:not([tabindex="-1"])');
-      if (!bisaFokus.length) return;
-      const awal  = bisaFokus[0];
-      const akhir = bisaFokus[bisaFokus.length - 1];
-      if (e.shiftKey && document.activeElement === awal)  { e.preventDefault(); akhir.focus(); }
-      else if (!e.shiftKey && document.activeElement === akhir) { e.preventDefault(); awal.focus(); }
-    };
-
-    modal.querySelector('#md-close').onclick = tutup;
-    modal.querySelector('#md-print').onclick = () => {
-      cetakDokumen(dataDokumen.judul, modal.querySelector('.doc-preview').innerHTML);
-    };
-    modal.addEventListener('click', (e) => { if (e.target === modal) tutup(); });
-    document.addEventListener('keydown', saatTombol);
-    modal.querySelector('#md-close').focus();
-  }
-
-  await Promise.allSettled([muatProfil(), muatSemua()]);
+  await muatSemua();
 
   // Cleanup: halaman ini tidak memasang listener global, jadi no-op.
   return () => {};

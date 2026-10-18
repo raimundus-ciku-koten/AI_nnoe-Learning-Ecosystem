@@ -15,6 +15,7 @@
  */
 
 import groovy.xml.MarkupBuilder
+import java.net.URI
 
 plugins {
     id 'com.android.application'
@@ -35,9 +36,27 @@ def releaseSigningConfigured = [
     'keyPassword'
 ].every { releaseSigningProperties.getProperty(it) }
 
+def configuredTwaHost = providers.gradleProperty('twaHost').orElse(providers.environmentVariable('TWA_HOST')).orNull
+if (!configuredTwaHost) {
+    throw new GradleException('Set TWA_HOST (atau -PtwaHost) ke domain HTTPS non-Firebase sebelum membangun APK.')
+}
+
+def normalizedTwaHost = configuredTwaHost.toLowerCase(Locale.ROOT)
+def twaHostUri = URI.create("https://${configuredTwaHost}")
+def firebaseManagedHost = ['web.app', 'firebaseapp.com', 'firebaseio.com'].any { suffix ->
+    normalizedTwaHost == suffix || normalizedTwaHost.endsWith(".${suffix}")
+}
+def placeholderHost = ['invalid', 'example', 'localhost'].any { suffix ->
+    normalizedTwaHost == suffix || normalizedTwaHost.endsWith(".${suffix}")
+} || ['example.com', 'example.net', 'example.org'].contains(normalizedTwaHost)
+if (!twaHostUri.host?.equalsIgnoreCase(configuredTwaHost) || twaHostUri.port != -1 || twaHostUri.rawPath ||
+    firebaseManagedHost || placeholderHost) {
+    throw new GradleException('TWA_HOST harus berupa hostname publik HTTPS non-Firebase, bukan placeholder, tanpa path atau port.')
+}
+
 def twaManifest = [
     applicationId: 'com.ainnoe.learningecosystem',
-    hostName: 'ainnoe-learning-ecosyste-f7432.web.app', // The domain being opened in the TWA.
+    hostName: normalizedTwaHost, // The domain being opened in the TWA.
     launchUrl: '/#/login', // The start path for the TWA. Must be relative to the domain.
     name: 'AI_nnoe Learning Ecosystem', // The application name.
     launcherName: 'AI_nnoe', // The name shown on the Android Launcher.
@@ -84,6 +103,7 @@ android {
         // The URL that will be used when launching the TWA from the Android Launcher
         def launchUrl = "https://" + twaManifest.hostName + twaManifest.launchUrl
         resValue "string", "launchUrl", launchUrl
+        resValue "string", "assetStatements", """[{"relation":["delegate_permission/common.handle_all_urls"],"target":{"namespace":"web","site":"https://${twaManifest.hostName}"}}]"""
 
         
 
@@ -91,12 +111,12 @@ android {
             // The URL the Web Manifest for the Progressive Web App that the TWA points to. This
             // is used by Chrome OS and Meta Quest to open the Web version of the PWA instead of
             // the TWA, as it will probably give a better user experience for non-mobile devices.
-            resValue "string", "webManifestUrl", 'https://ainnoe-learning-ecosyste-f7432.web.app/site.webmanifest'
+            resValue "string", "webManifestUrl", "https://${twaManifest.hostName}/site.webmanifest"
         
 
         
             // This is used by Meta Quest.
-            resValue "string", "fullScopeUrl", 'https://ainnoe-learning-ecosyste-f7432.web.app/'
+            resValue "string", "fullScopeUrl", "https://${twaManifest.hostName}/"
         
 
         

@@ -7,16 +7,12 @@
  *   2. Kartu siswa tampil: nama, NISN, barcode Code128, kode unik, URL scan.
  *   3. Cetak semua kartu yang tampil, atau satu kartu saja (10 kartu / A4, CR80).
  *   4. Unduh CSV kode (Excel-safe) atau barcode per siswa sebagai SVG.
- *   5. (Admin) Simpan kode ke Data Siswa agar kode permanen & tak berubah.
  *
  * Keputusan desain
  *   - `umum.js` dan `ui.js` diimpor sebagai namespace (`import * as`). Bila ada
  *     helper yang belum diekspor, modul TETAP termuat dan memakai cadangan lokal.
  *   - Logika berat dipisah ke lib/ (code128, kodeSiswa, berkas) dan kartuCetak.js
  *     sehingga bisa diuji tanpa DOM.
- *   - Penulisan ke Firestore HANYA lewat tombol "Simpan kode", memuat modul
- *     firebase/siswaKodeRepo.js secara malas (dynamic import). Tab tetap
- *     berfungsi penuh (baca-saja) bila modul/SDK Firebase bermasalah.
  *   - Semua teks dinamis di-escape; SVG barcode dibangun dari angka saja dan
  *     SVG dari luar divalidasi; CSV kebal formula injection.
  *
@@ -32,7 +28,7 @@ import { svgCode128 } from '../../lib/code128.js';
 import { esc, normal, namaAman } from '../../lib/teks.js';
 import { csvEscape, buatCsv, unduhBerkas, salinTeks } from '../../lib/berkas.js';
 import {
-  kelasDari, kodeTersimpan, kodeUntuk, urlScan as buatUrlScan, cariKodeGanda, rencanaKodeBaru,
+  kelasDari, kodeTersimpan, kodeUntuk, urlScan as buatUrlScan, cariKodeGanda,
 } from '../../lib/kodeSiswa.js';
 import { cetakKartu } from './kartuCetak.js';
 
@@ -83,14 +79,6 @@ const pembuatKode = typeof UMUM.buatKodeSiswa === 'function' ? UMUM.buatKodeSisw
 const pembuatUrl = typeof UMUM.urlScanKode === 'function' ? UMUM.urlScanKode : null;
 const kodeSiswa = (s) => kodeUntuk(s, pembuatKode);
 const urlScan = (kode) => buatUrlScan(kode, pembuatUrl);
-
-/** true/false bila ctx menyatakan peran; true bila tak diketahui (aturan Firestore tetap penentu). */
-function bolehSimpan(ctx) {
-  if (ctx?.isAdmin === true) return true;
-  if (ctx?.isAdmin === false) return false;
-  const peran = String(ctx?.peran ?? ctx?.role ?? ctx?.user?.peran ?? ctx?.user?.role ?? '').toLowerCase();
-  return peran ? ['admin', 'superadmin'].includes(peran) : true;
-}
 
 const BERBAHAYA = /<script|<foreignObject|\son\w+\s*=|javascript:/i;
 
@@ -180,7 +168,6 @@ export async function tabBarcode(el, ctx) {
   let kelasAktif = daftarKelas.includes(kelasTerakhir()) ? kelasTerakhir() : daftarKelas[0];
   let kataKunci = '';
   let tampil = [];            // siswa yang sedang ditampilkan
-  let sedangMenyimpan = false;
   const cacheSvg = new Map(); // kode → svg (hindari render ulang tiap ketikan)
 
   el.innerHTML = `
@@ -209,9 +196,6 @@ export async function tabBarcode(el, ctx) {
           <button type="button" class="dd-btn" id="bcUnduh">
             ${ikon('unduh')} Unduh CSV Kode
           </button>
-          <button type="button" class="dd-btn" id="bcSimpan" hidden>
-            Simpan Kode ke Data Siswa
-          </button>
         </div>
       </div>
 
@@ -223,8 +207,6 @@ export async function tabBarcode(el, ctx) {
       </p>
       <p class="dd-info-teks" id="bcPeringatan" hidden></p>
       <p class="dd-info-teks" id="bcGanda" role="alert" hidden></p>
-      <p class="dd-info-teks" id="bcStatus" role="status" aria-live="polite" hidden></p>
-
       <div class="dd-kartu-grid" id="bcGrid"></div>
     </section>`;
 
@@ -268,15 +250,11 @@ export async function tabBarcode(el, ctx) {
     q('#bcCetak').disabled = !tampil.length;
     q('#bcUnduh').disabled = !tampil.length;
 
-    const tombolSimpan = q('#bcSimpan');
-    tombolSimpan.hidden = !(belumTersimpan && bolehSimpan(ctx));
-    tombolSimpan.disabled = sedangMenyimpan;
-
     const peringatan = q('#bcPeringatan');
     peringatan.hidden = !belumTersimpan;
     peringatan.textContent = belumTersimpan
-      ? `${belumTersimpan} siswa di kelas ini belum punya kode tersimpan. Kodenya tetap tampil, ` +
-        'tetapi simpan dulu agar kode tidak berubah bila data siswa diedit.'
+      ? `${belumTersimpan} siswa di kelas ini belum memiliki kode unik permanen. ` +
+        'Rekonsiliasi data siswa terlebih dahulu sebelum menggunakan kartu untuk absensi.'
       : '';
 
     const peringatanGanda = q('#bcGanda');
@@ -318,12 +296,6 @@ export async function tabBarcode(el, ctx) {
     }).join('');
   }
 
-  function tampilkanStatus(teks) {
-    const p = q('#bcStatus');
-    p.hidden = !teks;
-    p.textContent = teks || '';
-  }
-
   /* ---------------- Aksi ---------------- */
 
   function cetak(daftar, judul) {
@@ -345,63 +317,6 @@ export async function tabBarcode(el, ctx) {
     });
     unduhBerkas(`kode-absensi-${namaAman(kelasAktif)}.csv`, buatCsv(baris), 'text/csv');
     toast(`${tampil.length} kode diunduh.`, 'ok');
-  }
-
-  async function simpanKode() {
-    if (sedangMenyimpan) return;
-    const kelasIni = semua.filter((s) => kelasDari(s) === kelasAktif);
-    const { rencana, tanpaId } = rencanaKodeBaru(semua, kelasIni, pembuatKode);
-
-    if (!rencana.length) {
-      toast(tanpaId.length
-        ? 'Siswa belum punya ID dokumen, kode tidak bisa disimpan dari tab ini.'
-        : 'Semua kode di kelas ini sudah tersimpan.', tanpaId.length ? 'galat' : 'ok');
-      return;
-    }
-
-    const yakin = window.confirm(
-      `Simpan ${rencana.length} kode ke Data Siswa kelas ${kelasAktif}?\n\n` +
-      'Kode yang sudah tersimpan tidak dapat diubah lagi, sehingga kartu yang dicetak tetap berlaku.',
-    );
-    if (!yakin) return;
-
-    sedangMenyimpan = true;
-    q('#bcSimpan').disabled = true;
-    tampilkanStatus(`Menyimpan 0 / ${rencana.length} kode…`);
-
-    try {
-      const repo = await import('../../firebase/siswaKodeRepo.js');
-      const hasil = await repo.simpanKodeSiswa(rencana, {
-        db: ctx?.db,
-        onProgress: (selesai, total) => tampilkanStatus(`Menyimpan ${selesai} / ${total} kode…`),
-      });
-
-      const peta = new Map(semua.filter((s) => s.id != null).map((s) => [String(s.id), s]));
-      rencana.slice(0, hasil.tersimpan).forEach((r) => {
-        const s = peta.get(r.id);
-        if (s) s.kodeUnik = r.kode;
-      });
-
-      if (hasil.galat) {
-        toast(`${hasil.tersimpan} kode tersimpan, sisanya gagal: ${pesanGalat(hasil.galat)}`, 'galat');
-      } else {
-        toast(`${hasil.tersimpan} kode tersimpan permanen.`, 'ok');
-      }
-    } catch (err) {
-      console.error('[tabBarcode] gagal menyimpan kode', err);
-      toast(`Gagal menyimpan kode: ${pesanGalat(err)}`, 'galat');
-    } finally {
-      sedangMenyimpan = false;
-      tampilkanStatus('');
-      render();
-    }
-  }
-
-  function pesanGalat(err) {
-    const kode = err?.code || '';
-    if (kode === 'permission-denied') return 'hanya admin yang boleh menyimpan kode.';
-    if (kode === 'unavailable') return 'koneksi ke server terputus, coba lagi.';
-    return err?.message || 'kesalahan tidak diketahui.';
   }
 
   /* ---------------- Event ---------------- */
@@ -428,8 +343,6 @@ export async function tabBarcode(el, ctx) {
     if (!tampil.length) { toast('Tidak ada data untuk diunduh.', 'galat'); return; }
     unduhCsv();
   });
-
-  q('#bcSimpan').addEventListener('click', simpanKode);
 
   grid.addEventListener('click', async (e) => {
     const tombol = e.target instanceof Element ? e.target.closest('[data-aksi]') : null;

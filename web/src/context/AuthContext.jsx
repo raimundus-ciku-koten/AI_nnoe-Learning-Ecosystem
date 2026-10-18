@@ -9,7 +9,7 @@ import {
 
 const AuthContext = createContext(null);
 
-// Jaring pengaman: jangan tahan UI selamanya bila layanan Auth tidak merespons.
+// Jaring pengaman: bila sesi Supabase lambat dipulihkan, jangan tahan UI selamanya.
 const BATAS_AUTH_SIAP_MS = 12000;
 
 export function AuthProvider({ children }) {

@@ -1,15 +1,14 @@
 // web/src/pages/dataDasar/tabJadwal.js
 // Jadwal Mengajar pekanan (Senin-Sabtu) dengan deteksi bentrok jam.
-// Lokasi data: guru/{uid}/pengaturan/jadwal  ->  { entri: [{id, hari, mulai, selesai, kelas, mapel}], diperbarui }
-//
-// Catatan arsitektur:
-// - Logika murni (validasi, bentrok, operasi) ada di jadwalUtil.js dan diuji terpisah.
-// - Setiap simpan memakai transaksi Firestore (baca -> ubah -> tulis) sehingga perubahan
-//   dari tab/perangkat lain tidak saling menimpa. Bentrok diperiksa ulang pada data terbaru.
-import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../firebase/index.js';
+// Isi jadwal dienkripsi di browser dan disimpan sebagai satu berkas Google Drive per pengguna.
 import { esc } from '../../ui.js';
 import { HARI, bersih, buatId, galat, ik, toast, urutUnik } from './umum.js';
+import {
+  hubungkanGoogleDriveUntukPengguna,
+  sesiGoogleWorkspacePerPengguna,
+} from '../../services/googleWorkspaceAuth.js';
+import { identitasEnkripsiDriveDalamSesi } from '../../services/driveEncryption.js';
+import { muatJadwalGuruDrive, ubahJadwalGuruDrive } from '../../services/teacherScheduleDrive.js';
 import {
   MAKS_KELAS, MAKS_MAPEL, cariBentrok, formatDurasi, idBentrokDalamHari, kelompokPerHari,
   normalisasiEntri, pesanBentrok, sarankanJamBerikutnya, terapkanOperasi, totalMenit,
@@ -18,6 +17,7 @@ import './tabJadwal.css';
 
 const JAM_MULAI_AWAL = '07:00';
 const JAM_SELESAI_AWAL = '07:40';
+const pemasangan = new WeakMap();
 
 // Nama field pada jadwalUtil -> id elemen form
 const ID_FIELD = { hari: 'jdHari', mulai: 'jdMulai', selesai: 'jdSelesai', kelas: 'jdKelas', mapel: 'jdMapel' };
@@ -34,13 +34,47 @@ function tampilkanGalatMuat(el, pesan, ulangi) {
 }
 
 export async function tabJadwal(el, ctx) {
+  const pemasanganAktif = {};
+  pemasangan.set(el, pemasanganAktif);
+  const masihAktif = () => el.isConnected && pemasangan.get(el) === pemasanganAktif;
   const uid = ctx?.user?.uid;
   if (!uid) {
     tampilkanGalatMuat(el, 'Sesi pengguna tidak ditemukan. Muat ulang halaman lalu masuk kembali.', null);
     return;
   }
 
-  const ref = doc(db, 'guru', uid, 'pengaturan', 'jadwal');
+  if (!ctx.tenantId || !['admin_sekolah', 'operator', 'guru', 'demo'].includes(ctx.role)) {
+    tampilkanGalatMuat(el, 'Jadwal hanya tersedia bagi anggota sekolah yang terhubung ke tenant.', null);
+    return;
+  }
+  const koneksi = sesiGoogleWorkspacePerPengguna(uid);
+  const token = koneksi?.expiresAt > Date.now() ? koneksi.accessToken : '';
+  const identity = identitasEnkripsiDriveDalamSesi(uid);
+  if (!token || !identity) {
+    el.innerHTML = `
+      <section class="ale-kartu ale-aksen-teal dd" role="status">
+        <h2 class="ale-kartu-judul">${ik('shield')}Jadwal terenkripsi di Google Drive</h2>
+        <p class="ale-info-teks">Hubungkan Google Drive dan buka kunci vault untuk membaca atau mengubah jadwal. Catatan jadwal lama di Firestore belum diimpor dan tidak ditampilkan sebagai jadwal kosong.</p>
+        <p><a class="btn btn-outline" href="#/pengaturan/google">Buka pengaturan Google Workspace untuk membuat atau memulihkan kunci vault</a></p>
+        <button type="button" class="btn btn-primary" id="jdDriveConnect">Hubungkan Google Drive</button>
+      </section>`;
+    el.querySelector('#jdDriveConnect').onclick = async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        await hubungkanGoogleDriveUntukPengguna(ctx.user);
+        if (!masihAktif()) return;
+        await tabJadwal(el, ctx);
+      } catch (err) {
+        if (!masihAktif()) return;
+        galat(err, 'Gagal menghubungkan Google Drive');
+        tampilkanGalatMuat(el, err?.message || 'Google Drive belum dapat dihubungkan.', () => tabJadwal(el, ctx));
+      } finally {
+        if (button.isConnected) button.disabled = false;
+      }
+    };
+    return;
+  }
   const namaHari = HARI.slice(1);
   const kelasCtx = Array.isArray(ctx.kelas) ? ctx.kelas : [];
   const mapelCtx = Array.isArray(ctx.mapel) ? ctx.mapel : [];
@@ -50,18 +84,20 @@ export async function tabJadwal(el, ctx) {
   // ---------- Muat data awal ----------
   let entri;
   let dibuangAwal = 0;
+  let jadwalTersimpan;
   try {
-    const snap = await getDoc(ref);
-    const hasil = normalisasiEntri(snap.exists() ? snap.data().entri : [], bersih);
+    jadwalTersimpan = await muatJadwalGuruDrive(token, identity);
+    if (!masihAktif()) return;
+    const hasil = normalisasiEntri(jadwalTersimpan.entries, bersih);
     entri = hasil.entri;
     dibuangAwal = hasil.dibuang;
   } catch (err) {
-    if (!el.isConnected) return;
+    if (!masihAktif()) return;
     galat(err, 'Gagal memuat jadwal');
-    tampilkanGalatMuat(el, 'Jadwal belum bisa dimuat. Periksa koneksi internet, lalu coba lagi.', () => tabJadwal(el, ctx));
+    tampilkanGalatMuat(el, err?.message || 'Jadwal terenkripsi belum bisa dimuat. Periksa koneksi Drive dan kunci vault.', () => tabJadwal(el, ctx));
     return;
   }
-  if (!el.isConnected) return; // pengguna sudah pindah tab selama memuat
+  if (!masihAktif()) return;
 
   let editId = null;
   let sibuk = false; // mencegah dua operasi tulis berjalan bersamaan
@@ -73,6 +109,7 @@ export async function tabJadwal(el, ctx) {
         <h2 class="ale-kartu-judul">${ik('jam')}Jadwal Mengajar Pekanan</h2>
         <span class="ale-chip ale-chip-admin" id="jdTotal" role="status">0 sesi</span>
       </div>
+      <p class="ale-peringatan" role="note">Data jadwal lama di Firestore belum diimpor. Jadwal yang tampil di sini hanya data yang sudah tersimpan di vault Google Drive akun ini.</p>
 
       <form id="jdForm" class="ale-panel-form" novalidate>
         <h3 class="ale-sub-judul" id="jdFormJudul">Tambah Sesi Mengajar</h3>
@@ -204,17 +241,21 @@ export async function tabJadwal(el, ctx) {
     gambar();
   }
 
-  // ---------- Penyimpanan (transaksi) ----------
+  // ---------- Penyimpanan dengan pemeriksaan revisi ----------
   async function jalankan(op) {
     sibuk = true;
     try {
-      entri = await runTransaction(db, async (tx) => {
-        const snap = await tx.get(ref);
-        const { entri: terkini } = normalisasiEntri(snap.exists() ? snap.data().entri : [], bersih);
-        const baru = terapkanOperasi(terkini, op); // fungsi murni: aman dijalankan ulang oleh transaksi
-        tx.set(ref, { entri: baru, diperbarui: serverTimestamp() }, { merge: true });
-        return baru;
-      });
+      jadwalTersimpan = await ubahJadwalGuruDrive(
+        token,
+        ctx.tenantId,
+        uid,
+        ctx.role,
+        identity,
+        op,
+        jadwalTersimpan.ciphertextSha256,
+      );
+      if (!masihAktif()) return;
+      entri = jadwalTersimpan.entries;
       renderDatalist();
     } finally {
       sibuk = false;
@@ -224,12 +265,16 @@ export async function tabJadwal(el, ctx) {
   // Sinkronkan tampilan dengan data terbaru (dipakai setelah penolakan akibat perubahan dari tempat lain).
   async function segarkan() {
     try {
-      const snap = await getDoc(ref);
-      entri = normalisasiEntri(snap.exists() ? snap.data().entri : [], bersih).entri;
+      jadwalTersimpan = await muatJadwalGuruDrive(token, identity);
+      if (!masihAktif()) return;
+      entri = normalisasiEntri(jadwalTersimpan.entries, bersih).entri;
       renderDatalist();
       if (editId && !entri.some((x) => x.id === editId)) resetForm();
       else { gambar(); perbaruiPeringatan(); }
-    } catch { /* galat sudah ditampilkan oleh operasi utama */ }
+    } catch (err) {
+      if (!masihAktif()) return;
+      galat(err, 'Gagal menyegarkan jadwal');
+    }
   }
 
   // ---------- Interaksi ----------
@@ -250,7 +295,7 @@ export async function tabJadwal(el, ctx) {
       ? { jenis: 'ubah', sesi: { ...f, id: editId } }
       : { jenis: 'tambah', sesi: { ...f, id: buatId() } };
 
-    // Pra-validasi lokal (cepat, tanpa jaringan). Pemeriksaan resmi tetap dilakukan di dalam transaksi.
+    // Pra-validasi lokal (cepat, tanpa jaringan); layanan memvalidasi ulang jadwal terbaru.
     try {
       terapkanOperasi(entri, op);
     } catch (err) {
@@ -262,10 +307,12 @@ export async function tabJadwal(el, ctx) {
     tombol.disabled = true;
     try {
       await jalankan(op);
+      if (!masihAktif()) return;
       toast(sedangUbah ? 'Sesi diperbarui.' : 'Sesi ditambahkan.', 'ok');
       resetForm(sedangUbah ? null : f);
     } catch (err) {
-      // Penolakan dari transaksi berarti data di server berubah sejak dimuat: tampilkan alasan lalu sinkronkan.
+      if (!masihAktif()) return;
+      // Konflik revisi berarti data di Drive berubah sejak dimuat: sinkronkan sebelum pengguna mencoba lagi.
       if (tampilkanGalatForm(err)) segarkan();
       else galat(err, 'Gagal menyimpan jadwal');
     } finally {
@@ -302,11 +349,13 @@ export async function tabJadwal(el, ctx) {
       btn.disabled = true;
       try {
         await jalankan({ jenis: 'hapus', id: sesi.id });
+        if (!masihAktif()) return;
         toast('Sesi dihapus.', 'ok');
         if (editId === sesi.id) resetForm();
         else { gambar(); perbaruiPeringatan(); }
         q('#jdGrid').focus(); // tombol yang diklik sudah hilang; jaga fokus keyboard
       } catch (err) {
+        if (!masihAktif()) return;
         btn.disabled = false;
         galat(err, 'Gagal menghapus sesi');
       }

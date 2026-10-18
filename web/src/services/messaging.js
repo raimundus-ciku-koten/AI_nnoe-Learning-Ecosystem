@@ -1,50 +1,79 @@
-// web/src/services/messaging.js
-import { getMessaging, getToken, deleteToken, onMessage, isSupported } from 'firebase/messaging';
-import { ref, set, remove } from 'firebase/database';
-import { app, rtdb } from '../firebase/index.js';
-import { VAPID_KEY } from '../config.js';
-import { kunciToken } from '../utils/chatUtil.js';
+import { supabase } from '../lib/supabase.ts';
+import { WEB_PUSH_PUBLIC_KEY } from '../config.js';
 
 export const statusNotifikasi = () =>
-  'Notification' in window ? Notification.permission : 'denied';
+  typeof Notification === 'undefined' ? 'denied' : Notification.permission;
+
+function kunciAplikasiServer(encodedKey) {
+  const padding = '='.repeat((4 - encodedKey.length % 4) % 4);
+  const base64 = (encodedKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+}
 
 async function daftarkanSW() {
-  return navigator.serviceWorker.register('/firebase-messaging-sw.js');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    throw new Error('Peramban ini belum mendukung notifikasi Web Push.');
+  }
+  return navigator.serviceWorker.register('/push-service-worker.js');
 }
 
-/** Harus dipanggil dari klik tombol (gestur pengguna). */
+async function simpanLangganan(uid, subscription) {
+  const data = subscription.toJSON();
+  const p256dh = data.keys?.p256dh;
+  const authSecret = data.keys?.auth;
+  if (!subscription.endpoint || !p256dh || !authSecret) {
+    throw new Error('Langganan Web Push tidak lengkap.');
+  }
+  const { error } = await supabase
+    .from('web_push_subscriptions')
+    .upsert({
+      user_id: uid,
+      endpoint: subscription.endpoint,
+      p256dh,
+      auth_secret: authSecret,
+    }, { onConflict: 'user_id,endpoint' });
+  if (error) throw error;
+}
+
 export async function aktifkanNotifikasi(uid) {
-  if (!(await isSupported())) throw new Error('Peramban ini belum mendukung notifikasi.');
-  const izin = await Notification.requestPermission();
-  if (izin !== 'granted') throw new Error('Izin notifikasi tidak diberikan.');
+  if (typeof Notification === 'undefined') {
+    throw new Error('Peramban ini belum mendukung notifikasi.');
+  }
+  if (!WEB_PUSH_PUBLIC_KEY) {
+    throw new Error('Kunci publik VAPID belum dikonfigurasi (VITE_WEB_PUSH_PUBLIC_KEY).');
+  }
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') throw new Error('Izin notifikasi tidak diberikan.');
 
-  if (!VAPID_KEY) throw new Error('Kunci VAPID belum diisi (VITE_FIREBASE_VAPID_KEY).');
-
-  const token = await getToken(getMessaging(app), {
-    vapidKey: VAPID_KEY,
-    serviceWorkerRegistration: await daftarkanSW()
-  });
-  if (!token) throw new Error('Token notifikasi tidak diperoleh.');
-  await set(ref(rtdb, `fcmTokens/${uid}/${kunciToken(token)}`), token);
-  return token;
-}
-
-/** Notifikasi saat aplikasi sedang dibuka. Mengembalikan Promise<fungsi berhenti>. */
-export async function dengarkanForeground(callback) {
-  if (!(await isSupported())) return () => {};
-  return onMessage(getMessaging(app), callback);
-}
-
-/** Lepas perangkat ini dari notifikasi (dipanggil saat keluar akun). Tidak melempar galat. */
-export async function lepaskanPerangkat(uid) {
-  try {
-    if (!(await isSupported()) || statusNotifikasi() !== 'granted') return;
-    const m = getMessaging(app);
-    const token = await getToken(m, {
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: await daftarkanSW()
+  const registration = await daftarkanSW();
+  const subscription = await registration.pushManager.getSubscription()
+    || await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: kunciAplikasiServer(WEB_PUSH_PUBLIC_KEY),
     });
-    if (token) await remove(ref(rtdb, `fcmTokens/${uid}/${kunciToken(token)}`));
-    await deleteToken(m);
-  } catch { /* abaikan: keluar akun tidak boleh terhambat */ }
+  await simpanLangganan(uid, subscription);
+  return subscription;
+}
+
+export async function dengarkanForeground(callback) {
+  if (!('serviceWorker' in navigator)) return () => {};
+  const onMessage = (event) => callback(event.data);
+  navigator.serviceWorker.addEventListener('message', onMessage);
+  return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+}
+
+export async function lepaskanPerangkat(uid) {
+  if (!('serviceWorker' in navigator)) return;
+  const registration = await navigator.serviceWorker.getRegistration('/push-service-worker.js');
+  if (!registration) return;
+  const subscription = await registration.pushManager.getSubscription();
+  if (!subscription) return;
+
+  const { error } = await supabase
+    .from('web_push_subscriptions')
+    .delete()
+    .eq('user_id', uid)
+    .eq('endpoint', subscription.endpoint);
+  if (error) throw error;
+  await subscription.unsubscribe();
 }

@@ -1,8 +1,7 @@
 // web/src/pages/dataDasar/jadwalUtil.js
 // Logika murni Jadwal Mengajar: validasi, deteksi bentrok, normalisasi data, dan
-// operasi tambah/ubah/hapus. Tidak menyentuh DOM maupun Firebase, sehingga dapat
-// diuji langsung di Node (lihat jadwalUtil.test.js) dan dipakai ulang di dalam
-// transaksi Firestore (fungsi pembaruan harus bebas efek samping).
+// operasi tambah/ubah/hapus. Tidak menyentuh DOM maupun layanan penyimpanan,
+// sehingga dapat diuji langsung di Node dan dipakai ulang di UI.
 
 export const MAKS_ENTRI = 100;
 export const MAKS_KELAS = 30;
@@ -54,7 +53,7 @@ export function bersihBawaan(nilai, maks) {
 const teks = (v) => (typeof v === 'string' ? v : '');
 
 /**
- * Menyaring data mentah dari Firestore. Hanya entri yang rusak secara struktur
+ * Menyaring data jadwal mentah. Hanya entri yang rusak secara struktur
  * yang dibuang (id kosong/ganda, hari/jam tidak valid, kelas/mapel kosong).
  * Entri yang saling bentrok TIDAK dibuang, dan jumlahnya tidak dipotong.
  * @returns {{ entri: object[], dibuang: number }}
@@ -165,6 +164,14 @@ export function kelompokPerHari(entri) {
 /** Total menit mengajar per pekan. */
 export function totalMenit(entri) {
   return entri.reduce((jumlah, e) => jumlah + (menit(e.selesai) - menit(e.mulai)), 0);
+}
+
+export function sesiUntukHari(entri, hari) {
+  if (!Array.isArray(entri) || !hariValid(hari)) return [];
+  return entri
+    .filter((sesi) => sesi?.hari === hari)
+    .slice()
+    .sort((a, b) => menit(a.mulai) - menit(b.mulai));
 }
 
 /**

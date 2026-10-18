@@ -140,6 +140,7 @@
 }
 .ale-login-field input[aria-invalid="true"] { border-color: #dc2626; }
 .ale-login-field input:disabled { background: #f1f5f9; cursor: not-allowed; }
+.login-captcha { min-height: 4.5rem; margin: 0 0 0.75rem; }
 
 .ale-login-sandi-wrap { position: relative; }
 .ale-login-sandi-wrap input { padding-right: 6.25rem; }

@@ -61,13 +61,11 @@ export function slugify(str) {
     .trim();
 }
 
-/**
- * Firestore Timestamp | Date | string | number → Date
- */
+/** Converts Date-like values, numeric timestamps, or strings to Date. */
 export function toDate(value) {
   if (!value) return null;
   if (value instanceof Date) return value;
-  if (typeof value.toDate === 'function') return value.toDate(); // Firestore Timestamp
+  if (typeof value.toDate === 'function') return value.toDate();
   if (typeof value.seconds === 'number') return new Date(value.seconds * 1000);
   if (typeof value === 'string' || typeof value === 'number') {
     const d = new Date(value);

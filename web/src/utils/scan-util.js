@@ -1,6 +1,6 @@
 // web/src/utils/scan-util.js
 /**
- * scan-util.js — Fungsi murni (tanpa Firebase/DOM) untuk halaman scan.
+ * scan-util.js — Fungsi murni (tanpa layanan backend/DOM) untuk halaman scan.
  * Dipisah agar mudah diuji dengan `node --test`.
  */
 
@@ -41,8 +41,8 @@ export function kunciTanggal(tanggal = new Date()) {
 }
 
 /**
- * Jam lokal HH:MM dari Date / Firestore Timestamp / milidetik.
- * @param {Date|{toDate:()=>Date}|number|null|undefined} nilai
+ * Jam lokal HH:MM dari Date, objek timestamp, milidetik, atau nilai kosong.
+ * @param {Date|{toDate:()=>Date}|number|string|null|undefined} nilai
  */
 export function jamLokal(nilai) {
   if (nilai == null) return '';
@@ -61,12 +61,13 @@ export function idAbsensi(tanggal, siswaId) {
   return `${tanggal}_${siswaId}`;
 }
 
-/** Pesan galat yang ramah pengguna dari kode galat Firebase. */
+/** Pesan galat yang ramah pengguna dari layanan presensi. */
 export function pesanGalat(err) {
   const kode = err?.code || '';
-  if (kode === 'permission-denied') return 'Akses ditolak. Pastikan Anda login dengan akun guru yang benar.';
-  if (kode === 'unavailable' || kode === 'deadline-exceeded') return 'Jaringan bermasalah. Periksa koneksi internet lalu coba lagi.';
-  if (kode === 'unauthenticated') return 'Sesi login berakhir. Silakan masuk kembali.';
-  if (kode === 'resource-exhausted') return 'Kuota layanan sedang penuh. Coba lagi beberapa saat.';
+  if (kode === '42501' || kode === 'permission-denied') return 'Akses ditolak. Pastikan Anda login dengan akun guru yang benar.';
+  if (kode === 'unavailable' || kode === 'deadline-exceeded' || /network|fetch failed/i.test(err?.message || ''))
+    return 'Jaringan bermasalah. Periksa koneksi internet lalu coba lagi.';
+  if (kode === 'unauthenticated' || kode === 'PGRST301') return 'Sesi login berakhir. Silakan masuk kembali.';
+  if (kode === 'student/duplicate-code') return 'Kode dipakai lebih dari satu siswa. Hubungi admin.';
   return 'Terjadi kesalahan saat memproses scan. Coba lagi.';
 }

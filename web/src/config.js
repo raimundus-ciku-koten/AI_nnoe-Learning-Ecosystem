@@ -12,6 +12,5 @@ export const LINK_PERENCANAAN_AKTIF = /^https:\/\//i.test(LINK_PERENCANAAN)
   ? LINK_PERENCANAAN
   : '';
 
-// Kunci web push (VAPID) untuk notifikasi: Firebase Console > Project settings > Cloud Messaging >
-// Web Push certificates > Generate key pair. Simpan kunci publiknya sebagai variabel Vite.
-export const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || '';
+// Kunci publik VAPID untuk Web Push, disimpan sebagai variabel Vite.
+export const WEB_PUSH_PUBLIC_KEY = import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY || '';

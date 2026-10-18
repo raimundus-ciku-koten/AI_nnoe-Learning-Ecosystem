@@ -2,7 +2,7 @@
  * @file Penyunting Peta Sebaran TP: ubah / hapus / simpan per baris, tambah TP dan unit.
  *
  * Perubahan hanya terjadi pada salinan kerja (draft) di memori. Halaman induk menyimpan ke
- * Firestore lewat tombol "Simpan perubahan" (dengan kontrol versi `rev`). Penyunting memberi
+ * vault Drive lewat tombol "Simpan perubahan" (dengan kontrol versi `rev`). Penyunting memberi
  * umpan balik langsung: galat per baris, dan penunjuk Σ JP TP terhadap anggaran.
  */
 
@@ -115,6 +115,13 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
   function bagianUnit(u, ui) {
     const nama = h('input', { type: 'text', value: u.nama, maxlength: BATAS.TEKS_PENDEK, 'aria-label': t('atpEditor.namaUnit', { no: u.no }),
       onChange: (e) => { draft.unit[ui].nama = bersihkanTeks(e.target.value, BATAS.TEKS_PENDEK) || u.nama; berubah(); } });
+    const elemen = h('select', {
+      'aria-label': t('atpEditor.elemenUnit', { no: u.no }),
+      onChange: (e) => { draft.unit[ui].elemen = e.target.value; berubah(); }
+    }, draft.cp.map((item) => h('option', {
+      value: item.elemen,
+      selected: item.elemen === u.elemen,
+    }, item.elemen)));
     const semester = h('select', { 'aria-label': t('atpEditor.semesterUnit', { no: u.no }), onChange: (e) => { draft.unit[ui].semester = Number(e.target.value); berubah(); } },
       h('option', { value: 1, selected: u.semester === 1 }, t('umum.ganjil')),
       h('option', { value: 2, selected: u.semester === 2 }, t('umum.genap')));
@@ -124,7 +131,7 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
 
     return h('section', { class: 'unit-editor' },
       h('div', { class: 'unit-kepala' },
-        h('h3', null, `${t('atp.unit')} ${u.no}`), nama, semester,
+        h('h3', null, `${t('atp.unit')} ${u.no}`), nama, elemen, semester,
         h('button', { type: 'button', class: 'tombol tombol-kecil tombol-bahaya', disabled: sedangUbah !== null,
           onClick: () => { draft.unit.splice(ui, 1); renumber(); berubah(); } }, t('atpEditor.hapusUnit'))),
       h('div', { class: 'tabel-bungkus' },
@@ -149,7 +156,13 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
       h('button', { type: 'button', class: 'tombol tombol-sekunder', disabled: sedangUbah !== null || draft.unit.length >= BATAS.UNIT_MAKS,
         onClick: () => {
           const akhir = draft.unit[draft.unit.length - 1];
-          draft.unit.push({ no: draft.unit.length + 1, nama: t('atpEditor.unitBaru'), elemen: akhir?.elemen ?? '', semester: akhir?.semester ?? 1, tp: [] });
+          draft.unit.push({
+            no: draft.unit.length + 1,
+            nama: t('atpEditor.unitBaru'),
+            elemen: akhir?.elemen ?? draft.cp[0]?.elemen ?? '',
+            semester: akhir?.semester ?? 1,
+            tp: [],
+          });
           berubah();
         } }, `+ ${t('atpEditor.tambahUnit')}`));
   }

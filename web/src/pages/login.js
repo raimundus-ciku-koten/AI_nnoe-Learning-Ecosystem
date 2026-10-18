@@ -1,25 +1,33 @@
 import '../styles/login.css';
 import { login, resetPassword, masukGoogle } from '../auth.js';
 import { toast } from '../components/toast.js';
+import { supabase } from '../lib/supabase.ts';
+import { pasangTurnstile } from '../services/turnstile.js';
 import PRICING from '../../../functions/shared/pricing.json';
 
+const TURNSTILE_SITE_KEY = import.meta.env?.VITE_TURNSTILE_SITE_KEY?.trim() || '';
 const PESAN_AUTH = {
   invalid_credentials: 'Email atau kata sandi tidak sesuai.',
-  email_not_confirmed: 'Konfirmasikan alamat email Anda sebelum masuk.',
-  user_banned: 'Akun ini dinonaktifkan. Hubungi administrator sekolah.',
+  invalid_email: 'Format email tidak valid.',
+  invalid_captcha: 'Verifikasi keamanan tidak valid. Selesaikan kembali pemeriksaan Cloudflare.',
+  captcha_failed: 'Verifikasi keamanan gagal. Selesaikan kembali pemeriksaan Cloudflare.',
+  email_not_confirmed: 'Email belum dikonfirmasi. Periksa kotak masuk Anda.',
+  user_banned: 'Akun ini dinonaktifkan. Hubungi admin sekolah.',
   over_request_rate_limit: 'Terlalu banyak percobaan. Tunggu beberapa saat.',
-  'auth/network-request-failed': 'Koneksi bermasalah. Periksa jaringan internet Anda.',
-  provider_disabled: 'Metode login ini belum diaktifkan pada Supabase.',
-  'auth/workspace-account-not-provisioned': 'Akun belum terdaftar aktif. Hubungi administrator sekolah.',
-  'auth/profile-not-found': 'Profil akun belum dibuat. Hubungi administrator.',
+  over_email_send_rate_limit: 'Batas pengiriman email tercapai. Tunggu sebelum mencoba lagi.',
+  signup_disabled: 'Pendaftaran akun tidak tersedia. Hubungi admin sekolah.',
+  otp_expired: 'Tautan masuk kedaluwarsa. Minta tautan baru.',
+  'auth/workspace-account-not-provisioned': 'Akun Google belum terdaftar aktif. Hubungi administrator sekolah.',
+  '42501': 'Izin akses profil Supabase ditolak. Periksa status akun dan peran Anda.',
+  'PGRST116': 'Profil akun tidak ditemukan. Hubungi administrator sekolah.',
 };
 
 function pesanLogin(error, google = false) {
-  const code = error?.firebaseCode || error?.code;
+  const code = error?.code;
   const message = PESAN_AUTH[code]
-    || (error?.code === 'auth/profile-not-found'
-      ? PESAN_AUTH[error.code]
-      : google ? 'Login Google gagal. Pastikan penyedia Google dan URL redirect telah dikonfigurasi di Supabase.' : 'Tidak dapat masuk saat ini. Silakan coba lagi.');
+    || (google
+      ? 'Login Google gagal. Pastikan provider Google dan URL pengalihan telah dikonfigurasi di Supabase Auth.'
+      : 'Tidak dapat masuk saat ini. Silakan coba lagi.');
   const diagnostic = code ? ` (kode: ${code})` : '';
   return `${message}${diagnostic}`;
 }
@@ -78,28 +86,27 @@ function pilihAcak(daftar, jumlah) {
 async function muatTestimoni(wadah) {
   const target = wadah.querySelector('#testiIsi');
   try {
-    const { supabase } = await import('../lib/supabase.ts');
     const { data, error } = await supabase
       .from('testimonials')
-      .select('quote:quote_public,displayName:display_name,role,school')
+      .select('quote, display_name, role')
       .eq('status', 'published')
       .eq('consent', true)
       .limit(40);
     if (error) throw error;
-    const testimoni = pilihAcak(data, 3);
+    const testimoni = pilihAcak(data || [], 3);
     if (!target?.isConnected) return;
     target.replaceChildren();
     if (!testimoni.length) {
       target.innerHTML = '<p class="testi-empty">Belum ada testimoni pengguna yang dipublikasikan.</p>';
       return;
     }
-    testimoni.forEach(({ quote, displayName, role, school }) => {
+    testimoni.forEach(({ quote, display_name, role }) => {
       const figure = document.createElement('figure');
       figure.className = 'testi';
       const quoteEl = document.createElement('blockquote');
       quoteEl.textContent = `“${quote}”`;
       const caption = document.createElement('figcaption');
-      caption.textContent = [displayName, role, school].filter(Boolean).join(' · ');
+      caption.textContent = [display_name, role].filter(Boolean).join(' · ');
       figure.append(quoteEl, caption);
       target.append(figure);
     });
@@ -117,12 +124,13 @@ export function halamanLogin(wadah) {
     <a class="skip-link" href="#/login" data-ke="masuk">Lewati ke formulir masuk</a>
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="#/login" data-ke="top" aria-label="AI_nnoe Learning Ecosystem - beranda">
+        <a class="brand" href="#/login" data-ke="top" aria-label="AI_nnoe Learning Ecosystem">
           <img src="/logo-ale-mark.png" alt="" width="52" height="36">
           <span class="brand-text"><strong>AI_nnoe</strong><small>Learning Ecosystem</small></span>
         </a>
         <nav class="nav" aria-label="Navigasi utama">
           <a href="#/login" data-ke="fitur">Fitur</a><a href="#/login" data-ke="harga">Harga</a><a href="#/login" data-ke="testimoni">Testimoni</a>
+          <a href="#/privacy">Privasi data</a>
           <a class="btn btn-ghost" href="#/login" data-ke="masuk">Masuk</a>
         </nav>
       </div>
@@ -138,6 +146,7 @@ export function halamanLogin(wadah) {
               <div class="field"><label for="lgnSandi">Kata sandi</label>
                 <div class="input-wrap"><input class="input" type="password" id="lgnSandi" name="sandi" autocomplete="current-password" placeholder="Masukkan kata sandi" minlength="6" required>
                   <button type="button" class="toggle-pw" id="btnLihat" aria-controls="lgnSandi" aria-pressed="false">Tampilkan</button></div></div>
+              ${TURNSTILE_SITE_KEY ? '<div id="loginCaptcha" class="login-captcha" aria-label="Verifikasi keamanan Cloudflare"></div>' : ''}
               <p id="lgnError" class="alert" role="alert" hidden></p>
               <button id="btnMasuk" class="btn btn-primary btn-block" type="submit"><span class="btn-label">Masuk</span></button>
             </form>
@@ -152,8 +161,8 @@ export function halamanLogin(wadah) {
             <p class="hero-lead">Satukan perangkat ajar, kegiatan belajar, dan komunikasi sekolah dalam ruang kerja yang dirancang untuk guru, siswa, admin, serta orang tua.</p>
             <div class="hero-cta"><a class="btn btn-brand" href="#/login" data-ke="harga">Lihat paket</a><a class="btn btn-outline" href="#/login" data-ke="fitur">Lihat fitur</a></div>
             <ul class="trust-list">
-              <li>${IKON_CEK}Coba selama 48 jam: 1 admin, 3 guru, dan 30 siswa</li>
-              <li>${IKON_CEK}Pilih lisensi bulanan atau tahunan sesuai jumlah pengguna</li>
+              <li>${IKON_CEK}Tinjau paket dan kapasitas pengguna yang tersedia</li>
+              <li>${IKON_CEK}Bandingkan referensi lisensi bulanan dan tahunan</li>
             </ul>
           </div>
         </div>
@@ -171,7 +180,7 @@ export function halamanLogin(wadah) {
       <section class="section section-alt" id="harga" aria-labelledby="judulHarga" hidden>
         <div class="container"><div class="section-head"><p class="kicker">Harga dan lisensi</p>
           <h2 id="judulHarga">Paket sekolah dan paket pengguna</h2>
-          <p>Harga paket mengikuti panduan. Pembayaran bulanan setara sepersepuluh harga tahunan; harga belum termasuk estimasi PPN.</p></div>
+          <p>Informasi harga paket berikut bukan untuk pembelian. Checkout dan pembayaran dinonaktifkan.</p></div>
           <div class="pricing-grid">
             <div class="card pricing-card">
               <div class="pricing-period"><label for="siklusHarga">Siklus pembayaran</label>
@@ -185,14 +194,12 @@ export function halamanLogin(wadah) {
                 ${grupPaket('judulPaketGuruMapel', 'Paket guru mapel', PRICING.teacherSubject)}
               </div>
               <p class="card-note">Akun orang tua mendapatkan akses melalui sekolah/anak; panduan ini tidak mencantumkan paket harga orang tua tersendiri.</p>
-              <p class="demo-note">Masa demo: 2 hari (48 jam). Demo dibatasi 1 admin, 3 guru, dan 30 siswa; data demo terjadwal dihapus setelah 30 hari.</p>
-              <a class="btn btn-brand btn-block" href="#/purchase">Lanjutkan ke pembayaran</a>
+              <p class="card-note">Pembelian dan pembayaran online saat ini dinonaktifkan.</p>
             </div>
             <ul class="benefits">
-              <li>${IKON_CEK}<span>Demo 48 jam: maksimal 1 admin, 3 guru, dan 30 siswa.</span></li>
-              <li>${IKON_CEK}<span>Admin sekolah membeli paket sekolah sesuai kapasitas peserta didik dan guru.</span></li>
-              <li>${IKON_CEK}<span>Siswa dan guru dapat membeli paket masing-masing melalui akun mereka.</span></li>
-              <li>${IKON_CEK}<span>Pembayaran aman melalui halaman pembayaran Midtrans.</span></li>
+              <li>${IKON_CEK}<span>Paket sekolah menyesuaikan kapasitas peserta didik dan guru.</span></li>
+              <li>${IKON_CEK}<span>Paket guru dan siswa ditampilkan sebagai informasi; transaksi belum tersedia.</span></li>
+              <li>${IKON_CEK}<span>Halaman paket hanya menampilkan informasi; tidak ada transaksi.</span></li>
             </ul>
           </div>
         </div>
@@ -232,6 +239,21 @@ export function halamanLogin(wadah) {
       field.removeAttribute('aria-invalid');
       field.removeAttribute('aria-describedby');
     });
+  };
+  let captchaWidget = null;
+  let captchaSetupError = null;
+  const captchaReady = TURNSTILE_SITE_KEY
+    ? pasangTurnstile($('#loginCaptcha'), TURNSTILE_SITE_KEY)
+      .then((widget) => { captchaWidget = widget; })
+      .catch((err) => { captchaSetupError = err; })
+    : Promise.resolve();
+  const ambilCaptchaToken = async () => {
+    await captchaReady;
+    if (captchaSetupError) throw captchaSetupError;
+    if (!TURNSTILE_SITE_KEY) return undefined;
+    const token = captchaWidget?.token();
+    if (!token) throw new Error('Selesaikan verifikasi Cloudflare sebelum melanjutkan.');
+    return token;
   };
 
   let testimoniDiminta = false;
@@ -298,10 +320,12 @@ export function halamanLogin(wadah) {
       return;
     }
     try {
-      await resetPassword(alamat);
+      await resetPassword(alamat, await ambilCaptchaToken());
       toast(`Tautan reset kata sandi dikirim ke ${alamat}.`, 'success', 8000);
+      captchaWidget?.reset();
     } catch (err) {
-      tampilkanError(PESAN_AUTH[err?.code] || 'Tidak dapat mengirim email reset. Coba lagi nanti.');
+      tampilkanError(err?.message || PESAN_AUTH[err?.code] || 'Tidak dapat mengirim email reset. Coba lagi nanti.');
+      captchaWidget?.reset();
     }
   });
 
@@ -323,7 +347,7 @@ export function halamanLogin(wadah) {
     statusLogin.textContent = 'Menghubungi Supabase Auth...';
     statusLogin.hidden = false;
     try {
-      await login(email.value.trim(), sandi.value);
+      await login(email.value.trim(), sandi.value, await ambilCaptchaToken());
       toast('Berhasil masuk. Mengalihkan...', 'success', 3000);
       window.location.hash = '#/dashboard';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -331,6 +355,7 @@ export function halamanLogin(wadah) {
       console.error('[login]', err);
       statusLogin.hidden = true;
       tampilkanError(pesanLogin(err));
+      captchaWidget?.reset();
       tombolMasuk.disabled = false;
       labelMasuk.textContent = 'Masuk';
       sandi.select();
@@ -346,7 +371,7 @@ export function halamanLogin(wadah) {
       statusLogin.textContent = 'Masih menunggu Google. Selesaikan atau tutup jendela Google yang terbuka; jika tidak muncul, izinkan popup untuk situs ini.';
     }, 12000);
     try {
-      await masukGoogle();
+      await masukGoogle(await ambilCaptchaToken());
       toast('Login Google berhasil. Mengalihkan...', 'success', 2000);
       window.location.hash = '#/dashboard';
       window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -355,10 +380,11 @@ export function halamanLogin(wadah) {
       statusLogin.hidden = true;
       tampilkanError(pesanLogin(err, true));
       tombolGoogle.disabled = false;
+      captchaWidget?.reset();
     } finally {
       clearTimeout(timerTungguGoogle);
     }
   });
 
-  return () => {};
+  return () => captchaWidget?.remove();
 }

@@ -1,4 +1,8 @@
-project_id = "jvcrmzmuxgyuetkjqady"
+[functions.midtrans-checkout]
+verify_jwt = true
 
-[functions.create-platform-user]
+[functions.midtrans-webhook]
+verify_jwt = false
+
+[functions.chat-push]
 verify_jwt = true

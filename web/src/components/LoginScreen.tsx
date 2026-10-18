@@ -4,22 +4,27 @@
 // dan tanpa Tailwind. Semua kelas berawalan "lgn", jadi tidak bentrok dengan tema.css.
 import React, { useEffect, useState, type FC, type ReactNode } from 'react';
 import { loginWithGoogle } from '../services/authService';
+import { type UserDoc } from '../types/schema';
 
 interface LoginScreenProps {
-  onLoginSuccess?: () => void;
+  onLoginSuccess: (user: UserDoc) => void;
 }
 
+// Kode galat autentikasi → kalimat yang bisa ditindaklanjuti guru.
 const PESAN_AUTH: Record<string, string> = {
-  invalid_credentials: 'Email atau kata sandi tidak sesuai.',
-  email_not_confirmed: 'Konfirmasikan alamat email Anda sebelum masuk.',
-  user_banned: 'Akun ini dinonaktifkan. Hubungi administrator.',
-  over_request_rate_limit: 'Terlalu banyak percobaan. Tunggu beberapa menit, lalu coba lagi.',
-  provider_disabled: 'Login Google belum diaktifkan pada proyek Supabase.',
+  'auth/popup-closed-by-user': 'Jendela masuk ditutup sebelum selesai. Klik tombol masuk untuk mencoba lagi.',
+  'auth/popup-blocked': 'Peramban memblokir jendela masuk. Izinkan pop-up untuk situs ini, lalu coba lagi.',
+  'auth/network-request-failed': 'Koneksi internet bermasalah. Periksa sinyal Anda, lalu coba lagi.',
+  'auth/too-many-requests': 'Terlalu banyak percobaan. Tunggu beberapa menit, lalu coba lagi.',
 };
 
 function pesanLogin(err: unknown): string | null {
   const e = err as { code?: string; message?: string } | null;
+  // Pengguna menekan tombol lagi saat jendela pertama masih terbuka: abaikan.
+  if (e?.code === 'auth/cancelled-popup-request') return null;
   if (e?.code && PESAN_AUTH[e.code]) return PESAN_AUTH[e.code];
+  if (e?.code?.startsWith('auth/')) return 'Masuk belum berhasil. Coba lagi beberapa saat.';
+  // Pesan dari authService (mis. akun tidak ada di daftar izin) sudah ditulis untuk pengguna.
   return e?.message || 'Masuk belum berhasil. Coba lagi.';
 }
 
@@ -656,13 +661,15 @@ export const LoginScreen: FC<LoginScreenProps> = ({ onLoginSuccess }: LoginScree
     };
   }, []);
 
+  // Penting: loginWithGoogle() harus dipanggil langsung dari klik (tanpa await di depannya),
+  // kalau tidak Safari/iOS memblokir pop-up.
   const handleGoogleLogin = async () => {
     if (loading || !online) return;
     setLoading(true);
     setErrorMessage(null);
     try {
-      await loginWithGoogle();
-      onLoginSuccess?.();
+      const userProfile = await loginWithGoogle();
+      onLoginSuccess(userProfile);
     } catch (err: unknown) {
       const pesan = pesanLogin(err);
       if (pesan) setErrorMessage(pesan);

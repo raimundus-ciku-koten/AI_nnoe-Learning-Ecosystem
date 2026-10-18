@@ -46,7 +46,7 @@ test('idAbsensi: deterministik', () => {
   assert.equal(idAbsensi('2026-10-14', 'abc'), '2026-10-14_abc');
 });
 
-test('pesanGalat: memetakan kode Firebase', () => {
+test('pesanGalat: memetakan kode galat presensi', () => {
   assert.match(pesanGalat({ code: 'permission-denied' }), /Akses ditolak/);
   assert.match(pesanGalat({ code: 'unavailable' }), /Jaringan/);
   assert.match(pesanGalat(new Error('x')), /kesalahan/i);

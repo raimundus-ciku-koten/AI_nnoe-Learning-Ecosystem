@@ -4,10 +4,10 @@
 
 import { h, tabel } from '../dom.js';
 import { t } from '../../i18n/index.js';
-import { ratakanTp, normKode } from '../../engine/prota.js';
+import { ratakanTp, normKode, sumberBelajarModul } from '../../engine/prota.js';
 import { kopDokumen, tabelIdentitas, blokTtd } from './umum.js';
 
-const daftar = (items) => h('ul', null, (items ?? []).map((x) => h('li', null, x)));
+const daftar = (items) => items?.length ? h('ul', null, items.map((x) => h('li', null, x))) : null;
 const paragraf = (teks) => (teks ? h('p', null, teks) : null);
 
 /* --------------------------------- KKTP --------------------------------- */
@@ -51,14 +51,35 @@ export function renderKktp(kktp, atp, konteks) {
  * @param {{no:number, nama:string}} unit
  * @param {Object} konteks
  */
-export function renderModul(modul, unit, konteks) {
+export function renderModul(modul, unit, konteks, atp, prota, prosem) {
   const bagian = (judul, isi) => (isi ? h('section', null, h('h2', null, judul), isi) : null);
+  const kegiatan = (judul, items) => items?.length
+    ? h('div', null, h('h4', null, judul), daftar(items))
+    : null;
+  const sumber = sumberBelajarModul(atp, unit, prota, prosem);
+  const ringkasanAlokasi = sumber.alokasi
+    ? `${t(`umum.${sumber.alokasi.semester === 1 ? 'ganjil' : 'genap'}`)}: ${sumber.alokasi.jp} JP (${sumber.alokasi.jpTP} JP TP + ${sumber.alokasi.uh} JP UH)`
+    : '';
+  const tanggal = (value) => new Intl.DateTimeFormat('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC'
+  }).format(new Date(`${value}T00:00:00Z`));
   return h('article', { class: 'dokumen dokumen-modul' },
     kopDokumen(konteks, `${t('modul.judul')} — ${t('atp.modul')} ${unit.no}: ${unit.nama}`),
     tabelIdentitas(konteks, [
       [t('modul.model'), modul.model],
-      [t('modul.tujuanKode'), (modul.tujuanKode ?? []).join(', ')]
+      [t('modul.tujuanKode'), (modul.tujuanKode ?? []).join(', ')],
+      [t('modul.alokasiSumberProta'), ringkasanAlokasi]
     ]),
+    bagian(t('modul.cpSumberAtp'), daftar(sumber.cp.map((item) => item.cp))),
+    bagian(t('modul.tpMateriSumberAtp'), daftar(
+      sumber.tp.map((item) => `${item.kode}: ${item.rumusan} — ${item.materi}`),
+    )),
+    bagian(t('modul.jadwalSumberProsem'), daftar(sumber.jadwal.map((item) =>
+      `${t(`umum.${item.semester === 1 ? 'ganjil' : 'genap'}`)} · ${t('prosem.pekan')}${item.pekan} · ${tanggal(item.mulai)}–${tanggal(item.selesai)} · ${item.jp} JP`,
+    ))),
     bagian(t('modul.pemahaman'), daftar(modul.pemahamanBermakna)),
     bagian(t('modul.pemantik'), daftar(modul.pertanyaanPemantik)),
     bagian(t('modul.profil'), daftar(modul.dimensiProfil)),
@@ -66,9 +87,9 @@ export function renderModul(modul, unit, konteks) {
     bagian(t('modul.pertemuan'), (modul.pertemuan ?? []).map((p) => h('div', { class: 'blok-pertemuan' },
       h('h3', null, `${t('modul.pertemuanKe', { ke: p.ke })}${p.judul ? `: ${p.judul}` : ''}${p.menit ? ` (${p.menit} ${t('umum.menit')})` : ''}`),
       paragraf(p.tujuan),
-      h('h4', null, t('modul.pendahuluan')), daftar(p.pendahuluan),
-      h('h4', null, t('modul.inti')), daftar(p.inti),
-      h('h4', null, t('modul.penutup')), daftar(p.penutup)))),
+      kegiatan(t('modul.pendahuluan'), p.pendahuluan),
+      kegiatan(t('modul.inti'), p.inti),
+      kegiatan(t('modul.penutup'), p.penutup)))),
     bagian(t('modul.asesmen'), h('div', null,
       modul.asesmen?.diagnostik ? h('p', null, h('strong', null, `${t('modul.diagnostik')}: `), modul.asesmen.diagnostik) : null,
       modul.asesmen?.formatif ? h('p', null, h('strong', null, `${t('modul.formatif')}: `), modul.asesmen.formatif) : null,

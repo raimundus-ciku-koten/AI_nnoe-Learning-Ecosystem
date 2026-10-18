@@ -112,7 +112,7 @@ export default function TeacherAccountPage() {
           </div>
         </div>
         <p className="teacher-account-help">
-          Tautan aman akan dikirim oleh Firebase Authentication ke email akun. Kata sandi
+          Tautan aman akan dikirim oleh Supabase Authentication ke email akun. Kata sandi
           tidak pernah dibaca atau disimpan oleh aplikasi.
         </p>
         <button type="button" className="teacher-account-reset"

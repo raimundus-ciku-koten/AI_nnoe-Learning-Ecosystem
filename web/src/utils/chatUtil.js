@@ -1,13 +1,15 @@
 // web/src/utils/chatUtil.js
+import { isEconomyMode } from '../services/economyMode.js';
 /**
- * Fungsi murni untuk chat (tanpa DOM, tanpa Firebase) → mudah diuji dengan `node --test`.
- * Batas di sini HARUS sama dengan database.rules.json dan storage.rules.
+ * Fungsi murni untuk chat (tanpa DOM atau backend) agar mudah diuji dengan `node --test`.
+ * Batas di sini harus sama dengan validasi layanan dan skema chat.
  */
 
 export const MAKS_TEKS = 2000;               // database.rules.json: text <= 2000
-export const MAKS_BERKAS = 2 * 1024 * 1024; // Realtime Database Rules: at most 2 MiB
+export const MAKS_BERKAS = 2 * 1024 * 1024;
 export const MAKS_ANGGOTA_GRUP = 50;         // Client-side group creation limit.
 export const MAKS_JUDUL = 80;
+export const MASA_AKTIF_PRESENCE = 90_000;
 
 /** SVG sengaja tidak diizinkan (vektor XSS). */
 export const TIPE_GAMBAR = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -21,7 +23,7 @@ export const TIPE_DOKUMEN = [
 export const ATRIBUT_ACCEPT =
   'image/jpeg,image/png,image/webp,image/gif,.pdf,.txt,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
 
-/** ID percakapan pribadi = ID pasangan kontak: dua UID diurutkan. */
+/** Legacy pair key retained only by the read-only contact reconciliation tool. */
 export const idPribadi = (a, b) => `d_${[a, b].sort().join('_')}`;
 
 /** Hanya huruf/angka/-/_ yang dipakai di ID. */
@@ -37,11 +39,10 @@ export function jalurLampiranDariUrl(url, chatId) {
   if (typeof url !== 'string' || url.length > 1200) return null;
   try {
     const parsed = new URL(url);
-    const hostValid = parsed.hostname === 'firebasestorage.googleapis.com' ||
-      ((parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') &&
-        parsed.port === '9199');
+    const hostValid = parsed.protocol === 'https:' && parsed.hostname.endsWith('.supabase.co')
+      || parsed.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(parsed.hostname);
     if (!hostValid) return null;
-    const bagian = /^\/v0\/b\/[^/]+\/o\/(.+)$/.exec(parsed.pathname);
+    const bagian = /^\/storage\/v1\/object\/(?:sign|public)\/[^/]+\/(.+)$/.exec(parsed.pathname);
     if (!bagian) return null;
     const path = decodeURIComponent(bagian[1]);
     return jalurLampiranValid(path, chatId) ? path : null;
@@ -50,10 +51,17 @@ export function jalurLampiranDariUrl(url, chatId) {
   }
 }
 
-/** Hanya alamat unduhan Cloud Storage (atau emulator) yang boleh jadi href/src. */
+/** Hanya URL HTTPS dari storage Supabase (atau loopback lokal) yang boleh ditampilkan. */
 export function urlAman(url) {
-  return typeof url === 'string' && url.length <= 800 &&
-    /^(https:\/\/firebasestorage\.googleapis\.com\/|http:\/\/(127\.0\.0\.1|localhost):9199\/)/.test(url);
+  if (typeof url !== 'string' || url.length > 1200) return false;
+  try {
+    const parsed = new URL(url);
+    const hostValid = parsed.protocol === 'https:' && parsed.hostname.endsWith('.supabase.co')
+      || parsed.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(parsed.hostname);
+    return hostValid && parsed.pathname.startsWith('/storage/v1/object/');
+  } catch {
+    return false;
+  }
 }
 
 export function formatUkuran(byte) {
@@ -91,9 +99,6 @@ export function ringkas(teks, maks) {
   return s.length > maks ? `${s.slice(0, maks - 1)}…` : s;
 }
 
-/** Karakter terlarang pada kunci Realtime Database diganti "_". */
-export const kunciToken = (t) => String(t).replace(/[.#$[\]/]/g, '_');
-
 /* ---------- Waktu ---------- */
 const fJam  = new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' });
 const fHari = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -127,18 +132,28 @@ export function statusTerakhirDilihat(presence, sekarang = Date.now()) {
     : `Terakhir dilihat ${fTgl.format(d)}`;
 }
 
-/** Pesan galat ramah pengguna dari kode galat Firebase (RTDB, Storage). */
+export function presenceMasihAktif(presence, sekarang = Date.now()) {
+  const lastSeen = Number(presence?.lastSeen);
+  const masaAktif = isEconomyMode()
+    ? Math.max(MASA_AKTIF_PRESENCE, 240_000)
+    : MASA_AKTIF_PRESENCE;
+  return presence?.online === true
+    && Number.isFinite(lastSeen)
+    && lastSeen <= sekarang
+    && sekarang - lastSeen <= masaAktif;
+}
+
+/** Pesan galat ramah pengguna dari layanan chat Supabase. */
 export function pesanGalatChat(e, konteks = '') {
   const k = String((e && (e.code || e.message)) || '');
   if (e && e.name === 'GalatKontak') return e.message;
-  if (/permission[-_]denied/i.test(k)) {
+  if (e?.code === 'chat/attachment-unavailable') return e.message;
+  if (e?.code === '42501' || /permission[-_]denied/i.test(k)) {
     return konteks === 'kirim'
       ? 'Pesan ditolak. Pastikan Anda masih terhubung sebagai kontak dan anggota percakapan ini.'
       : 'Akses ditolak oleh aturan keamanan.';
   }
-  if (k === 'storage/unauthorized') return 'Unggahan ditolak oleh aturan Storage.';
-  if (k === 'storage/canceled') return 'Unggahan dibatalkan.';
-  if (k === 'storage/retry-limit-exceeded' || /network|unavailable/i.test(k)) return 'Koneksi bermasalah. Coba lagi.';
-  if (k === 'unauthenticated' || /auth\//.test(k)) return 'Sesi berakhir. Silakan masuk kembali.';
+  if (/network|fetch failed|unavailable/i.test(k)) return 'Koneksi bermasalah. Coba lagi.';
+  if (e?.code === 'PGRST301' || /jwt/i.test(k)) return 'Sesi berakhir. Silakan masuk kembali.';
   return 'Terjadi kesalahan. Silakan coba lagi.';
 }

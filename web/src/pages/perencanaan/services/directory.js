@@ -1,12 +1,19 @@
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../../../firebase/index.js';
+import { supabase } from '../../../lib/supabase.ts';
 
 export async function daftarGuruPerencanaan(tenantId = '') {
-  const syarat = [where('role', '==', 'guru')];
-  if (tenantId) syarat.push(where('tenantId', '==', tenantId));
+  let query = supabase
+    .from('profiles')
+    .select('id,nama,tenant_id')
+    .eq('role', 'guru')
+    .eq('active', true);
+  if (tenantId) query = query.eq('tenant_id', tenantId);
 
-  const snapshot = await getDocs(query(collection(db, 'directory'), ...syarat));
-  return snapshot.docs
-    .map((akun) => ({ uid: akun.id, ...akun.data() }))
-    .sort((a, b) => String(a.nama || '').localeCompare(String(b.nama || ''), 'id'));
+  const { data, error } = await query.order('nama', { ascending: true });
+  if (error) throw error;
+  if (!Array.isArray(data)) throw new Error('Supabase tidak mengembalikan direktori guru yang valid.');
+  return data.map((profile) => ({
+    uid: profile.id,
+    nama: profile.nama || '',
+    tenantId: profile.tenant_id || '',
+  }));
 }

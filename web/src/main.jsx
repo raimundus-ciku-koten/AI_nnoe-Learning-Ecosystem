@@ -6,10 +6,6 @@ import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { pulihkanSideTutup } from './ui.js'; //[cite: 11]
 import App from './App.jsx'; //[cite: 11]
-import {
-  initializeAnalyticsForConsent,
-  trackAppNavigation
-} from './services/analyticsConsent.js';
 
 // Terapkan preferensi sidebar sebelum render pertama (tanpa kedip)[cite: 11]
 pulihkanSideTutup(); 
@@ -24,7 +20,13 @@ createRoot(document.getElementById('app')).render(
   </StrictMode>
 );
 
-void initializeAnalyticsForConsent().catch((err) => {
-  console.error('[analytics] Tidak dapat memulihkan persetujuan Analytics:', err?.message || err);
-});
-window.addEventListener('hashchange', trackAppNavigation);
+if (import.meta.env.PROD) {
+  const mulaiMonitoring = () => {
+    console.info('[performance] Monitoring web dinonaktifkan untuk migrasi Supabase.');
+  };
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(mulaiMonitoring, { timeout: 4000 });
+  } else {
+    window.setTimeout(mulaiMonitoring, 0);
+  }
+}

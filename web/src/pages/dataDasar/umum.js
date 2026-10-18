@@ -8,17 +8,15 @@
  *
  * Ekspor utama:
  *   - Utilitas: buatId, bersih, kunciKelas, urutUnik, urutNama, HARI, ik
- *   - Firestore: muatPenugasan, ambilSiswa, bekukanKodeSiswa
+ *   - Data siswa: ambilSiswa, bekukanKodeSiswa
  *   - Kode siswa: buatKodeSiswa, urlScanKode, kodeSiswaValid, fnv1a32
  *   - Barcode: barcodeCode128SVG, barcodeCode39SVG
  *   - Penanganan galat: galat, toast (re-export)
  */
-import {
-  collection, doc, getDoc, getDocs, orderBy, query, writeBatch,
-} from 'firebase/firestore';
-import { db } from '../../firebase/index.js';
 import { esc, ikon } from '../../ui.js';
 import { toast } from '../../components/toast.js';
+import { muatSiswa as muatDaftarSiswa } from '../../services/students.js';
+import { muatPenugasanGuru } from '../../services/teacherAssignments.js';
 
 // Toast satu sumber (components/toast.js). Re-export agar impor dari modul ini tetap jalan.
 export { toast };
@@ -77,7 +75,7 @@ const PESAN_GALAT = [
   ['deadline-exceeded',    'permintaan terlalu lama, coba lagi.'],
   ['resource-exhausted',   'kuota terlampaui, coba beberapa saat lagi.'],
   ['not-found',            'data tidak ditemukan.'],
-  ['failed-precondition',  'indeks Firestore belum dibuat (lihat konsol).'],
+  ['failed-precondition',  'prasyarat layanan belum terpenuhi.'],
 ];
 
 export function galat(err, awalan = 'Terjadi kesalahan') {
@@ -88,35 +86,14 @@ export function galat(err, awalan = 'Terjadi kesalahan') {
 }
 
 /* ===========================================================================
- * 4. FIRESTORE — PENUGASAN GURU
+ * 4. PENUGASAN GURU
  * =========================================================================== */
 
-/** Muat penugasan guru dari `penugasan/{uid}` (tersanitasi & bebas duplikat). */
-export async function muatPenugasan(uid) {
-  if (!uid) throw new Error('uid wajib diisi');
-  const snap = await getDoc(doc(db, 'penugasan', uid));
-  const mentah = snap.exists() && Array.isArray(snap.data().mapelKelas)
-    ? snap.data().mapelKelas : [];
-
-  const lihat = new Set();
-  const mapelKelas = [];
-  for (const i of mentah) {
-    const mapel = bersih(i?.mapel, 80);
-    const kelas = bersih(i?.kelas, 30);
-    const kunci = `${mapel}\u0000${kelas}`;
-    if (!mapel || !kelas || lihat.has(kunci)) continue;
-    lihat.add(kunci);
-    mapelKelas.push({ mapel, kelas });
-  }
-  return {
-    mapelKelas,
-    kelas: urutUnik(mapelKelas.map((i) => i.kelas)),
-    mapel: urutUnik(mapelKelas.map((i) => i.mapel)),
-  };
-}
+/** Muat daftar penugasan per pengguna dari profil Supabase yang diizinkan RLS. */
+export const muatPenugasan = muatPenugasanGuru;
 
 /* ===========================================================================
- * 5. FIRESTORE — SISWA (dengan cache concurrent-safe)
+ * 5. SISWA (dengan cache concurrent-safe)
  * =========================================================================== */
 
 /**
@@ -131,8 +108,8 @@ export async function ambilSiswa(ctx, paksa = false) {
   if (!paksa && cache.siswa) return cache.siswa;
   if (!paksa && cache.siswaJanji) return cache.siswaJanji;
 
-  const janji = getDocs(query(collection(db, 'guru', uid, 'siswa'), orderBy('nama')))
-    .then((snap) => (cache.siswa = snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+  const janji = muatDaftarSiswa(uid)
+    .then((students) => (cache.siswa = students))
     .finally(() => { if (cache.siswaJanji === janji) delete cache.siswaJanji; });
   cache.siswaJanji = janji;
   return janji;
@@ -141,36 +118,17 @@ export async function ambilSiswa(ctx, paksa = false) {
 /**
  * Simpan permanen `kodeUnik` untuk siswa yang belum punya, supaya kode pada kartu
  * yang sudah dicetak TIDAK berubah. Tabrakan kode diselesaikan otomatis.
- * Batch ≤ 450 operasi (batas Firestore 500).
+ * Kode siswa diwajibkan saat row Supabase dibuat dan tidak dapat diubah.
  * @returns {Promise<number>} jumlah siswa yang diperbarui
  */
 export async function bekukanKodeSiswa(ctx, daftar = null) {
   const uid = ctx?.user?.uid;
   if (!uid) throw new Error('Pengguna belum masuk');
   const siswa = daftar || (await ambilSiswa(ctx));
-
-  const dipakai = new Set(siswa.map((s) => s.kodeUnik).filter(Boolean));
-  const tugas = [];
-  for (const s of siswa) {
-    if (s.kodeUnik) continue;
-    let kode = buatKodeSiswa(s);
-    for (let n = 1; dipakai.has(kode) && n < 50; n += 1) kode = buatKodeSiswa(s, `#${n}`);
-    dipakai.add(kode);
-    tugas.push({ id: s.id, kode });
+  if (siswa.some((student) => !student.kodeUnik)) {
+    throw new Error('Ada siswa tanpa kode unik. Data legacy harus direkonsiliasi sebelum digunakan.');
   }
-
-  for (let i = 0; i < tugas.length; i += 450) {
-    const batch = writeBatch(db);
-    for (const { id, kode } of tugas.slice(i, i + 450)) {
-      batch.update(doc(db, 'guru', uid, 'siswa', id), { kodeUnik: kode });
-    }
-    await batch.commit();
-  }
-  if (tugas.length) {
-    const peta = new Map(tugas.map((t) => [t.id, t.kode]));
-    siswa.forEach((s) => { if (peta.has(s.id)) s.kodeUnik = peta.get(s.id); });
-  }
-  return tugas.length;
+  return 0;
 }
 
 /* ===========================================================================
@@ -246,7 +204,7 @@ export function kodeSiswaValid(kode) {
 /**
  * Bangun URL scan absensi dari kode unik.
  * Format: <origin><pathname>#/scan/<kodeUnik>
- * Aman untuk hosting statis (Firebase Hosting, GitHub Pages).
+ * Aman untuk hosting statis.
  * Daftarkan rute di main.js: daftar('/scan/:kode', halamanScan, { shell: false });
  */
 export function urlScanKode(kode) {

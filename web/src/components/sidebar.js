@@ -31,7 +31,6 @@ import { menuUntuk } from '../menu.js';
 import { logout } from '../auth.js';
 import { hentikanChat } from '../services/chatSync.js';
 import { jalankanAksi } from './profilaksi.js';
-import { pasangFotoTerlindung } from '../services/protectedMedia.js';
 import {
   esc, ikon, inisial, namaDariUser, ambilProfil,
   htmlAvatar, LABEL_PERAN, linkLuarAman,
@@ -491,11 +490,6 @@ export function topbar() {
   const foto   = user?.photoURL && /^https:\/\//i.test(user.photoURL) ? user.photoURL : '';
   const logo   = /^https:\/\//i.test(profil.logoSekolah || '') ? profil.logoSekolah : '';
 
-  requestAnimationFrame(() => {
-    const image = document.querySelector('#aleAvatarWrap img[data-foto-url]');
-    if (image) pasangFotoTerlindung(image);
-  });
-
   const item = (aksi, ikNama, teks, warna) =>
     `<button type="button" class="ale-pop-item ale-pw-${warna}"
              role="menuitem" data-aksi="${aksi}">
@@ -562,7 +556,6 @@ export function topbar() {
               <p class="ale-pop-judul" role="presentation">Profil</p>
               ${item('foto-tambah', 'unggah',  'Ubah foto profil',           'sky')}
               ${item('notif',       'lonceng', 'Aktifkan notifikasi',        'amber')}
-              ${item('fcm',         'unggah',  'Daftarkan ulang notifikasi', 'teal')}
               ${item('foto-hapus',  'sampah',  'Hapus foto profil',          'rose')}
               <hr class="ale-pop-sekat" role="separator">
               ${item('kelas-mapel', 'kartuid', 'Kelas & mapel saya',         'sky')}

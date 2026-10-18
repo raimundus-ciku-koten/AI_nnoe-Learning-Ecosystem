@@ -3,13 +3,13 @@
 // menu.js — Adaptor menu/sidebar. Guru dan superadmin memakai katalog rute
 // navigasi.js agar tautan sidebar dan route metadata selalu selaras.
 //
-// Rute memakai hash (#/...) supaya tidak perlu rewrite SPA di Firebase Hosting.
+// Rute memakai hash (#/...) supaya hosting statis tidak perlu rewrite SPA.
 //
 // Status item kompatibilitas:
-//   rute    : halaman Firebase yang sudah ada (href "#/rute")
+//   rute    : halaman yang sudah ada (href "#/rute")
 //   gulir   : bagian di halaman Dasbor (menggulir ke kartu terkait)
 //   gas     : fitur yang masih berjalan di aplikasi perencanaan lama (Apps Script)
-//   segera  : belum dibangun di Firebase (tampil redup, tidak bisa diklik)
+//   segera  : belum dibangun (tampil redup, tidak bisa diklik)
 //
 // Catatan:
 //   - Grup "Dasbor" hanya punya 1 item → dirender sebagai link tunggal oleh
@@ -321,7 +321,7 @@ const TAMBAHAN = {
     {
       id: 'x-pantau', judul: 'Pemantauan Platform', ikon: 'activity',
       items: [
-        s('Kuota Firebase',        'speedometer2'),
+        s('Kuota AI',              'speedometer2'),
         s('Aktivitas Platform',    'activity'),
         s('Pengguna Aktif Harian', 'people'),
       ],

@@ -15,7 +15,7 @@ const COMMON_RULES = [
 ].join('\n- ');
 const dataBlock = (value) => `<DATA>\n${JSON.stringify(value)}\n</DATA>`;
 
-export function promptAtp({ mapel, kelas, fase, totalJP, jpPerPekan }) {
+export function promptAtp({ mapel, kelas, fase, cp, totalJP, jpPerPekan }) {
   const jumlahTp = Math.max(6, Math.min(40, Math.round(totalJP / 7)));
   const jumlahUnit = Math.max(2, Math.min(10, Math.round(jumlahTp / 3.5)));
   return `${ROLE}
@@ -25,14 +25,22 @@ TUGAS: susun Alur Tujuan Pembelajaran (ATP) untuk mata pelajaran dan kelas pada 
 ATURAN:
 - ${COMMON_RULES}
 - Bentuk JSON: {"cp":[{"elemen":string,"cp":string}],"unit":[{"no":int,"nama":string,"elemen":string,"semester":1|2,"tp":[{"kode":string,"rumusan":string,"materi":string,"jp":int}]}]}
-- "cp": Capaian Pembelajaran fase tersebut, satu butir per elemen. Gunakan rumusan resmi Kurikulum Merdeka bila Anda mengetahuinya; bila tidak, tulis ringkasan yang setia pada cakupan elemen.
+- "cp" adalah sumber resmi yang diberikan di DATA: salin seluruh nama elemen dan rumusan CP PERSIS tanpa meringkas, mengubah, menambah, atau menghilangkan isi.
+- Setiap nilai "unit[].elemen" harus persis sama dengan salah satu nama elemen pada sumber CP.
 - Sekitar ${jumlahUnit} unit dan ${jumlahTp} TP secara keseluruhan; urutan unit berjenjang dari konsep dasar ke penerapan.
 - Kode TP berformat "<huruf fase>.<nomor urut>" (mis. "E.1", "E.2"), unik, berurutan lintas unit.
 - Rumusan TP terukur, diawali kata kerja operasional (Bloom), satu kompetensi per TP.
 - "semester": unit awal semester 1, unit akhir semester 2; kedua semester harus terisi dan urutan tidak boleh turun.
 - "jp": bilangan bulat ≥ 1, perkiraan relatif beban TP (total akan diselaraskan oleh sistem ke ${totalJP} JP; jangan menyesuaikan sendiri).
 
-${dataBlock({ mapel: safe(mapel, 120), kelas: safe(kelas, 20), fase: safe(fase, 2), totalJP, jpPerPekan })}`;
+${dataBlock({
+    mapel: safe(mapel, 120),
+    kelas: safe(kelas, 20),
+    fase: safe(fase, 2),
+    cp: cp.map((item) => ({ elemen: safe(item.elemen, 120), cp: safe(item.cp, 3000) })),
+    totalJP,
+    jpPerPekan,
+  })}`;
 }
 
 export function promptKktp({ mapel, kelas, fase, tps }) {

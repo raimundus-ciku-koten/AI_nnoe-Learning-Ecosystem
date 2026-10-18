@@ -7,7 +7,7 @@
  *
  * Sumber data:
  *   - Kontak & permintaan: state.kontak (satu listener global di chatSync.js)
- *   - Orang: Firestore `directory` (difilter tenantId; tanpa email/data privat)
+ *   - Orang: direktori profil Supabase (dibatasi tenant; tanpa email/data privat)
  *
  * Mengembalikan cleanup → dilepas router.
  */
@@ -18,9 +18,9 @@ import { toast } from '../../utils/toast.js';
 import { LABEL_PERAN } from '../../ui.js';
 import { pesanGalatChat } from '../../utils/chatUtil.js';
 import { mulaiChatPribadi } from '../../services/chat.js';
-import { pasangFotoTerlindung, uidDariUrlFotoProfil } from '../../services/protectedMedia.js';
+import { urlFotoAman } from '../../services/protectedMedia.js';
 import {
-  kirimPermintaan, terimaPermintaan, hapusKontak, muatDirektori, idPasangan
+  kirimPermintaan, terimaPermintaan, hapusKontak, muatDirektori
 } from '../../services/contacts.js';
 import { buatTabChat } from './chatTabs.js';
 
@@ -61,7 +61,6 @@ export async function tampilkanKontak(wadah) {
   let aktif = true;
   let kontakTerakhir = null;
   const sibuk = new Set(); // id/uid yang sedang diproses (cegah klik ganda)
-  let bersihkanFoto = [];
 
   const tabChat = buatTabChat('kontak');
   const panelTab = h('div', { class: 'chat-subtab', role: 'tablist' });
@@ -131,16 +130,14 @@ export async function tampilkanKontak(wadah) {
 
   /* ---------- komponen baris ---------- */
   function avatar(nama, foto) {
-    const privatePhoto = Boolean(uidDariUrlFotoProfil(foto));
-    const image = foto && /^https:\/\//i.test(foto)
+    const image = urlFotoAman(foto)
       ? h('img', {
-        ...(privatePhoto ? { 'data-foto-url': foto } : { src: foto }),
+        src: foto,
         alt: '',
         loading: 'lazy',
         referrerpolicy: 'no-referrer',
       })
       : null;
-    if (privatePhoto && image) bersihkanFoto.push(pasangFotoTerlindung(image, foto));
     return h('span', { class: 'avatar' },
       image
         ? image
@@ -234,7 +231,7 @@ export async function tampilkanKontak(wadah) {
 
     return cocok.map((u) => {
       const st = statusDengan(u.uid);
-      const id = idPasangan(saya.uid, u.uid);
+      const id = st?.id;
       let aksi;
       if (st?.status === 'accepted') {
         aksi = [tombol('Chat', 'btn-ale', () => bukaChat(u.uid, u.nama), sibuk.has(`chat:${u.uid}`))];
@@ -256,8 +253,6 @@ export async function tampilkanKontak(wadah) {
 
   function gambar() {
     if (!aktif) return;
-    bersihkanFoto.forEach((stop) => stop());
-    bersihkanFoto = [];
     gambarTab();
     const bagian = tabAktif === 'kontak' ? tabKontak() : tabAktif === 'permintaan' ? tabPermintaan() : tabCari();
     clear(isi);
@@ -272,7 +267,7 @@ export async function tampilkanKontak(wadah) {
     } catch (e) {
       console.error('[kontak] direktori gagal dimuat:', e);
       orangGalat = e?.code === 'permission-denied'
-        ? 'Akses ke direktori ditolak. Pastikan akun Anda terhubung ke sekolah dan Rules terbaru sudah di-deploy.'
+        ? 'Akses ke direktori ditolak. Pastikan akun Anda terhubung ke sekolah dan kebijakan akses terbaru sudah diterapkan.'
         : 'Gagal memuat daftar pengguna. Periksa koneksi lalu muat ulang halaman.';
     }
     orangSiap = true;
@@ -290,8 +285,6 @@ export async function tampilkanKontak(wadah) {
   return () => {
     aktif = false;
     berhenti();
-    bersihkanFoto.forEach((stop) => stop());
-    bersihkanFoto = [];
     clearTimeout(debounce);
     try { tabChat.berhenti(); } catch { /* abaikan */ }
   };

@@ -39,7 +39,7 @@ export function buatKodeSiswa(siswa, garam = '') {
   return `ALE-${kelas}-${hash}-${ident}`;
 }
 
-/** Validasi bentuk kode (dipakai halaman scan sebelum query ke Firestore). */
+/** Validasi bentuk kode (dipakai halaman scan sebelum query ke Supabase). */
 export const KODE_SISWA_REGEX = /^ALE-[A-Z0-9]{1,6}-[A-Z0-9]{6}-\d{4}$/;
 export const kodeSiswaValid = (kode) => KODE_SISWA_REGEX.test(String(kode || '').trim());
 

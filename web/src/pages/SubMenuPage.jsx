@@ -84,10 +84,6 @@ const ALUR = {
     ringkasan: 'Kelola konfigurasi AI dan pemakaian dari sisi server. Rahasia API tidak ditampilkan atau disimpan di klien.',
     langkah: ['Pilih konfigurasi atau metrik AI', 'Tinjau pemakaian dan batas biaya', 'Ubah rahasia hanya melalui layanan tepercaya'],
   },
-  'platform-firebase': {
-    ringkasan: 'Tinjau layanan Firebase yang menopang autentikasi, data, berkas, fungsi, dan notifikasi platform.',
-    langkah: ['Pilih layanan Firebase', 'Tinjau status dan kapasitas', 'Buka konsol resmi bila tindakan operasional diperlukan'],
-  },
   'platform-keamanan': {
     ringkasan: 'Tinjau kontrol keamanan platform, audit, dan App Check untuk memastikan akses tetap terjaga.',
     langkah: ['Pilih kontrol atau rentang waktu', 'Tinjau temuan dan jejak audit', 'Terapkan tindak lanjut yang telah disetujui'],

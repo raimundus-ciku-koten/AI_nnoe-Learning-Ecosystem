@@ -1,6 +1,6 @@
 {
   "packageId": "com.ainnoe.learningecosystem",
-  "host": "ainnoe-learning-ecosyste-f7432.web.app",
+  "host": "APP_DOMAIN_REQUIRED.invalid",
   "name": "AI_nnoe Learning Ecosystem",
   "launcherName": "AI_nnoe",
   "display": "standalone",
@@ -13,7 +13,7 @@
   "backgroundColor": "#FFFFFF",
   "enableNotifications": true,
   "startUrl": "/#/login",
-  "iconUrl": "https://ainnoe-learning-ecosyste-f7432.web.app/logo-ale.png",
+  "iconUrl": "https://APP_DOMAIN_REQUIRED.invalid/logo-ale.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "./android.keystore",
@@ -23,7 +23,7 @@
   "appVersionCode": 1,
   "shortcuts": [],
   "generatorApp": "@bubblewrap/cli 1.27.0",
-  "webManifestUrl": "https://ainnoe-learning-ecosyste-f7432.web.app/site.webmanifest",
+  "webManifestUrl": "https://APP_DOMAIN_REQUIRED.invalid/site.webmanifest",
   "fallbackType": "customtabs",
   "features": {},
   "alphaDependencies": {
@@ -32,7 +32,7 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://ainnoe-learning-ecosyste-f7432.web.app/",
+  "fullScopeUrl": "https://APP_DOMAIN_REQUIRED.invalid/",
   "minSdkVersion": 24,
   "orientation": "portrait",
   "fingerprints": [],

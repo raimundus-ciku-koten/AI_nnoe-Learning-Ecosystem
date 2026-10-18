@@ -6,6 +6,7 @@ import {
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { MaintenanceGuard, PlatformControlProvider } from './context/PlatformControlContext.jsx';
 import { logout } from './auth.js';
+import PrivilegedMfaGate from './components/PrivilegedMfaGate.jsx';
 
 // Legacy Alias Mapper[cite: 10]
 const LEGACY_ALIAS = {
@@ -77,7 +78,6 @@ function LegacyPage({ render }) {
 const HalamanLogin = lazy(() => import('./pages/login.js').then(({ halamanLogin }) => ({
   default: function LoginRoute() { return <LegacyPage render={halamanLogin} />; },
 })));
-const HalamanResetPassword = lazy(() => import('./pages/PasswordRecoveryPage.jsx'));
 const HalamanDashboard = lazy(() => import('./pages/dashboard.js').then(({ halamanDashboard }) => ({
   default: function DashboardRoute() { return <LegacyPage render={halamanDashboard} />; },
 })));
@@ -103,20 +103,27 @@ const HalamanPresensi = lazy(() => import('./pages/AttendancePage.jsx'));
 const HalamanGoogleWorkspace = lazy(() => import('./pages/GoogleWorkspacePage.jsx'));
 const HalamanIntegrasiAI = lazy(() => import('./pages/AIIntegrationsPage.jsx'));
 const HalamanBankSoal = lazy(() => import('./pages/QuestionBankPage.jsx'));
+const HalamanUjianOnline = lazy(() => import('./pages/OnlineAssessmentPage.jsx'));
+const HalamanNilaiUjianSiswa = lazy(() => import('./pages/OnlineAssessmentResultsPage.jsx'));
+const HalamanTautkanAkunSiswa = lazy(() => import('./pages/StudentAccountLinkPage.jsx'));
 const HalamanTenantPlatform = lazy(() => import('./pages/PlatformTenantsPage.jsx'));
 const HalamanPenggunaPlatform = lazy(() => import('./pages/PlatformUsersPage.jsx'));
 const HalamanOperasiPlatform = lazy(() => import('./pages/PlatformOperationsPage.jsx'));
+const HalamanPenggunaSupabase = lazy(() => import('./pages/SupabasePlatformUsersPage.jsx'));
+const HalamanPrivasi = lazy(() => import('./pages/PrivacyNoticePage.jsx'));
 const AppShell = lazy(() => import('./components/AppShell.jsx'));
 
 function PrivateShell({ children }) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const location = useLocation();
 
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return (
-    <MaintenanceGuard>
-      <AppShell path={location.pathname} search={location.search}>{children}</AppShell>
-    </MaintenanceGuard>
+    <PrivilegedMfaGate role={role} userId={user.uid}>
+      <MaintenanceGuard>
+        <AppShell path={location.pathname} search={location.search}>{children}</AppShell>
+      </MaintenanceGuard>
+    </PrivilegedMfaGate>
   );
 }
 
@@ -150,8 +157,9 @@ function RouteWrapper() {
   }, [userId]);
 
   const publicRoute = location.pathname === '/login'
-    || location.pathname === '/reset-password'
-    || location.pathname.startsWith('/scan/');
+    || location.pathname === '/privacy'
+    || location.pathname.startsWith('/scan/')
+    || location.pathname === '/platform/supabase-users';
   if (loading && !publicRoute) {
     return <div className="app-loader">Memuat sesi...</div>;
   }
@@ -160,7 +168,8 @@ function RouteWrapper() {
     <Suspense fallback={<div className="loading-spinner">Memuat...</div>}>
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <HalamanLogin />} />
-        <Route path="/reset-password" element={<HalamanResetPassword />} />
+        <Route path="/privacy" element={<HalamanPrivasi />} />
+        <Route path="/platform/supabase-users" element={<HalamanPenggunaSupabase />} />
         <Route path="/scan/:kode" element={<HalamanScan />} />
         <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
         
@@ -168,10 +177,14 @@ function RouteWrapper() {
         <Route path="/purchase" element={<PrivateShell><HalamanPurchase /></PrivateShell>} />
         <Route path="/testimoni" element={<PrivateShell><HalamanTestimoni /></PrivateShell>} />
         <Route path="/admin/pengguna/:sub" element={<PrivateShell><HalamanAdminPengguna /></PrivateShell>} />
+        <Route path="/admin/pengguna/tautkan-siswa" element={<PrivateShell><HalamanTautkanAkunSiswa /></PrivateShell>} />
         <Route path="/pelaksanaan/presensi" element={<PrivateShell><HalamanPresensi /></PrivateShell>} />
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
         <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanIntegrasiAI /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
+        <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
+        <Route path="/siswa/ujian" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
+        <Route path="/siswa/nilai" element={<PrivateShell><HalamanNilaiUjianSiswa /></PrivateShell>} />
         <Route path="/admin/perencanaan/paket/:id?/:jenis?" element={<PrivateShell><HalamanPerencanaan /></PrivateShell>} />
         <Route path="/platform/tenant/sekolah" element={<PrivateShell><HalamanTenantPlatform /></PrivateShell>} />
         <Route path="/platform/pengguna/admin-sekolah" element={<PrivateShell><HalamanPenggunaPlatform /></PrivateShell>} />

@@ -12,6 +12,7 @@
  */
 
 import { toast } from './components/toast.js';
+import { urlFotoAman } from './services/protectedMedia.js';
 
 export { toast };
 
@@ -272,11 +273,9 @@ export function ikon(nama, kelas = '') {
 
 /** HTML avatar (img atau span inisial). */
 export function htmlAvatar(foto, nama) {
-  if (!foto) return `<span class="ale-avatar" aria-hidden="true">${esc(inisial(nama))}</span>`;
-  const protectedPhoto = /^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/[^/]+\/o\/fotoProfil%2F[A-Za-z0-9_-]{1,128}\.jpg(?:\?|$)/i.test(foto);
-  return protectedPhoto
-    ? `<img class="ale-avatar" data-foto-url="${esc(foto)}" alt="" width="48" height="48" referrerpolicy="no-referrer">`
-    : `<img class="ale-avatar" src="${esc(foto)}" alt="" width="48" height="48" referrerpolicy="no-referrer">`;
+  const fallback = `<span class="ale-avatar" aria-hidden="true">${esc(inisial(nama))}</span>`;
+  if (!urlFotoAman(foto)) return fallback;
+  return `<img class="ale-avatar" src="${esc(foto)}" alt="" width="48" height="48" referrerpolicy="no-referrer">`;
 }
 
 /** Perbarui avatar di header (foto = '' berarti kembali ke inisial). */
@@ -284,10 +283,4 @@ export function perbaruiAvatar(foto, nama) {
   const w = document.getElementById('aleAvatarWrap');
   if (!w) return;
   w.innerHTML = htmlAvatar(/^https:\/\//i.test(foto || '') ? foto : '', nama);
-  const image = w.querySelector('img[data-foto-url]');
-  if (image) {
-    import('./services/protectedMedia.js')
-      .then(({ pasangFotoTerlindung }) => pasangFotoTerlindung(image))
-      .catch((error) => console.error('[profil] Foto profil gagal dipasang:', error));
-  }
 }

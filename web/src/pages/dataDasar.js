@@ -25,13 +25,12 @@
  *   import '../dataDasar.tema.css';
  *   import '../styles/dataDasar-screens.css';   // kelas ale-* semua sub-menu
  */
-import { db } from '../firebase/index.js';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { getState } from '../state.js';
 import { bacaRute, navigate } from '../router.js';
 import { perbaruiHeader } from '../components/sidebar.js';
 import { esc, LABEL_PERAN, namaDariUser, ambilProfil } from '../ui.js';
 import { bersih, galat, ik, muatPenugasan, toast } from './dataDasar/umum.js';
+import { muatPengaturanTenant, simpanProfilTenant, simpanSiklusTenant } from '../services/tenantSettings.js';
 import { tabSiswa }  from './dataDasar/tabSiswa.js';
 import { tabJadwal } from './dataDasar/tabJadwal.js';
 import { tabDenah }  from './dataDasar/tabDenah.js';
@@ -87,7 +86,7 @@ export async function halamanDataDasar(wadah) {
   const ctx = {
     user, role, tenantId, bisaEdit,
     cache: { siswa: null },
-    kelas: [], mapel: [], mapelKelas: [],
+    kelas: [], mapel: [],
   };
 
   // Cache lazy + invalidator
@@ -100,7 +99,6 @@ export async function halamanDataDasar(wadah) {
         .then((p) => {
           ctx.kelas = p.kelas;
           ctx.mapel = p.mapel;
-          ctx.mapelKelas = p.mapelKelas;
           return p;
         })
         .catch((e) => { promisePenugasan = null; throw e; });
@@ -113,8 +111,7 @@ export async function halamanDataDasar(wadah) {
       if (!tenantId) {
         throw new Error('Akun belum terhubung ke sekolah.');
       }
-      promiseConfig = getDoc(doc(db, 'tenants', tenantId))
-        .then((s) => (s.exists() ? s.data() : {}))
+      promiseConfig = muatPengaturanTenant(tenantId)
         .catch((e) => { promiseConfig = null; throw e; });
     }
     return promiseConfig;
@@ -191,7 +188,7 @@ function pesanGalat(err) {
   if (kode.includes('permission-denied')) {
     return {
       judul: 'Akses data ditolak',
-      rinci: 'Akun ini belum diizinkan membaca data tersebut. Periksa Firestore Security Rules untuk koleksi yang dibuka halaman ini.',
+      rinci: 'Akun ini belum diizinkan membaca data tersebut. Periksa akses dan kebijakan Supabase untuk data sekolah.',
     };
   }
   if (kode.includes('unauthenticated')) {
@@ -199,8 +196,8 @@ function pesanGalat(err) {
   }
   if (kode.includes('unavailable') || kode.includes('network')) {
     return {
-      judul: 'Tidak dapat terhubung ke Firestore',
-      rinci: 'Periksa koneksi internet. Bila memakai emulator, pastikan "firebase emulators:start" berjalan. '
+      judul: 'Tidak dapat terhubung ke Supabase',
+      rinci: 'Periksa koneksi internet dan konfigurasi layanan Supabase. '
            + 'Pemblokir iklan, antivirus, atau VPN juga dapat memutus koneksi.',
     };
   }
@@ -336,14 +333,12 @@ async function tabProfil(el, o) {
     try {
       const nama = bersih(el.querySelector('#inNama').value, 150);
       if (!o.tenantId) throw new Error('Akun belum terhubung ke sekolah.');
-      await setDoc(doc(db, 'tenants', o.tenantId), {
+      await simpanProfilTenant(o.tenantId, o.user.id || o.user.uid, {
         nama,
-        npsn:           bersih(el.querySelector('#inNpsn').value, 12).replace(/\D/g, ''),
-        kepalaSekolah:  bersih(el.querySelector('#inKepsek').value, 150),
+        npsn: bersih(el.querySelector('#inNpsn').value, 12).replace(/\D/g, ''),
+        kepalaSekolah: bersih(el.querySelector('#inKepsek').value, 150),
         nipKepalaSekolah: bersih(el.querySelector('#inNip').value, 25).replace(/[^\d\s]/g, ''),
-        diperbaruiOleh: o.user.uid,
-        waktuUbah:      serverTimestamp(),
-      }, { merge: true });
+      });
 
       o.invalidateConfig();
       toast('Profil sekolah berhasil diperbarui.', 'ok');
@@ -415,12 +410,10 @@ async function tabTA(el, o) {
     try {
       const semester = el.querySelector('#inSem').value === 'Genap' ? 'Genap' : 'Ganjil';
       if (!o.tenantId) throw new Error('Akun belum terhubung ke sekolah.');
-      await setDoc(doc(db, 'tenants', o.tenantId), {
-        tahunAjaran:    ta,
+      await simpanSiklusTenant(o.tenantId, o.user.id || o.user.uid, {
+        tahunAjaran: ta,
         semester,
-        diperbaruiOleh: o.user.uid,
-        waktuUbah:      serverTimestamp(),
-      }, { merge: true });
+      });
 
       o.invalidateConfig();
       toast('Siklus akademik diperbarui.', 'ok');
@@ -443,7 +436,7 @@ async function tabKelas(el, o) {
   } catch (err) {
     console.error('[DataDasar] penugasan:', err);
     gagal = err;
-    p = { mapelKelas: [] };
+    p = { kelas: [], mapel: [] };
   }
 
   el.innerHTML = `
@@ -451,17 +444,22 @@ async function tabKelas(el, o) {
     <section class="ale-kartu card">
       <div class="ale-kartu-kepala">
         <h2 class="ale-kartu-judul">${ik('buku')} Penugasan Mata Pelajaran & Rombel</h2>
-        <span class="ale-chip ale-chip-admin">${p.mapelKelas.length} penugasan</span>
+        <span class="ale-chip ale-chip-admin">${p.kelas.length + p.mapel.length} daftar</span>
       </div>
-      ${p.mapelKelas.length
-        ? `<div class="ale-grid-mapel">${p.mapelKelas.map((i) => `
+      ${p.kelas.length || p.mapel.length
+        ? `<div class="ale-grid-mapel">
             <div class="ale-card-item">
-              <strong>${esc(i.mapel)}</strong>
-              <span>Kelas / Rombel: ${esc(i.kelas)}</span>
-            </div>`).join('')}</div>`
+              <strong>Mata pelajaran</strong>
+              <span>${p.mapel.length ? p.mapel.map(esc).join(', ') : 'Belum ditetapkan'}</span>
+            </div>
+            <div class="ale-card-item">
+              <strong>Kelas / rombel</strong>
+              <span>${p.kelas.length ? p.kelas.map(esc).join(', ') : 'Belum ditetapkan'}</span>
+            </div>
+          </div>`
         : `<p class="ale-kosong">${gagal
             ? 'Penugasan belum dapat dimuat.'
-            : 'Belum ada penugasan kelas atau mata pelajaran. Penugasan diatur oleh administrator.'}</p>`}
+            : 'Belum ada daftar kelas atau mata pelajaran. Penugasan dikelola oleh administrator.'}</p>`}
     </section>`;
 
   pasangUlang(el, o.ulang);

@@ -1,10 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const testMode = import.meta.env.MODE === 'test';
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
-  || (testMode ? 'http://127.0.0.1:54321' : '');
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
-  || (testMode ? 'test-publishable-key' : '');
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error(

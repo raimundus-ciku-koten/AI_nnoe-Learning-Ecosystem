@@ -81,7 +81,7 @@ export function initials(name) {
   return out || '?';
 }
 
-/** Jam saja: "14:30". Menerima Timestamp Firebase, Date, number, atau string. */
+/** Jam saja: "14:30". Menerima objek timestamp, Date, number, atau string. */
 export function formatTime(ts) {
   if (!ts) return '';
   const d = ts?.toDate ? ts.toDate() : new Date(ts);

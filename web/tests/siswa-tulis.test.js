@@ -1,19 +1,10 @@
 // web/tests/siswa-tulis.test.js
-// tulis.js mengimpor 'firebase/firestore'; uji ini hanya memakai fungsi yang
-// tidak menyentuh Firestore, sehingga dimuat lewat dynamic import dengan
-// resolver tiruan hanya bila paket firebase tidak terpasang.
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
-let modul;
-try {
-  modul = await import('../src/pages/dataDasar/siswa/tulis.js');
-} catch {
-  modul = null;
-}
-const lewati = !modul;
+import * as modul from '../src/pages/dataDasar/siswa/tulis.js';
 
-describe('tulis.js', { skip: lewati && 'paket "firebase" belum terpasang' }, () => {
+describe('tulis.js', () => {
   test('pecah', () => {
     assert.deepEqual(modul.pecah([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
     assert.deepEqual(modul.pecah([], 3), []);

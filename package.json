@@ -1,44 +1,19 @@
 {
-  "name": "ainnoe-firebase",
+  "name": "ainnoe-learning-ecosystem",
   "version": "1.0.0",
   "private": true,
-  "description": "AI-nnoe Kurikulum Merdeka Ecosystem — Firebase Migration Edition",
+  "description": "AI_nnoe Learning Ecosystem web app — Supabase-based active stack",
   "type": "commonjs",
   "scripts": {
     "dev": "npm --prefix web run dev",
     "build": "npm --prefix web run build",
     "preview": "npm --prefix web run preview",
-    "seed": "node scripts/seed.js",
-    "set-role": "node scripts/setRole.js",
-    "role:guru": "node scripts/setRole.js",
-    "role:admin": "node scripts/setRole.js",
-    "role:super": "node scripts/setRole.js",
-    "emulator": "firebase emulators:start",
-    "deploy": "npm run deploy:spark",
-    "deploy:spark": "npm run build && node scripts/deploySpark.js",
-    "deploy:blaze": "npm run build && firebase deploy",
-    "deploy:rules": "firebase deploy --only database,firestore:default",
-    "deploy:host": "firebase deploy --only hosting",
     "test": "npm --prefix web test",
-    "test:billing": "node --test functions/lib/billing.test.js",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-ainno \"npm --prefix web run test:rules\"",
-    "test:users-rules": "firebase emulators:exec --only firestore --project demo-ainno \"npm --prefix web run test:users-rules\"",
-    "test:attendance-rules": "firebase emulators:exec --only firestore --project demo-ainno \"npm --prefix web run test:attendance-rules\"",
-    "test:rtdb": "firebase emulators:exec --only database --project demo-ainno \"npm --prefix web run test:rtdb\"",
-    "test:storage-rules": "firebase emulators:exec --only storage --project demo-ainno \"npm --prefix web run test:storage-rules\""
-  },
-  "dependencies": {
-    "firebase-admin": "^14.5.0",
-    "google-auth-library": "^11.2.0",
-    "yargs": "^17.7.3"
-  },
-  "devDependencies": {
-    "firebase-tools": "^15.34.0"
+    "test:billing": "node --test functions/lib/billing.test.js"
   },
   "keywords": [
     "kurikulum-merdeka",
     "ai-nnoe",
-    "firebase",
     "education"
   ],
   "author": "Raimundus Ciku Koten",

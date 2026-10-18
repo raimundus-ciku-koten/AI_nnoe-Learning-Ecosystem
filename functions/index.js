@@ -1,4 +1,6 @@
 'use strict';
+throw new Error('Legacy Firebase Functions diarsipkan dan dinonaktifkan; gunakan Supabase Edge Functions yang telah diverifikasi.');
+
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret, defineString, defineInt } = require('firebase-functions/params');
 const { getFirestore } = require('firebase-admin/firestore');

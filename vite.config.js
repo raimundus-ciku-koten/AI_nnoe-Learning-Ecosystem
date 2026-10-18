@@ -13,14 +13,5 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     // Optimasi chunking untuk performa LCP < 2.5s
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules/firebase/')) {
-            return 'firebase-vendor';
-          }
-        }
-      }
-    }
   }
 });
