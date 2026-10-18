@@ -1,0 +1,367 @@
+/* ============================================================
+   dataDasar.tema.css — Tema v2 halaman Data Dasar.
+
+   Load order: setelah dataDasar.css dan dashboard.css (paling akhir
+   di dataDasar.js). Semua selektor diprefiks .dd-page agar menang
+   spesifisitas tanpa !important.
+
+   Token memakai --ale-* dari dashboard.css.
+   Ikon memakai Bootstrap Icons (<i class="bi bi-*">), bukan SVG.
+
+   Yang diatur di sini:
+     - Hero & ringkasan stat (grid 4 kolom di desktop).
+     - Binder: tab vertikal sticky di desktop, strip horizontal
+       geser di mobile.
+     - Panel & kartu bersama (ale-*) di dalam .dd-page.
+     - Tweaks kecil: chip, tombol, gradient kartu.
+   ============================================================ */
+
+/* ============================================================
+   1. ROOT
+   ============================================================ */
+.dd-page { gap: 16px; }
+
+/* ============================================================
+   2. HERO & RINGKASAN STAT
+   ============================================================ */
+.dd-page .dd-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  padding: 20px 22px;
+  margin: 0;
+}
+.dd-page .dd-hero-teks { margin: 0; }
+
+.dd-page .dd-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ale-teal);
+  text-transform: none;
+  letter-spacing: 0;
+}
+/* Ikon Bootstrap: atur font-size, bukan lebar/tinggi SVG */
+.dd-page .dd-kicker .bi { font-size: 16px; line-height: 1; }
+
+.dd-page .dd-hero h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--ale-ink);
+}
+.dd-page .dd-hero-teks p {
+  margin-top: 4px;
+  max-width: 60ch;
+  font-size: 0.88rem;
+  color: var(--ale-muted);
+}
+
+/* Ringkasan 4 kartu stat */
+.dd-page .dd-ringkas {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.dd-page .dd-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--ale-latar);
+  border: 1px solid var(--ale-garis);
+  border-radius: 0.75rem;
+}
+.dd-page .dd-stat-ikon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 0.75rem;
+  background: #ccfbf1;
+  color: #115e59;
+}
+.dd-page .dd-stat-ikon .bi { font-size: 18px; line-height: 1; }
+
+.dd-page .dd-stat-isi {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.dd-page .dd-stat-label {
+  font-size: 0.72rem;
+  color: var(--ale-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.dd-page .dd-stat-isi strong {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ale-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ringkasan 4 kolom → 2 kolom di tablet → 1 kolom di HP kecil */
+@media (max-width: 1100px) {
+  .dd-page .dd-ringkas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .dd-page .dd-hero { padding: 16px; }
+  .dd-page .dd-stat { padding: 10px; gap: 10px; }
+  .dd-page .dd-stat-ikon { width: 32px; height: 32px; }
+  .dd-page .dd-stat-ikon .bi { font-size: 16px; }
+}
+
+/* ============================================================
+   3. BINDER — tab vertikal di laptop, strip horizontal di HP
+   ============================================================ */
+.dd-page .dd-binder {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Desktop: tab di kolom kiri, panel di kanan */
+@media (min-width: 1100px) {
+  .dd-page .dd-binder {
+    grid-template-columns: 272px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+}
+
+/* Wadah tab */
+.dd-page .dd-tabs {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 4px;
+  margin: 0 -2px;
+  background: #fff;
+  border: 1px solid var(--ale-garis);
+  border-radius: var(--ale-radius);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.dd-page .dd-tabs::-webkit-scrollbar { display: none; }
+
+/* Desktop: tab vertikal sticky di kolom kiri */
+@media (min-width: 1100px) {
+  .dd-page .dd-tabs {
+    flex-direction: column;
+    overflow: visible;
+    margin: 0;
+    padding: 6px;
+    position: sticky;
+    top: calc(var(--ale-topbar-h) + 16px);
+  }
+}
+
+/* Tombol tab */
+.dd-page .dd-tab {
+  position: relative;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  width: auto;
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--ale-muted);
+  border: 0;
+  border-radius: 0.75rem;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.dd-page .dd-tab:hover {
+  background: #f1f5f9;
+  color: var(--ale-ink);
+}
+.dd-page .dd-tab.aktif {
+  background: #f0fdfa;
+  color: #115e59;
+}
+/* Garis indikator bawah (mobile) */
+.dd-page .dd-tab.aktif::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 3px;
+  background: var(--ale-teal);
+  border-radius: 3px 3px 0 0;
+}
+
+/* Ikon & teks tab */
+.dd-page .dd-tab-ikon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: inherit;
+}
+.dd-page .dd-tab-ikon .bi { font-size: 20px; line-height: 1; }
+
+.dd-page .dd-tab-teks {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.dd-page .dd-tab-teks strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dd-page .dd-tab.aktif .dd-tab-teks strong { font-weight: 700; }
+.dd-page .dd-tab-teks small {
+  display: none;
+  font-size: 0.72rem;
+  color: var(--ale-muted);
+  font-weight: 400;
+}
+
+/* Desktop: tab lebih lebar, indikator pindah ke kiri */
+@media (min-width: 1100px) {
+  .dd-page .dd-tab {
+    width: 100%;
+    padding: 10px 12px;
+  }
+  .dd-page .dd-tab-teks strong { white-space: normal; }
+  .dd-page .dd-tab-teks small { display: block; }
+  .dd-page .dd-tab.aktif::after {
+    left: 0;
+    right: auto;
+    top: 10px;
+    bottom: 10px;
+    width: 4px;
+    height: auto;
+    border-radius: 0 4px 4px 0;
+  }
+}
+
+/* ============================================================
+   4. PANEL
+   ============================================================ */
+.dd-page .dd-panels { min-width: 0; }
+.dd-page .dd-panel { min-width: 0; }
+.dd-page .dd-panel > * + * { margin-top: 16px; }
+
+/* ============================================================
+   5. KARTU BERSAMA (ale-*) DI DALAM DATA DASAR
+   ============================================================ */
+.dd-page .ale-kartu {
+  padding: 18px 20px;
+  border-radius: var(--ale-radius);
+  border: 1px solid var(--ale-garis);
+  background: #fff;
+}
+.dd-page .ale-kartu-kepala { margin-bottom: 14px; }
+.dd-page .ale-kartu-judul {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ale-ink);
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+.dd-page .ale-chip {
+  text-transform: none;
+  letter-spacing: 0;
+}
+.dd-page .ale-kosong {
+  background: var(--ale-latar);
+  border: 1px dashed #cbd5e1;
+  border-radius: 0.75rem;
+  color: var(--ale-muted);
+}
+
+@media (max-width: 640px) {
+  .dd-page .ale-kartu { padding: 16px; }
+}
+
+/* ============================================================
+   6. TWEAKS KECIL
+   ============================================================ */
+
+/* Tab aktif lebih tegas */
+.dd-page .dd-tab.aktif {
+  box-shadow: inset 0 0 0 3px rgba(34, 175, 167, 0.18);
+}
+
+/* Chip admin lebih kontras */
+.dd-page .ale-chip-admin {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Kartu di dalam panel diberi sedikit napas ekstra */
+.dd-page .dd-panel .ale-kartu {
+  padding: 1.15rem 1.3rem;
+}
+
+/* Tombol utama di halaman ini sedikit lebih besar */
+.dd-page .btn-primary {
+  padding: 0.55rem 1rem;
+  font-weight: 600;
+}
+
+/* Kartu stat hero pakai gradient halus */
+.dd-page .dd-stat {
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border-color: var(--ale-garis);
+}
+
+/* ============================================================
+   7. MOBILE KECIL
+   ============================================================ */
+@media (max-width: 480px) {
+  .dd-page .dd-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: visible;
+  }
+  .dd-page .dd-tab-teks small { display: none; }
+  .dd-page .dd-hero { padding: 1rem; }
+}
+/* Sub-nav pakai anchor — hilangkan garis bawah default */
+.dd-page .dd-tab { text-decoration: none; }
+.dd-page .dd-tab:hover { text-decoration: none; }
+
+/* Header sub-halaman */
+.dd-page .dd-kepala {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.dd-page .dd-kepala-teks h1 {
+  margin: 0.15rem 0 0.25rem;
+  font-size: clamp(1.3rem, 2.5vw, 1.6rem);
+  color: var(--ale-ink);
+}
+.dd-page .dd-kepala-teks p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--ale-muted);
+}

@@ -1,0 +1,104 @@
+html,
+body {
+  margin: 0;
+}
+
+.splash {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: #fff;
+  color: #0f172a;
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  text-align: center;
+}
+
+.splash__logo {
+  width: 112px;
+  height: 88px;
+  object-fit: contain;
+}
+
+.splash__spin {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #cbd5e1;
+  border-top-color: #3730a3;
+  border-radius: 50%;
+  animation: splash-putar .8s linear infinite;
+}
+
+.splash__pesan {
+  min-height: 1.5em;
+  max-width: 420px;
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.splash__muat {
+  display: none;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: #3730a3;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.splash--gagal .splash__spin {
+  display: none;
+}
+
+.splash--gagal .splash__muat {
+  display: inline-block;
+}
+
+.noscript-message {
+  max-width: 640px;
+  margin: auto;
+  padding: 24px;
+  font-family: sans-serif;
+}
+
+.noscript-message h1 {
+  margin: 0 0 8px;
+}
+
+.noscript-message p {
+  margin: 0;
+  color: #475569;
+}
+
+@keyframes splash-putar {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-color-scheme: dark) {
+  .splash {
+    background: #fff;
+    color: #0f172a;
+  }
+
+  .splash__pesan {
+    color: #475569;
+  }
+
+  .splash__spin {
+    border-color: #cbd5e1;
+    border-top-color: #0f766e;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash__spin {
+    animation-duration: 2.4s;
+  }
+}

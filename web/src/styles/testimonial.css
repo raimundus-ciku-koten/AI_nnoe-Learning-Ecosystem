@@ -1,0 +1,21 @@
+.ale-testimonials { display: grid; gap: 1.25rem; max-width: 54rem; margin: 0 auto; padding: clamp(1rem, 3vw, 2rem); }
+.ale-testimonials header { display: grid; gap: .45rem; }
+.ale-testimonials h2 { font-size: clamp(1.5rem, 3vw, 2rem); }
+.ale-testimonials h3 { margin-bottom: .75rem; font-size: 1.1rem; }
+.ale-testimonials header p, .ale-testimonials-small { color: var(--ale-muted, #475569); }
+.ale-testimonials-kicker { color: var(--ale-teal-700, #0f766e) !important; font-size: .85rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.ale-testimonials-status { padding: .75rem 1rem; border-radius: .65rem; background: #eff6ff; color: #1e40af; }
+.ale-testimonials-card { display: grid; gap: .75rem; padding: 1.25rem; border: 1px solid var(--ale-line, #e2e8f0); border-radius: 1rem; background: var(--ale-kartu, #fff); }
+.ale-testimonials-card form, .ale-testimonials-card label { display: grid; gap: .5rem; }
+.ale-testimonials-card form { gap: 1rem; }
+.ale-testimonials-card textarea, .ale-testimonials-card select { width: 100%; min-height: 2.7rem; padding: .65rem; border: 1px solid var(--ale-line, #cbd5e1); border-radius: .6rem; background: #fff; }
+.ale-testimonials-card textarea { min-height: 6rem; resize: vertical; }
+.ale-testimonials-check { display: flex !important; align-items: center; gap: .55rem !important; }
+.ale-testimonials-check input { width: 1.1rem; height: 1.1rem; }
+.ale-testimonials-small { font-size: .85rem; }
+.ale-testimonials-card button { min-height: 2.6rem; padding: .55rem .9rem; border: 0; border-radius: .6rem; color: #fff; background: #0f766e; font-weight: 750; }
+.ale-testimonials-card button.secondary { color: #334155; background: #e2e8f0; }
+.ale-testimonials-card button:disabled { opacity: .6; cursor: progress; }
+.ale-testimonials-review { display: grid; gap: .9rem; }
+.ale-testimonials-review article blockquote { margin: 0; padding: .75rem; border-left: 3px solid #0f766e; background: #f8fafc; }
+.ale-testimonials-actions { display: flex; flex-wrap: wrap; gap: .65rem; }

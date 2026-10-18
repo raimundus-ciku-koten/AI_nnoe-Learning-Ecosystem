@@ -1,0 +1,57 @@
+rules_version = '2';
+
+// =====================================================================
+// firestore.rules — HANYA bagian guru/{uid}/... yang relevan untuk scan.
+// JIKA PROYEK ANDA SUDAH PUNYA firestore.rules, JANGAN ditimpa:
+// gabungkan blok `match /guru/{uid}/absensi/{absensiId}` ke dalam
+// blok `match /guru/{uid}` yang sudah ada.
+// =====================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function login() { return request.auth != null; }
+    function pemilik(uid) { return login() && request.auth.uid == uid; }
+
+    match /guru/{uid} {
+
+      // --- Data siswa: dikelola guru pemilik. ---
+      // (Sesuaikan dengan rules siswa Anda yang sudah ada bila lebih ketat.)
+      match /siswa/{siswaId} {
+        allow read, write: if pemilik(uid);
+      }
+
+      // --- Absensi hasil scan: 1 dokumen per siswa per hari. ---
+      match /absensi/{absensiId} {
+        allow read: if pemilik(uid);
+
+        // Buat saja (tidak ada update) → catatan pertama tidak bisa ditimpa.
+        // ID dokumen WAJIB "{tanggal}_{siswaId}" sehingga duplikat mustahil di sisi server.
+        allow create: if pemilik(uid)
+          && request.resource.data.keys().hasOnly(
+               ['siswaId', 'tanggal', 'status', 'metode', 'kodeUnik', 'nama', 'kelas', 'waktu'])
+          && request.resource.data.siswaId is string
+          && request.resource.data.tanggal is string
+          && request.resource.data.tanggal.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && absensiId == request.resource.data.tanggal + '_' + request.resource.data.siswaId
+          && request.resource.data.status in ['hadir']
+          && request.resource.data.metode == 'scan'
+          && request.resource.data.kodeUnik is string
+          && request.resource.data.kodeUnik.size() <= 64
+          && request.resource.data.nama is string && request.resource.data.nama.size() <= 200
+          && request.resource.data.kelas is string && request.resource.data.kelas.size() <= 50
+          && request.resource.data.waktu == request.time
+          // Siswa harus benar-benar ada di daftar guru yang sama.
+          && exists(/databases/$(database)/documents/guru/$(uid)/siswa/$(request.resource.data.siswaId));
+
+        allow update: if false;
+        // Guru boleh menghapus catatan yang keliru (mis. salah scan).
+        allow delete: if pemilik(uid);
+      }
+    }
+
+    // Tolak semua yang tidak diatur secara eksplisit.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

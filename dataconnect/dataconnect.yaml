@@ -1,0 +1,7 @@
+specVersion: "v1alpha"
+serviceId: "ainnoe-service"
+location: "us-central1"
+schema:
+  source: "./schema"
+connector:
+  dirs: ["./connector"]

@@ -1,0 +1,111 @@
+.ale-purchase {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+.ale-purchase-header { display: grid; gap: .45rem; }
+.ale-purchase-header h2 { font-size: clamp(1.5rem, 3vw, 2rem); }
+.ale-purchase-header p, .ale-purchase-demo p { color: var(--ale-muted, #475569); }
+.ale-purchase-kicker { color: var(--ale-teal-700, #0f766e); font-size: .85rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.ale-purchase-card, .ale-purchase-demo {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid var(--ale-line, #e2e8f0);
+  border-radius: 1rem;
+  background: var(--ale-kartu, #fff);
+  box-shadow: var(--ale-bayangan, 0 10px 26px -14px rgb(15 23 42 / .16));
+}
+.ale-purchase-field { display: grid; gap: .4rem; font-weight: 700; }
+.ale-purchase-field select {
+  min-height: 2.75rem;
+  padding: .5rem .7rem;
+  border: 1px solid var(--ale-line, #cbd5e1);
+  border-radius: .6rem;
+  background: #fff;
+}
+.ale-purchase-seats { display: grid; gap: .55rem; margin: 0; padding: 0; border: 0; }
+.ale-purchase-seats legend { margin-bottom: .5rem; font-weight: 800; }
+.ale-purchase-plan {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .8rem;
+  border: 1px solid var(--ale-line, #e2e8f0);
+  border-radius: .7rem;
+  cursor: pointer;
+}
+.ale-purchase-plan.is-selected {
+  border-color: var(--ale-teal-700, #0f766e);
+  background: #f0fdfa;
+  box-shadow: 0 0 0 1px var(--ale-teal-700, #0f766e);
+}
+.ale-purchase-plan input { flex: none; margin-top: .22rem; accent-color: var(--ale-teal-700, #0f766e); }
+.ale-purchase-plan-copy {
+  display: grid;
+  gap: .25rem;
+  min-width: 0;
+}
+.ale-purchase-plan-copy strong { color: var(--ale-ink, #1e293b); }
+.ale-purchase-plan-copy small { color: var(--ale-muted, #475569); line-height: 1.45; }
+.ale-purchase-plan-price {
+  flex: none;
+  text-align: right;
+  font-weight: 800;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.ale-purchase-plan-price small { display: block; color: var(--ale-muted, #475569); font-size: .75rem; font-weight: 500; }
+.ale-purchase-plans {
+  display: grid;
+  gap: .65rem;
+}
+.ale-purchase-seat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .65rem 0;
+  border-bottom: 1px solid var(--ale-line, #e2e8f0);
+}
+.ale-purchase-seat span { display: grid; gap: .15rem; font-weight: 700; }
+.ale-purchase-seat small { color: var(--ale-muted, #475569); font-weight: 400; }
+.ale-purchase-total { display: grid; gap: .5rem; margin: 0; }
+.ale-purchase-total div { display: flex; justify-content: space-between; gap: 1rem; }
+.ale-purchase-total dd { margin: 0; font-variant-numeric: tabular-nums; }
+.ale-purchase-grand-total { padding-top: .75rem; border-top: 1px solid var(--ale-line, #e2e8f0); font-size: 1.15rem; font-weight: 800; }
+.ale-purchase-submit {
+  min-height: 2.9rem;
+  padding: .6rem 1rem;
+  border: 0;
+  border-radius: .7rem;
+  color: #fff;
+  background: var(--ale-brand, linear-gradient(135deg, #1e1b4b, #0f766e));
+  font-weight: 800;
+}
+.ale-purchase-submit:disabled { opacity: .65; cursor: progress; }
+.ale-purchase-refresh {
+  justify-self: start;
+  padding: .4rem .65rem;
+  border: 1px solid currentColor;
+  border-radius: .5rem;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.ale-purchase-refresh:disabled { opacity: .65; cursor: progress; }
+.ale-purchase-message { padding: .7rem; border-radius: .6rem; background: #fef2f2; color: #b91c1c; }
+.ale-purchase-message-info { background: #eff6ff; color: #1e40af; }
+.ale-purchase-current { display: grid; gap: .2rem; padding: .85rem 1rem; border: 1px solid #b9e3d2; border-radius: .7rem; background: #f0fbf6; color: #1b6047; }
+.ale-purchase-current small { color: #526d63; }
+.ale-purchase-footnote { color: var(--ale-muted, #475569); font-size: .85rem; }
+.ale-purchase-demo h3 { font-size: 1.05rem; }
+@media (max-width: 560px) {
+  .ale-purchase-seat { align-items: flex-start; }
+  .ale-purchase-plan { flex-wrap: wrap; }
+  .ale-purchase-plan-price { margin-left: 1.5rem; text-align: left; }
+}

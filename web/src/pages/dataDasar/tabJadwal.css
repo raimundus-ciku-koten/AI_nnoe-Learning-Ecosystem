@@ -1,0 +1,177 @@
+/* ==========================================================================
+   tabJadwal.css
+   Arsitektur CSS Modern untuk Komponen Tab Jadwal
+   Standar: BEM (Block, Element, Modifier), CSS Variables, Mobile-First
+   ========================================================================== */
+
+/* --- 1. CSS Variables (Theming & Consistency) --- */
+:root {
+  --jadwal-bg-primary: #ffffff;
+  --jadwal-bg-secondary: #f8fafc;
+  --jadwal-border-color: #e2e8f0;
+  --jadwal-text-main: #1e293b;
+  --jadwal-text-muted: #64748b;
+  
+  /* Status Colors */
+  --jadwal-color-primary: #3b82f6;      /* Biru untuk jadwal normal */
+  --jadwal-color-primary-bg: #eff6ff;
+  --jadwal-color-conflict: #ef4444;     /* Merah untuk jadwal bentrok */
+  --jadwal-color-conflict-bg: #fef2f2;
+  --jadwal-color-success: #10b981;      /* Hijau untuk jadwal tersimpan/aktif */
+  
+  /* Layout & Shadows */
+  --jadwal-radius-sm: 6px;
+  --jadwal-radius-md: 10px;
+  --jadwal-shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --jadwal-shadow-hover: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+}
+
+/* --- 2. Container & Layout Utama --- */
+.tab-jadwal-container {
+  width: 100%;
+  background-color: var(--jadwal-bg-primary);
+  border-radius: var(--jadwal-radius-md);
+  box-shadow: var(--jadwal-shadow-sm);
+  padding: 1.5rem;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* --- 3. Header & Filter Jadwal --- */
+.jadwal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--jadwal-border-color);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.jadwal-header__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--jadwal-text-main);
+  margin: 0;
+}
+
+.jadwal-header__actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* --- 4. Grid Jadwal (Timetable) --- */
+.jadwal-grid-wrapper {
+  width: 100%;
+  overflow-x: auto; /* Scroll horizontal di layar kecil */
+  -webkit-overflow-scrolling: touch;
+}
+
+.jadwal-table {
+  width: 100%;
+  min-width: 800px; /* Memastikan tabel tidak terlalu terjepit */
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.jadwal-table th,
+.jadwal-table td {
+  padding: 1rem;
+  border: 1px solid var(--jadwal-border-color);
+  vertical-align: top;
+}
+
+.jadwal-table th {
+  background-color: var(--jadwal-bg-secondary);
+  color: var(--jadwal-text-muted);
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Kolom Jam (Waktu) */
+.jadwal-time-col {
+  width: 100px;
+  font-weight: 600;
+  color: var(--jadwal-text-main);
+  text-align: center;
+  background-color: var(--jadwal-bg-secondary);
+}
+
+/* --- 5. Kartu Item Jadwal (Mata Pelajaran / Sesi) --- */
+.jadwal-item {
+  background-color: var(--jadwal-color-primary-bg);
+  border-left: 4px solid var(--jadwal-color-primary);
+  border-radius: var(--jadwal-radius-sm);
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  position: relative;
+}
+
+.jadwal-item:last-child {
+  margin-bottom: 0;
+}
+
+.jadwal-item:hover {
+  box-shadow: var(--jadwal-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.jadwal-item__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--jadwal-text-main);
+  margin: 0 0 0.25rem 0;
+}
+
+.jadwal-item__meta {
+  font-size: 0.75rem;
+  color: var(--jadwal-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* --- 6. Modifiers (Status Bentrok / Konflik) --- */
+/* Digunakan jika fungsi `pesanBentrok` mendeteksi adanya tabrakan jam */
+.jadwal-item--conflict {
+  background-color: var(--jadwal-color-conflict-bg);
+  border-left-color: var(--jadwal-color-conflict);
+}
+
+.jadwal-item--conflict .jadwal-item__title {
+  color: var(--jadwal-color-conflict);
+}
+
+/* Indikator Peringatan Bentrok */
+.jadwal-conflict-warning {
+  display: inline-block;
+  background-color: var(--jadwal-color-conflict);
+  color: white;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 12px;
+  margin-top: 0.4rem;
+  font-weight: 500;
+}
+
+/* --- 7. Responsivitas (Mobile View) --- */
+@media screen and (max-width: 768px) {
+  .tab-jadwal-container {
+    padding: 1rem;
+  }
+  
+  .jadwal-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .jadwal-header__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "ainnoe-learning-ecosystem",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI_nnoe Learning Ecosystem web app — Supabase-based active stack",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "preview": "npm --prefix web run preview",
+    "test": "npm --prefix web test",
+    "test:billing": "node --test functions/lib/billing.test.js"
+  },
+  "keywords": [
+    "kurikulum-merdeka",
+    "ai-nnoe",
+    "education"
+  ],
+  "author": "Raimundus Ciku Koten",
+  "license": "ISC"
+}
