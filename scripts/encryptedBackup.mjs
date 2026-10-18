@@ -50,7 +50,12 @@ export async function encryptBackup(inputPath, outputPath, encodedKey) {
   const header = Buffer.concat([MAGIC, Buffer.from([VERSION]), iv]);
   const encrypted = Readable.from((async function* () {
     yield header;
-    for await (const chunk of createReadStream(input).pipe(cipher)) yield chunk;
+    for await (const chunk of createReadStream(input)) {
+      const encryptedChunk = cipher.update(chunk);
+      if (encryptedChunk.length > 0) yield encryptedChunk;
+    }
+    const finalChunk = cipher.final();
+    if (finalChunk.length > 0) yield finalChunk;
     yield cipher.getAuthTag();
   }()));
   await writeAtomically(output, encrypted);
@@ -83,10 +88,17 @@ export async function decryptBackup(inputPath, outputPath, encodedKey) {
 
   const decipher = createDecipheriv('aes-256-gcm', key, header.subarray(MAGIC.length + 1));
   decipher.setAuthTag(tag);
-  const encrypted = createReadStream(input, {
-    start: HEADER_LENGTH,
-    end: size - TAG_LENGTH - 1,
-  }).pipe(decipher);
+  const encrypted = Readable.from((async function* () {
+    for await (const chunk of createReadStream(input, {
+      start: HEADER_LENGTH,
+      end: size - TAG_LENGTH - 1,
+    })) {
+      const decryptedChunk = decipher.update(chunk);
+      if (decryptedChunk.length > 0) yield decryptedChunk;
+    }
+    const finalChunk = decipher.final();
+    if (finalChunk.length > 0) yield finalChunk;
+  }()));
   await writeAtomically(output, encrypted);
 }
 
