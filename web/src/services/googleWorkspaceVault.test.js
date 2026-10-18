@@ -15,13 +15,13 @@ import {
   unduhBerkasTerenkripsiDrive,
 } from './googleWorkspace.js';
 
-test('mengunggah ciphertext dengan nama Drive generik dan manifest tanpa nama asli', async () => {
+test('mengunggah ciphertext dengan nama Drive generik dan manifest tanpa nama asli', async (t) => {
   const identity = await buatIdentitasEnkripsiDrive();
   const original = new File([new TextEncoder().encode('private assessment data')], 'grades-class-X.json', {
     type: 'application/json',
   });
 
-  test('menyimpan dan memuat catatan workspace hanya melalui kategori vault terenkripsi', async () => {
+  await t.test('menyimpan dan memuat catatan workspace hanya melalui kategori vault terenkripsi', async () => {
     const identity = await buatIdentitasEnkripsiDrive();
     const entry = {
       modulePath: '/refleksi/pembelajaran',
