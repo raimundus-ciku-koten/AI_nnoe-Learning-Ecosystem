@@ -6,7 +6,10 @@ const { useAuthMock } = vi.hoisted(() => ({ useAuthMock: vi.fn() }));
 
 vi.mock('../context/AuthContext.jsx', () => ({ useAuth: useAuthMock }));
 
-import GuidanceProgramPage from './GuidanceProgramPage.jsx';
+import GuidanceProgramPage, {
+  DIMENSI_PROFIL,
+  SARAN_TEMA,
+} from './GuidanceProgramPage.jsx';
 
 function renderPage() {
   return renderToStaticMarkup(React.createElement(GuidanceProgramPage));
@@ -35,5 +38,17 @@ describe('GuidanceProgramPage', () => {
     expect(html).toContain('role="alert"');
     expect(html).toContain('Hak akses mengikuti peran yang diberikan server.');
     expect(html).not.toContain('<form');
+  });
+
+  it('provides phase-based, location-neutral kokurikuler topics and the eight graduate-profile dimensions', () => {
+    expect(DIMENSI_PROFIL).toHaveLength(8);
+    expect(SARAN_TEMA.kokurikuler.A.length).toBeGreaterThan(0);
+    expect(SARAN_TEMA.kokurikuler.B.length).toBeGreaterThan(0);
+    expect(SARAN_TEMA.kokurikuler.C.length).toBeGreaterThan(0);
+    expect(SARAN_TEMA.kokurikuler.D.length).toBeGreaterThan(0);
+    expect(SARAN_TEMA.kokurikuler.E).toHaveLength(14);
+    expect(SARAN_TEMA.kokurikuler.F.length).toBeGreaterThanOrEqual(5);
+    expect(SARAN_TEMA.kokurikuler.E.join(' ')).not.toMatch(/Tanjung Bunga|Flores Timur|Lamaholot/i);
+    expect(SARAN_TEMA.kokurikuler.F.join(' ')).not.toMatch(/Tanjung Bunga|Flores Timur|Lamaholot/i);
   });
 });

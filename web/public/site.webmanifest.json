@@ -1,7 +1,7 @@
 {
   "name": "AINNOE Learning Ecosystem",
   "short_name": "AINNOE",
-  "description": "Ekosistem pembelajaran digital untuk guru, siswa, dan orang tua.",
+  "description": "Ruang kerja sekolah untuk data, perencanaan ajar, program BK dan kegiatan, asesmen, komunikasi, serta integrasi pilihan. Aktivasi bergantung pada kesiapan backend.",
   "lang": "id",
   "start_url": "/#/dashboard",
   "scope": "/",

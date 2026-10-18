@@ -17,3 +17,10 @@ test('peran lain tetap mengikuti otorisasi rute yang sudah ada', () => {
     assert.equal(canOpenRolePath(role, '/perencanaan'), true);
   }
 });
+
+test('peran demo hanya dapat membuka simulasi uji coba', () => {
+  assert.equal(canOpenRolePath('demo', '/trial'), true);
+  for (const path of ['/dashboard', '/admin/pengguna/guru', '/perencanaan', '/chat']) {
+    assert.equal(canOpenRolePath('demo', path), false);
+  }
+});

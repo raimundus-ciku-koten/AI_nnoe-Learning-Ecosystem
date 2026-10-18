@@ -1,8 +1,13 @@
 import '../styles/login.css';
-import { login, resetPassword, masukGoogle } from '../auth.js';
+import { buatKataSandi, daftarUjiCoba, login, resetPassword, masukGoogle } from '../auth.js';
 import { toast } from '../components/toast.js';
-import { supabase } from '../lib/supabase.ts';
+import {
+  isSupabaseConfigured,
+  supabase,
+  supabaseConfigError,
+} from '../lib/supabase.ts';
 import { pasangTurnstile } from '../services/turnstile.js';
+import { getState, subscribe } from '../state.js';
 import PRICING from '../../../functions/shared/pricing.json';
 
 const TURNSTILE_SITE_KEY = import.meta.env?.VITE_TURNSTILE_SITE_KEY?.trim() || '';
@@ -49,7 +54,7 @@ function kartuPaket(paket) {
   const harga = hargaSiklus(paket, 'bulanan');
   return `
     <article class="plan-card">
-      <div class="plan-card-copy"><h4>${paket.name}</h4><p>${paket.features}</p></div>
+      <div class="plan-card-copy"><h4>${paket.name}</h4><p>Katalog harga indikatif; rincian fitur, kapasitas, dan aktivasi paket perlu dikonfirmasi. Checkout belum tersedia.</p></div>
       <strong class="plan-price" data-plan-id="${paket.id}" data-annual-price="${paket.annualPrice}">
         ${formatRupiah(harga)}<small> / bulan</small>
       </strong>
@@ -130,7 +135,6 @@ export function halamanLogin(wadah) {
         </a>
         <nav class="nav" aria-label="Navigasi utama">
           <a href="#/login" data-ke="fitur">Fitur</a><a href="#/login" data-ke="harga">Harga</a><a href="#/login" data-ke="testimoni">Testimoni</a>
-          <a href="#/privacy">Privasi data</a>
           <a class="btn btn-ghost" href="#/login" data-ke="masuk">Masuk</a>
         </nav>
       </div>
@@ -140,29 +144,52 @@ export function halamanLogin(wadah) {
         <div class="container hero-grid">
           <section class="card login-card" id="masuk" aria-labelledby="judulMasuk">
             <div class="card-head"><h2 id="judulMasuk">Masuk ke akun Anda</h2><p>Akses dasbor AI_nnoe Learning Ecosystem.</p></div>
+            <p id="lgnError" class="alert" role="alert" hidden></p>
             <form id="formLogin" novalidate>
               <div class="field"><label for="lgnEmail">Email</label>
                 <input class="input" type="email" id="lgnEmail" name="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="nama@sekolah.sch.id" required></div>
               <div class="field"><label for="lgnSandi">Kata sandi</label>
                 <div class="input-wrap"><input class="input" type="password" id="lgnSandi" name="sandi" autocomplete="current-password" placeholder="Masukkan kata sandi" minlength="6" required>
                   <button type="button" class="toggle-pw" id="btnLihat" aria-controls="lgnSandi" aria-pressed="false">Tampilkan</button></div></div>
-              ${TURNSTILE_SITE_KEY ? '<div id="loginCaptcha" class="login-captcha" aria-label="Verifikasi keamanan Cloudflare"></div>' : ''}
-              <p id="lgnError" class="alert" role="alert" hidden></p>
               <button id="btnMasuk" class="btn btn-primary btn-block" type="submit"><span class="btn-label">Masuk</span></button>
             </form>
+            <form id="formTrial" novalidate hidden>
+              <div class="field"><label for="trialNama">Nama tampilan</label>
+                <input class="input" type="text" id="trialNama" name="nama" autocomplete="name" maxlength="120" required></div>
+              <div class="field"><label for="trialEmail">Email</label>
+                <input class="input" type="email" id="trialEmail" name="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="254" required></div>
+              <div class="field"><label for="trialSandi">Kata sandi (minimal 12 karakter)</label>
+                <input class="input" type="password" id="trialSandi" name="sandi" autocomplete="new-password" minlength="12" maxlength="72" required></div>
+              <div class="field"><label for="trialKonfirmasi">Ulangi kata sandi</label>
+                <input class="input" type="password" id="trialKonfirmasi" name="konfirmasi" autocomplete="new-password" minlength="12" maxlength="72" required></div>
+              <label class="trial-consent"><input id="trialConsent" type="checkbox" required>
+                <span>Saya memahami bahwa uji coba hanya menggunakan data contoh, bukan data sekolah nyata; saya berusia minimal 18 tahun atau memiliki persetujuan orang tua/wali, dan berwenang menggunakan alamat email ini.</span></label>
+              <button id="btnDaftarTrial" class="btn btn-primary btn-block" type="submit">Kirim tautan verifikasi</button>
+              <p class="card-note">Trial aktif selama 72 jam setelah email diverifikasi. Satu trial per alamat email.</p>
+            </form>
+            <form id="formBuatSandi" novalidate hidden>
+              <div class="field"><label for="sandiBaru">Kata sandi baru</label>
+                <input class="input" type="password" id="sandiBaru" name="sandiBaru" autocomplete="new-password" minlength="8" required></div>
+              <div class="field"><label for="konfirmasiSandiBaru">Ulangi kata sandi baru</label>
+                <input class="input" type="password" id="konfirmasiSandiBaru" name="konfirmasiSandiBaru" autocomplete="new-password" minlength="8" required></div>
+              <button id="btnSimpanSandi" class="btn btn-primary btn-block" type="submit">Simpan kata sandi</button>
+            </form>
+            ${TURNSTILE_SITE_KEY ? '<div id="loginCaptcha" class="login-captcha" aria-label="Verifikasi keamanan Cloudflare"></div>' : ''}
             <div class="divider" role="separator"><span>atau</span></div>
             <button id="btnGoogle" class="btn btn-outline btn-block" type="button">${IKON_GOOGLE} Masuk dengan Google</button>
             <p id="loginStatus" class="login-status" role="status" aria-live="polite" hidden></p>
             <p class="card-note"><a href="#" id="btnLupaSandi">Lupa kata sandi?</a></p>
+            <p class="card-note" id="trialPrompt">Ingin mencoba dengan data simulasi? <button class="trial-link" id="btnTampilkanTrial" type="button">Coba gratis 3 hari</button></p>
+            <p class="card-note" id="trialBack" hidden><button class="trial-link" id="btnKembaliMasuk" type="button">Kembali ke login</button></p>
           </section>
           <div class="hero-copy">
             <span class="eyebrow">Ruang kerja digital untuk warga sekolah</span>
-            <h1 id="judulHero">Rencanakan, ajarkan, dan pantau pembelajaran dalam satu ekosistem.</h1>
-            <p class="hero-lead">Satukan perangkat ajar, kegiatan belajar, dan komunikasi sekolah dalam ruang kerja yang dirancang untuk guru, siswa, admin, serta orang tua.</p>
+            <h1 id="judulHero">Ruang kerja digital untuk pembelajaran dan administrasi sekolah.</h1>
+            <p class="hero-lead">Kelola data dasar, rencanakan pembelajaran, susun program BK dan kegiatan, serta akses modul asesmen dan komunikasi sesuai peran. Ketersediaan tiap modul bergantung pada kesiapan backend dan layanan yang diperlukan.</p>
             <div class="hero-cta"><a class="btn btn-brand" href="#/login" data-ke="harga">Lihat paket</a><a class="btn btn-outline" href="#/login" data-ke="fitur">Lihat fitur</a></div>
             <ul class="trust-list">
-              <li>${IKON_CEK}Tinjau paket dan kapasitas pengguna yang tersedia</li>
-              <li>${IKON_CEK}Bandingkan referensi lisensi bulanan dan tahunan</li>
+              <li>${IKON_CEK}Akses mengikuti akun dan peran yang disahkan administrator</li>
+              <li>${IKON_CEK}Harga paket hanya referensi; checkout dan penagihan belum aktif</li>
             </ul>
           </div>
         </div>
@@ -170,17 +197,18 @@ export function halamanLogin(wadah) {
       <section class="section" id="fitur" aria-labelledby="judulFitur" hidden>
         <div class="container"><div class="section-head"><p class="kicker">Ekosistem pembelajaran</p>
           <h2 id="judulFitur">Alat kerja untuk setiap peran di sekolah</h2></div>
+          <p class="card-note" role="note">Ringkasan ini mencakup modul yang tersedia di aplikasi, bukan jaminan bahwa seluruh layanan sudah aktif pada setiap lingkungan. Modul yang memerlukan schema Supabase, kredensial provider, atau persetujuan pihak ketiga hanya dapat digunakan setelah prasyarat tersebut dikonfigurasi dan diuji.</p>
           <div class="feature-grid">
-            <article class="feature"><span class="feature-icon">${IKON_FITUR.perencanaan}</span><h3>Perencanaan ajar</h3><p>Susun dan arsipkan ATP, RPE, Prota, Prosem, KKTP, dan modul ajar.</p></article>
-            <article class="feature"><span class="feature-icon tone-blue">${IKON_FITUR.komunikasi}</span><h3>Komunikasi langsung</h3><p>Guru, siswa, admin, dan orang tua dapat berkoordinasi melalui percakapan.</p></article>
-            <article class="feature"><span class="feature-icon tone-amber">${IKON_FITUR.akses}</span><h3>Akses berbasis peran</h3><p>Ruang kerja sekolah terpisah dengan hak akses sesuai peran.</p></article>
+            <article class="feature"><span class="feature-icon">${IKON_FITUR.perencanaan}</span><h3>Data dan perencanaan pembelajaran</h3><p>Antarmuka mencakup profil, kelas, data siswa, jadwal, denah, dan perangkat seperti ATP, RPE, Prota, Prosem, KKTP, serta modul ajar. Sebagian alat perencanaan masih bergantung pada layanan lama atau belum tersedia di lingkungan Supabase.</p></article>
+            <article class="feature"><span class="feature-icon tone-blue">${IKON_FITUR.komunikasi}</span><h3>Pelaksanaan, program, dan asesmen</h3><p>Kode aplikasi memuat modul presensi, bank soal, ujian online, serta draf program BK, kokurikuler, dan ekstrakurikuler. Draf program hanya di browser sampai dicetak/disimpan sebagai PDF; fungsi asesmen dan data memerlukan backend yang telah diterapkan.</p></article>
+            <article class="feature"><span class="feature-icon tone-amber">${IKON_FITUR.akses}</span><h3>Kolaborasi dan integrasi pilihan</h3><p>Antarmuka mencakup chat, akun berbasis peran, serta Google Drive, Sheets, Calendar, dan Meet. Chat memerlukan schema backend; Google memerlukan OAuth dan izin pengguna. Asisten AI ada di aplikasi, tetapi provider eksternal dinonaktifkan. Akses mengikuti peran yang disahkan server.</p></article>
           </div>
         </div>
       </section>
       <section class="section section-alt" id="harga" aria-labelledby="judulHarga" hidden>
         <div class="container"><div class="section-head"><p class="kicker">Harga dan lisensi</p>
           <h2 id="judulHarga">Paket sekolah dan paket pengguna</h2>
-          <p>Informasi harga paket berikut bukan untuk pembelian. Checkout dan pembayaran dinonaktifkan.</p></div>
+          <p>Katalog harga indikatif dalam Rupiah sebelum pajak, bukan penawaran final atau deskripsi kemampuan yang sudah aktif. Harga, kapasitas, dan rincian paket perlu divalidasi sebelum ditawarkan; checkout, pembayaran, dan aktivasi langganan dinonaktifkan.</p></div>
           <div class="pricing-grid">
             <div class="card pricing-card">
               <div class="pricing-period"><label for="siklusHarga">Siklus pembayaran</label>
@@ -194,7 +222,7 @@ export function halamanLogin(wadah) {
                 ${grupPaket('judulPaketGuruMapel', 'Paket guru mapel', PRICING.teacherSubject)}
               </div>
               <p class="card-note">Akun orang tua mendapatkan akses melalui sekolah/anak; panduan ini tidak mencantumkan paket harga orang tua tersendiri.</p>
-              <p class="card-note">Pembelian dan pembayaran online saat ini dinonaktifkan.</p>
+              <p class="card-note">Harga tahunan setara 10 bulan harga bulanan (diskon 2 bulan); semua harga belum termasuk pajak. Harga, pajak, paket, dan entitlement perlu dikonfirmasi sebelum transaksi. Pembelian, pembayaran online, dan aktivasi paket saat ini dinonaktifkan.</p>
             </div>
             <ul class="benefits">
               <li>${IKON_CEK}<span>Paket sekolah menyesuaikan kapasitas peserta didik dan guru.</span></li>
@@ -225,6 +253,44 @@ export function halamanLogin(wadah) {
   const tombolMasuk = $('#btnMasuk');
   const labelMasuk = tombolMasuk.querySelector('.btn-label');
   const statusLogin = $('#loginStatus');
+  const tombolGoogle = $('#btnGoogle');
+  const formTrial = $('#formTrial');
+  const tombolDaftarTrial = $('#btnDaftarTrial');
+  const trialNama = $('#trialNama');
+  const trialEmail = $('#trialEmail');
+  const trialSandi = $('#trialSandi');
+  const trialKonfirmasi = $('#trialKonfirmasi');
+  const trialConsent = $('#trialConsent');
+  const loginCaptcha = $('#loginCaptcha');
+  const tombolTampilkanTrial = $('#btnTampilkanTrial');
+  const tombolKembaliMasuk = $('#btnKembaliMasuk');
+  const tombolSimpanSandi = $('#btnSimpanSandi');
+  const formBuatSandi = $('#formBuatSandi');
+  const sandiBaru = $('#sandiBaru');
+  const konfirmasiSandiBaru = $('#konfirmasiSandiBaru');
+  const judulMasuk = $('#judulMasuk');
+  const keteranganMasuk = judulMasuk.nextElementSibling;
+  let modeBuatSandi = false;
+  let modeTrial = false;
+
+  const terapkanModeBuatSandi = (aktif) => {
+    modeBuatSandi = aktif;
+    form.hidden = aktif;
+    formTrial.hidden = aktif || !modeTrial;
+    formBuatSandi.hidden = !aktif;
+    if (loginCaptcha) loginCaptcha.hidden = aktif;
+    wadah.querySelector('.divider').hidden = aktif;
+    tombolGoogle.hidden = aktif;
+    $('#btnLupaSandi').parentElement.hidden = aktif;
+    $('#trialPrompt').hidden = aktif || modeTrial;
+    $('#trialBack').hidden = aktif || !modeTrial;
+    judulMasuk.textContent = aktif ? 'Buat kata sandi akun' : 'Masuk ke akun Anda';
+    keteranganMasuk.textContent = aktif
+      ? 'Tautan verifikasi berhasil. Buat kata sandi untuk masuk ke AI_nnoe Learning Ecosystem.'
+      : 'Akses dasbor AI_nnoe Learning Ecosystem.';
+    if (aktif) sandiBaru.focus();
+  };
+
   const tampilkanError = (message, field = null) => {
     error.textContent = message;
     error.hidden = false;
@@ -236,11 +302,25 @@ export function halamanLogin(wadah) {
   const hapusError = () => {
     error.textContent = '';
     error.hidden = true;
-    [email, sandi].forEach((field) => {
+    [email, sandi, sandiBaru, konfirmasiSandiBaru].forEach((field) => {
       field.removeAttribute('aria-invalid');
       field.removeAttribute('aria-describedby');
     });
   };
+
+  if (!isSupabaseConfigured) {
+    tombolMasuk.disabled = true;
+    tombolGoogle.disabled = true;
+    tombolSimpanSandi.disabled = true;
+    tampilkanError(supabaseConfigError?.message || 'Supabase belum dikonfigurasi. Hubungi administrator untuk mengatur variabel lingkungan.', email);
+    statusLogin.textContent = 'Konfigurasi Supabase belum tersedia. Periksa variabel VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY.';
+    statusLogin.hidden = false;
+  }
+  terapkanModeBuatSandi(getState().passwordRecovery);
+  const stopStateSubscription = subscribe((state) => {
+    if (state.passwordRecovery !== modeBuatSandi) terapkanModeBuatSandi(state.passwordRecovery);
+  });
+
   let captchaWidget = null;
   let captchaSetupError = null;
   const captchaReady = TURNSTILE_SITE_KEY
@@ -256,6 +336,26 @@ export function halamanLogin(wadah) {
     if (!token) throw new Error('Selesaikan verifikasi Cloudflare sebelum melanjutkan.');
     return token;
   };
+  const terapkanModeTrial = (aktif) => {
+    if (modeBuatSandi) return;
+    modeTrial = aktif;
+    form.hidden = aktif;
+    formTrial.hidden = !aktif;
+    if (loginCaptcha) loginCaptcha.hidden = false;
+    wadah.querySelector('.divider').hidden = aktif;
+    tombolGoogle.hidden = aktif;
+    $('#btnLupaSandi').parentElement.hidden = aktif;
+    $('#trialPrompt').hidden = aktif;
+    $('#trialBack').hidden = !aktif;
+    judulMasuk.textContent = aktif ? 'Coba AI_nnoe selama 3 hari' : 'Masuk ke akun Anda';
+    keteranganMasuk.textContent = aktif
+      ? 'Buat akun demo terisolasi. Akses hanya ke simulasi lokal dengan data contoh.'
+      : 'Akses dasbor AI_nnoe Learning Ecosystem.';
+    if (aktif) trialNama.focus();
+  };
+
+  tombolTampilkanTrial.addEventListener('click', () => terapkanModeTrial(true));
+  tombolKembaliMasuk.addEventListener('click', () => terapkanModeTrial(false));
 
   let testimoniDiminta = false;
   wadah.querySelectorAll('[data-ke]').forEach((link) => {
@@ -311,6 +411,8 @@ export function halamanLogin(wadah) {
   });
   email.addEventListener('input', hapusError);
   sandi.addEventListener('input', hapusError);
+  sandiBaru.addEventListener('input', hapusError);
+  konfirmasiSandiBaru.addEventListener('input', hapusError);
 
   $('#btnLupaSandi').addEventListener('click', async (event) => {
     event.preventDefault();
@@ -330,8 +432,115 @@ export function halamanLogin(wadah) {
     }
   });
 
+  formBuatSandi.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!isSupabaseConfigured) {
+      tampilkanError(supabaseConfigError?.message || 'Supabase belum dikonfigurasi. Hubungi administrator.', sandiBaru);
+      return;
+    }
+    hapusError();
+    if (sandiBaru.value.length < 8) {
+      tampilkanError('Kata sandi baru minimal 8 karakter.', sandiBaru);
+      sandiBaru.focus();
+      return;
+    }
+    if (sandiBaru.value !== konfirmasiSandiBaru.value) {
+      tampilkanError('Konfirmasi kata sandi belum sama.', konfirmasiSandiBaru);
+      konfirmasiSandiBaru.focus();
+      return;
+    }
+    tombolSimpanSandi.disabled = true;
+    tombolSimpanSandi.textContent = 'Menyimpan...';
+    try {
+      await buatKataSandi(sandiBaru.value);
+      sandiBaru.value = '';
+      konfirmasiSandiBaru.value = '';
+      toast('Kata sandi berhasil dibuat. Mengalihkan ke dashboard...', 'success', 4000);
+      window.location.hash = '#/dashboard';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    } catch (err) {
+      console.error('[login] Gagal membuat kata sandi:', err);
+      tampilkanError(err?.message || 'Kata sandi belum dapat disimpan. Minta tautan baru lalu coba kembali.');
+    } finally {
+      tombolSimpanSandi.disabled = false;
+      tombolSimpanSandi.textContent = 'Simpan kata sandi';
+    }
+  });
+
+  formTrial.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!isSupabaseConfigured) {
+      tampilkanError(supabaseConfigError?.message || 'Supabase belum dikonfigurasi. Hubungi administrator.', trialEmail);
+      return;
+    }
+    hapusError();
+    const nama = trialNama.value.trim();
+    const alamat = trialEmail.value.trim().toLowerCase();
+    if (nama.length < 2 || nama.length > 120 || /[\u0000-\u001f\u007f]/.test(nama)) {
+      tampilkanError('Nama tampilan harus 2–120 karakter dan tidak boleh berisi karakter kontrol.', trialNama);
+      trialNama.focus();
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(alamat) || alamat.length > 254) {
+      tampilkanError('Masukkan alamat email yang valid.', trialEmail);
+      trialEmail.focus();
+      return;
+    }
+    if (trialSandi.value.length < 12) {
+      tampilkanError('Kata sandi uji coba minimal 12 karakter.', trialSandi);
+      trialSandi.focus();
+      return;
+    }
+    if (trialSandi.value !== trialKonfirmasi.value) {
+      tampilkanError('Konfirmasi kata sandi belum sama.', trialKonfirmasi);
+      trialKonfirmasi.focus();
+      return;
+    }
+    if (!trialConsent.checked) {
+      tampilkanError('Setujui ketentuan penggunaan data contoh dan alamat email sebelum melanjutkan.', trialConsent);
+      trialConsent.focus();
+      return;
+    }
+    if (!TURNSTILE_SITE_KEY) {
+      tampilkanError('Pendaftaran uji coba belum tersedia karena verifikasi anti-bot belum dikonfigurasi.');
+      return;
+    }
+
+    tombolDaftarTrial.disabled = true;
+    tombolDaftarTrial.textContent = 'Mengirim...';
+    statusLogin.textContent = 'Meminta verifikasi email...';
+    statusLogin.hidden = false;
+    try {
+      await daftarUjiCoba({
+        nama,
+        email: alamat,
+        sandi: trialSandi.value,
+        captchaToken: await ambilCaptchaToken(),
+      });
+      formTrial.reset();
+      statusLogin.textContent = 'Jika alamat memenuhi syarat, tautan verifikasi akan dikirim. Trial berlangsung 72 jam setelah email diverifikasi; satu trial tersedia untuk setiap alamat email.';
+      captchaWidget?.reset();
+    } catch (err) {
+      console.error('[trial] Pendaftaran uji coba gagal:', err);
+      statusLogin.hidden = true;
+      const alreadyRegistered = err?.code === 'user_already_exists'
+        || /already registered|already been registered/i.test(err?.message || '');
+      tampilkanError(alreadyRegistered
+        ? 'Jika akun dengan alamat tersebut sudah ada, silakan masuk. Pendaftaran demo menggunakan alamat email yang belum terdaftar.'
+        : err?.message || PESAN_AUTH[err?.code] || 'Pendaftaran belum dapat diproses. Coba lagi nanti.');
+      captchaWidget?.reset();
+    } finally {
+      tombolDaftarTrial.disabled = false;
+      tombolDaftarTrial.textContent = 'Kirim tautan verifikasi';
+    }
+  });
+
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (!isSupabaseConfigured) {
+      tampilkanError(supabaseConfigError?.message || 'Supabase belum dikonfigurasi. Hubungi administrator untuk mengatur variabel lingkungan.', email);
+      return;
+    }
     hapusError();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
       tampilkanError('Masukkan alamat email yang valid.', email);
@@ -363,8 +572,11 @@ export function halamanLogin(wadah) {
     }
   });
 
-  const tombolGoogle = $('#btnGoogle');
   tombolGoogle.addEventListener('click', async () => {
+    if (!isSupabaseConfigured) {
+      tampilkanError(supabaseConfigError?.message || 'Supabase belum dikonfigurasi. Hubungi administrator untuk mengatur variabel lingkungan.', email);
+      return;
+    }
     tombolGoogle.disabled = true;
     statusLogin.textContent = 'Membuka jendela autentikasi Google...';
     statusLogin.hidden = false;
@@ -387,5 +599,8 @@ export function halamanLogin(wadah) {
     }
   });
 
-  return () => captchaWidget?.remove();
+  return () => {
+    stopStateSubscription();
+    captchaWidget?.remove();
+  };
 }
