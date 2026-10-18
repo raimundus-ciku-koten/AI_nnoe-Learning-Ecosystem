@@ -9,7 +9,7 @@ The staged Supabase foundation is applied to project `jvcrmzmuxgyuetkjqady`
 (`ap-south-1`). The Supabase browser client is available at
 `web/src/lib/supabase.ts`, and `web/vercel.json` configures SPA routing and
 security headers. GitHub Actions runs the web build and tests. On 2026-10-18,
-Vercel reported a completed preview deployment for commit `33d17a0a` on
+Vercel reported a completed preview deployment for commit `2ae170a4` on
 `migration/supabase-foundation-preview`; its runtime and any production
 deployment remain unverified.
 
@@ -746,10 +746,10 @@ installing dependencies from `web/package-lock.json` and building `web/`.
 Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to all three Vercel
 environments. GitHub Actions runs CI for pull requests and pushes to `main`;
 Vercel's Git integration handles preview and production deployments when the
-project owner has connected it. The preview commit `33d17a0a` on
+project owner has connected it. The preview commit `2ae170a4` on
 `migration/supabase-foundation-preview` received a successful Vercel
 deployment check on 2026-10-18
-([deployment details](https://vercel.com/kotenraimundusc-4094/ainnoe-le/7WpiedEkQabx5uGy9M8Ms8HRYusp)).
+([deployment details](https://vercel.com/kotenraimundusc-4094/ainnoe-le/D7ZwydJqdSCKGWdiH6Hea44gmVr4)).
 Production deployment, runtime authentication, and plan eligibility have not
 been verified. Do not upgrade or enable billing to overcome a free-plan limit.
 
