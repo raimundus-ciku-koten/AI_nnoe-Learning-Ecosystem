@@ -4,17 +4,26 @@ import '../styles/supabase-platform-users.css';
 
 const ROLES = [
   ['admin_sekolah', 'Admin sekolah'],
+  ['kepala_sekolah', 'Kepala Sekolah (akses terbatas)'],
   ['operator', 'Operator'],
   ['guru', 'Guru'],
+  ['wali_kelas', 'Wali Kelas'],
+  ['guru_bk', 'Guru BK'],
+  ['guru_kokurikuler', 'Guru Kokurikuler'],
+  ['guru_ekstrakurikuler', 'Guru Ekstrakurikuler'],
   ['siswa', 'Siswa'],
   ['ortu', 'Orang tua'],
   ['orang_tua', 'Orang tua (alias kompatibilitas)'],
 ];
+const LEGACY_ROLES = new Set([
+  'admin_sekolah', 'operator', 'guru', 'siswa', 'ortu', 'orang_tua',
+]);
 
 const EMPTY_FORM = {
   email: '',
   nama: '',
   role: 'admin_sekolah',
+  roles: [],
   tenantId: '',
   nip: '',
   mapel: '',
@@ -22,7 +31,24 @@ const EMPTY_FORM = {
   active: true,
 };
 
-const displayRole = (role) => ROLES.find(([value]) => value === role)?.[1] || role || 'Belum ditetapkan';
+const displayRole = (role, roles = []) => {
+  const assigned = roles.length ? roles : (role ? [role] : []);
+  return assigned
+    .map((assignedRole) => ROLES.find(([value]) => value === assignedRole)?.[1] || assignedRole)
+    .join(', ') || 'Belum ditetapkan';
+};
+
+async function readRolesWithSchemaFallback(readWithRoles, readLegacy, surface) {
+  const current = await readWithRoles();
+  if (!current.error) return { result: current, supportsRoleAssignments: true };
+  if (current.error.code !== '42703' && !/column .*roles.* does not exist/i.test(current.error.message || '')) {
+    throw current.error;
+  }
+  console.warn(`[supabase-platform-users] Skema peran belum diterapkan pada ${surface}; menggunakan tampilan satu peran.`);
+  const legacy = await readLegacy();
+  if (legacy.error) throw legacy.error;
+  return { result: legacy, supportsRoleAssignments: false };
+}
 
 function splitValues(value) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
@@ -45,6 +71,7 @@ export default function SupabasePlatformUsersPage() {
   const [profile, setProfile] = useState(null);
   const [tenants, setTenants] = useState([]);
   const [users, setUsers] = useState([]);
+  const [supportsRoleAssignments, setSupportsRoleAssignments] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editing, setEditing] = useState(false);
   const [emailInput, setEmailInput] = useState('kotenraimundusc@gmail.com');
@@ -73,20 +100,35 @@ export default function SupabasePlatformUsersPage() {
         return;
       }
 
-      const [directoryResult, tenantResult, allowlistResult] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id,email,nama,role,tenant_id,instansi,nip,mapel_ids,kelas_ids,active')
-          .order('email')
-          .limit(500),
+      const [directory, tenantResult, allowlist] = await Promise.all([
+        readRolesWithSchemaFallback(
+          () => supabase
+            .from('profiles')
+            .select('id,email,nama,role,roles,tenant_id,instansi,nip,mapel_ids,kelas_ids,active')
+            .order('email')
+            .limit(500),
+          () => supabase
+            .from('profiles')
+            .select('id,email,nama,role,tenant_id,instansi,nip,mapel_ids,kelas_ids,active')
+            .order('email')
+            .limit(500),
+          'profiles',
+        ),
         supabase.from('tenants').select('id,name,active').order('name').limit(200),
-        supabase.from('user_allowlist').select('email,role,tenant_id,active').order('email').limit(500),
+        readRolesWithSchemaFallback(
+          () => supabase.from('user_allowlist').select('email,role,roles,tenant_id,active').order('email').limit(500),
+          () => supabase.from('user_allowlist').select('email,role,tenant_id,active').order('email').limit(500),
+          'user_allowlist',
+        ),
       ]);
+      const { result: directoryResult, supportsRoleAssignments: profileRoleSupport } = directory;
+      const { result: allowlistResult, supportsRoleAssignments: allowlistRoleSupport } = allowlist;
       if (directoryResult.error) throw directoryResult.error;
       if (tenantResult.error) throw tenantResult.error;
       if (allowlistResult.error) throw allowlistResult.error;
 
       setProfile(ownProfile);
+      setSupportsRoleAssignments(profileRoleSupport && allowlistRoleSupport);
       const availableTenants = (tenantResult.data || []).filter((tenant) => tenant.active);
       const profilesByEmail = new Map((directoryResult.data || [])
         .filter((user) => user.email)
@@ -98,6 +140,7 @@ export default function SupabasePlatformUsersPage() {
           ? {
             ...profile,
             role: profile.role === 'unprovisioned' ? allowed.role : profile.role,
+            roles: profile.roles?.length ? profile.roles : (allowed.roles?.length ? allowed.roles : [allowed.role]),
             pendingConfirmation: allowed.active && profile.active !== true,
           }
           : {
@@ -105,6 +148,7 @@ export default function SupabasePlatformUsersPage() {
             email: allowed.email,
             nama: 'Menunggu akun Auth',
             role: allowed.role,
+            roles: allowed.roles?.length ? allowed.roles : [allowed.role],
             tenant_id: allowed.tenant_id,
             instansi: tenant?.name || '',
             nip: null,
@@ -117,7 +161,10 @@ export default function SupabasePlatformUsersPage() {
       const allowlistedEmails = new Set((allowlistResult.data || []).map((item) => item.email.toLowerCase()));
       const unlistedProfiles = (directoryResult.data || []).filter((user) =>
         !user.email || !allowlistedEmails.has(user.email.toLowerCase()));
-      setUsers([...allowlistedProfiles, ...unlistedProfiles]);
+      setUsers([...allowlistedProfiles, ...unlistedProfiles.map((user) => ({
+        ...user,
+        roles: user.roles?.length ? user.roles : (user.role ? [user.role] : []),
+      }))]);
       setTenants(availableTenants);
     } catch (loadError) {
       console.error('[supabase-platform-users] Gagal memuat direktori:', loadError);
@@ -163,7 +210,7 @@ export default function SupabasePlatformUsersPage() {
     const term = search.trim().toLocaleLowerCase('id');
     if (!term) return users;
     return users.filter((user) => [
-      user.nama, user.email, user.role, user.tenant_id, user.instansi, user.id,
+      user.nama, user.email, user.role, ...(user.roles || []), user.tenant_id, user.instansi, user.id,
     ].some((value) => String(value || '').toLocaleLowerCase('id').includes(term)));
   }, [search, users]);
 
@@ -196,6 +243,7 @@ export default function SupabasePlatformUsersPage() {
       email: user.email || '',
       nama: user.nama || '',
       role: user.role === 'unprovisioned' ? 'guru' : user.role,
+      roles: user.roles?.length ? user.roles : [user.role === 'unprovisioned' ? 'guru' : user.role],
       tenantId: user.tenant_id || '',
       nip: user.nip || '',
       mapel: (user.mapel_ids || []).join(', '),
@@ -217,6 +265,22 @@ export default function SupabasePlatformUsersPage() {
 
     let roleSaved = false;
     try {
+      const selectedRoles = supportsRoleAssignments
+        ? [...new Set([...form.roles, form.role])]
+        : [form.role];
+      const teacherSpecializations = [
+        'wali_kelas', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',
+      ];
+      if (selectedRoles.length > 8) {
+        throw new Error('Satu akun dapat diberi paling banyak delapan peran.');
+      }
+      if (selectedRoles.some((assignedRole) => teacherSpecializations.includes(assignedRole))
+        && !selectedRoles.includes('guru')) {
+        throw new Error('Wali Kelas dan spesialisasi Guru harus tetap disertai peran Guru.');
+      }
+      if (!supportsRoleAssignments && selectedRoles.length > 1) {
+        throw new Error('Skema multi-peran belum diterapkan pada Supabase. Terapkan migrasi 20261018001200 setelah rekonsiliasi schema sebelum menyimpan beberapa peran.');
+      }
       const request = {
         p_email: form.email.trim().toLowerCase(),
         p_nama: form.nama.trim(),
@@ -227,12 +291,13 @@ export default function SupabasePlatformUsersPage() {
         p_mapel_ids: splitValues(form.mapel),
         p_kelas_ids: splitValues(form.kelas),
       };
+      if (supportsRoleAssignments) request.p_roles = selectedRoles;
       const { data, error: rpcError } = await supabase.rpc('manage_platform_user', request);
       if (rpcError) throw rpcError;
       roleSaved = true;
 
       if (data?.invitation_required) {
-        setNotice(`Peran ${request.p_role} disimpan pada allowlist untuk ${request.p_email}. Undangan tidak dikirim otomatis; buat atau undang identitas melalui Supabase Auth, lalu konfirmasikan email agar akses aplikasi dapat aktif.`);
+        setNotice(`Peran ${displayRole(request.p_role, selectedRoles)} disimpan pada allowlist untuk ${request.p_email}. Undangan tidak dikirim otomatis; buat atau undang identitas melalui Supabase Auth, lalu konfirmasikan email agar akses aplikasi dapat aktif.`);
       } else {
         setNotice(`Profil ${request.p_email} berhasil diperbarui. Perubahan hak akses berlaku pada token sesi baru pengguna.`);
       }
@@ -324,14 +389,40 @@ export default function SupabasePlatformUsersPage() {
                 />
               </label>
               <label>
-                Peran
+                Peran utama
                 <select
                   value={form.role}
                   onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}
                 >
-                  {ROLES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  {ROLES.map(([value, label]) => (
+                    <option key={value} value={value} disabled={!supportsRoleAssignments && !LEGACY_ROLES.has(value)}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </label>
+              <fieldset className="supabase-platform-users__roles">
+                <legend>Peran yang diizinkan</legend>
+                {!supportsRoleAssignments && (
+                  <p role="note">Multi-peran aktif setelah migrasi identitas diterapkan pada Supabase. Sampai itu selesai, hanya peran utama yang dapat disimpan.</p>
+                )}
+                {ROLES.map(([value, label]) => (
+                  <label key={value} className="supabase-platform-users__checkbox">
+                    <input
+                      type="checkbox"
+                      checked={form.role === value || form.roles.includes(value)}
+                      disabled={!supportsRoleAssignments && form.role !== value}
+                      onChange={(event) => setForm((current) => ({
+                        ...current,
+                        roles: event.target.checked
+                          ? [...new Set([...current.roles, value])]
+                          : current.roles.filter((assignedRole) => assignedRole !== value),
+                      }))}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </fieldset>
               <label>
                 Instansi / sekolah
                 <select
@@ -420,7 +511,7 @@ export default function SupabasePlatformUsersPage() {
                       <tr key={user.id}>
                         <td>{user.nama || 'Belum diisi'}{user.nip && <small>NIP/NUPTK: {user.nip}</small>}</td>
                         <td>{user.email || '—'}</td>
-                        <td>{displayRole(user.role)}</td>
+                        <td>{displayRole(user.role, user.roles)}</td>
                         <td>{user.instansi || user.tenant_id || '—'}</td>
                         <td>{user.pendingConfirmation ? 'Menunggu Auth / konfirmasi' : user.active ? 'Aktif' : 'Nonaktif'}</td>
                         <td>

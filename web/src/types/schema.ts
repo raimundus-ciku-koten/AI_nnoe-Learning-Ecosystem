@@ -2,13 +2,27 @@
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 export type TimestampLike = string | number | Date;
 
-export type UserRole = 'superadmin' | 'admin_sekolah' | 'guru' | 'siswa' | 'orang_tua' | 'demo';
+export type UserRole =
+  | 'superadmin'
+  | 'admin_sekolah'
+  | 'operator'
+  | 'guru'
+  | 'kepala_sekolah'
+  | 'wali_kelas'
+  | 'guru_bk'
+  | 'guru_kokurikuler'
+  | 'guru_ekstrakurikuler'
+  | 'siswa'
+  | 'ortu'
+  | 'orang_tua'
+  | 'demo';
 
 export interface UserDoc {
   uid: string;
   email: string;
   nama: string;
   role: UserRole;
+  roles?: UserRole[];
   nip?: string;
   sekolahId: string;
   mapelIds: string[];

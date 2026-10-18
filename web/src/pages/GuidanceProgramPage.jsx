@@ -161,7 +161,7 @@ export default function GuidanceProgramPage() {
     setHasil({ ...draft, dibuatPada: new Date().toLocaleDateString('id-ID', { dateStyle: 'long' }) });
   }
 
-  if (role !== 'guru') {
+  if (!['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(role)) {
     return (
       <main className="guidance-program">
         <section className="guidance-program__notice" role="alert">

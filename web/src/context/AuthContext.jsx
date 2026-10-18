@@ -4,7 +4,7 @@ import React, {
 } from 'react';
 import { getSnapshot, getState, setState, subscribe } from '../state.js';
 import {
-  pantaulogin, login, logout, masukGoogle, resetPassword, updateProfil,
+  pantaulogin, login, logout, masukGoogle, resetPassword, updateProfil, switchRole,
 } from '../auth.js';
 
 const AuthContext = createContext(null);
@@ -33,10 +33,12 @@ export function AuthProvider({ children }) {
     user: state.user,
     profile: state.profile,
     role: state.role,
+    activeRole: state.activeRole,
+    roles: state.roles,
     tenantId: state.tenantId,
     isDemo: state.isDemo,
     loading: !state.authReady,
-    login, logout, masukGoogle, resetPassword, updateProfil,
+    login, logout, masukGoogle, resetPassword, updateProfil, switchRole,
   }), [state]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

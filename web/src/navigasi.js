@@ -168,6 +168,11 @@ const MENU_ORTU = [
     tautan('Kontak', '/chat/kontak', 'users'),
   ]),
 ];
+const MENU_KONTEKS_TERBATAS = [
+  grup('beranda', 'Dashboard', 'home', [
+    tautan('Dashboard', '/dashboard', 'home'),
+  ]),
+];
 export const MENU_OPERATOR = [
   grup('operator-dashboard', 'Dashboard', 'home', [
     tautan('Dashboard', '/dashboard', 'home'),
@@ -342,7 +347,8 @@ export function menuUntukPeran(role) {
   if (peran === 'siswa') return MENU_SISWA;
   if (peran === 'ortu' || peran === 'orang_tua') return MENU_ORTU;
   if (peran === 'operator') return MENU_OPERATOR;
-  if (['guru', 'demo'].includes(peran)) return GRUP_MENU;
+  if (['kepala_sekolah', 'wali_kelas'].includes(peran)) return MENU_KONTEKS_TERBATAS;
+  if (['guru', 'demo', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(peran)) return GRUP_MENU;
   return MENU_TANPA_PERAN;
 }
 

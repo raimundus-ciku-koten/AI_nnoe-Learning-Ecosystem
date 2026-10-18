@@ -16,14 +16,16 @@ describe('GuidanceProgramPage', () => {
   beforeEach(() => useAuthMock.mockReset());
 
   it('offers handbook-based optional topic suggestions with a free-text theme input', () => {
-    useAuthMock.mockReturnValue({ role: 'guru' });
-    const html = renderPage();
+    for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+      useAuthMock.mockReturnValue({ role });
+      const html = renderPage();
 
-    expect(html).toContain('name="tema"');
-    expect(html).toContain('list="guidance-topic-suggestions"');
-    expect(html).toContain('<datalist id="guidance-topic-suggestions">');
-    expect(html).toContain('Menjelajahi pilihan jenjang dan karier');
-    expect(html).toContain('Tema bebas dapat diketik');
+      expect(html).toContain('name="tema"');
+      expect(html).toContain('list="guidance-topic-suggestions"');
+      expect(html).toContain('<datalist id="guidance-topic-suggestions">');
+      expect(html).toContain('Menjelajahi pilihan jenjang dan karier');
+      expect(html).toContain('Tema bebas dapat diketik');
+    }
   });
 
   it('keeps the planning form unavailable to accounts without the teacher role', () => {

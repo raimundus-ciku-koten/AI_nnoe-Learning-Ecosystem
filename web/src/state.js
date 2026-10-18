@@ -5,6 +5,8 @@ const state = {
   user: null,
   profile: null,
   role: null,
+  activeRole: null,
+  roles: [],
   tenantId: null,
   isDemo: false,
   claims: null,

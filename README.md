@@ -695,6 +695,29 @@ recovery-tested deployment is approved. Enrolment needs a working Supabase Auth
 MFA configuration; confirm TOTP support on the current plan and test with
 non-owner administrator accounts before rollout.
 
+Multi-role identity is implemented as a **source migration**, not yet applied
+to hosted Supabase. Migration
+`supabase/migrations/20261018001200_multi_role_identity.sql` stores trusted
+assignments on the allowlist and profile, validates the selected role against
+those assignments in the Auth access-token hook, and exposes the available
+roles to the authenticated UI. Users switch roles from the profile menu after
+sign-in; a role change updates user metadata only as a preference, then
+refreshes the token so the server hook—not the browser—decides the active role.
+The superadmin user-management page falls back to single-role mode until the
+new columns exist.
+
+Guru BK, Guru Kokurikuler, and Guru Ekstrakurikuler assignments require the
+base Guru role and use the existing teacher authorization scope; they do not
+create counselor case-note storage. Kepala Sekolah and Wali Kelas are not
+school-admin roles. Their app navigation is dashboard-only, and the migration's
+active-user authorization helper fails closed for active-only data policies
+until dedicated server-side read/class-scoped permissions are designed. A
+principal must be explicitly assigned Admin Sekolah to receive
+tenant-administration access. This migration has not been reconciled or applied
+to hosted Supabase. Review and test it on a recovery-tested staging schema,
+including all role combinations and RLS boundaries, before enabling the
+multi-role UI in a hosted environment.
+
 Login supports Cloudflare Turnstile through `VITE_TURNSTILE_SITE_KEY`. It is
 intentionally optional until the owner creates a Turnstile site key and
 configures the matching secret/CAPTCHA provider in Supabase Auth. Setting only

@@ -11,7 +11,7 @@ const BATAS_PROFIL_MS = 6000;
 const BATAS_SESI_MS = 8000;
 
 const STATE_KOSONG = Object.freeze({
-  user: null, profile: null, role: null, tenantId: null,
+  user: null, profile: null, role: null, activeRole: null, roles: [], tenantId: null,
   isDemo: false, claims: null, sesiMemuat: false,
 });
 
@@ -30,7 +30,13 @@ function rakitState(user, claims = {}, profil = {}) {
   const ringkas = ringkasProfil(profil);
   simpanProfil(user.id, ringkas);
 
-  const role = claims.role || profil.role || null;
+  const activeRole = claims.role || profil.role || null;
+  const role = ['guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(activeRole)
+    ? 'guru'
+    : activeRole;
+  const roles = Array.isArray(claims.roles) && claims.roles.length
+    ? [...new Set(claims.roles.filter((candidate) => typeof candidate === 'string'))]
+    : (role ? [role] : []);
   const userOut = {
     uid: user.id,
     email: user.email || '',
@@ -42,6 +48,8 @@ function rakitState(user, claims = {}, profil = {}) {
     user: userOut,
     profile: ringkas,
     role,
+    activeRole,
+    roles,
     tenantId: claims.tenantId || claims.tenant_id || profil.tenant_id || profil.tenantId || null,
     isDemo: role === 'demo' || claims.isDemo === true,
     claims,
@@ -110,6 +118,40 @@ export async function masukGoogle(captchaToken) {
   if (error) throw error;
 }
 
+export async function switchRole(role) {
+  const current = getState();
+  if (!current.user?.uid) throw new Error('Belum login.');
+  if (typeof role !== 'string' || !current.roles?.includes(role)) {
+    throw new Error('Peran tersebut tidak diberikan kepada akun ini.');
+  }
+  if (current.activeRole === role) return;
+
+  const { data: identity, error: identityError } = await supabase.auth.getUser();
+  if (identityError) throw identityError;
+  if (!identity.user) throw new Error('Identitas akun tidak tersedia.');
+  const { data: userData, error: updateError } = await supabase.auth.updateUser({
+    data: { ...identity.user.user_metadata, active_role: role },
+  });
+  if (updateError) throw updateError;
+  if (!userData.user) throw new Error('Supabase Auth tidak mengembalikan identitas akun.');
+
+  const { data: sessionData, error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError) throw refreshError;
+  const user = sessionData.session?.user;
+  if (!user || user.app_metadata?.role !== role) {
+    throw new Error('Server belum mengesahkan peran yang dipilih. Muat ulang sesi atau hubungi administrator.');
+  }
+
+  const profil = await ambilProfil(user.id);
+  const claims = {
+    role: user.app_metadata?.role || null,
+    roles: Array.isArray(user.app_metadata?.roles) ? user.app_metadata.roles : [],
+    tenantId: user.app_metadata?.tenant_id || null,
+    isDemo: user.app_metadata?.role === 'demo',
+  };
+  setState({ ...rakitState(user, claims, profil), sesiMemuat: false });
+}
+
 let versiSesi = 0;
 
 export function pantaulogin(onReady, onUbah) {
@@ -125,6 +167,7 @@ export function pantaulogin(onReady, onUbah) {
     if (saya !== versiSesi) return;
     const claims = {
       role: user.app_metadata?.role || profil.role || null,
+      roles: Array.isArray(user.app_metadata?.roles) ? user.app_metadata.roles : [],
       tenantId: user.app_metadata?.tenant_id || profil.tenant_id || null,
       isDemo: user.app_metadata?.role === 'demo',
     };
@@ -133,7 +176,7 @@ export function pantaulogin(onReady, onUbah) {
     onReady?.(user);
 
     const lama = getState();
-    const penting = next.role !== lama.role || next.tenantId !== lama.tenantId;
+    const penting = next.role !== lama.role || next.activeRole !== lama.activeRole || next.tenantId !== lama.tenantId;
     if (penting) onUbah?.();
   };
 

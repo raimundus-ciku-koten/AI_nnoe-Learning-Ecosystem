@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { MaintenanceGuard, PlatformControlProvider } from './context/PlatformControlContext.jsx';
 import { logout } from './auth.js';
 import PrivilegedMfaGate from './components/PrivilegedMfaGate.jsx';
+import { canOpenRolePath } from './services/roleAccess.js';
 
 // Legacy Alias Mapper[cite: 10]
 const LEGACY_ALIAS = {
@@ -115,10 +116,13 @@ const HalamanPrivasi = lazy(() => import('./pages/PrivacyNoticePage.jsx'));
 const AppShell = lazy(() => import('./components/AppShell.jsx'));
 
 function PrivateShell({ children }) {
-  const { user, role } = useAuth();
+  const { user, role, activeRole } = useAuth();
   const location = useLocation();
 
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (!canOpenRolePath(activeRole || role, location.pathname)) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return (
     <PrivilegedMfaGate role={role} userId={user.uid}>
       <MaintenanceGuard>

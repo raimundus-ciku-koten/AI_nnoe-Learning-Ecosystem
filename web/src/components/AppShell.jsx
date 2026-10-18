@@ -34,7 +34,7 @@ function useDesktop() {
 }
 
 export default function AppShell({ path, search = '', judulHalaman, children }) {
-  const { user, profile, role, logout } = useAuth();
+  const { user, profile, role, activeRole, roles = [], logout, switchRole } = useAuth();
   const hematData = isEconomyMode();
   const desktop = useDesktop();
   const daftarMenu = menuUntukPeran(role);
@@ -45,6 +45,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   const [mobileBuka, setMobileBuka] = useState(false);
   const [profilBuka, setProfilBuka] = useState(false);
   const [keluar, setKeluar] = useState(false);
+  const [menggantiPeran, setMenggantiPeran] = useState(false);
   const [aksiProfil, setAksiProfil] = useState('');
   const [grupBuka, setGrupBuka] = useState(() => new Set([menu?.grup.id || 'beranda']));
   const profilRef = useRef(null);
@@ -123,6 +124,23 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
     }
   }
 
+  async function handleGantiPeran(event) {
+    const nextRole = event.target.value;
+    if (!nextRole || nextRole === activeRole || menggantiPeran) return;
+    setMenggantiPeran(true);
+    try {
+      await switchRole(nextRole);
+      setProfilBuka(false);
+      window.location.hash = '#/dashboard';
+    } catch (error) {
+      console.error('[auth] Gagal mengganti peran aktif:', error);
+      toast(error?.message || 'Peran tidak dapat diganti. Coba lagi.', 'error');
+      event.target.value = activeRole || role || '';
+    } finally {
+      setMenggantiPeran(false);
+    }
+  }
+
   async function handleAksiProfil(aksi) {
     if (aksiProfil) return;
     setAksiProfil(aksi);
@@ -139,7 +157,8 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   }
 
   const nama = user?.displayName || 'Pengguna';
-  const peran = LABEL_PERAN[role] || (role ? role : 'Pengguna');
+  const peranAktif = activeRole || role;
+  const peran = LABEL_PERAN[peranAktif] || (peranAktif ? peranAktif : 'Pengguna');
   const subNama = profile?.sekolah || peran;
   const menuTerbuka = desktop ? !sideTutup : mobileBuka;
 
@@ -206,40 +225,54 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
                 <Ikon nama="chevron" className="ale-chev" />
               </button>
 
-              <div id="ale-pop-profil" className="ale-pop ale-pop-profil" role="menu"
+              <div id="ale-pop-profil" className="ale-pop ale-pop-profil" role="dialog"
                    aria-label="Menu profil" hidden={!profilBuka}>
                 <p className="ale-pop-judul" role="presentation">Profil</p>
                 <div style={{ padding: '0 .75rem .25rem', overflowWrap: 'anywhere', fontSize: '.88rem', color: 'var(--ale-muted)' }}>
                   {user?.email}
                 </div>
+                {roles.length > 1 && (
+                  <label style={{ display: 'grid', gap: '.35rem', padding: '.5rem .75rem', fontSize: '.88rem' }}>
+                    <span>Masuk sebagai</span>
+                    <select value={peranAktif || ''} onChange={handleGantiPeran} disabled={menggantiPeran}
+                            aria-label="Pilih peran aktif">
+                      {roles.map((availableRole) => (
+                        <option key={availableRole} value={availableRole}>
+                          {LABEL_PERAN[availableRole] || availableRole}
+                        </option>
+                      ))}
+                    </select>
+                    {menggantiPeran && <span role="status">Memvalidasi peran…</span>}
+                  </label>
+                )}
                 <hr className="ale-pop-sekat" />
-                <button type="button" role="menuitem" className="ale-pop-item ale-pw-sky"
+                <button type="button" className="ale-pop-item ale-pw-sky"
                         onClick={() => handleAksiProfil('foto-tambah')} disabled={!!aksiProfil}>
                   <Ikon nama="user" /> Ubah foto profil
                 </button>
-                <button type="button" role="menuitem" className="ale-pop-item ale-pw-amber"
+                <button type="button" className="ale-pop-item ale-pw-amber"
                         onClick={() => handleAksiProfil('notif')} disabled={!!aksiProfil}>
                   <Ikon nama="badge" /> Aktifkan notifikasi
                 </button>
-                <button type="button" role="menuitem" className="ale-pop-item ale-pw-rose"
+                <button type="button" className="ale-pop-item ale-pw-rose"
                         onClick={() => handleAksiProfil('foto-hapus')} disabled={!!aksiProfil}>
                   <Ikon nama="user" /> Hapus foto profil
                 </button>
                 <hr className="ale-pop-sekat" />
-                <a role="menuitem" className="ale-pop-item ale-pw-sky" href="#/datadasar/kelas"
+                <a className="ale-pop-item ale-pw-sky" href="#/datadasar/kelas"
                    onClick={() => setProfilBuka(false)}>
                   <Ikon nama="school" /> Kelas &amp; mapel saya
                 </a>
-                <button type="button" role="menuitem" className="ale-pop-item ale-pw-cyan"
+                <button type="button" className="ale-pop-item ale-pw-cyan"
                         onClick={() => handleAksiProfil('api-key')} disabled={!!aksiProfil}>
                   <Ikon nama="settings" /> AI &amp; Layanan
                 </button>
-                <button type="button" role="menuitem" className="ale-pop-item ale-pw-indigo"
+                <button type="button" className="ale-pop-item ale-pw-indigo"
                         onClick={() => handleAksiProfil('google')} disabled={!!aksiProfil}>
                   <Ikon nama="external" /> Hubungkan Google
                 </button>
                 <hr className="ale-pop-sekat" />
-                <button type="button" role="menuitem" className="ale-pop-item ale-pw-sky"
+                <button type="button" className="ale-pop-item ale-pw-sky"
                         onClick={() => setProfilBuka(false)}>
                   <Ikon nama="chevron" /> Tutup
                 </button>

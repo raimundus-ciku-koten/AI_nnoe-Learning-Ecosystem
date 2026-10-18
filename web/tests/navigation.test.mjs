@@ -71,12 +71,27 @@ test('semua submenu memiliki rute aktif dan dapat ditemukan kembali', () => {
 test('semua tautan untuk guru, siswa, orang tua, sekolah, dan platform cocok dengan halamannya', () => {
   for (const role of [
     'guru', 'operator', 'demo', 'siswa', 'ortu', 'orang_tua',
-    'admin_sekolah', 'admin', 'superadmin',
+    'admin_sekolah', 'admin', 'superadmin', 'kepala_sekolah', 'wali_kelas',
+    'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',
   ]) {
     const menu = menuUntukPeran(role);
     for (const item of menu.flatMap((bagian) => bagian.item)) {
       assert.equal(cariMenu(item.path, item.search || '', role)?.item, item, `${role}: ${item.label}`);
     }
+  }
+});
+
+test('spesialis guru memakai menu guru; kepala sekolah dan wali kelas tidak menjadi admin', () => {
+  for (const role of ['guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+    assert.equal(menuUntukPeran(role), menuUntukPeran('guru'));
+    assert.ok(menuUntukPeran(role).flatMap((group) => group.item)
+      .some((item) => item.path === '/program-kegiatan'));
+  }
+  for (const role of ['kepala_sekolah', 'wali_kelas']) {
+    const paths = menuUntukPeran(role).flatMap((group) => group.item.map((item) => item.path));
+    assert.deepEqual(paths, ['/dashboard']);
+    assert.equal(cariMenu('/platform/tenant/sekolah', '', role), null);
+    assert.equal(cariMenu('/admin/pengguna/guru', '', role), null);
   }
 });
 

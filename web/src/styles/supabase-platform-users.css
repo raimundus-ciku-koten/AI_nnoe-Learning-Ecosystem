@@ -113,6 +113,32 @@
   min-height: 18px;
 }
 
+.supabase-platform-users__roles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  grid-column: 1 / -1;
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #dbe3ef;
+  border-radius: 10px;
+}
+
+.supabase-platform-users__roles legend {
+  padding: 0 6px;
+  color: #25344d;
+  font-weight: 700;
+}
+
+.supabase-platform-users__roles p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #52637d;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .supabase-platform-users__actions,
 .supabase-platform-users__session,
 .supabase-platform-users__toolbar {
@@ -195,6 +221,10 @@
 
 @media (max-width: 720px) {
   .supabase-platform-users__form {
+    grid-template-columns: 1fr;
+  }
+
+  .supabase-platform-users__roles {
     grid-template-columns: 1fr;
   }
 

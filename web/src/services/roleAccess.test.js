@@ -1,0 +1,19 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { canOpenRolePath } from './roleAccess.js';
+
+test('Kepala Sekolah dan Wali Kelas hanya dapat membuka dashboard sampai ada izin terukur', () => {
+  for (const role of ['kepala_sekolah', 'wali_kelas']) {
+    assert.equal(canOpenRolePath(role, '/dashboard'), true);
+    assert.equal(canOpenRolePath(role, '/admin/pengguna/guru'), false);
+    assert.equal(canOpenRolePath(role, '/perencanaan'), false);
+    assert.equal(canOpenRolePath(role, '/chat'), false);
+  }
+});
+
+test('peran lain tetap mengikuti otorisasi rute yang sudah ada', () => {
+  for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'siswa', 'superadmin']) {
+    assert.equal(canOpenRolePath(role, '/dashboard'), true);
+    assert.equal(canOpenRolePath(role, '/perencanaan'), true);
+  }
+});
