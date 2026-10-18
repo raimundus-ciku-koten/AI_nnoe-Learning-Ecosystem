@@ -9,6 +9,7 @@
 export const ROUTES = {
   '/login':             { page: 'login',       title: 'Masuk' },
   '/dashboard':         { page: 'dashboard',   title: 'Dashboard' },
+  '/program-kegiatan':  { page: 'program-kegiatan', title: 'Program BK dan Kegiatan' },
 
   '/perencanaan':       { page: 'perencanaan', title: 'Perencanaan Pembelajaran' },
   '/perencanaan/rpe':   { page: 'perencanaan', title: 'RPE',        sub: 'rpe' },

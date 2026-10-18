@@ -858,6 +858,10 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand-600); }
   background: var(--bg);
 }
 .public-login .site-header { flex: none; }
+.public-login .site-footer { flex: none; padding-block: .65rem; }
+.public-login .footer-inner { min-height: 2rem; }
+.public-login .footer-inner p { margin: 0; }
+.public-login .footer-inner a { color: #fff; text-underline-offset: .2em; }
 .public-login main {
   display: flex;
   flex: 1;
@@ -895,6 +899,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand-600); }
   .public-login .brand img { width: 38px; }
   .public-login .brand-text strong { font-size: .9rem; }
   .public-login .brand-text small { display: none; }
+  .public-login .footer-inner { gap: .25rem .75rem; font-size: .75rem; }
   .public-login .nav { gap: 0; }
   .public-login .nav a:not(.btn) {
     display: inline-flex;

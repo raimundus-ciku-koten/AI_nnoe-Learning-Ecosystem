@@ -809,6 +809,17 @@ that school and must not be treated as the default for other schools.
 | `reference/legacy-firebase/` | Unused alternative Firebase bootstrap helpers; not imported by the active app. |
 | `public/` | Root-level static assets retained for project tooling. The Vite app serves assets from `web/public/`. |
 
+### Program BK dan kegiatan
+
+The teacher-only `#/program-kegiatan` workspace provides a printable draft for
+Bimbingan dan Konseling, kokurikuler, and ekstrakurikuler programs. The BK
+template follows the uploaded guide's phases A-F, four service areas, service
+components, needs assessment, goals, indicators, session steps, evaluation,
+and follow-up. Suggested themes are optional; teachers may enter a custom
+topic. Drafts stay in page memory and are not saved to Supabase or Drive. Do
+not enter student identities, counseling notes, or case details. Persistent
+storage and specialty-specific account roles are not implemented.
+
 ## Common commands
 
 Run from the workspace root. These commands do not invoke Firebase:

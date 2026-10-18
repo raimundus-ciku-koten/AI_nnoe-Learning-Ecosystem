@@ -88,6 +88,7 @@ const HalamanChat = lazy(() => import('./pages/chat.js').then(({ halamanChat }) 
   default: function ChatRoute() { return <LegacyPage render={halamanChat} />; },
 })));
 const HalamanAsisten = lazy(() => import('./pages/AsistenPage.jsx'));
+const HalamanProgramKegiatan = lazy(() => import('./pages/GuidanceProgramPage.jsx'));
 const HalamanDataDasar = lazy(() => import('./pages/dataDasar.js').then(({ halamanDataDasar }) => ({
   default: function DataDasarRoute() { return <LegacyPage render={halamanDataDasar} />; },
 })));
@@ -179,6 +180,7 @@ function RouteWrapper() {
         <Route path="/admin/pengguna/:sub" element={<PrivateShell><HalamanAdminPengguna /></PrivateShell>} />
         <Route path="/admin/pengguna/tautkan-siswa" element={<PrivateShell><HalamanTautkanAkunSiswa /></PrivateShell>} />
         <Route path="/pelaksanaan/presensi" element={<PrivateShell><HalamanPresensi /></PrivateShell>} />
+        <Route path="/program-kegiatan" element={<PrivateShell><HalamanProgramKegiatan /></PrivateShell>} />
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
         <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanIntegrasiAI /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />

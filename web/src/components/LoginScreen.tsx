@@ -759,7 +759,7 @@ export const LoginScreen: FC<LoginScreenProps> = ({ onLoginSuccess }: LoginScree
               <Ikon nama="kunci" />
               <span>Kata sandi Google Anda tidak pernah dibagikan ke aplikasi ini.</span>
             </p>
-            <p className="lgn__hak">© {new Date().getFullYear()} AI-nnoe</p>
+            <p className="lgn__hak">© {new Date().getFullYear()} AI_nnoe Learning Ecosystem. Hak cipta dilindungi.</p>
           </div>
 
           <ul className="lgn__manfaat" aria-label="Manfaat aplikasi">

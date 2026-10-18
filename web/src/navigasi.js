@@ -49,6 +49,7 @@ export const GRUP_MENU = [
     item: [
       tautan('Jurnal Mengajar Harian', '/pelaksanaan/jurnal', 'file'),
       tautan('Presensi Siswa', '/pelaksanaan/presensi', 'check'),
+      tautan('Program BK & Kegiatan', '/program-kegiatan', 'file'),
       tautan('Realisasi terhadap Rencana', '/pelaksanaan/realisasi', 'chart'),
       tautan('Pembelajaran Berdiferensiasi', '/pelaksanaan/berdiferensiasi', 'users'),
       tautan('Kegiatan Kelas Khusus', '/pelaksanaan/kelas-khusus', 'users'),

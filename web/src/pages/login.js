@@ -212,8 +212,9 @@ export function halamanLogin(wadah) {
         </div>
       </section>
     </main>
-    <footer class="site-footer" hidden><div class="container footer-inner">
+    <footer class="site-footer"><div class="container footer-inner">
       <p>&copy; ${new Date().getFullYear()} AI_nnoe Learning Ecosystem. Hak cipta dilindungi.</p>
+      <a href="#/privacy">Kebijakan privasi</a>
     </div></footer>`;
 
   const $ = (selector) => wadah.querySelector(selector);
