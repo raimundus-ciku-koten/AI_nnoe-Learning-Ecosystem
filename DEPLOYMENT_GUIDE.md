@@ -92,7 +92,7 @@ I cannot build a signed Play Store APK/AAB without the signing key and the asset
 
 9) Rollout & privacy
 
-- The demo email retention policy was set to keep trial emails "during the service lifetime (no re-trial with the same email)". Before public rollout, finalize a retention/erasure schedule (for example: retain the email record for X years or until account deletion request).
+- The selected policy is to keep the email record while the service operates, to prevent another trial with the same address. The final privacy process must provide a way to submit a verified erasure request; deleting the record permits that address to register for another trial. Publish registration only after the controller identity, privacy contact, and request process are in place.
 - Add final legal contact and privacy-controller details to `/privacy` before inviting students or processing sensitive data.
 
 10) If you want me to continue now (autopilot):

@@ -234,6 +234,10 @@ as $$
   select coalesce((
     select profile.active
       and profile.role <> 'demo'
+      and public.current_app_role() in (
+        'superadmin', 'admin_sekolah', 'operator', 'guru', 'siswa',
+        'ortu', 'orang_tua'
+      )
       and case
         when public.current_app_role() in ('admin_sekolah', 'superadmin')
           then auth.jwt() ->> 'aal' = 'aal2'
