@@ -28,7 +28,7 @@ function pilihanPaket(paket, idTerpilih, pilih, siklus) {
       />
       <span className="ale-purchase-plan-copy">
         <strong>{paket.name}</strong>
-        <small>{paket.features || `${paket.students.toLocaleString('id-ID')} siswa, ${paket.teachers == null ? 'guru tanpa batas' : `${paket.teachers} guru`}`}</small>
+        <small>Informasi katalog; rincian fitur dan aktivasi paket belum dapat dijamin.</small>
       </span>
       <span className="ale-purchase-plan-price">
         {formatRupiah(harga)}<small>/{siklus === 'bulanan' ? 'bulan' : 'tahun'}</small>
@@ -109,11 +109,11 @@ export default function PurchasePage() {
       <header className="ale-purchase-header">
         <p className="ale-purchase-kicker">Lisensi AI_nnoe</p>
         <h2>{productType === 'school' ? 'Pilih paket sekolah' : 'Pilih paket akun Anda'}</h2>
-        <p>Pembayaran dan checkout online dinonaktifkan untuk menjaga aplikasi tetap tanpa billing.</p>
+        <p>Harga indikatif ditampilkan dalam Rupiah sebelum pajak. Pembayaran dan checkout online dinonaktifkan.</p>
       </header>
       {galatLangganan && <p className="ale-purchase-message" role="alert">{galatLangganan}</p>}
       <p className="ale-purchase-message" role="status">
-        Paket di bawah hanya informasi. Aplikasi tidak membuat pesanan, membuka halaman pembayaran, atau menagih biaya.
+        Harga di bawah hanya informasi, dalam Rupiah, dan belum termasuk pajak. Aplikasi tidak membuat pesanan, membuka halaman pembayaran, atau menagih biaya.
       </p>
       {langganan && (
         <section className="ale-purchase-current" aria-live="polite">
@@ -156,7 +156,7 @@ export default function PurchasePage() {
           </dl>
         )}
         <p className="ale-purchase-footnote">
-          Tarif ini hanya referensi dan bukan penawaran pembayaran. Tidak ada checkout atau aktivasi pembelian dari halaman ini.
+          Tarif ini hanya referensi dalam Rupiah dan belum termasuk pajak. Harga tahunan setara 10 bulan harga bulanan (diskon 2 bulan); pajak dan harga final harus dikonfirmasi sebelum transaksi. Tidak ada checkout atau aktivasi pembelian dari halaman ini.
         </p>
       </section>
     </main>

@@ -113,13 +113,16 @@ const HalamanPenggunaPlatform = lazy(() => import('./pages/PlatformUsersPage.jsx
 const HalamanOperasiPlatform = lazy(() => import('./pages/PlatformOperationsPage.jsx'));
 const HalamanPenggunaSupabase = lazy(() => import('./pages/SupabasePlatformUsersPage.jsx'));
 const HalamanPrivasi = lazy(() => import('./pages/PrivacyNoticePage.jsx'));
+const HalamanTrial = lazy(() => import('./pages/TrialDemoPage.jsx'));
 const AppShell = lazy(() => import('./components/AppShell.jsx'));
 
 function PrivateShell({ children }) {
-  const { user, role, activeRole } = useAuth();
+  const { user, role, activeRole, passwordRecovery } = useAuth();
   const location = useLocation();
 
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (passwordRecovery) return <Navigate to="/login" replace />;
+  if ((activeRole || role) === 'demo') return <Navigate to="/trial" replace />;
   if (!canOpenRolePath(activeRole || role, location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -134,8 +137,9 @@ function PrivateShell({ children }) {
 
 function RouteWrapper() {
   const location = useLocation();
-  const { loading, user } = useAuth();
+  const { loading, user, role, activeRole, passwordRecovery } = useAuth();
   const userId = user?.uid;
+  const selectedRole = activeRole || role;
   
   // Tangani Legacy URL otomatis[cite: 10]
   useEffect(() => {
@@ -146,7 +150,7 @@ function RouteWrapper() {
   }, [location]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || selectedRole === 'demo') return;
     let active = true;
     Promise.all([
       import('./services/chatSync.js'),
@@ -159,7 +163,7 @@ function RouteWrapper() {
       console.error('[app] Gagal menginisialisasi sinkronisasi chat:', err);
     });
     return () => { active = false; };
-  }, [userId]);
+  }, [userId, selectedRole]);
 
   const publicRoute = location.pathname === '/login'
     || location.pathname === '/privacy'
@@ -172,11 +176,12 @@ function RouteWrapper() {
   return (
     <Suspense fallback={<div className="loading-spinner">Memuat...</div>}>
       <Routes>
-        <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <HalamanLogin />} />
+        <Route path="/login" element={user && !passwordRecovery ? <Navigate to={selectedRole === 'demo' ? '/trial' : '/dashboard'} replace /> : <HalamanLogin />} />
+        <Route path="/trial" element={user ? (selectedRole === 'demo' ? <HalamanTrial /> : <Navigate to="/dashboard" replace />) : <Navigate to="/login" replace />} />
         <Route path="/privacy" element={<HalamanPrivasi />} />
         <Route path="/platform/supabase-users" element={<HalamanPenggunaSupabase />} />
         <Route path="/scan/:kode" element={<HalamanScan />} />
-        <Route path="/" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
+        <Route path="/" element={<Navigate to={user ? (passwordRecovery ? '/login' : selectedRole === 'demo' ? '/trial' : '/dashboard') : '/login'} replace />} />
         
         <Route path="/dashboard" element={<PrivateShell><HalamanDashboard /></PrivateShell>} />
         <Route path="/purchase" element={<PrivateShell><HalamanPurchase /></PrivateShell>} />
@@ -221,7 +226,7 @@ function RouteWrapper() {
         
         <Route path="/profil" element={<Navigate to="/pengaturan/akun" replace />} />
         <Route path="*" element={user
-          ? <PrivateShell><HalamanSubMenu /></PrivateShell>
+          ? (passwordRecovery ? <Navigate to="/login" replace /> : selectedRole === 'demo' ? <Navigate to="/trial" replace /> : <PrivateShell><HalamanSubMenu /></PrivateShell>)
           : <Navigate to="/login" replace />} /> {/*[cite: 9] */}
       </Routes>
     </Suspense>

@@ -12,12 +12,19 @@ const DEFAULT_STATE = Object.freeze({
 const PlatformControlContext = createContext(DEFAULT_STATE);
 
 export function PlatformControlProvider({ children }) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [state, setState] = useState(DEFAULT_STATE);
 
   useEffect(() => {
     if (!user) {
       setState(DEFAULT_STATE);
+      return undefined;
+    }
+    if (role === 'demo') {
+      setState({
+        ...DEFAULT_STATE,
+        features: { aiAssistant: false, aiGeneration: false },
+      });
       return undefined;
     }
 
@@ -60,7 +67,7 @@ export function PlatformControlProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [user?.uid]);
+  }, [user?.uid, role]);
 
   const value = useMemo(() => state, [state]);
   return (

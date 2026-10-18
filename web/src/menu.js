@@ -439,7 +439,8 @@ export function menuUntuk(role) {
     return dariNavigasi(menuUntukPeran(bersih));
   }
   if (bersih === 'operator') return dariNavigasi(MENU_NAV_OPERATOR);
-  if (['guru', 'demo'].includes(bersih)) {
+  if (bersih === 'demo') return dariNavigasi(menuUntukPeran(bersih));
+  if (bersih === 'guru') {
     return dariNavigasi(MENU_NAV_GURU);
   }
   return dariNavigasi(menuUntukPeran(bersih));

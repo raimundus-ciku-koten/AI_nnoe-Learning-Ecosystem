@@ -37,6 +37,8 @@ export function AuthProvider({ children }) {
     roles: state.roles,
     tenantId: state.tenantId,
     isDemo: state.isDemo,
+    trialExpiresAt: state.trialExpiresAt,
+    passwordRecovery: state.passwordRecovery,
     loading: !state.authReady,
     login, logout, masukGoogle, resetPassword, updateProfil, switchRole,
   }), [state]);
