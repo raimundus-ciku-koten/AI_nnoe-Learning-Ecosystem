@@ -51,9 +51,11 @@ export default function PrivacyNoticePage() {
         </p>
         <p>
           Untuk uji coba promosi, data simulasi hanya berada di memori browser. Catatan alamat email uji coba
-          disimpan untuk menegakkan batas satu kali per email; kebijakan penghapusan dan periode retensinya
-          masih harus ditetapkan pemilik layanan sebelum pendaftaran dibuka untuk publik. Jangan gunakan
-          uji coba untuk memproses data anak atau data sekolah nyata.
+          disimpan selama layanan beroperasi untuk menegakkan batas satu kali per email. Permintaan
+          penghapusan yang terverifikasi harus diproses melalui mekanisme privasi resmi; penghapusan catatan
+          akan memungkinkan alamat tersebut mendaftar uji coba lagi. Mekanisme permintaan dan kontak privasi
+          resmi harus ditambahkan sebelum pendaftaran dibuka untuk publik. Jangan gunakan uji coba untuk
+          memproses data anak atau data sekolah nyata.
         </p>
         <h2>Permintaan dan kontak</h2>
         <p>

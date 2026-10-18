@@ -23,6 +23,7 @@ test('trial tidak dapat memperoleh role lain, akses data, atau tenant sekolah', 
   assert.match(migration, /profile\.role <> 'demo'/);
   assert.match(migration, /select case when profile\.role = 'demo' then '' else profile\.tenant_id end/);
   assert.match(migration, /select profile\.active\s+and profile\.role <> 'demo'/);
+  assert.match(migration, /public\.current_app_role\(\) in \(\s*'superadmin', 'admin_sekolah', 'operator', 'guru', 'siswa'/);
   assert.match(migration, /assigned_roles := array\['demo'\]/);
   assert.match(migration, /'trial-' \|\| new\.id::text/);
 });

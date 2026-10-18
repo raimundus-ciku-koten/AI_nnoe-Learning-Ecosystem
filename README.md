@@ -788,9 +788,12 @@ roles from active authorization. It is source-only and has **not** been
 applied to hosted Supabase. Do not publish the signup until schema parity,
 trigger/hook settings, server-side Supabase CAPTCHA verification, email
 confirmation redirects, a Supabase Auth password minimum of 12 characters,
-privacy/retention policy, and recovery-tested backup have been verified. The
-email record is retained to enforce one trial per address; the service owner
-must approve its deletion/retention schedule before public registration.
+and recovery-tested backup have been verified. Per the selected trial policy,
+the email record is retained while the service operates to prevent another
+trial with the same address. A verified data-erasure request must be handled
+under the final privacy process; deleting the record permits that address to
+register for another trial. Publish the signup only after the service owner
+has provided the required legal identity, privacy contact, and request process.
 
 Reduced-data mode activates when a device advertises `Save-Data` or the release
 sets `VITE_ECONOMY_MODE=true`. It hides external profile/school images and
