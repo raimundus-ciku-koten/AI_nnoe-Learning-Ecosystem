@@ -2,13 +2,21 @@ Deployment and Release Guide — AI_nnoe Learning Ecosystem
 
 Overview
 
-This document lists the safe, zero-cost-friendly steps to review, stage, and publish the web release and Android build for AI_nnoe Learning Ecosystem. It assumes the feature branch `feature/demo-trial` contains the changes (trial UI, migration, tests, docs). Do NOT apply database migrations to hosted Supabase until backups and a staging verification are complete.
+This document records the release state and the remaining safe rollout steps for AI_nnoe Learning Ecosystem.
 
-1) Pull request and review
+Current release status:
+- Production is publicly available at `https://ainnoe-le.vercel.app/`. The Vercel production deployment is Ready; Preview remains protected.
+- The production login page loads anonymously. `/.well-known/assetlinks.json` returns HTTP 200 and its package name and signing fingerprint match the repository configuration and signed APK candidate.
+- Trial registration is intentionally unavailable until Turnstile is configured and verified server-side by Supabase Auth. The form fails closed while its site key is missing.
+- Hosted Supabase migrations have not been applied. Midtrans business review is in progress, and AdSense remains in onboarding; payments and ads are not active.
 
-- A branch `feature/demo-trial` has already been pushed. The GitHub PR form was opened for this branch.
-- Recommended: submit the PR on GitHub, mark it as non-draft, and request reviews from the team (at least one reviewer familiar with Supabase RLS and queries).
-- The PR must explicitly note this migration is source-only and must NOT be applied to hosted without approval.
+Do NOT apply database migrations to hosted Supabase until backups and a staging verification are complete.
+
+1) Pull request and release branch
+
+- PR #3 was merged into `migration/supabase-foundation-preview`; `main` remains unchanged.
+- The public production deployment was promoted from the Ready feature preview and rebuilt with the Production environment. Do not treat Preview environment values as Production values.
+- Keep the trial migration source-only until the backup, staging, and approval requirements below are satisfied.
 
 2) CI / Build verification
 
@@ -52,16 +60,19 @@ Set these environment variables in Vercel (Project Settings → Environment Vari
 Important:
 - The frontend must never receive service_role or other server secrets.
 - Implement serverless functions (Edge Functions) as a proxy for Midtrans using server-side secrets.
+- The current public build has no Turnstile widget and blocks trial registration when the site key is missing. Do not add the frontend site key until Supabase Auth is configured to validate Turnstile tokens server-side.
 
 5) Midtrans integration (billing)
 
 - Keep checkout disabled until you verify Midtrans sandbox behavior and the payment flow uses server-side verification.
+- Midtrans business registration is currently under review; do not claim payments are enabled or add live credentials before approval.
 - Implement an Edge Function / Supabase Function to call Midtrans server-side finalize endpoints using `MIDTRANS_SERVER_KEY`. The DB function `finalize_midtrans_payment()` is provided in migrations but must be executed only by `service_role` or via authenticated serverless functions.
 - Test end-to-end with Midtrans sandbox credentials.
 
 6) AdSense / AdMob
 
 - AdSense requires account approval and site verification. Do not enable live ad units until AdSense approves the site.
+- AdSense is currently in onboarding; no live ads are enabled.
 - Add `ads.txt` and `app-ads.txt` as required, but keep ad scripts disabled in the release until approval.
 - For AdMob in an Android build, the app must be a real native app (AAB) and have a registered package name and signing key uploaded to the Play Console. Trusted Web Activity (TWA) is not sufficient for AdMob SDK.
 
@@ -80,14 +91,16 @@ For a Play Store release (recommended):
 - Set up `keystore.properties` with password and alias (never commit these to the repo).
 - Run `./gradlew bundleRelease` to generate an AAB, sign it with your keystore, and verify with `apksigner`.
 
-I cannot build a signed Play Store APK/AAB without the signing key and the assetlinks.json being hosted. If you provide these securely (or create a CI secret in GitHub for them), I can add a workflow to build the signed bundle.
+A signed APK candidate already exists at `android-apk/app/build/outputs/apk/release/app-release.apk`. It targets `ainnoe-le.vercel.app`; the production Digital Asset Links endpoint is live and matches its signing fingerprint. Treat it as a candidate, not a Play Store release, until store listing, legal details, and release review are complete.
 
 8) Post-deploy checks
 
 - After deploying preview or production, verify:
-  - Login flow works; Turnstile is enforced if enabled and Supabase verifies tokens server-side.
+  - The public login page loads and unauthenticated routes remain restricted.
+  - Trial signup stays blocked until Turnstile is enforced and Supabase verifies tokens server-side.
+  - `https://ainnoe-le.vercel.app/.well-known/assetlinks.json` returns HTTP 200 with the APK package and signing fingerprint.
   - Superadmin allowlist entries work and the supplied emails can set passwords via the password setup flow.
-  - Demo accounts can sign up and are limited to `/trial` and in-browser simulation only.
+  - After provider configuration is verified, demo accounts can sign up and are limited to `/trial` and in-browser simulation only.
   - Billing pages show indicative pricing but checkout remains disabled until Midtrans is configured.
 
 9) Rollout & privacy
@@ -95,11 +108,13 @@ I cannot build a signed Play Store APK/AAB without the signing key and the asset
 - The selected policy is to keep the email record while the service operates, to prevent another trial with the same address. The final privacy process must provide a way to submit a verified erasure request; deleting the record permits that address to register for another trial. Publish registration only after the controller identity, privacy contact, and request process are in place.
 - Add final legal contact and privacy-controller details to `/privacy` before inviting students or processing sensitive data.
 
-10) If you want me to continue now (autopilot):
-- I can prepare a Vercel deployment checklist and a GitHub Actions workflow to run build & tests on PRs.
-- I can add a Play Store build workflow template that accepts signing secrets (you still must add the secrets in GitHub Actions secrets).
-- I cannot apply Supabase migrations to hosted production without explicit credentials, backups, and a staging approval.
+10) Remaining rollout steps
+- Sign in to the Supabase staging and Cloudflare dashboards, configure Turnstile, and verify server-side CAPTCHA enforcement and email redirects before enabling trial registration.
+- Verify the staging schema, backup, and restore process before applying any hosted migrations; production migration still requires explicit approval.
+- Wait for Midtrans business review and complete sandbox/webhook tests before enabling checkout.
+- Complete AdSense site verification and policy approval before enabling ads.
+- Publish the privacy contact and verified email-erasure process before inviting students or processing real school data.
 
 ---
 
-If you want a specific next action now, tell me which credentials/secrets you will provide (and how), or confirm if I should add the CI workflow templates and deployment docs to the PR. I will proceed accordingly and document each step in the PR comments.
+Never send passwords, API keys, or other secrets in chat. Configure them directly in the provider dashboards or as deployment secrets.
