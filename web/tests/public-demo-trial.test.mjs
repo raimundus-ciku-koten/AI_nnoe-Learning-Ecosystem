@@ -9,6 +9,7 @@ const migration = await readFile(
 const auth = await readFile(new URL('../src/auth.js', import.meta.url), 'utf8');
 const authService = await readFile(new URL('../src/services/authService.ts', import.meta.url), 'utf8');
 const demoPage = await readFile(new URL('../src/pages/TrialDemoPage.jsx', import.meta.url), 'utf8');
+const loginPage = await readFile(new URL('../src/pages/login.js', import.meta.url), 'utf8');
 
 test('trial memiliki masa berlaku tetap 72 jam dan satu catatan per email terverifikasi', () => {
   assert.match(migration, /email text primary key/);
@@ -33,6 +34,14 @@ test('signup mewajibkan token CAPTCHA dan tidak menerima klaim peran dari klien'
   assert.match(auth, /if \(!captchaToken\) throw new Error/);
   assert.match(auth, /captchaToken,\s+emailRedirectTo,\s+data: \{ full_name: nama \}/);
   assert.doesNotMatch(auth.match(/export async function daftarUjiCoba[\s\S]*?\n}/)?.[0] || '', /role|tenant_id|active_role/);
+});
+
+test('trial publik tersembunyi dan diblokir sampai diaktifkan eksplisit dengan Turnstile', () => {
+  assert.match(loginPage, /VITE_PUBLIC_DEMO_TRIAL_ENABLED\?\.trim\(\)\.toLowerCase\(\) === 'true'[\s\S]*?Boolean\(TURNSTILE_SITE_KEY\)/);
+  assert.match(loginPage, /id="trialPrompt" \$\{DEMO_TRIAL_ENABLED \? '' : 'hidden'\}/);
+  assert.match(loginPage, /if \(modeBuatSandi \|\| \(aktif && !DEMO_TRIAL_ENABLED\)\) return;/);
+  assert.match(loginPage, /if \(DEMO_TRIAL_ENABLED\) \{\s+tombolTampilkanTrial\.addEventListener/);
+  assert.match(loginPage, /if \(!DEMO_TRIAL_ENABLED\) \{\s+tampilkanError/);
 });
 
 test('callback Google tidak menambahkan hash router ke fragmen token OAuth', () => {
