@@ -6,17 +6,17 @@ This document records the release state and the remaining safe rollout steps for
 
 Current release status:
 - Production is publicly available at `https://ainnoe-le.vercel.app/`. The Vercel production deployment is Ready; Preview remains protected.
-- The production login page loads anonymously. `/.well-known/assetlinks.json` returns HTTP 200 and its package name and signing fingerprint match the repository configuration and signed APK candidate.
+- The production site and login page load anonymously. `/.well-known/assetlinks.json` returns HTTP 200 and its package name and signing fingerprint match the repository configuration and signed APK candidate. The trial signup form is visible, but registration must remain blocked until Turnstile is configured and verified server-side.
 - Trial registration is intentionally unavailable until Turnstile is configured and verified server-side by Supabase Auth. The form fails closed while its site key is missing.
-- The Supabase dashboard currently shows one project, `Ainnoe LE`, on branch `main` / `Production`; no staging project is available. Do not use it to test or apply the trial migration.
-- Supabase CAPTCHA protection is currently disabled. The Cloudflare account has no Turnstile widget configured yet.
+- The Supabase organization is on the Free plan. Production `Ainnoe LE` (`jvcrmzmuxgyuetkjqady`) and the new blank `Ainnoe LE Staging` (`samszhfyhbjuculrcffg`) are both in `ap-south-1`. No migrations have been applied to staging and it has not been brought to schema parity with Production.
+- Supabase CAPTCHA protection is currently disabled. A Turnstile widget and server-side CAPTCHA validation have not been verified.
 - Hosted Supabase migrations have not been applied. Midtrans business review is in progress. AdSense has no registered sites yet; `ads.txt` is published, but ads are not active.
 
 Do NOT apply database migrations to hosted Supabase until backups and a staging verification are complete.
 
 1) Pull request and release branch
 
-- PR #3 was merged into `migration/supabase-foundation-preview`; `main` remains unchanged.
+- PR #3 was merged into `migration/supabase-foundation-preview`; `main` remains unchanged. In the release repository, PR #2 (`Add secure 3-day demo trial and align Indonesian pricing`) is closed without being merged; its CI and Vercel preview checks passed, but that is not evidence that the changes were merged into the production source branch.
 - The public production deployment was promoted from the Ready feature preview and rebuilt with the Production environment. Do not treat Preview environment values as Production values.
 - Keep the trial migration source-only until the backup, staging, and approval requirements below are satisfied.
 
@@ -39,14 +39,16 @@ Backup checklist:
   - Verify the backup file can be restored into a local or staging Postgres instance.
 
 Applying migrations (recommended workflow):
-  1. Create a disposable staging project (or clone production schema into a staging DB).
+  1. Use the existing disposable staging project and verify that it matches the intended Production schema without copying production user data.
   2. Apply the migration SQL files (in `supabase/migrations/`) in order using the SQL Editor or `psql`.
   3. Run the full test suite (local and any DB-focused integration tests) against staging.
   4. After sign-off, apply migrations to production during a maintenance window.
 
 The migration in this PR: `supabase/migrations/20261019000200_public_demo_trial.sql` creates `trial_registrations` and writes `trial_expires_at`. It is append-only but modifies `public.provision_auth_profile()` and `public.custom_access_token_hook()` logic. Audit these functions carefully in staging.
 
-Current blocker: the only project visible in the Supabase organization is explicitly on `main` / `Production`, and the app's local Supabase URL uses that same project ref. A separate staging project with a verified schema and backup/restore path must exist before testing this migration. Do not use Production as a substitute for staging.
+Current blocker: the staging project exists but is a blank database, not a clone of Production. Its schema has not been migrated or compared, and no Production backup/restore has been verified. Do not use Production as a substitute for staging.
+
+The staging database password was generated in Supabase during project creation and was not copied into this repository or chat. If direct database access is later needed for CLI migrations or backup/restore, reset it in Supabase and store the replacement in an approved password manager.
 
 4) Environment variables (Vercel / Hosting)
 
@@ -64,8 +66,8 @@ Set these environment variables in Vercel (Project Settings → Environment Vari
 Important:
 - The frontend must never receive service_role or other server secrets.
 - Implement serverless functions (Edge Functions) as a proxy for Midtrans using server-side secrets.
-- After staging exists: create a Managed Cloudflare Turnstile widget for `ainnoe-le.vercel.app`; configure its site key and secret in the staging Supabase Authentication → Attack Protection → CAPTCHA protection settings; and add only the public site key as `VITE_TURNSTILE_SITE_KEY` to Vercel Preview. Validate missing, invalid, and expired tokens before any Production rollout.
-- After staging validation and written approval, configure CAPTCHA protection in Production Supabase, add the public site key to Vercel Production, redeploy, and verify the live signup flow. Never store or expose the Turnstile secret in Vercel, source control, chat, or a frontend build.
+- After staging exists: create a dedicated Managed Cloudflare Turnstile widget for the exact Vercel Preview hostname(s) used for staging; configure its site key and secret in the staging Supabase Authentication → Attack Protection → CAPTCHA protection settings; and add only the public site key as `VITE_TURNSTILE_SITE_KEY` to Vercel Preview. Do not use a broad `*.vercel.app` hostname allowlist. Validate missing, invalid, and expired tokens before any Production rollout.
+- After staging validation and written approval, create a separate Turnstile widget restricted to `ainnoe-le.vercel.app`, configure its key pair in Production Supabase, add the public site key to Vercel Production, redeploy, and verify the live signup flow. Never store or expose the Turnstile secret in Vercel, source control, chat, or a frontend build.
 - The current public build has no Turnstile widget and blocks trial registration when the site key is missing. Do not add the frontend site key until Supabase Auth is configured to validate Turnstile tokens server-side.
 
 5) Midtrans integration (billing)
@@ -115,7 +117,9 @@ A signed APK candidate already exists at `android-apk/app/build/outputs/apk/rele
 - Add final legal contact and privacy-controller details to `/privacy` before inviting students or processing sensitive data.
 
 10) Remaining rollout steps
-- Create/prepare a separate Supabase staging project from the current Production schema, verify a restorable backup, then configure Turnstile and validate server-side CAPTCHA enforcement and email redirects before enabling trial registration.
+- Bring the existing `Ainnoe LE Staging` project to verified Production schema parity without copying production user data; verify a restorable Production backup before any Production migration.
+- Resolve the release PR/source-branch discrepancy: PR #2 is closed unmerged, so confirm the intended code branch and merge/deploy path before claiming the trial feature is part of a merged release.
+- Configure Turnstile only after staging Auth is reachable, then validate server-side CAPTCHA enforcement and email redirects before enabling trial registration.
 - Verify the staging schema, backup, and restore process before applying any hosted migrations; production migration still requires explicit approval.
 - Wait for Midtrans business review and complete sandbox/webhook tests before enabling checkout.
 - Complete AdSense site verification and policy approval before enabling ads.
