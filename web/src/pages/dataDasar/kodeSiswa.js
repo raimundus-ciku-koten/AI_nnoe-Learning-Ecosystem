@@ -1,11 +1,6 @@
 // web/src/pages/dataDasar/kodeSiswa.js
 // Kode unik siswa + URL scan. Mandiri (tanpa Firebase) agar mudah diuji.
-//
-// Format : ALE-<KELAS>-<HASH6>-<IDENT>
-//   KELAS : A-Z0-9, maks 6 karakter (default 'KELAS')
-//   HASH6 : FNV-1a 32-bit → base36 → UPPERCASE, 6 karakter
-//   IDENT : 4 digit terakhir NISN/seed
-// Contoh : ALE-7A-3F9K2P-9012
+import { buatKodeAcak } from '../../lib/kodeSiswa.js';
 
 /** FNV-1a 32-bit (deterministik lintas runtime). */
 export function fnv1a32(str) {
@@ -18,29 +13,16 @@ export function fnv1a32(str) {
 }
 
 /**
- * Kode unik deterministik. Bila `siswa.kodeUnik` sudah tersimpan, itu yang dipakai
- * (kode tidak berubah saat nama/kelas diedit).
+ * Token acak baru. Bila `siswa.kodeUnik` sudah tersimpan, gunakan itu.
  * @param {object} siswa
- * @param {string} [garam] — dipakai HANYA untuk memecah tabrakan hash.
  */
-export function buatKodeSiswa(siswa, garam = '') {
+export function buatKodeSiswa(siswa) {
   if (siswa?.kodeUnik) return String(siswa.kodeUnik);
-
-  const kelas = String(siswa?.kelas || 'KELAS')
-    .toUpperCase().replace(/[^A-Z0-9]+/g, '').slice(0, 6) || 'KELAS';
-
-  const seed = String(
-    siswa?.uid || siswa?.id ||
-    `${siswa?.nama || ''}|${siswa?.nisn || ''}|${siswa?.kelas || ''}`
-  );
-
-  const hash = fnv1a32(seed + garam).toString(36).toUpperCase().padStart(6, '0').slice(-6);
-  const ident = String(siswa?.nisn || seed).replace(/\D/g, '').slice(-4).padStart(4, '0');
-  return `ALE-${kelas}-${hash}-${ident}`;
+  return buatKodeAcak();
 }
 
 /** Validasi bentuk kode (dipakai halaman scan sebelum query ke Supabase). */
-export const KODE_SISWA_REGEX = /^ALE-[A-Z0-9]{1,6}-[A-Z0-9]{6}-\d{4}$/;
+export const KODE_SISWA_REGEX = /^(?:ALE-[0-9A-F]{32}|ALE-[A-Z0-9]{1,6}-[A-Z0-9]{6}-\d{4})$/;
 export const kodeSiswaValid = (kode) => KODE_SISWA_REGEX.test(String(kode || '').trim());
 
 /** Basis path aplikasi: buang nama berkas (index.html), pastikan diakhiri '/'. */

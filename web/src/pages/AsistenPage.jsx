@@ -11,7 +11,7 @@ const SARAN = [
   'Susun pertanyaan refleksi untuk siswa setelah belajar.',
 ];
 const MAKS_RIWAYAT_TAMPIL = 100;
-const NAMA_PROVIDER = { gemini: 'Gemini', deepseek: 'DeepSeek', groq: 'Groq', cerebras: 'Cerebras' };
+const NAMA_PROVIDER = { gemini: 'Gemini', deepseek: 'DeepSeek', groq: 'Groq', claude: 'Claude' };
 
 export default function AsistenPage() {
   const { features } = usePlatformControls();
@@ -45,7 +45,7 @@ export default function AsistenPage() {
     try {
       const hasil = await tanyaAsisten(user?.uid, berikutnya.slice(-16).map(({ role, text }) => ({ role, text })));
       setMessages((lama) => [...lama, { role: 'assistant', text: hasil.answer }].slice(-MAKS_RIWAYAT_TAMPIL));
-      setProvider(NAMA_PROVIDER[hasil.penyedia] || hasil.penyedia);
+      setProvider(NAMA_PROVIDER[hasil.provider] || hasil.provider);
     } catch (err) {
       console.error('[asisten] Permintaan AI gagal:', err);
       setError(err.message || 'Permintaan AI gagal. Silakan coba lagi.');
@@ -66,7 +66,7 @@ export default function AsistenPage() {
     try {
       const hasil = await tanyaAsisten(user?.uid, messages.slice(-16).map(({ role, text }) => ({ role, text })));
       setMessages((lama) => [...lama, { role: 'assistant', text: hasil.answer }].slice(-MAKS_RIWAYAT_TAMPIL));
-      setProvider(NAMA_PROVIDER[hasil.penyedia] || hasil.penyedia);
+      setProvider(NAMA_PROVIDER[hasil.provider] || hasil.provider);
     } catch (err) {
       console.error('[asisten] Pengulangan permintaan AI gagal:', err);
       setError(err.message || 'Permintaan AI gagal. Silakan coba lagi.');
@@ -115,7 +115,7 @@ export default function AsistenPage() {
       <div className="ai-chat-card">
         <div className="ai-chat-meta">
           <span className="ai-status"><span aria-hidden="true" /> {aiEnabled ? 'Siap membantu' : 'Layanan dinonaktifkan'}</span>
-          <span>Provider mengikuti pilihan akun: Gemini, DeepSeek, atau Groq</span>
+          <span>Provider mengikuti pilihan akun: Gemini, DeepSeek, Groq, atau Claude</span>
         </div>
 
         {!aiEnabled && (
@@ -180,6 +180,8 @@ export default function AsistenPage() {
         </form>
         <p className="ai-provider-note">
           {provider ? `Jawaban terakhir dibuat dengan ${provider}. ` : ''}
+          Pesan yang dikirim akan diproses oleh provider AI yang Anda sambungkan, yang dapat
+          mengenakan biaya atau membatasi kuota.
           Jawaban AI dapat keliru; periksa kembali informasi penting.
         </p>
       </div>

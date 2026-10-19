@@ -3,20 +3,37 @@
 Monorepo for the AI_nnoe Learning Ecosystem web application and its backend
 services.
 
-## Release readiness snapshot (2026-10-19)
+## Release readiness snapshot (2026-10-20)
 
-The current worktree's web build and test suite are validated locally, but the
-application is not yet a verified public release. The supplied Vercel preview
-and release-candidate URLs both returned HTTP 302 to Vercel authentication,
-so public access and runtime behavior could not be verified. The hosted
-Supabase inventory below still lacks the billing relations and migration
-history; both Midtrans Edge Functions remain fail-closed with HTTP 410.
-Midtrans charges transaction fees, so live checkout is incompatible with a
-strict zero-cost guarantee. AdSense script loading is disabled; the static
-`ads.txt` publisher entry has not been verified against an approved account.
-AdMob is not integrated: the current Android project is a Trusted Web Activity,
-not a native app with the AdMob SDK. No APK should be called a release until a
-public HTTPS hostname and matching Digital Asset Links are verified.
+The login-only hotfix `f616440b` is deployed to Production at
+`https://ainnoe-le.vercel.app/`. Anonymous smoke tests verified the login page,
+primary JavaScript/CSS assets, and Digital Asset Links (`200`). Email and
+Google sign-in providers are enabled; public signup, trial registration,
+checkout, and ads remain disabled. No database migration was applied.
+A fresh anonymous browser check on 2026-10-20 confirmed the Production login
+page does not show the trial CTA. No credentials were entered and no signup was
+submitted.
+
+The owner reports that the Superadmin account can log in but currently sees
+only the dashboard. Superadmin menu access is controlled by the server-issued
+role claim; this remains a release blocker until the Staging profile and fresh
+JWT claim are verified and the Superadmin menu is confirmed.
+
+The three accounts in the separately supplied account document are present in
+Production Auth, confirmed, and not banned. A successful login was not tested
+with their credentials: one account has a prior sign-in, while two have no
+recorded sign-in. The account owner must verify those sign-ins after deployment.
+The supplied document contains plaintext password fields; keep it out of the
+repository and rotate those passwords through the account provider.
+
+This is a limited login release, not a full public release of signup, trials,
+payments, or ads. The hosted Supabase inventory still lacks the billing
+relations and migration history; both Midtrans Edge Functions remain fail-closed
+with HTTP 410. Midtrans charges transaction fees, so live checkout is
+incompatible with a strict zero-cost guarantee. AdSense script loading is
+disabled and the static `ads.txt` publisher entry has not been verified against
+an approved account. AdMob is not integrated: the current Android project is a
+Trusted Web Activity, not a native app with the AdMob SDK.
 
 ## Product description and feature status
 

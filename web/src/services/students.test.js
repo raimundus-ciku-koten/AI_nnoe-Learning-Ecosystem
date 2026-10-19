@@ -31,7 +31,7 @@ const row = (id, name = 'Ayu') => ({
   kelas: '7A',
   nisn: null,
   jk: 'P',
-  kode_unik: `ALE-7A-${id.slice(0, 6).toUpperCase()}-0000`,
+  kode_unik: 'ALE-0123456789ABCDEF0123456789ABCDEF',
   created_at: '2026-10-18T00:00:00Z',
   updated_at: '2026-10-18T00:00:00Z',
 });
@@ -55,8 +55,8 @@ describe('Supabase student service', () => {
       id: '12345678-1234-1234-1234-123456789012',
       nama: 'Ayu',
       jk: 'P',
-      kodeUnik: 'ALE-7A-123456-0000',
-      urlScan: 'https://ainnoe.app/#/scan/ALE-7A-123456-0000',
+      kodeUnik: 'ALE-0123456789ABCDEF0123456789ABCDEF',
+      urlScan: 'https://ainnoe.app/#/scan/ALE-0123456789ABCDEF0123456789ABCDEF',
     });
   });
 

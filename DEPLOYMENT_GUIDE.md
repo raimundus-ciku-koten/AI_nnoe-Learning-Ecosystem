@@ -5,27 +5,34 @@ Overview
 This document records the release state and the remaining safe rollout steps for AI_nnoe Learning Ecosystem.
 
 Current release status:
-- Production is publicly available at `https://ainnoe-le.vercel.app/`. The Vercel production deployment is Ready; Preview remains protected.
-- The production site and login page load anonymously. `/.well-known/assetlinks.json` returns HTTP 200 and its package name and signing fingerprint match the repository configuration and signed APK candidate. The trial signup form is visible, but registration must remain blocked until Turnstile is configured and verified server-side.
-- Trial registration is intentionally unavailable until Turnstile is configured and verified server-side by Supabase Auth. The form fails closed while its site key is missing.
-- The Supabase organization is on the Free plan. Production `Ainnoe LE` (`jvcrmzmuxgyuetkjqady`) and the new blank `Ainnoe LE Staging` (`samszhfyhbjuculrcffg`) are both in `ap-south-1`. No migrations have been applied to staging and it has not been brought to schema parity with Production.
+- The login-only hotfix `f616440b` is deployed as a new Vercel Production deployment from the Production environment. The Preview deployment was not promoted because it uses Staging environment values.
+- The Production site and login page load anonymously. The email/password and Google sign-in controls are present; trial/signup controls are not shown. The primary JavaScript and CSS assets and `/.well-known/assetlinks.json` return HTTP 200.
+- Production Supabase Auth has the email and Google providers enabled, while “Allow new users to sign up” is disabled. The three accounts in the separately supplied account document are present, confirmed, and not banned. One has a prior sign-in; two have no recorded sign-in, so their credentials still require owner-run sign-in verification.
+- The supplied account document contains plaintext password fields. Keep it out of source control and rotate those passwords through the account provider before reuse.
+- Trial registration remains disabled. Any future trial/signup release requires Turnstile to be configured and verified server-side by Supabase Auth.
+- The Supabase organization is on the Free plan. Production `Ainnoe LE` (`jvcrmzmuxgyuetkjqady`) and `Ainnoe LE Staging` (`samszhfyhbjuculrcffg`) are both in `ap-south-1`. On 2026-10-20 the owner confirmed that Staging has the required schema and that Production backup restore was tested. This workspace has no Supabase CLI credentials, so that readiness and the backup artifact have not been independently inspected here; no rollout migrations have been run.
 - Supabase CAPTCHA protection is currently disabled. A Turnstile widget and server-side CAPTCHA validation have not been verified.
-- Hosted Supabase migrations have not been applied. Midtrans business review is in progress. AdSense has no registered sites yet; `ads.txt` is published, but ads are not active.
+- The new rollout migrations listed in this guide (price catalog, trial, active-profile check, private AI credentials, and random attendance tokens) have not been applied to Staging or Production. Midtrans business review is in progress. AdSense has no registered sites yet; `ads.txt` is published, but ads are not active.
+- A fresh anonymous Production browser check on 2026-10-20 showed the login page without the trial CTA. No account or signup form was submitted. The previously shared Preview page recorded Turnstile error `300030`; treat Preview signup as unverified and keep it disabled.
 
 Do NOT apply database migrations to hosted Supabase until backups and a staging verification are complete.
 
 1) Pull request and release branch
 
 - PR #3 was merged into `migration/supabase-foundation-preview`; `main` remains unchanged. In the release repository, PR #2 (`Add secure 3-day demo trial and align Indonesian pricing`) is closed without being merged; its CI and Vercel preview checks passed, but that is not evidence that the changes were merged into the production source branch.
-- The public production deployment was promoted from the Ready feature preview and rebuilt with the Production environment. Do not treat Preview environment values as Production values.
+- PR #1 (`chore: establish staged Supabase migration foundation`) remains open against `main`. Its `verify` checks passed, but GitHub reports the Vercel deployment check as failed; inspect that deployment before merging. The local `fix/login-only-public-release` branch diverges from the Preview base and contains six commits not yet submitted as a PR. Reconcile it with `migration/supabase-foundation-preview` before opening a release PR; do not target `main` while the foundation PR is unresolved.
+- The login-only hotfix was redeployed from commit `f616440b` with Vercel's Production environment. The Staging Preview was not promoted. Do not treat Preview environment values as Production values.
 - Keep the trial migration source-only until the backup, staging, and approval requirements below are satisfied.
+- The owner reports that the AI provider and Canva OAuth secrets are configured server-side. Do not request or copy their values; provider calls still need an authenticated Staging smoke test.
+- Superadmin navigation is driven by the server-authorized role claim, not by a client-side email check. The verified-owner bootstrap is in `supabase/migrations/20261016000400_verified_superadmin_bootstrap.sql`. If the owner can log in but sees only the dashboard, inspect the account's `profiles.role`, `profiles.roles`, `profiles.active`, and freshly issued `app_metadata.role` in Staging. Do not grant Superadmin in frontend code; the role must be provisioned server-side and the session refreshed.
 
 2) CI / Build verification
 
 - The repository includes `web/package.json` scripts for build and test. Locally run:
   - npm --prefix web run build
   - npm --prefix web test
-- The build and tests must pass in CI (GitHub Actions). If not present, add a job that runs `npm ci` and the above commands on PR updates.
+- The GitHub Actions web CI also type-checks the new Supabase Edge Functions with Deno. The build, tests, and Edge Function checks must pass on the release PR.
+- Workspace design analyzer `skillui@1.3.4` is a development-only dependency and is not bundled into the web application. The owner accepted its unresolved dependency advisories for local use; do not run `skillui --repo` on untrusted repositories. The production dependency audit (`npm audit --omit=dev`) currently reports zero vulnerabilities, while the full development dependency audit still reports four advisories (two critical, one high, one low).
 
 3) Supabase migration policy (CRITICAL, manual step)
 
@@ -44,9 +51,18 @@ Applying migrations (recommended workflow):
   3. Run the full test suite (local and any DB-focused integration tests) against staging.
   4. After sign-off, apply migrations to production during a maintenance window.
 
-The migration in this PR: `supabase/migrations/20261019000200_public_demo_trial.sql` creates `trial_registrations` and writes `trial_expires_at`. It is append-only but modifies `public.provision_auth_profile()` and `public.custom_access_token_hook()` logic. Audit these functions carefully in staging.
+The trial migration `supabase/migrations/20261019000200_public_demo_trial.sql` creates `trial_registrations` and writes `trial_expires_at`. It is append-only but modifies `public.provision_auth_profile()` and `public.custom_access_token_hook()` logic. Audit these functions carefully in staging. The additional source-only migrations `20261019000100_indonesia_price_catalog.sql`, `20261019000300_live_profile_active_check.sql`, `20261019000400_private_ai_credentials.sql`, and `20261019000500_random_attendance_tokens.sql` are also not applied to Staging or Production.
 
-Current blocker: the staging project exists but is a blank database, not a clone of Production. Its schema has not been migrated or compared, and no Production backup/restore has been verified. Do not use Production as a substitute for staging.
+Current blocker: the owner reports Staging and backup restore are ready, but this workspace cannot inspect the hosted migration history or verify the restore artifact because Supabase CLI access is not configured. Before applying the source-only migrations, confirm the foundation migrations are present in Staging and resolve the Superadmin role/claim mismatch there. Do not use Production as a substitute for staging.
+
+7) Attendance rollout aligned with the school attendance guide
+
+- QR/barcode remains the active attendance method. New cards print a QR link to the authenticated scan page and retain a Code128 option for dedicated scanners. The link carries only a cryptographically random opaque token, not class, NISN, or a student name.
+- Existing printed cards remain valid during the compatibility rollout. Existing legacy codes can contain the class and the last four NISN digits; replace/reissue those cards before claiming all school cards meet the token-only privacy rule. Do not rotate them in bulk without a school-approved reprint plan.
+- The scan confirmation shows only the student's first name and does not display NISN or the card token. Attendance remains teacher-authenticated and scoped by Supabase RLS.
+- Face recognition is not implemented or enabled. Do not collect/store face images or embeddings until a separately approved volunteer pilot has written consent, a non-biometric QR/manual alternative, tested liveness/anti-spoofing, access controls, retention/deletion rules, and an evaluated on-device design.
+- Offline queueing, manual correction with reason/audit trails, device-level scan audit, and attendance-pattern alerts are not yet available. Do not advertise these as release features; add and validate them as separately scoped work before relying on those controls.
+- Apply `20261019000500_random_attendance_tokens.sql` only through the documented backup, staging parity, validation, and approval process. This migration permits new random tokens while preserving legacy tokens; it does not rewrite existing student records.
 
 The staging database password was generated in Supabase during project creation and was not copied into this repository or chat. If direct database access is later needed for CLI migrations or backup/restore, reset it in Supabase and store the replacement in an approved password manager.
 
@@ -124,6 +140,18 @@ A signed APK candidate already exists at `android-apk/app/build/outputs/apk/rele
 - Wait for Midtrans business review and complete sandbox/webhook tests before enabling checkout.
 - Complete AdSense site verification and policy approval before enabling ads.
 - Publish the privacy contact and verified email-erasure process before inviting students or processing real school data.
+
+11) AI provider and Canva rollout (source changes only)
+
+- AI assistant and question-draft requests use the authenticated Supabase Edge Function `ai-user-services`. Teachers provide their own Gemini, DeepSeek, Groq, or Claude key; the browser never calls AI provider APIs directly. There is no platform-key fallback.
+- Before allowing AI traffic, apply `supabase/migrations/20261019000400_private_ai_credentials.sql` to a verified staging database, then deploy `ai-user-services`, `canva-oauth-start`, and `canva-oauth-callback` to that same project. The backend enforces `platform_control.features.aiAssistant` and `aiGeneration` for assistant, question-generation, and provider-key verification requests.
+- Configure `AI_CREDENTIALS_KEYRING` as a Supabase Edge Function secret. Its value is JSON shaped like `{"active":"v1","keys":{"v1":"<base64-encoded-32-byte-key>"}}`. Generate the 32-byte encryption key using an approved secure process and store it only in the secret manager. Do not paste it into chat, source control, Vercel, or browser variables. Preserve older key versions during key rotation until all credentials encrypted with them have been re-encrypted or removed.
+- Canva OAuth additionally requires the server-side secrets `CANVA_CLIENT_ID`, `CANVA_CLIENT_SECRET`, `CANVA_REDIRECT_URI`, and `CANVA_APP_URL`. Register the exact callback URL `https://<project-ref>.supabase.co/functions/v1/canva-oauth-callback` in the Canva developer app and enable the requested `design:content:write` scope. `CANVA_APP_URL` must be the intended HTTPS application URL. Never expose the client secret or encryption key to the browser.
+- The function configuration requires JWT verification for `ai-user-services` and `canva-oauth-start`; `canva-oauth-callback` is intentionally public for the OAuth redirect and validates a one-time, expiring server-side state before accepting the authorization code.
+- The AI settings page discloses provider processing and possible fees. Verifying a submitted key makes a small provider request; a free quota or continued model availability is not guaranteed. AI keys are encrypted at rest and are used only for the owner's requests.
+- Canva support in this release is limited to connecting and disconnecting an account (including remote token revocation). Creating or editing Canva designs from the application is not implemented. The planning-document AI generator is also not connected to this backend yet; do not advertise either capability as available.
+- The AI settings, authenticated assistant, and question-draft flows are wired to these functions in source. The provider IDs have been checked against current provider documentation. The owner reports that provider secrets are configured in the dashboard, but provider requests have not yet been validated in Staging. Planning-document generation and Canva design creation/editing remain unavailable and must not be advertised.
+- These migration and function changes are not deployed to Staging or Production. Follow the backup, schema-parity, staging-validation, and written-approval requirements in section 3 before any hosted migration or Production rollout. Verify the four AI providers, account isolation, disabled-feature behavior, Canva connect/disconnect, and OAuth error paths in Staging first.
 
 ---
 

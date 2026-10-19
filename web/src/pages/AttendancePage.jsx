@@ -92,6 +92,15 @@ export default function AttendancePage() {
         </a>
       </header>
 
+      <section className="ale-kartu attendance-guidance" role="note" aria-label="Metode presensi">
+        <strong>QR/barcode adalah metode yang aktif.</strong>
+        <span>
+          Kode kartu baru bersifat acak dan tidak memuat NISN. Pengenalan wajah belum diaktifkan;
+          pilot biometrik memerlukan persetujuan tertulis, alternatif QR/manual, liveness, dan
+          kebijakan retensi serta penghapusan data.
+        </span>
+      </section>
+
       <section className="attendance-summary" aria-label="Ringkasan presensi">
         <article className="ale-kartu attendance-stat">
           <span>Catatan pada tampilan</span>

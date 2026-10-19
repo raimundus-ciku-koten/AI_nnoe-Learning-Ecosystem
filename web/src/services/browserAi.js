@@ -1,47 +1,79 @@
-export const EXTERNAL_AI_PROVIDERS_ENABLED = false;
+import { jalankanAiUserService } from './aiUserServices.js';
 
-const PROVIDERS = ['gemini', 'deepseek', 'groq'];
-const WORKFLOWS = ['planning', 'assistant', 'questions'];
-const AI_DISABLED_MESSAGE = 'Provider AI eksternal dinonaktifkan untuk mencegah biaya atau billing yang tidak disengaja.';
+const PROVIDERS = ['gemini', 'deepseek', 'groq', 'claude'];
+const WORKFLOWS = ['assistant', 'questions'];
+const DEFAULT_PREFERENCES = { assistant: 'auto', questions: 'auto' };
 
-function rejectExternalAi() {
-  throw new Error(AI_DISABLED_MESSAGE);
+function preferencesKey(uid) {
+  return `ai-preferences:${uid}`;
 }
 
-export function getBrowserAiConnections(uid) {
+function muatPreferensi(uid) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(preferencesKey(uid)) || '{}');
+    return Object.fromEntries(WORKFLOWS.map((workflow) => [
+      workflow,
+      saved[workflow] === 'auto' || PROVIDERS.includes(saved[workflow])
+        ? saved[workflow]
+        : DEFAULT_PREFERENCES[workflow],
+    ]));
+  } catch {
+    return DEFAULT_PREFERENCES;
+  }
+}
+
+function requireUid(uid) {
   if (!uid) throw new Error('Sesi login tidak tersedia. Masuk kembali.');
-  return {
-    providers: Object.fromEntries(PROVIDERS.map((provider) => [
-      provider,
-      { personal: false, platform: false, available: false },
-    ])),
-    preferences: Object.fromEntries(WORKFLOWS.map((workflow) => [workflow, 'auto'])),
-    personalKeysEnabled: false,
-  };
-}
-
-export async function testAndSaveBrowserKey() {
-  rejectExternalAi();
-}
-
-export function removeBrowserKey() {
-  rejectExternalAi();
 }
 
 export function clearBrowserAiSession() {}
 
-export function setBrowserAiPreference() {
-  rejectExternalAi();
+export async function getBrowserAiConnections(uid) {
+  requireUid(uid);
+  return jalankanAiUserService('status');
 }
 
-export async function generateBrowserQuestion() {
-  rejectExternalAi();
+export async function testAndSaveBrowserKey(uid, provider, apiKey) {
+  requireUid(uid);
+  return jalankanAiUserService('save-key', { provider, apiKey });
 }
 
-export async function askBrowserAssistant() {
-  rejectExternalAi();
+export async function removeBrowserKey(uid, provider) {
+  requireUid(uid);
+  return jalankanAiUserService('remove-key', { provider });
+}
+
+export function setBrowserAiPreference(uid, workflow, provider) {
+  requireUid(uid);
+  if (!WORKFLOWS.includes(workflow) || (provider !== 'auto' && !PROVIDERS.includes(provider))) {
+    throw new Error('Preferensi provider AI tidak valid.');
+  }
+  const next = { ...muatPreferensi(uid), [workflow]: provider };
+  localStorage.setItem(preferencesKey(uid), JSON.stringify(next));
+  return next;
+}
+
+export async function askBrowserAssistant(uid, messages) {
+  requireUid(uid);
+  return jalankanAiUserService('assistant', {
+    messages,
+    providerPreference: muatPreferensi(uid).assistant,
+  });
+}
+
+export async function generateBrowserQuestion(uid, context) {
+  requireUid(uid);
+  return jalankanAiUserService('question', {
+    ...context,
+    providerPreference: muatPreferensi(uid).questions,
+  });
 }
 
 export async function generateBrowserPlanning() {
-  rejectExternalAi();
+  throw new Error('Generator perangkat AI belum terhubung ke backend aktif.');
+}
+
+export async function startCanvaOAuth(uid) {
+  requireUid(uid);
+  return jalankanAiUserService('canva-oauth-start', {});
 }

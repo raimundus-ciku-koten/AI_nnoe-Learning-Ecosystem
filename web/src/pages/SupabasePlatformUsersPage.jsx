@@ -66,6 +66,28 @@ function formatAuthError(error) {
   return error?.message || 'Permintaan tidak berhasil. Silakan coba kembali.';
 }
 
+async function kirimUndanganPlatform(email, nama) {
+  const { data, error } = await supabase.functions.invoke('platform-user-invite', {
+    body: { email, nama },
+  });
+  if (error) {
+    const response = error.context;
+    let detail = error.message;
+    if (response instanceof Response) {
+      try {
+        const body = await response.clone().json();
+        if (typeof body?.error === 'string') detail = body.error;
+      } catch {
+        detail = error.message;
+      }
+    }
+    throw new Error(detail);
+  }
+  if (data?.invited !== true) {
+    throw new Error('Layanan undangan tidak mengonfirmasi pengiriman email.');
+  }
+}
+
 export default function SupabasePlatformUsersPage() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -263,7 +285,8 @@ export default function SupabasePlatformUsersPage() {
     setError('');
     setNotice('');
 
-    let roleSaved = false;
+    let accountSaved = false;
+    let invitationSent = false;
     try {
       const selectedRoles = supportsRoleAssignments
         ? [...new Set([...form.roles, form.role])]
@@ -294,10 +317,16 @@ export default function SupabasePlatformUsersPage() {
       if (supportsRoleAssignments) request.p_roles = selectedRoles;
       const { data, error: rpcError } = await supabase.rpc('manage_platform_user', request);
       if (rpcError) throw rpcError;
-      roleSaved = true;
+      accountSaved = true;
 
       if (data?.invitation_required) {
-        setNotice(`Peran ${displayRole(request.p_role, selectedRoles)} disimpan pada allowlist untuk ${request.p_email}. Undangan tidak dikirim otomatis; buat atau undang identitas melalui Supabase Auth, lalu konfirmasikan email agar akses aplikasi dapat aktif.`);
+        if (form.active) {
+          await kirimUndanganPlatform(request.p_email, request.p_nama);
+          invitationSent = true;
+          setNotice(`Peran ${displayRole(request.p_role, selectedRoles)} tersimpan dan undangan dikirim ke ${request.p_email}. Akses aktif setelah pemilik email mengonfirmasi undangan.`);
+        } else {
+          setNotice(`Peran ${displayRole(request.p_role, selectedRoles)} tersimpan dalam keadaan nonaktif. Undangan tidak dikirim.`);
+        }
       } else {
         setNotice(`Profil ${request.p_email} berhasil diperbarui. Perubahan hak akses berlaku pada token sesi baru pengguna.`);
       }
@@ -307,12 +336,64 @@ export default function SupabasePlatformUsersPage() {
       await loadDirectory(session.user.id);
     } catch (saveError) {
       console.error('[supabase-platform-users] Gagal menyimpan perubahan akun:', saveError);
-      if (roleSaved) {
-        setNotice('Perubahan peran sudah tersimpan, tetapi direktori gagal dimuat ulang. Muat ulang halaman untuk memverifikasi hasilnya.');
+      if (accountSaved) {
+        setNotice(invitationSent
+          ? 'Perubahan dan undangan sudah tersimpan, tetapi direktori gagal dimuat ulang.'
+          : 'Perubahan akses sudah tersimpan, tetapi undangan atau pemuatan direktori gagal. Periksa pesan error dan muat ulang sebelum mencoba lagi.');
         setError(formatAuthError(saveError));
       } else {
         setError(formatAuthError(saveError));
       }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function ubahStatusAkses(user, active) {
+    if (saving || !profile || !user.email || user.role === 'superadmin' || user.role === 'unprovisioned') return;
+    if (!active && !window.confirm(`Nonaktifkan akses ${user.email}? Profil dan riwayatnya akan tetap disimpan.`)) return;
+
+    setSaving(true);
+    setError('');
+    setNotice('');
+    let accountSaved = false;
+    let invitationSent = false;
+    try {
+      const roles = [...new Set([user.role, ...(user.roles || [])])];
+      const request = {
+        p_email: user.email.trim().toLowerCase(),
+        p_nama: user.nama || user.email,
+        p_role: user.role,
+        p_tenant_id: user.tenant_id,
+        p_active: active,
+        p_nip: user.nip || null,
+        p_mapel_ids: user.mapel_ids || [],
+        p_kelas_ids: user.kelas_ids || [],
+      };
+      if (supportsRoleAssignments) request.p_roles = roles;
+
+      const { data, error: rpcError } = await supabase.rpc('manage_platform_user', request);
+      if (rpcError) throw rpcError;
+      accountSaved = true;
+      if (active && data?.invitation_required) {
+        await kirimUndanganPlatform(request.p_email, request.p_nama);
+        invitationSent = true;
+      }
+
+      setNotice(active
+        ? invitationSent
+          ? `Undangan dikirim ke ${request.p_email}; akses aktif setelah email dikonfirmasi.`
+          : `Akses ${request.p_email} diaktifkan kembali.`
+        : `Akses ${request.p_email} dinonaktifkan. Profil dan riwayatnya tetap disimpan.`);
+      await loadDirectory(session.user.id);
+    } catch (statusError) {
+      console.error('[supabase-platform-users] Gagal mengubah status akses:', statusError);
+      if (accountSaved) {
+        setNotice(invitationSent
+          ? 'Undangan terkirim, tetapi direktori gagal dimuat ulang.'
+          : 'Status akses tersimpan, tetapi undangan atau pemuatan direktori gagal. Periksa pesan error dan muat ulang.');
+      }
+      setError(formatAuthError(statusError));
     } finally {
       setSaving(false);
     }
@@ -369,7 +450,7 @@ export default function SupabasePlatformUsersPage() {
 
           <section className="supabase-platform-users__card" aria-labelledby="supabase-user-form-title">
             <h2 id="supabase-user-form-title">{editing ? 'Ubah akses pengguna' : 'Tambahkan pengguna'}</h2>
-            <p>Peran superadmin tidak dapat diberikan melalui formulir ini. Akun baru hanya dimasukkan ke allowlist; identitas Auth harus dibuat dan dikonfirmasi sebelum akses aktif.</p>
+            <p>Peran superadmin tidak dapat diberikan melalui formulir ini. Akun baru yang aktif akan menerima undangan email; akses baru aktif setelah email dikonfirmasi.</p>
             <form className="supabase-platform-users__form" onSubmit={saveUser}>
               <label>
                 Nama lengkap
@@ -470,7 +551,7 @@ export default function SupabasePlatformUsersPage() {
               </label>
               <div className="supabase-platform-users__actions">
                 <button type="submit" disabled={saving}>
-                  {saving ? 'Menyimpan…' : editing ? 'Simpan perubahan' : 'Tambahkan ke allowlist'}
+                  {saving ? 'Menyimpan…' : editing ? 'Simpan perubahan' : 'Tambahkan dan kirim undangan'}
                 </button>
                 {editing && (
                   <button
@@ -515,8 +596,18 @@ export default function SupabasePlatformUsersPage() {
                         <td>{user.instansi || user.tenant_id || '—'}</td>
                         <td>{user.pendingConfirmation ? 'Menunggu Auth / konfirmasi' : user.active ? 'Aktif' : 'Nonaktif'}</td>
                         <td>
-                          {user.role !== 'superadmin' && (
-                            <button type="button" className="is-secondary" onClick={() => editUser(user)}>Ubah akses</button>
+                          {user.role !== 'superadmin' && user.role !== 'unprovisioned' && (
+                            <>
+                              <button type="button" className="is-secondary" disabled={saving} onClick={() => editUser(user)}>Ubah akses</button>
+                              <button
+                                type="button"
+                                className="is-secondary"
+                                disabled={saving || !user.email}
+                                onClick={() => void ubahStatusAkses(user, !user.active)}
+                              >
+                                {user.active ? 'Nonaktifkan akses' : 'Aktifkan akses'}
+                              </button>
+                            </>
                           )}
                         </td>
                       </tr>

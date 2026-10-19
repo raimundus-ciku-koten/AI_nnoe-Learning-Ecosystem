@@ -1,10 +1,12 @@
 // Jalankan: npx vitest run
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import {
   CODE128_POLA, CODE128_START_B, CODE128_STOP,
   nilaiCode128B, bitCode128B, barcodeCode128SVG, barcodeCode39SVG, bitCode39,
 } from './barcode.js';
 import { buatKodeSiswa, fnv1a32, kodeSiswaValid, urlScanKode } from './kodeSiswa.js';
+
+afterEach(() => vi.restoreAllMocks());
 
 function decode128(bit) {
   const nilai = [];
@@ -59,14 +61,18 @@ describe('kode siswa', () => {
     expect(fnv1a32('a')).toBe(0xe40c292c);
     expect(fnv1a32('foobar')).toBe(0xbf9cf968);
   });
-  it('deterministik, valid, dan menghormati kodeUnik tersimpan', () => {
+  it('menghasilkan token acak tanpa data siswa dan menghormati kodeUnik tersimpan', () => {
     const s = { id: 'abc123xyz', nama: 'Budi', nisn: '0012349012', kelas: '7A' };
+    const randomUUID = vi.spyOn(globalThis.crypto, 'randomUUID')
+      .mockReturnValueOnce('00123490-127a-4cde-8f00-123456789abc')
+      .mockReturnValueOnce('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
     const k = buatKodeSiswa(s);
-    expect(buatKodeSiswa(s)).toBe(k);
+    expect(k).toBe('ALE-00123490127A4CDE8F00123456789ABC');
+    expect(buatKodeSiswa(s)).toBe('ALE-AAAAAAAAAAAA4AAA8AAAAAAAAAAAAAAA');
+    expect(randomUUID).toHaveBeenCalledTimes(2);
     expect(kodeSiswaValid(k)).toBe(true);
-    expect(k.endsWith('-9012')).toBe(true);
     expect(buatKodeSiswa({ ...s, kodeUnik: 'ALE-X-AAAAAA-0001' })).toBe('ALE-X-AAAAAA-0001');
-    expect(buatKodeSiswa(s, '#1')).not.toBe(k);
+    expect(kodeSiswaValid('ALE-X-AAAAAA-0001')).toBe(true);
   });
   it('URL scan', () => {
     expect(urlScanKode('ALE 1/2', 'https://x.id')).toBe('https://x.id/#/scan/ALE%201%2F2');

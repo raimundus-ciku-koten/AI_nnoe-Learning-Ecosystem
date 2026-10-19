@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { buatKodeSiswa, kodeSiswaValid } from '../web/src/pages/dataDasar/kodeSiswa.js';
+import { kodeSiswaValid } from '../web/src/pages/dataDasar/kodeSiswa.js';
 
 const UUID_NAMESPACE = '3957e3cb-9a84-5f63-8d5e-f161cd62c990';
 const STUDENT_FIELDS = [
@@ -116,20 +116,13 @@ const normalizeStudent = (entry, ownerUid, studentDocumentId, reconciledAt) => {
   }
 
   const sourceKey = sourceKeyFor(ownerUid, studentDocumentId);
-  let kodeUnik;
-  if (Object.hasOwn(data, 'kodeUnik')) {
-    if (typeof data.kodeUnik !== 'string' || !kodeSiswaValid(data.kodeUnik.trim())) {
-      return { error: 'source_student_code_invalid' };
-    }
-    kodeUnik = data.kodeUnik.trim();
-  } else {
-    kodeUnik = buatKodeSiswa({
-      id: sourceKey,
-      nama,
-      nisn: nisn ?? '',
-      kelas,
-    });
+  if (!Object.hasOwn(data, 'kodeUnik')) {
+    return { error: 'source_student_code_missing' };
   }
+  if (typeof data.kodeUnik !== 'string' || !kodeSiswaValid(data.kodeUnik.trim())) {
+    return { error: 'source_student_code_invalid' };
+  }
+  const kodeUnik = data.kodeUnik.trim();
 
   if (Object.hasOwn(data, 'urlScan')) {
     const scanSuffix = `/#/scan/${encodeURIComponent(data.kodeUnik || '')}`;

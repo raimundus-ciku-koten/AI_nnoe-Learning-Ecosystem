@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { reconcileStudents } from '../../scripts/reconcileStudents.mjs';
-import { buatKodeSiswa } from '../src/pages/dataDasar/kodeSiswa.js';
 
 const ownerId = '11111111-1111-4111-8111-111111111111';
 
@@ -14,6 +13,7 @@ const makeInput = overrides => ({
       kelas: ' X-A ',
       nisn: '1234567890',
       jk: 'L',
+      kodeUnik: 'ALE-0123456789ABCDEF0123456789ABCDEF',
       dibuat: '2025-12-01T00:00:00Z',
       diperbarui: '2026-01-03T00:00:00Z',
     },
@@ -36,7 +36,7 @@ const makeInput = overrides => ({
   ...overrides,
 });
 
-test('maps owner-scoped student data and derives stable QR codes when absent', () => {
+test('maps owner-scoped student data and preserves its opaque QR token', () => {
   const report = reconcileStudents(makeInput());
   const proposal = report.proposals[0];
   assert.equal(report.mode, 'report-only');
@@ -47,16 +47,18 @@ test('maps owner-scoped student data and derives stable QR codes when absent', (
   assert.equal(proposal.kelas, 'X-A');
   assert.equal(proposal.nisn, '1234567890');
   assert.equal(proposal.jk, 'L');
-  assert.equal(proposal.kode_unik, buatKodeSiswa({
-    id: 'legacy-teacher/siswa/doc-1',
-    nama: 'Siswa Contoh',
-    nisn: '1234567890',
-    kelas: 'X-A',
-  }));
-  assert.match(proposal.kode_unik, /^ALE-[A-Z0-9]{1,6}-[A-Z0-9]{6}-[0-9]{4}$/);
+  assert.equal(proposal.kode_unik, 'ALE-0123456789ABCDEF0123456789ABCDEF');
   assert.equal(proposal.created_at, '2025-12-01T00:00:00.000Z');
   assert.equal(proposal.updated_at, '2026-01-03T00:00:00.000Z');
   assert.equal(JSON.stringify(report).includes('urlScan'), false);
+});
+
+test('quarantines a source student without a saved token instead of deriving one from personal data', () => {
+  const input = makeInput();
+  delete input.studentRecords[0].data.kodeUnik;
+  const report = reconcileStudents(input);
+  assert.equal(report.proposals.length, 0);
+  assert.equal(report.quarantined[0].reason, 'source_student_code_missing');
 });
 
 test('normalizes empty nullable fields and uses import time when source creation time is absent', () => {

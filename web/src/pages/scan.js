@@ -66,29 +66,28 @@ function tplLogin() {
     </section>`;
 }
 
-function tplGagal({ ikon = '✗', judul, pesan, info = '', kode = '', detik = null }) {
+function tplGagal({ ikon = '✗', judul, pesan, info = '', detik = null }) {
   return `
     <section class="scan-hasil scan-hasil--gagal" role="alert">
       <div class="scan-ikon" aria-hidden="true">${ikon}</div>
       <h1>${esc(judul)}</h1>
       <p>${pesan}</p>
-      ${kode ? `<p><code class="dd-kode">${esc(kode)}</code></p>` : ''}
       ${info ? `<p class="scan-info">${esc(info)}</p>` : ''}
       ${tombolKembali()}
       ${detik != null ? blokSisa(detik) : ''}
     </section>`;
 }
 
-function tplMemuat(kode) {
+function tplMemuat() {
   return `
     <section class="scan-hasil scan-hasil--memuat" role="status" aria-live="polite">
       <div class="scan-spinner" aria-hidden="true"></div>
       <h1>Memeriksa kode…</h1>
-      <p><code class="dd-kode">${esc(kode)}</code></p>
+      <p>Mohon tunggu sebentar.</p>
     </section>`;
 }
 
-function tplSiswa({ siswa, kode, hasil, detik }) {
+function tplSiswa({ siswa, hasil, detik }) {
   const jam = jamLokal(hasil?.waktu);
   let varian = 'sukses';
   let ikon = '✓';
@@ -107,12 +106,7 @@ function tplSiswa({ siswa, kode, hasil, detik }) {
   return `
     <section class="scan-hasil scan-hasil--${varian}" role="status" aria-live="polite">
       <div class="scan-ikon" aria-hidden="true">${ikon}</div>
-      <h1>${esc(siswa.nama || 'Siswa')}</h1>
-      <dl class="scan-detail">
-        <div><dt>Kelas</dt><dd>${esc(siswa.kelas || '-')}</dd></div>
-        <div><dt>NISN</dt><dd>${esc(siswa.nisn || '-')}</dd></div>
-        <div><dt>Kode</dt><dd><code class="dd-kode">${esc(kode)}</code></dd></div>
-      </dl>
+      <h1>${esc(String(siswa.nama || 'Siswa').trim().split(/\s+/)[0])}</h1>
       <p class="scan-info">${catatan}</p>
       ${tombolKembali('btn-primary', 'Scan Berikutnya')}
       ${blokSisa(detik)}
@@ -175,7 +169,7 @@ export async function halamanScan(wadah, ctx = {}) {
   }
   const { kode } = cek;
 
-  wadah.innerHTML = tplMemuat(kode);
+  wadah.innerHTML = tplMemuat();
 
   // Tunggu sesi Supabase siap; state aplikasi dipakai sebagai cadangan.
   let user = null;
@@ -231,7 +225,6 @@ export async function halamanScan(wadah, ctx = {}) {
     wadah.innerHTML = tplGagal({
       judul: 'Kode tidak dikenali',
       pesan: 'Kode ini tidak ditemukan pada data siswa Anda.',
-      kode,
       info: 'Pastikan kartu yang discan milik kelas Anda.',
       detik: Math.ceil(AUTO_KEMBALI_MS.gagal / 1000),
     });
@@ -241,7 +234,7 @@ export async function halamanScan(wadah, ctx = {}) {
 
   const sudah = hasil?.status === 'sudah';
   const ms = sudah ? AUTO_KEMBALI_MS.sudah : AUTO_KEMBALI_MS.sukses;
-  wadah.innerHTML = tplSiswa({ siswa, kode, hasil, detik: Math.ceil(ms / 1000) });
+  wadah.innerHTML = tplSiswa({ siswa, hasil, detik: Math.ceil(ms / 1000) });
   umpanBalik(sudah ? 'sudah' : 'sukses');
   return pasangAutoKembali(wadah, ms);
 }
