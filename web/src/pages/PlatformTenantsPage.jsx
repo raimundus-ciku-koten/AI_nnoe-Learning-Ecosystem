@@ -14,11 +14,15 @@ function statusTenant(active) {
 export default function PlatformTenantsPage() {
   const { role } = useAuth();
   const [tenants, setTenants] = useState([]);
+  const [requests, setRequests] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState('');
+  const [requestError, setRequestError] = useState('');
+  const [reviewingId, setReviewingId] = useState('');
+  const [reviewNotes, setReviewNotes] = useState({});
   const cursor = useRef(null);
   const busy = useRef(false);
 
@@ -35,14 +39,31 @@ export default function PlatformTenantsPage() {
     }
 
     try {
-      let request = supabase
+      let tenantQuery = supabase
         .from('tenants')
         .select('id, name, active')
         .order('id')
         .limit(UKURAN_HALAMAN + 1);
-      if (berikutnya && cursor.current) request = request.gt('id', cursor.current);
-      const { data, error: queryError } = await request;
+      if (berikutnya && cursor.current) tenantQuery = tenantQuery.gt('id', cursor.current);
+      const [tenantResult, requestResult] = await Promise.all([
+        tenantQuery,
+        supabase
+          .from('school_registration_requests')
+          .select('id,email,school_name,npsn,status,submitted_at')
+          .eq('status', 'pending')
+          .order('submitted_at')
+          .limit(100),
+      ]);
+      const { data, error: queryError } = tenantResult;
       if (queryError) throw queryError;
+      if (requestResult.error) {
+        console.error('[platform-tenants] Gagal memuat permohonan sekolah:', requestResult.error);
+        setRequestError('Antrean permohonan sekolah belum tersedia. Pastikan migrasi pendaftaran sekolah telah diterapkan.');
+        setRequests([]);
+      } else {
+        setRequestError('');
+        setRequests(requestResult.data || []);
+      }
 
       const page = data.slice(0, UKURAN_HALAMAN);
       cursor.current = page.at(-1)?.id || cursor.current;
@@ -59,6 +80,36 @@ export default function PlatformTenantsPage() {
       setLoadingMore(false);
     }
   }, [role]);
+
+  const tinjauPermohonan = async (item, keputusan) => {
+    const pertanyaan = keputusan === 'approve'
+      ? `Setujui pendaftaran ${item.school_name} (NPSN ${item.npsn}) dan buat tenant aktif?`
+      : `Tolak permohonan ${item.school_name} (NPSN ${item.npsn})?`;
+    if (!window.confirm(pertanyaan)) return;
+
+    setReviewingId(item.id);
+    setRequestError('');
+    try {
+      const { error: reviewError } = await supabase.rpc('review_school_registration_request', {
+        p_request_id: item.id,
+        p_decision: keputusan,
+        p_review_notes: reviewNotes[item.id] || null,
+      });
+      if (reviewError) throw reviewError;
+      setRequests((current) => current.filter((request) => request.id !== item.id));
+      setReviewNotes((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
+      await muat();
+    } catch (reviewError) {
+      console.error('[platform-tenants] Gagal meninjau permohonan:', reviewError);
+      setRequestError('Keputusan belum tersimpan. Pastikan MFA superadmin aktif dan coba lagi.');
+    } finally {
+      setReviewingId('');
+    }
+  };
 
   useEffect(() => {
     if (role === 'superadmin') void muat();
@@ -110,7 +161,7 @@ export default function PlatformTenantsPage() {
             className="platform-tenants-button secondary"
             type="button"
             onClick={() => void muat()}
-            disabled={loading || loadingMore}
+            disabled={loading || loadingMore || Boolean(reviewingId)}
           >
             {loading ? 'Memuat…' : 'Muat ulang'}
           </button>
@@ -159,6 +210,80 @@ export default function PlatformTenantsPage() {
             >
               {loadingMore ? 'Memuat…' : 'Muat tenant berikutnya'}
             </button>
+          </div>
+        )}
+      </section>
+
+      <section className="platform-tenants-card" aria-labelledby="school-requests-title">
+        <div className="platform-tenants-toolbar">
+          <div>
+            <h2 id="school-requests-title">Permohonan sekolah menunggu pemeriksaan</h2>
+            <p>{requests.length} permohonan dimuat · maksimum 100 per pemuatan</p>
+          </div>
+          <button
+            className="platform-tenants-button secondary"
+            type="button"
+            onClick={() => void muat()}
+            disabled={loading || loadingMore || Boolean(reviewingId)}
+          >
+            {loading ? 'Memuat…' : 'Muat ulang'}
+          </button>
+        </div>
+        {requestError && <p className="platform-tenants-error" role="alert">{requestError}</p>}
+        {!requestError && requests.length === 0 ? (
+          <p className="platform-tenants-empty">Tidak ada permohonan yang menunggu pemeriksaan.</p>
+        ) : !requestError && (
+          <div className="platform-tenants-table-wrap">
+            <table className="platform-tenants-table">
+              <thead>
+                <tr>
+                  <th scope="col">Sekolah</th>
+                  <th scope="col">NPSN</th>
+                  <th scope="col">Email pemohon</th>
+                  <th scope="col">Pemeriksaan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.map((item) => (
+                  <tr key={item.id}>
+                    <th scope="row">{item.school_name}</th>
+                    <td>{item.npsn}</td>
+                    <td>{item.email}</td>
+                    <td className="platform-tenant-review">
+                      <label>
+                        <span>Catatan (opsional)</span>
+                        <textarea
+                          value={reviewNotes[item.id] || ''}
+                          maxLength={1000}
+                          onChange={(event) => setReviewNotes((current) => ({
+                            ...current,
+                            [item.id]: event.target.value,
+                          }))}
+                        />
+                      </label>
+                      <div>
+                        <button
+                          className="platform-tenants-button"
+                          type="button"
+                          onClick={() => void tinjauPermohonan(item, 'approve')}
+                          disabled={Boolean(reviewingId)}
+                        >
+                          {reviewingId === item.id ? 'Menyimpan…' : 'Setujui'}
+                        </button>
+                        <button
+                          className="platform-tenants-button secondary"
+                          type="button"
+                          onClick={() => void tinjauPermohonan(item, 'reject')}
+                          disabled={Boolean(reviewingId)}
+                        >
+                          Tolak
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

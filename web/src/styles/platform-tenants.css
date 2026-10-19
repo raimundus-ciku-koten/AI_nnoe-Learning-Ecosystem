@@ -27,6 +27,11 @@
 .platform-tenants-status.is-active { background: #ecfdf5; color: #047857; }
 .platform-tenants-status.is-inactive { background: #fef2f2; color: #b91c1c; }
 .platform-tenants-status.is-unknown { background: #f1f5f9; color: #52647e; }
+.platform-tenant-review { min-width: 17rem; }
+.platform-tenant-review label { display: grid; gap: .35rem; margin-bottom: .5rem; color: #53627a; font-size: .75rem; font-weight: 700; }
+.platform-tenant-review textarea { box-sizing: border-box; width: 100%; min-height: 3.5rem; padding: .5rem; border: 1px solid #cbd5e1; border-radius: .5rem; font: inherit; font-size: .82rem; resize: vertical; }
+.platform-tenant-review > div { display: flex; gap: .45rem; }
+.platform-tenant-review .platform-tenants-button { min-height: 2.3rem; padding: .4rem .7rem; font-size: .78rem; }
 .platform-tenants-empty { padding: 1.2rem; border: 1px dashed #cbd5e1; border-radius: .7rem; color: #58677c; text-align: center; }
 .platform-tenants-error { padding: .8rem 1rem; border: 1px solid #fecaca; border-radius: .7rem; background: #fef2f2; color: #991b1b; }
 .platform-tenants-more { display: flex; justify-content: center; }

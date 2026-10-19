@@ -322,6 +322,7 @@ test('hosted schema audit script contains read-only SQL only', () => {
     'online_exam_items',
     'online_exam_attempts',
     'trial_registrations',
+    'school_registration_requests',
   ];
   for (const featureRelation of featureRelations) {
     assert.match(auditSql, new RegExp(`'${featureRelation}'`));

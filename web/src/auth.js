@@ -98,6 +98,29 @@ export async function daftarUjiCoba({ nama, email, sandi, captchaToken }) {
   return data;
 }
 
+export async function daftarSekolah({
+  nama, email, sandi, namaSekolah, npsn, captchaToken,
+}) {
+  if (!captchaToken) throw new Error('Verifikasi anti-bot wajib diselesaikan untuk mendaftar sekolah.');
+  const emailRedirectTo = `${window.location.origin}${window.location.pathname}`;
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password: sandi,
+    options: {
+      captchaToken,
+      emailRedirectTo,
+      data: {
+        full_name: nama,
+        school_name: namaSekolah,
+        school_npsn: npsn,
+        signup_intent: 'school_registration',
+      },
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function logout() {
   const uid = getState().user?.uid;
   hapusSesiGoogleWorkspace(uid);

@@ -20,6 +20,9 @@ jobs:
       - name: Install web dependencies
         run: npm ci
         working-directory: web
+      - name: Verify Vercel environment targets
+        run: VERCEL_ENV=preview VITE_SUPABASE_URL=https://samszhfyhbjuculrcffg.supabase.co VITE_SUPABASE_ANON_KEY=dummy VITE_TURNSTILE_SITE_KEY=dummy npm run check:vercel-env
+        working-directory: web
       - name: Build web app
         run: npm run build -- --mode ci
         working-directory: web

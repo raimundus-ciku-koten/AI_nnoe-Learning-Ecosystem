@@ -114,6 +114,7 @@ const HalamanOperasiPlatform = lazy(() => import('./pages/PlatformOperationsPage
 const HalamanPenggunaSupabase = lazy(() => import('./pages/SupabasePlatformUsersPage.jsx'));
 const HalamanPrivasi = lazy(() => import('./pages/PrivacyNoticePage.jsx'));
 const HalamanTrial = lazy(() => import('./pages/TrialDemoPage.jsx'));
+const HalamanPendaftaranSekolah = lazy(() => import('./pages/SchoolRegistrationPage.jsx'));
 const AppShell = lazy(() => import('./components/AppShell.jsx'));
 
 function PrivateShell({ children }) {
@@ -123,6 +124,7 @@ function PrivateShell({ children }) {
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;
   if ((activeRole || role) === 'demo') return <Navigate to="/trial" replace />;
+  if ((activeRole || role) === 'unprovisioned') return <Navigate to="/daftar-sekolah" replace />;
   if (!canOpenRolePath(activeRole || role, location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -166,6 +168,7 @@ function RouteWrapper() {
   }, [userId, selectedRole]);
 
   const publicRoute = location.pathname === '/login'
+    || location.pathname === '/daftar-sekolah'
     || location.pathname === '/privacy'
     || location.pathname.startsWith('/scan/')
     || location.pathname === '/platform/supabase-users';
@@ -176,12 +179,13 @@ function RouteWrapper() {
   return (
     <Suspense fallback={<div className="loading-spinner">Memuat...</div>}>
       <Routes>
-        <Route path="/login" element={user && !passwordRecovery ? <Navigate to={selectedRole === 'demo' ? '/trial' : '/dashboard'} replace /> : <HalamanLogin />} />
+        <Route path="/login" element={user && !passwordRecovery ? <Navigate to={selectedRole === 'demo' ? '/trial' : selectedRole === 'unprovisioned' ? '/daftar-sekolah' : '/dashboard'} replace /> : <HalamanLogin />} />
         <Route path="/trial" element={user ? (selectedRole === 'demo' ? <HalamanTrial /> : <Navigate to="/dashboard" replace />) : <Navigate to="/login" replace />} />
+        <Route path="/daftar-sekolah" element={user ? (selectedRole === 'unprovisioned' ? <HalamanPendaftaranSekolah /> : <Navigate to={selectedRole === 'demo' ? '/trial' : '/dashboard'} replace />) : <HalamanPendaftaranSekolah />} />
         <Route path="/privacy" element={<HalamanPrivasi />} />
         <Route path="/platform/supabase-users" element={<HalamanPenggunaSupabase />} />
         <Route path="/scan/:kode" element={<HalamanScan />} />
-        <Route path="/" element={<Navigate to={user ? (passwordRecovery ? '/login' : selectedRole === 'demo' ? '/trial' : '/dashboard') : '/login'} replace />} />
+        <Route path="/" element={<Navigate to={user ? (passwordRecovery ? '/login' : selectedRole === 'demo' ? '/trial' : selectedRole === 'unprovisioned' ? '/daftar-sekolah' : '/dashboard') : '/login'} replace />} />
         
         <Route path="/dashboard" element={<PrivateShell><HalamanDashboard /></PrivateShell>} />
         <Route path="/purchase" element={<PrivateShell><HalamanPurchase /></PrivateShell>} />

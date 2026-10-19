@@ -54,6 +54,22 @@ reconciled and the recovery prerequisite above is met.
 
 ## Backend migration status
 
+The source now includes an opt-in school self-registration flow. Applicants
+must verify their email and submit an 8-digit NPSN; this creates only a
+registration request, not an active tenant or role. An active superadmin with
+MFA must approve it before the tenant and `admin_sekolah` account are created
+in one audited database transaction. The migration
+`supabase/migrations/20261019000400_public_school_registration.sql` is
+source-only and has not been applied to a hosted project. Public signup is
+disabled unless `VITE_PUBLIC_SCHOOL_SIGNUP_ENABLED=true` and a Turnstile site
+key are configured. Production additionally requires the non-public
+`PRODUCTION_CAPTCHA_VERIFIED=true` and `PRODUCTION_DEMO_TRIAL_VERIFIED=true`
+build acknowledgments after the Production CAPTCHA and trial end-to-end checks
+pass. School self-registration also requires
+`PRODUCTION_SCHOOL_SIGNUP_VERIFIED=true` after its Production migration, RLS,
+MFA review, and end-to-end checks. These acknowledgments are release gates,
+not security controls.
+
 The staged Supabase foundation is applied to project `jvcrmzmuxgyuetkjqady`
 (`ap-south-1`). The Supabase browser client is available at
 `web/src/lib/supabase.ts`, and `web/vercel.json` configures SPA routing and
@@ -775,9 +791,13 @@ the public site key will cause login challenges to fail; it does not enable
 server-side verification by itself. Supabase Auth rate limits remain
 independently enforced.
 
-The login page now includes a three-day promotional demo signup. It requires a
-verified email and Turnstile token, provisions only the isolated `demo` role,
-and starts its 72-hour clock after email confirmation. The demo can only open
+The code includes an optional three-day promotional demo signup, but it is
+disabled by default. It appears only when
+`VITE_PUBLIC_DEMO_TRIAL_ENABLED=true` and a Turnstile site key is configured;
+enable it only in a validated staging environment after server-side CAPTCHA
+verification. Signup requires a verified email and Turnstile token, provisions
+only the isolated `demo` role, and starts its 72-hour clock after email
+confirmation. The demo can only open
 the sample-data page; persona choices are labels, not role grants. Its maximum
 five added sample items remain in browser memory and are not sent to Supabase.
 School data, tenant RPCs, uploads, Google, external AI, and payment are
