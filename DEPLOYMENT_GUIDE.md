@@ -8,7 +8,9 @@ Current release status:
 - Production is publicly available at `https://ainnoe-le.vercel.app/`. The Vercel production deployment is Ready; Preview remains protected.
 - The production login page loads anonymously. `/.well-known/assetlinks.json` returns HTTP 200 and its package name and signing fingerprint match the repository configuration and signed APK candidate.
 - Trial registration is intentionally unavailable until Turnstile is configured and verified server-side by Supabase Auth. The form fails closed while its site key is missing.
-- Hosted Supabase migrations have not been applied. Midtrans business review is in progress, and AdSense remains in onboarding; payments and ads are not active.
+- The Supabase dashboard currently shows one project, `Ainnoe LE`, on branch `main` / `Production`; no staging project is available. Do not use it to test or apply the trial migration.
+- Supabase CAPTCHA protection is currently disabled. The Cloudflare account has no Turnstile widget configured yet.
+- Hosted Supabase migrations have not been applied. Midtrans business review is in progress. AdSense has no registered sites yet; `ads.txt` is published, but ads are not active.
 
 Do NOT apply database migrations to hosted Supabase until backups and a staging verification are complete.
 
@@ -44,6 +46,8 @@ Applying migrations (recommended workflow):
 
 The migration in this PR: `supabase/migrations/20261019000200_public_demo_trial.sql` creates `trial_registrations` and writes `trial_expires_at`. It is append-only but modifies `public.provision_auth_profile()` and `public.custom_access_token_hook()` logic. Audit these functions carefully in staging.
 
+Current blocker: the only project visible in the Supabase organization is explicitly on `main` / `Production`, and the app's local Supabase URL uses that same project ref. A separate staging project with a verified schema and backup/restore path must exist before testing this migration. Do not use Production as a substitute for staging.
+
 4) Environment variables (Vercel / Hosting)
 
 Set these environment variables in Vercel (Project Settings → Environment Variables) for the Preview and Production environments. Use values from your Supabase console and external services, stored as project-level secrets (NOT in repo):
@@ -52,7 +56,7 @@ Set these environment variables in Vercel (Project Settings → Environment Vari
 - VITE_SUPABASE_ANON_KEY — Supabase anon/publishable key (frontend)
 - SUPABASE_SERVICE_ROLE_KEY — (ONLY for server-side functions; never expose to client)
 - VITE_TURNSTILE_SITE_KEY — Cloudflare Turnstile site key (frontend)
-- TURNSTILE_SECRET_KEY — Cloudflare Turnstile secret (server validation via Edge/Function)
+- Turnstile secret: configure only in Supabase Auth CAPTCHA settings; never store it in Vercel or frontend environment variables.
 - VERCEL_TOKEN — (only if automating deployments via CLI in scripts)
 - MIDTRANS_SERVER_KEY / MIDTRANS_CLIENT_KEY — use Midtrans sandbox keys for testing
 - ADSENSE_PUBLISHER_ID, ADMOB_APP_ID — placeholders until accounts are approved
@@ -60,6 +64,8 @@ Set these environment variables in Vercel (Project Settings → Environment Vari
 Important:
 - The frontend must never receive service_role or other server secrets.
 - Implement serverless functions (Edge Functions) as a proxy for Midtrans using server-side secrets.
+- After staging exists: create a Managed Cloudflare Turnstile widget for `ainnoe-le.vercel.app`; configure its site key and secret in the staging Supabase Authentication → Attack Protection → CAPTCHA protection settings; and add only the public site key as `VITE_TURNSTILE_SITE_KEY` to Vercel Preview. Validate missing, invalid, and expired tokens before any Production rollout.
+- After staging validation and written approval, configure CAPTCHA protection in Production Supabase, add the public site key to Vercel Production, redeploy, and verify the live signup flow. Never store or expose the Turnstile secret in Vercel, source control, chat, or a frontend build.
 - The current public build has no Turnstile widget and blocks trial registration when the site key is missing. Do not add the frontend site key until Supabase Auth is configured to validate Turnstile tokens server-side.
 
 5) Midtrans integration (billing)
@@ -72,7 +78,7 @@ Important:
 6) AdSense / AdMob
 
 - AdSense requires account approval and site verification. Do not enable live ad units until AdSense approves the site.
-- AdSense is currently in onboarding; no live ads are enabled.
+- AdSense has no registered sites and remains in onboarding; `ads.txt` is published, but no live ads are enabled.
 - Add `ads.txt` and `app-ads.txt` as required, but keep ad scripts disabled in the release until approval.
 - For AdMob in an Android build, the app must be a real native app (AAB) and have a registered package name and signing key uploaded to the Play Console. Trusted Web Activity (TWA) is not sufficient for AdMob SDK.
 
@@ -109,7 +115,7 @@ A signed APK candidate already exists at `android-apk/app/build/outputs/apk/rele
 - Add final legal contact and privacy-controller details to `/privacy` before inviting students or processing sensitive data.
 
 10) Remaining rollout steps
-- Sign in to the Supabase staging and Cloudflare dashboards, configure Turnstile, and verify server-side CAPTCHA enforcement and email redirects before enabling trial registration.
+- Create/prepare a separate Supabase staging project from the current Production schema, verify a restorable backup, then configure Turnstile and validate server-side CAPTCHA enforcement and email redirects before enabling trial registration.
 - Verify the staging schema, backup, and restore process before applying any hosted migrations; production migration still requires explicit approval.
 - Wait for Midtrans business review and complete sandbox/webhook tests before enabling checkout.
 - Complete AdSense site verification and policy approval before enabling ads.
