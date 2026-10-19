@@ -1,0 +1,167 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - generic:
+        - generic:
+          - link:
+            - /url: "#main"
+            - generic: Skip to content
+        - generic:
+          - banner:
+            - generic:
+              - generic:
+                - link:
+                  - /url: /dashboard/org/pklrkrhxgwrmfbhlzlvy
+                  - generic: Back to organization home
+                - generic:
+                  - generic:
+                    - link:
+                      - /url: /dashboard/org/pklrkrhxgwrmfbhlzlvy
+                      - generic: AI_nnoe Corp
+                      - generic: Free
+                    - button
+                - generic: New project
+              - generic:
+                - button:
+                  - generic: Feedback
+                - generic:
+                  - button:
+                    - generic:
+                      - paragraph: Search...
+                    - generic [aria-hidden]:
+                      - generic: Ctrl K
+                  - button:
+                    - generic: Help
+                  - generic:
+                    - button:
+                      - generic: Advisor Center
+                - button
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - main:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - heading [level=3]: Create a new project
+                                    - paragraph: Your project will have its own dedicated instance and full Postgres database. An API will be set up so you can easily interact with your new database.
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic: Organization
+                                        - generic:
+                                          - generic:
+                                            - combobox:
+                                              - generic:
+                                                - generic:
+                                                  - generic: AI_nnoe Corp
+                                                  - generic: Free
+                                            - combobox [aria-hidden]
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic: GitHub (optional)
+                                        - generic:
+                                          - generic:
+                                            - button:
+                                              - generic: Choose GitHub repository
+                                          - generic:
+                                            - text: Ideal for agent-first workflows. Update your schema in code and push it to GitHub. Supabase deploys the changes.
+                                            - link:
+                                              - /url: https://supabase.com/docs/guides/deployment/branching/github-integration
+                                              - text: Learn more
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic: Project name
+                                        - generic:
+                                          - generic:
+                                            - textbox:
+                                              - /placeholder: Project name
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic: Database password
+                                        - generic:
+                                          - generic:
+                                            - group:
+                                              - textbox:
+                                                - /placeholder: Type in a strong password
+                                          - generic:
+                                            - paragraph:
+                                              - text: This is the password to your Postgres database, so it must be strong and hard to guess.
+                                              - button: Generate a password
+                                              - text: .
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic: Region
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - combobox [expanded]:
+                                                - generic: Asia-Pacific
+                                              - combobox [aria-hidden]
+                                              - paragraph:
+                                                - button: Need a specific region?
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic: Security
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - generic:
+                                                - checkbox [checked]
+                                                - checkbox [checked] [aria-hidden]
+                                                - generic:
+                                                  - text: Enable Data API
+                                                  - generic:
+                                                    - text: Autogenerate a RESTful API for your public schema. Recommended if using a client library like
+                                                    - link:
+                                                      - /url: https://supabase.com/docs/reference/javascript/introduction
+                                                      - text: supabase-js
+                                                    - text: .
+                                              - generic:
+                                                - checkbox [checked]
+                                                - checkbox [checked] [aria-hidden]
+                                                - generic:
+                                                  - text: Automatically expose new tables
+                                                  - generic:
+                                                    - text: Grants privileges to Data API roles by default, exposing new tables.
+                                                    - strong: We recommend disabling this to control access manually.
+                                              - generic:
+                                                - checkbox
+                                                - checkbox [aria-hidden]
+                                                - generic:
+                                                  - text: Enable automatic RLS
+                                                  - generic: Create an event trigger that automatically enables Row Level Security on all new tables in the public schema.
+                                  - generic:
+                                    - generic:
+                                      - button: Advanced Configuration
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - button:
+                                          - generic: Cancel
+                                        - button:
+                                          - generic: Create new project
+  - generic:
+    - alert: New Project | Supabase
+  - listbox [ref=f13e382]:
+    - group "General regions" [ref=f13e383]:
+      - option "Americas" [ref=f13e385]
+      - option "Europe" [ref=f13e392]
+      - option "Asia-Pacific Recommended" [active] [selected] [ref=f13e399]:
+        - generic [ref=f13e405]:
+          - generic [ref=f13e406]: Asia-Pacific
+          - generic [ref=f13e409]: Recommended

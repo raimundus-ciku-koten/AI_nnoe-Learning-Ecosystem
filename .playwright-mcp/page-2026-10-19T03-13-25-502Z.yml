@@ -1,0 +1,282 @@
+- generic:
+  - generic [aria-hidden]:
+    - generic:
+      - generic:
+        - generic:
+          - link:
+            - /url: "#main"
+            - generic: Skip to content
+        - generic:
+          - banner:
+            - generic:
+              - generic:
+                - link:
+                  - /url: /dashboard/org/pklrkrhxgwrmfbhlzlvy
+                  - generic: Back to organization home
+                - generic:
+                  - generic:
+                    - link:
+                      - /url: /dashboard/org/pklrkrhxgwrmfbhlzlvy
+                      - generic: AI_nnoe Corp
+                      - generic: Free
+                    - button
+                  - generic:
+                    - generic:
+                      - link:
+                        - /url: /dashboard/project/samszhfyhbjuculrcffg
+                        - generic: Ainnoe LE Staging
+                      - button
+                    - generic:
+                      - link:
+                        - /url: /dashboard/project/samszhfyhbjuculrcffg
+                        - generic: main
+                        - generic: Production
+                      - button
+                - generic:
+                  - button:
+                    - generic: Connect
+              - generic:
+                - button:
+                  - generic: Feedback
+                - generic:
+                  - button:
+                    - generic:
+                      - paragraph: Search...
+                    - generic [aria-hidden]:
+                      - generic: Ctrl K
+                  - button:
+                    - generic: Help
+                  - generic:
+                    - button:
+                      - generic: Advisor Center
+                  - button:
+                    - generic: SQL Editor
+                  - button:
+                    - generic: AI Assistant
+                - button
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - navigation:
+                    - generic:
+                      - list:
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/editor
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/sql
+                    - generic:
+                      - list:
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/database/schemas
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/auth/users
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/storage/files
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/functions
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/compute
+                            - generic: Compute
+                            - generic: New
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/realtime/inspector
+                    - generic:
+                      - list:
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/advisors/security
+                            - generic: Advisors
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/observability
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/logs
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/integrations
+                    - generic:
+                      - list:
+                        - listitem:
+                          - link:
+                            - /url: /dashboard/project/samszhfyhbjuculrcffg/settings/general
+                - generic:
+                  - generic:
+                    - button
+          - generic:
+            - generic:
+              - generic:
+                - main:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - heading [level=4]: SQL Editor
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic: Search queries
+                                          - textbox:
+                                            - /placeholder: Search queries...
+                                          - button
+                                      - button
+                                    - generic:
+                                      - button:
+                                        - generic: Shared
+                                    - generic:
+                                      - button:
+                                        - generic: Favorites
+                                    - generic:
+                                      - button [expanded]:
+                                        - generic: PRIVATE
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - paragraph: No private queries created yet
+                                            - paragraph: Queries will be automatically saved once you start writing in the editor
+                                            - generic:
+                                              - generic:
+                                                - generic: dummy_query_1
+                                                - generic: dummy_query_2
+                                                - generic: dummy_query_3
+                                                - generic: dummy_query_4
+                                    - generic:
+                                      - button:
+                                        - generic: Logs
+                                    - generic:
+                                      - button [expanded]:
+                                        - generic: Reference
+                                      - generic:
+                                        - link:
+                                          - /url: /dashboard/project/samszhfyhbjuculrcffg/sql/templates
+                                          - text: templates
+                                        - link:
+                                          - /url: /dashboard/project/samszhfyhbjuculrcffg/sql/examples
+                                          - text: examples
+                                  - generic:
+                                    - link:
+                                      - /url: /dashboard/project/samszhfyhbjuculrcffg/observability/connections
+                                      - generic: View running queries
+                      - separator
+                      - generic:
+                        - generic:
+                          - main:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - button:
+                                    - generic: Collapse sidebar
+                                  - tablist:
+                                    - generic:
+                                      - generic:
+                                        - tab [selected]:
+                                          - generic: New
+                                        - button
+                                - status
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button
+                                    - generic:
+                                      - button:
+                                        - generic: Database
+                                      - generic:
+                                        - button [disabled]:
+                                          - generic: Save
+                                          - generic [aria-hidden]:
+                                            - generic: Ctrl S
+                                        - button:
+                                          - generic: Run
+                                          - generic [aria-hidden]:
+                                            - generic: Ctrl ↵
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - generic:
+                                                - generic:
+                                                  - code:
+                                                    - generic:
+                                                      - generic [aria-hidden]:
+                                                        - generic [aria-hidden]:
+                                                          - generic: "1"
+                                                      - textbox
+                                                      - generic: Hit CTRL+SHIFT+K to generate query or just start typing
+                                    - separator
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - tablist:
+                                            - generic:
+                                              - tab [selected]:
+                                                - generic: Results
+                                              - tab:
+                                                - generic: Chart
+                                          - generic:
+                                            - paragraph:
+                                              - text: Click
+                                              - code: Run
+                                              - text: to execute your query
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - button
+                - generic:
+                  - generic:
+                    - generic: Preview
+                    - generic:
+                      - generic:
+                        - paragraph: User growth
+                        - paragraph: Track how your user base is trending.
+                      - generic:
+                        - paragraph:
+                          - generic: select
+                          - generic: date_trunc('week', last_sign_in_at) as week,
+                          - generic: count(distinct id) as active_users
+                  - generic:
+                    - paragraph: Explorer & Notebooks
+                    - paragraph: New unified workspace for querying data and chatting with Assistant.
+                  - generic:
+                    - button:
+                      - generic: Enable Explorer
+  - generic:
+    - alert: SQL Editor | Ainnoe LE Staging | AI_nnoe Corp | Supabase
+  - dialog [ref=f31e1040]:
+    - generic [ref=f31e1041]:
+      - heading "Snippets no longer save automatically" [level=2] [ref=f31e1042]
+      - paragraph [ref=f31e1043]: The SQL Editor now saves your snippets only when you save them.
+    - list [ref=f31e1046]:
+      - listitem [ref=f31e1047]:
+        - text: Save with the Save button next to Run, or with
+        - generic [ref=f31e1048]: Ctrl S
+      - listitem [ref=f31e1049]: Tabs with unsaved edits show a dot
+      - listitem [ref=f31e1050]: Closing a tab with unsaved edits discards them
+    - button "Understood" [active] [ref=f31e1052] [cursor=pointer]
+    - button "Close" [ref=f31e1054]
+  - generic:
+    - alert
+    - alert

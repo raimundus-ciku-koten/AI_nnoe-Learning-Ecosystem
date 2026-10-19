@@ -1,0 +1,273 @@
+- generic [active] [ref=f19e1]:
+  - generic [ref=f19e3]:
+    - generic [ref=f19e331]:
+      - link "Skip to content" [ref=f19e333] [cursor=pointer]:
+        - /url: "#main"
+      - banner [ref=f19e336]:
+        - generic [ref=f19e337]:
+          - generic [ref=f19e338]:
+            - link "Supabase Back to organization home" [ref=f19e339] [cursor=pointer]:
+              - /url: /dashboard/org/pklrkrhxgwrmfbhlzlvy
+              - img "Supabase" [ref=f19e340]
+              - generic [ref=f19e341]: Back to organization home
+            - generic [ref=f19e342]:
+              - generic [ref=f19e346]:
+                - link "AI_nnoe Corp Free" [ref=f19e347] [cursor=pointer]:
+                  - /url: /dashboard/org/pklrkrhxgwrmfbhlzlvy
+                  - generic [ref=f19e358]: AI_nnoe Corp
+                  - generic [ref=f19e359]: Free
+                - button "Show organizations" [ref=f19e360] [cursor=pointer]
+              - generic [ref=f19e365]:
+                - generic [ref=f19e369]:
+                  - link "Ainnoe LE Staging" [ref=f19e370] [cursor=pointer]:
+                    - /url: /dashboard/project/samszhfyhbjuculrcffg
+                  - button "Show organization projects" [ref=f19e375] [cursor=pointer]
+                - generic [ref=f19e383]:
+                  - link "main Production" [ref=f19e384] [cursor=pointer]:
+                    - /url: /dashboard/project/samszhfyhbjuculrcffg
+                    - generic "main" [ref=f19e385]
+                    - generic [ref=f19e386]: Production
+                  - button "Show project branches" [ref=f19e387] [cursor=pointer]
+            - button "Connect" [ref=f19e393] [cursor=pointer]
+          - generic [ref=f19e398]:
+            - button "Feedback" [ref=f19e399] [cursor=pointer]
+            - generic [ref=f19e401]:
+              - button [ref=f19e402] [cursor=pointer]:
+                - paragraph [ref=f19e407]: Search...
+                - generic [ref=f19e409]: Ctrl K
+              - button "Help" [ref=f19e410] [cursor=pointer]
+              - button "Advisor Center" [ref=f19e417] [cursor=pointer]
+              - button "SQL Editor" [ref=f19e422] [cursor=pointer]
+              - button "AI Assistant" [ref=f19e427] [cursor=pointer]
+            - button [ref=f19e435] [cursor=pointer]:
+              - img "raimundus-ciku-koten" [ref=f19e437]
+      - generic [ref=f19e438]:
+        - generic [ref=f19e442]:
+          - navigation [ref=f19e444]:
+            - list [ref=f19e446]:
+              - listitem [ref=f19e447]:
+                - link "Project Overview" [ref=f19e448] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg
+              - listitem [ref=f19e451]:
+                - link "Table Editor" [ref=f19e452] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/editor
+              - listitem [ref=f19e455]:
+                - link "SQL Editor" [ref=f19e456] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/sql
+            - list [ref=f19e460]:
+              - listitem [ref=f19e461]:
+                - link "Database" [ref=f19e462] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/database/schemas
+              - listitem [ref=f19e467]:
+                - link "Authentication" [ref=f19e468] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/auth/users
+              - listitem [ref=f19e471]:
+                - link "Storage" [ref=f19e472] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/storage/files
+              - listitem [ref=f19e475]:
+                - link "Edge Functions" [ref=f19e476] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/functions
+              - listitem [ref=f19e482]:
+                - link "Compute New" [ref=f19e483] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/compute
+                  - generic [ref=f19e486]: Compute
+                  - generic [ref=f19e487]: New
+              - listitem [ref=f19e488]:
+                - link "Realtime" [ref=f19e489] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/realtime/inspector
+            - list [ref=f19e493]:
+              - listitem [ref=f19e494]:
+                - link "Advisors" [ref=f19e495] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/advisors/security
+              - listitem [ref=f19e499]:
+                - link "Observability" [ref=f19e500] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/observability
+              - listitem [ref=f19e509]:
+                - link "Logs" [ref=f19e510] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/logs
+              - listitem [ref=f19e512]:
+                - link "Integrations" [ref=f19e513] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/integrations
+            - list [ref=f19e518]:
+              - listitem [ref=f19e519]:
+                - link "Project Settings" [ref=f19e520] [cursor=pointer]:
+                  - /url: /dashboard/project/samszhfyhbjuculrcffg/settings/general
+          - button "Sidebar control" [ref=f19e526] [cursor=pointer]
+        - main [ref=f19e533]:
+          - main [ref=f19e538]:
+            - generic [ref=f19e539]:
+              - generic [ref=f19e543]:
+                - generic [ref=f19e544]:
+                  - heading "Ainnoe LE Staging" [level=1] [ref=f19e548]
+                  - generic [ref=f19e553]:
+                    - generic [ref=f19e564]:
+                      - generic [ref=f19e565]: Status
+                      - generic [ref=f19e566]: Checking...
+                    - link "Compute size nano" [ref=f19e568] [cursor=pointer]:
+                      - /url: /dashboard/project/samszhfyhbjuculrcffg/settings/infrastructure
+                      - generic [ref=f19e574]:
+                        - generic [ref=f19e575]: Compute size
+                        - generic [ref=f19e576]: nano
+                    - link "GitHub No repository connected" [ref=f19e581] [cursor=pointer]:
+                      - /url: /dashboard/project/samszhfyhbjuculrcffg/settings/integrations
+                      - generic [ref=f19e587]:
+                        - generic [ref=f19e588]: GitHub
+                        - paragraph [ref=f19e590]: No repository connected
+                    - link "Recent branch No branches" [ref=f19e592] [cursor=pointer]:
+                      - /url: /dashboard/project/samszhfyhbjuculrcffg/branches
+                      - generic [ref=f19e599]:
+                        - generic [ref=f19e600]: Recent branch
+                        - paragraph [ref=f19e602]: No branches
+                    - link "Last migration" [ref=f19e603] [cursor=pointer]:
+                      - /url: /dashboard/project/samszhfyhbjuculrcffg/database/migrations
+                    - link "Last backup" [ref=f19e614] [cursor=pointer]:
+                      - /url: /dashboard/project/samszhfyhbjuculrcffg/database/backups/scheduled
+                - generic [ref=f19e627]:
+                  - generic [ref=f19e629]:
+                    - button "Show infrastructure as a diagram" [pressed] [ref=f19e630] [cursor=pointer]
+                    - button "Show infrastructure on the map" [ref=f19e637] [cursor=pointer]
+                  - application [ref=f19e644]
+              - generic [ref=f19e649]:
+                - generic [ref=f19e650]:
+                  - button "Drag to reorder section" [ref=f19e652]
+                  - generic [ref=f19e662]:
+                    - heading "Get connected" [level=3] [ref=f19e664]
+                    - generic [ref=f19e669]:
+                      - button [ref=f19e670]:
+                        - generic [ref=f19e675]:
+                          - paragraph [ref=f19e676]: Framework
+                          - paragraph [ref=f19e677]: Use a client library
+                      - button [ref=f19e678]:
+                        - generic [ref=f19e683]:
+                          - paragraph [ref=f19e684]: Server
+                          - paragraph [ref=f19e685]: Build APIs
+                      - button [ref=f19e686]:
+                        - generic [ref=f19e692]:
+                          - paragraph [ref=f19e693]: Direct
+                          - paragraph [ref=f19e694]: Connection string
+                      - button [ref=f19e695]:
+                        - generic [ref=f19e701]:
+                          - paragraph [ref=f19e702]: ORM
+                          - paragraph [ref=f19e703]: Third-party library
+                      - button [ref=f19e704]:
+                        - generic [ref=f19e709]:
+                          - paragraph [ref=f19e710]: MCP
+                          - paragraph [ref=f19e711]: Connect your agent
+                      - button [ref=f19e712]:
+                        - generic [ref=f19e717]:
+                          - paragraph [ref=f19e718]: API Keys
+                          - paragraph [ref=f19e719]: Manage project keys
+                - generic [ref=f19e721]:
+                  - button "Drag to reorder section" [ref=f19e723]
+                  - generic [ref=f19e733]:
+                    - generic [ref=f19e734]:
+                      - generic [ref=f19e735]:
+                        - generic [ref=f19e736]:
+                          - generic [ref=f19e737]: "0"
+                          - generic [ref=f19e738]: Total Requests
+                        - generic [ref=f19e739]:
+                          - generic [ref=f19e740]: 0.0%
+                          - generic [ref=f19e741]: Success Rate
+                      - button "Last 60 minutes" [ref=f19e742] [cursor=pointer]
+                    - generic [ref=f19e747]:
+                      - button "Scroll right" [ref=f19e749] [cursor=pointer]
+                      - region "Horizontally scrollable content" [ref=f19e753]:
+                        - generic [ref=f19e754]:
+                          - generic [ref=f19e757]:
+                            - generic [ref=f19e759]:
+                              - heading [level=3] [ref=f19e760]:
+                                - link "Postgres" [ref=f19e761] [cursor=pointer]:
+                                  - /url: /dashboard/project/samszhfyhbjuculrcffg/editor
+                              - generic [ref=f19e762]: "0"
+                            - generic [ref=f19e763]:
+                              - generic [ref=f19e764]:
+                                - generic [ref=f19e765]: Warnings
+                                - generic [ref=f19e768]: "0"
+                              - generic [ref=f19e769]:
+                                - generic [ref=f19e770]: Errors
+                                - generic [ref=f19e773]: "0"
+                          - generic [ref=f19e781]:
+                            - generic [ref=f19e783]:
+                              - heading [level=3] [ref=f19e784]:
+                                - link "Edge Functions" [ref=f19e785] [cursor=pointer]:
+                                  - /url: /dashboard/project/samszhfyhbjuculrcffg/functions
+                              - generic [ref=f19e786]: "0"
+                            - generic [ref=f19e787]:
+                              - generic [ref=f19e788]:
+                                - generic [ref=f19e789]: Warnings
+                                - generic [ref=f19e792]: "0"
+                              - generic [ref=f19e793]:
+                                - generic [ref=f19e794]: Errors
+                                - generic [ref=f19e797]: "0"
+                          - generic [ref=f19e805]:
+                            - generic [ref=f19e807]:
+                              - heading [level=3] [ref=f19e808]:
+                                - link "Auth" [ref=f19e809] [cursor=pointer]:
+                                  - /url: /dashboard/project/samszhfyhbjuculrcffg/auth/users
+                              - generic [ref=f19e810]: "0"
+                            - generic [ref=f19e811]:
+                              - generic [ref=f19e812]:
+                                - generic [ref=f19e813]: Warnings
+                                - generic [ref=f19e816]: "0"
+                              - generic [ref=f19e817]:
+                                - generic [ref=f19e818]: Errors
+                                - generic [ref=f19e821]: "0"
+                          - generic [ref=f19e829]:
+                            - generic [ref=f19e831]:
+                              - heading [level=3] [ref=f19e832]:
+                                - link "Storage" [ref=f19e833] [cursor=pointer]:
+                                  - /url: /dashboard/project/samszhfyhbjuculrcffg/storage/buckets
+                              - generic [ref=f19e834]: "0"
+                            - generic [ref=f19e835]:
+                              - generic [ref=f19e836]:
+                                - generic [ref=f19e837]: Warnings
+                                - generic [ref=f19e840]: "0"
+                              - generic [ref=f19e841]:
+                                - generic [ref=f19e842]: Errors
+                                - generic [ref=f19e845]: "0"
+                          - generic [ref=f19e853]:
+                            - generic [ref=f19e855]:
+                              - heading [level=3] [ref=f19e856]:
+                                - link "Realtime" [ref=f19e857] [cursor=pointer]:
+                                  - /url: /dashboard/project/samszhfyhbjuculrcffg/realtime/inspector
+                              - generic [ref=f19e858]: "0"
+                            - generic [ref=f19e859]:
+                              - generic [ref=f19e860]:
+                                - generic [ref=f19e861]: Warnings
+                                - generic [ref=f19e864]: "0"
+                              - generic [ref=f19e865]:
+                                - generic [ref=f19e866]: Errors
+                                - generic [ref=f19e869]: "0"
+                - button "Drag to reorder section" [ref=f19e878]
+                - generic [ref=f19e895]:
+                  - button "Drag to reorder section" [ref=f19e897]
+                  - generic [ref=f19e907]:
+                    - generic [ref=f19e908]:
+                      - heading "Reports" [level=3] [ref=f19e909]
+                      - button "Add block" [ref=f19e911] [cursor=pointer]
+                    - generic [ref=f19e916]:
+                      - heading "Build a custom report" [level=4] [ref=f19e917]
+                      - paragraph [ref=f19e918]: Keep track of your most important metrics
+                      - button "Add your first block" [ref=f19e919] [cursor=pointer]
+                - status [ref=f19e923]
+    - generic [ref=f19e928]:
+      - button "Close banner" [ref=f19e930] [cursor=pointer]
+      - generic [ref=f19e935]:
+        - generic [ref=f19e936]:
+          - generic [ref=f19e937]: Preview
+          - generic [ref=f19e938]:
+            - generic [ref=f19e939]:
+              - paragraph [ref=f19e940]: User growth
+              - paragraph [ref=f19e941]: Track how your user base is trending.
+            - paragraph [ref=f19e944]:
+              - generic [ref=f19e945]: select
+              - generic [ref=f19e946]: date_trunc('week', last_sign_in_at) as week,
+              - generic [ref=f19e947]: count(distinct id) as active_users
+        - generic [ref=f19e948]:
+          - paragraph [ref=f19e949]: Explorer & Notebooks
+          - paragraph [ref=f19e950]: New unified workspace for querying data and chatting with Assistant.
+        - button "Enable Explorer" [ref=f19e952] [cursor=pointer]
+  - alert [ref=f19e92]: Supabase
+  - generic [ref=f19e330]:
+    - alert
+    - alert

@@ -7,6 +7,7 @@ const migration = await readFile(
   'utf8',
 );
 const auth = await readFile(new URL('../src/auth.js', import.meta.url), 'utf8');
+const authService = await readFile(new URL('../src/services/authService.ts', import.meta.url), 'utf8');
 const demoPage = await readFile(new URL('../src/pages/TrialDemoPage.jsx', import.meta.url), 'utf8');
 
 test('trial memiliki masa berlaku tetap 72 jam dan satu catatan per email terverifikasi', () => {
@@ -32,6 +33,11 @@ test('signup mewajibkan token CAPTCHA dan tidak menerima klaim peran dari klien'
   assert.match(auth, /if \(!captchaToken\) throw new Error/);
   assert.match(auth, /captchaToken,\s+emailRedirectTo,\s+data: \{ full_name: nama \}/);
   assert.doesNotMatch(auth.match(/export async function daftarUjiCoba[\s\S]*?\n}/)?.[0] || '', /role|tenant_id|active_role/);
+});
+
+test('callback Google tidak menambahkan hash router ke fragmen token OAuth', () => {
+  assert.match(auth, /const redirectTo = `\$\{window\.location\.origin\}\$\{window\.location\.pathname\}`;/);
+  assert.match(authService, /const redirectTo = `\$\{window\.location\.origin\}\$\{window\.location\.pathname\}`;/);
 });
 
 test('demo hanya memanipulasi data contoh lokal dengan batas lima item', () => {

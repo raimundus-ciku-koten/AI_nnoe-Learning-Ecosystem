@@ -1,0 +1,110 @@
+- generic [active] [ref=f13e1]:
+  - generic [ref=f13e4]:
+    - link "Skip to content" [ref=f13e6] [cursor=pointer]:
+      - /url: "#main"
+    - banner [ref=f13e9]:
+      - generic [ref=f13e10]:
+        - generic [ref=f13e11]:
+          - link "Supabase Back to organization home" [ref=f13e12] [cursor=pointer]:
+            - /url: /dashboard/org/pklrkrhxgwrmfbhlzlvy
+            - img "Supabase" [ref=f13e13]
+            - generic [ref=f13e14]: Back to organization home
+          - generic [ref=f13e19]:
+            - link "AI_nnoe Corp Free" [ref=f13e20] [cursor=pointer]:
+              - /url: /dashboard/org/pklrkrhxgwrmfbhlzlvy
+              - generic [ref=f13e31]: AI_nnoe Corp
+              - generic [ref=f13e32]: Free
+            - button "Show organizations" [ref=f13e33] [cursor=pointer]
+          - generic [ref=f13e265]: New project
+        - generic [ref=f13e38]:
+          - button "Feedback" [ref=f13e39] [cursor=pointer]
+          - generic [ref=f13e41]:
+            - button [ref=f13e42] [cursor=pointer]:
+              - paragraph [ref=f13e47]: Search...
+              - generic [ref=f13e49]: Ctrl K
+            - button "Help" [ref=f13e50] [cursor=pointer]
+            - button "Advisor Center" [ref=f13e57] [cursor=pointer]
+          - button [ref=f13e62] [cursor=pointer]:
+            - img "raimundus-ciku-koten" [ref=f13e64]
+    - main [ref=f13e122]:
+      - generic [ref=f13e276]:
+        - generic [ref=f13e278]:
+          - heading "Create a new project" [level=3] [ref=f13e279]
+          - paragraph [ref=f13e280]: Your project will have its own dedicated instance and full Postgres database. An API will be set up so you can easily interact with your new database.
+        - generic [ref=f13e281]:
+          - generic [ref=f13e284]:
+            - generic [ref=f13e285]: Organization
+            - generic [ref=f13e289]:
+              - combobox "Organization" [ref=f13e290] [cursor=pointer]:
+                - generic:
+                  - generic:
+                    - generic: AI_nnoe Corp
+                    - generic: Free
+              - combobox [aria-hidden] [ref=f13e293]
+          - generic [ref=f13e296]:
+            - generic [ref=f13e297]: GitHub (optional)
+            - generic [ref=f13e300]:
+              - button "GitHub (optional)" [ref=f13e302] [cursor=pointer]:
+                - generic [ref=f13e303]: Choose GitHub repository
+              - generic [ref=f13e307]:
+                - text: Ideal for agent-first workflows. Update your schema in code and push it to GitHub. Supabase deploys the changes.
+                - link "Learn more" [ref=f13e308] [cursor=pointer]:
+                  - /url: https://supabase.com/docs/guides/deployment/branching/github-integration
+          - generic [ref=f13e311]:
+            - generic [ref=f13e312]: Project name
+            - textbox "Project name" [ref=f13e317]: Ainnoe LE Staging
+          - generic [ref=f13e320]:
+            - generic [ref=f13e321]: Database password
+            - generic [ref=f13e324]:
+              - group [ref=f13e326]:
+                - textbox "Database password" [ref=f13e327]:
+                  - /placeholder: Type in a strong password
+                  - text: KAgaMoQZ4Mw47PdW
+                - group [ref=f13e416]:
+                  - button "Copy" [ref=f13e417] [cursor=pointer]
+              - generic [ref=f13e328]:
+                - progressbar [ref=f13e423]
+                - paragraph [ref=f13e329]:
+                  - text: This password is strong.
+                  - button "Generate a password" [ref=f13e330]
+                  - text: .
+          - generic [ref=f13e333]:
+            - generic [ref=f13e334]: Region
+            - generic [ref=f13e339]:
+              - combobox "Region" [ref=f13e340] [cursor=pointer]:
+                - generic: Asia-Pacific
+              - combobox [aria-hidden] [ref=f13e343]
+              - paragraph [ref=f13e344]:
+                - button "Need a specific region?" [ref=f13e345]
+          - generic [ref=f13e348]:
+            - generic [ref=f13e349]: Security
+            - generic [ref=f13e354]:
+              - generic [ref=f13e355]:
+                - checkbox "Enable Data API" [checked] [ref=f13e356] [cursor=pointer]
+                - checkbox [checked] [aria-hidden]
+                - generic [ref=f13e357]:
+                  - text: Enable Data API
+                  - generic [ref=f13e358]:
+                    - text: Autogenerate a RESTful API for your public schema. Recommended if using a client library like
+                    - link "supabase-js" [ref=f13e359] [cursor=pointer]:
+                      - /url: https://supabase.com/docs/reference/javascript/introduction
+                    - text: .
+              - generic [ref=f13e360]:
+                - checkbox "Automatically expose new tables" [ref=f13e361] [cursor=pointer]
+                - checkbox [aria-hidden]
+                - generic [ref=f13e362]:
+                  - text: Automatically expose new tables
+                  - generic [ref=f13e363]:
+                    - text: Grants privileges to Data API roles by default, exposing new tables.
+                    - strong [ref=f13e364]: We recommend disabling this to control access manually.
+              - generic [ref=f13e365]:
+                - checkbox "Enable automatic RLS" [ref=f13e366] [cursor=pointer]
+                - checkbox [aria-hidden]
+                - generic [ref=f13e367]:
+                  - text: Enable automatic RLS
+                  - generic [ref=f13e368]: Create an event trigger that automatically enables Row Level Security on all new tables in the public schema.
+          - button "Advanced Configuration" [ref=f13e371]
+        - generic [ref=f13e377]:
+          - button "Cancel" [disabled]
+          - button "Create new project" [disabled]
+  - alert [ref=f13e264]: New Project | Supabase

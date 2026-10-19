@@ -144,7 +144,7 @@ export async function buatKataSandi(password) {
 }
 
 export async function masukGoogle(captchaToken) {
-  const redirectTo = `${window.location.origin}${window.location.pathname}#/login`;
+  const redirectTo = `${window.location.origin}${window.location.pathname}`;
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo, ...(captchaToken ? { captchaToken } : {}) },

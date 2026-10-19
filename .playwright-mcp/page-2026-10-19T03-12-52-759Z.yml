@@ -1,0 +1,35 @@
+- generic [active] [ref=f25e1]:
+  - generic [ref=f25e4]:
+    - link "Skip to content" [ref=f25e6] [cursor=pointer]:
+      - /url: "#main"
+    - banner [ref=f25e9]:
+      - generic [ref=f25e10]:
+        - link "Supabase Back to organization home" [ref=f25e12] [cursor=pointer]:
+          - /url: /dashboard/organizations
+          - img "Supabase" [ref=f25e13]
+          - generic [ref=f25e14]: Back to organization home
+        - generic [ref=f25e15]:
+          - button "Feedback" [ref=f25e16] [cursor=pointer]
+          - generic [ref=f25e18]:
+            - button [ref=f25e19] [cursor=pointer]:
+              - paragraph [ref=f25e24]: Search...
+              - generic [ref=f25e26]: Ctrl K
+            - button "Help" [ref=f25e27] [cursor=pointer]
+            - button "Advisor Center" [ref=f25e34] [cursor=pointer]
+          - button [ref=f25e39] [cursor=pointer]
+    - generic [ref=f25e44]:
+      - generic [ref=f25e48]:
+        - generic [ref=f25e49]:
+          - navigation
+        - button "Sidebar control" [ref=f25e52] [cursor=pointer]
+      - main [ref=f25e59]:
+        - generic [ref=f25e61]:
+          - separator [ref=f25e65]
+          - main [ref=f25e76]:
+            - generic [ref=f25e78]:
+              - generic [ref=f25e79]:
+                - button "Collapse sidebar" [ref=f25e80]
+                - tablist [ref=f25e85]:
+                  - button [ref=f25e87]
+              - status [ref=f25e90]
+  - alert [ref=f25e92]
