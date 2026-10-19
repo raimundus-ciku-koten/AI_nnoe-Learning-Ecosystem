@@ -17,9 +17,10 @@ export default function PrivacyNoticePage() {
         <p className="privacy-notice-kicker">AI_nnoe Learning Ecosystem</p>
         <h1 id="privacy-title">Informasi Privasi dan Data Pribadi</h1>
         <p className="privacy-notice-warning" role="note">
-          Informasi ini menjelaskan kategori data dan kontrol yang dirancang untuk aplikasi. Ini belum menggantikan
-          kebijakan privasi final: pemilik layanan dan sekolah perlu melengkapi identitas hukum, kontak,
-          dasar pemrosesan, persetujuan orang tua, dan jadwal retensi sebelum penggunaan publik.
+          Informasi ini menjelaskan kategori data dan kontrol yang dirancang untuk aplikasi. AI_nnoe Corp
+          adalah pengendali layanan yang dicantumkan untuk pertanyaan privasi. Sekolah tetap bertanggung jawab
+          menentukan dasar pemrosesan, persetujuan orang tua/wali bila diperlukan, dan jadwal retensi data
+          sekolah sebelum memasukkan data nyata.
         </p>
         <h2>Data yang dapat diproses</h2>
         <ul>
@@ -51,17 +52,21 @@ export default function PrivacyNoticePage() {
         </p>
         <p>
           Untuk uji coba promosi, data simulasi hanya berada di memori browser. Catatan alamat email uji coba
-          disimpan selama layanan beroperasi untuk menegakkan batas satu kali per email. Permintaan
-          penghapusan yang terverifikasi harus diproses melalui mekanisme privasi resmi; penghapusan catatan
-          akan memungkinkan alamat tersebut mendaftar uji coba lagi. Mekanisme permintaan dan kontak privasi
-          resmi harus ditambahkan sebelum pendaftaran dibuka untuk publik. Jangan gunakan uji coba untuk
-          memproses data anak atau data sekolah nyata.
+          akan disimpan untuk menegakkan batas satu kali per email apabila pendaftaran uji coba diaktifkan.
+          Permintaan penghapusan yang terverifikasi akan menghapus catatan uji coba terkait; setelah
+          penghapusan, alamat tersebut dapat mendaftar uji coba lagi. Jangan gunakan uji coba untuk memproses
+          data anak atau data sekolah nyata.
         </p>
         <h2>Permintaan dan kontak</h2>
         <p>
-          Untuk pertanyaan atau permintaan terkait data siswa, hubungi administrator sekolah yang mengelola akun.
-          Sebelum halaman ini diterbitkan sebagai kebijakan final, pemilik layanan wajib menambahkan nama badan
-          hukum, alamat/kontak privasi resmi, serta proses eskalasi dan tenggat respons.
+          Pengendali layanan: AI_nnoe Corp. Untuk pertanyaan atau permintaan akses, koreksi, atau penghapusan
+          data akun dan uji coba, kirim email ke{' '}
+          <a href="mailto:kotenraimundusc@gmail.com?subject=Permintaan%20privasi%20AI_nnoe%20Learning%20Ecosystem">
+            kotenraimundusc@gmail.com
+          </a>
+          . Permintaan akan diverifikasi melalui alamat email yang terkait dengan akun sebelum diproses.
+          Jangan sertakan data sensitif siswa di dalam email. Untuk data sekolah, hubungi administrator sekolah
+          yang mengelola akun agar permintaan ditinjau bersama pengendali data sekolah.
         </p>
         <p className="privacy-notice-updated">Terakhir diperbarui: 19 Oktober 2026 · Informasi operasional, bukan nasihat hukum.</p>
         <a href="#/login">Kembali ke halaman masuk</a>

@@ -9,6 +9,7 @@ const migration = await readFile(
 const auth = await readFile(new URL('../src/auth.js', import.meta.url), 'utf8');
 const authService = await readFile(new URL('../src/services/authService.ts', import.meta.url), 'utf8');
 const demoPage = await readFile(new URL('../src/pages/TrialDemoPage.jsx', import.meta.url), 'utf8');
+const privacyPage = await readFile(new URL('../src/pages/PrivacyNoticePage.jsx', import.meta.url), 'utf8');
 
 test('trial memiliki masa berlaku tetap 72 jam dan satu catatan per email terverifikasi', () => {
   assert.match(migration, /email text primary key/);
@@ -38,6 +39,12 @@ test('signup mewajibkan token CAPTCHA dan tidak menerima klaim peran dari klien'
 test('callback Google tidak menambahkan hash router ke fragmen token OAuth', () => {
   assert.match(auth, /const redirectTo = `\$\{window\.location\.origin\}\$\{window\.location\.pathname\}`;/);
   assert.match(authService, /const redirectTo = `\$\{window\.location\.origin\}\$\{window\.location\.pathname\}`;/);
+});
+
+test('halaman privasi mencantumkan pengendali dan kanal permintaan yang dapat dihubungi', () => {
+  assert.match(privacyPage, /Pengendali layanan: AI_nnoe Corp/);
+  assert.match(privacyPage, /mailto:kotenraimundusc@gmail\.com/);
+  assert.match(privacyPage, /diverifikasi melalui alamat email yang terkait dengan akun/);
 });
 
 test('demo hanya memanipulasi data contoh lokal dengan batas lima item', () => {

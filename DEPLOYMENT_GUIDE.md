@@ -5,12 +5,15 @@ Overview
 This document records the release state and the remaining safe rollout steps for AI_nnoe Learning Ecosystem.
 
 Current release status:
-- Production is publicly available at `https://ainnoe-le.vercel.app/`. The Vercel production deployment is Ready; Preview remains protected.
+- Production is publicly available at `https://ainnoe-le.vercel.app/`. The live deployment includes the curriculum guidance update and Google OAuth callback fix; the site, login page, and APK Digital Asset Links endpoint return HTTP 200.
+- Google OAuth is enabled in Production Supabase and was verified by completing a Google login through to the dashboard.
 - The production site and login page load anonymously. `/.well-known/assetlinks.json` returns HTTP 200 and its package name and signing fingerprint match the repository configuration and signed APK candidate. The trial signup form is visible, but registration must remain blocked until Turnstile is configured and verified server-side.
 - Trial registration is intentionally unavailable until Turnstile is configured and verified server-side by Supabase Auth. The form fails closed while its site key is missing.
-- The Supabase organization is on the Free plan. Production `Ainnoe LE` (`jvcrmzmuxgyuetkjqady`) and the new blank `Ainnoe LE Staging` (`samszhfyhbjuculrcffg`) are both in `ap-south-1`. No migrations have been applied to staging and it has not been brought to schema parity with Production.
+- The Supabase organization is on the Free plan. Production `Ainnoe LE` (`jvcrmzmuxgyuetkjqady`) and `Ainnoe LE Staging` (`samszhfyhbjuculrcffg`) are both in `ap-south-1`. The staging project is still blank; no migrations have been applied or verified there. The dashboard session expired during the latest staging check.
+- The owner reports that a Production backup and restore have been verified. Supabase confirms that managed scheduled backups are not included on the current Free plan; retain the independent backup and restore evidence before any migration.
 - Supabase CAPTCHA protection is currently disabled. A Turnstile widget and server-side CAPTCHA validation have not been verified.
-- Hosted Supabase migrations have not been applied. Midtrans business review is in progress. AdSense has no registered sites yet; `ads.txt` is published, but ads are not active.
+- Hosted Supabase migrations have not been applied. Midtrans business review remains unverified/pending. The signed-in AdSense account is in onboarding with no site registered; ads are not active. Cloudflare and Midtrans dashboards require an authenticated owner session to continue setup.
+- The privacy page identifies AI_nnoe Corp and the owner-provided privacy contact. School processing basis, retention schedule, and legal review still need confirmation before real school/student data is used.
 
 Do NOT apply database migrations to hosted Supabase until backups and a staging verification are complete.
 
@@ -46,7 +49,7 @@ Applying migrations (recommended workflow):
 
 The migration in this PR: `supabase/migrations/20261019000200_public_demo_trial.sql` creates `trial_registrations` and writes `trial_expires_at`. It is append-only but modifies `public.provision_auth_profile()` and `public.custom_access_token_hook()` logic. Audit these functions carefully in staging.
 
-Current blocker: the staging project exists but is a blank database, not a clone of Production. Its schema has not been migrated or compared, and no Production backup/restore has been verified. Do not use Production as a substitute for staging.
+Current blocker: the staging project exists but is a blank database, not a clone of Production. Its schema has not been migrated or compared. The owner reports a verified Production backup/restore; retain its evidence for the migration review. Do not use Production as a substitute for staging.
 
 The staging database password was generated in Supabase during project creation and was not copied into this repository or chat. If direct database access is later needed for CLI migrations or backup/restore, reset it in Supabase and store the replacement in an approved password manager.
 
