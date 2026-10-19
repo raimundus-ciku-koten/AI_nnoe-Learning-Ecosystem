@@ -3,6 +3,7 @@ import '../styles/privacy-notice.css';
 
 const dataGroups = [
   ['Akun dan keamanan', 'Alamat email, nama profil, peran, sekolah, status akun, dan token autentikasi.'],
+  ['Pendaftaran uji coba', 'Alamat email terverifikasi dan nama tampilan untuk mencegah penggunaan uji coba berulang; pilihan persona demo tidak menjadi peran akun.'],
   ['Data pembelajaran', 'Data siswa, kelas, kehadiran, bank soal, nilai atau asesmen, dan dokumen yang dimasukkan oleh sekolah atau pengguna.'],
   ['Komunikasi', 'Pesan, metadata percakapan, lampiran yang dipilih pengguna, dan token notifikasi perangkat bila notifikasi diaktifkan.'],
   ['Integrasi pilihan pengguna', 'Berkas Drive/Sheets yang dibuat atau dipilih langsung oleh pengguna. Token Google Workspace hanya disimpan sementara di memori halaman.'],
@@ -48,13 +49,21 @@ export default function PrivacyNoticePage() {
           (UU 27/2022). Penghapusan otomatis log atau arsip ujian belum diverifikasi pada database hosted.
           Tetapkan jadwal retensi dengan sekolah sebelum memasukkan data siswa.
         </p>
+        <p>
+          Untuk uji coba promosi, data simulasi hanya berada di memori browser. Catatan alamat email uji coba
+          disimpan selama layanan beroperasi untuk menegakkan batas satu kali per email. Permintaan
+          penghapusan yang terverifikasi harus diproses melalui mekanisme privasi resmi; penghapusan catatan
+          akan memungkinkan alamat tersebut mendaftar uji coba lagi. Mekanisme permintaan dan kontak privasi
+          resmi harus ditambahkan sebelum pendaftaran dibuka untuk publik. Jangan gunakan uji coba untuk
+          memproses data anak atau data sekolah nyata.
+        </p>
         <h2>Permintaan dan kontak</h2>
         <p>
           Untuk pertanyaan atau permintaan terkait data siswa, hubungi administrator sekolah yang mengelola akun.
           Sebelum halaman ini diterbitkan sebagai kebijakan final, pemilik layanan wajib menambahkan nama badan
           hukum, alamat/kontak privasi resmi, serta proses eskalasi dan tenggat respons.
         </p>
-        <p className="privacy-notice-updated">Terakhir diperbarui: 18 Oktober 2026 · Informasi operasional, bukan nasihat hukum.</p>
+        <p className="privacy-notice-updated">Terakhir diperbarui: 19 Oktober 2026 · Informasi operasional, bukan nasihat hukum.</p>
         <a href="#/login">Kembali ke halaman masuk</a>
       </article>
     </main>

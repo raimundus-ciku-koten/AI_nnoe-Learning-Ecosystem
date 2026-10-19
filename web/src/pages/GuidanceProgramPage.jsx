@@ -17,7 +17,17 @@ const FASE = [
   ['E', 'Fase E · Kelas X'],
   ['F', 'Fase F · Kelas XI–XII (SMK empat tahun: XIII)'],
 ];
-const SARAN_TEMA = {
+export const DIMENSI_PROFIL = [
+  'Keimanan dan Ketakwaan',
+  'Kewargaan',
+  'Penalaran Kritis',
+  'Kreativitas',
+  'Kolaborasi',
+  'Kemandirian',
+  'Kesehatan',
+  'Komunikasi',
+];
+export const SARAN_TEMA = {
   bk: {
     A: [
       'Mengenal dan menamai perasaan dasar',
@@ -68,12 +78,58 @@ const SARAN_TEMA = {
       'Menyiapkan komunikasi dan kemandirian hidup',
     ],
   },
-  kokurikuler: [
-    'Kepemimpinan dan kerja sama',
-    'Kepedulian sosial dan lingkungan',
-    'Literasi dan komunikasi',
-    'Kreativitas dan pemecahan masalah',
-  ],
+  kokurikuler: {
+    A: [
+      'Kenalan dengan lingkungan sekitar',
+      'Kata-kata dan cerita dari keluarga',
+      'Halaman bersih dan kebiasaan sehat',
+      'Taman kecil dan pertumbuhan tanaman',
+      'Permainan tradisional dan gerak sehat',
+    ],
+    B: [
+      'Mengamati lingkungan dan membuat peta sederhana',
+      'Cerita budaya dan wawancara santun',
+      'Mengurangi sampah di sekolah',
+      'Kebun kelas dan jurnal pertumbuhan',
+    ],
+    C: [
+      'Mengenali potensi dan kebutuhan lingkungan',
+      'Dokumentasi cerita dan tradisi',
+      'Audit sampah dan aksi kebersihan',
+      'Karya kreatif untuk masalah di sekitar',
+    ],
+    D: [
+      'Aksi kolaboratif untuk kebutuhan komunitas',
+      'Cerita digital dan literasi media',
+      'Kesehatan dan lingkungan sekolah',
+      'Riset sederhana dan solusi berkelanjutan',
+    ],
+    E: [
+      'Mengenal bahasa, budaya, dan tradisi',
+      'Cerita digital dan warisan budaya',
+      'Mengenal pesisir dan keanekaragaman hayati',
+      'Gotong royong untuk kebutuhan komunitas',
+      'Mengenal motif dan proses tenun',
+      'Konservasi lingkungan dan potensi maritim',
+      'Inovasi produk dari sumber daya lokal',
+      'Lingkungan bersih dan sekolah sehat',
+      'Seni pertunjukan dan dokumentasi budaya',
+      'Sekolah pantai dan kesadaran lingkungan',
+      'Budaya bahari dalam sastra dan seni',
+      'Ibadah, kedamaian, dan toleransi',
+      'Kebugaran dan kebiasaan hidup aktif',
+      'Jelajah alam dan budaya secara bertanggung jawab',
+    ],
+    F: [
+      'Menganalisis ancaman lingkungan dan merancang solusi berbasis data',
+      'Menguji prototipe produk dan memperbaikinya dari umpan balik',
+      'Memimpin aksi sosial dan mengevaluasi dampaknya',
+      'Mengembangkan kewirausahaan sosial dan kemitraan',
+      'Melestarikan warisan budaya melalui karya dan diseminasi',
+      'Merancang kebiasaan sehat dan advokasi berbasis bukti',
+      'Menyusun rekomendasi dan rencana keberlanjutan',
+    ],
+  },
   ekstrakurikuler: [
     'Kepemimpinan dan tanggung jawab',
     'Kebugaran dan sportivitas',
@@ -121,6 +177,32 @@ const KOSONG = {
   langkah: '',
   evaluasi: '',
   tindakLanjut: '',
+  dimensi: [],
+  lokasi: '',
+  keterkaitan: '',
+  mitra: '',
+  izinEtika: '',
+  hakCipta: '',
+  aksesibilitas: '',
+  buktiKarya: '',
+  digital: '',
+  rencanaOffline: '',
+  asesmenFormatif: '',
+  asesmenSumatif: '',
+  tahapMengenal: '',
+  tahapMenyelidiki: '',
+  tahapMerancang: '',
+  tahapBerkarya: '',
+  tahapMerefleksi: '',
+  risiko: '',
+  pencegahan: '',
+  penanggungJawab: '',
+  anggaranBahan: '',
+  anggaranLapangan: '',
+  anggaranDokumentasi: '',
+  anggaranPameran: '',
+  pameran: '',
+  keberlanjutan: '',
 };
 
 function BarisRingkasan({ label, nilai }) {
@@ -137,8 +219,11 @@ export default function GuidanceProgramPage() {
   const { role } = useAuth();
   const [draft, setDraft] = useState(KOSONG);
   const [hasil, setHasil] = useState(null);
+  const [galatDimensi, setGalatDimensi] = useState('');
   const temaSaran = useMemo(
-    () => (draft.program === 'bk' ? SARAN_TEMA.bk[draft.fase] : SARAN_TEMA[draft.program]),
+    () => (draft.program === 'bk'
+      ? SARAN_TEMA.bk[draft.fase]
+      : (draft.program === 'kokurikuler' ? SARAN_TEMA.kokurikuler[draft.fase] : SARAN_TEMA[draft.program])),
     [draft.fase, draft.program],
   );
   const strategi = draft.program === 'bk' ? STRATEGI_BK : STRATEGI_KEGIATAN;
@@ -147,17 +232,27 @@ export default function GuidanceProgramPage() {
     const { name, value } = event.target;
     setDraft((current) => ({
       ...current,
-      [name]: value,
+      [name]: event.target.type === 'checkbox'
+        ? (event.target.checked
+          ? [...current[name], value]
+          : current[name].filter((item) => item !== value))
+        : value,
       ...(name === 'program' ? {
         komponen: value === 'bk' ? KOMPONEN_BK[0] : '',
         bidang: value === 'bk' ? BIDANG_BK[0] : '',
         strategi: value === 'bk' ? STRATEGI_BK[0] : STRATEGI_KEGIATAN[0],
+        fase: value === 'kokurikuler' ? 'E' : current.fase,
       } : {}),
     }));
   }
 
   function buatRencana(event) {
     event.preventDefault();
+    if (draft.program === 'kokurikuler' && (draft.dimensi.length < 1 || draft.dimensi.length > 4)) {
+      setGalatDimensi('Pilih satu sampai empat dimensi profil lulusan yang paling relevan.');
+      return;
+    }
+    setGalatDimensi('');
     setHasil({ ...draft, dibuatPada: new Date().toLocaleDateString('id-ID', { dateStyle: 'long' }) });
   }
 
@@ -209,6 +304,14 @@ export default function GuidanceProgramPage() {
                 ))}
               </select>
             </label>
+            {draft.program !== 'bk' && (
+              <label>
+                Fase
+                <select name="fase" value={draft.fase} onChange={ubah}>
+                  {FASE.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                </select>
+              </label>
+            )}
             {draft.program === 'bk' && (
               <>
                 <label>
@@ -235,6 +338,12 @@ export default function GuidanceProgramPage() {
               Kelas atau kelompok sasaran
               <input name="kelas" value={draft.kelas} onChange={ubah} maxLength={80} placeholder="Contoh: Kelas VII" />
             </label>
+            {draft.program === 'kokurikuler' && (
+              <label>
+                Lokasi atau lingkungan belajar
+                <input name="lokasi" value={draft.lokasi} onChange={ubah} maxLength={160} placeholder="Isi sesuai konteks sekolah; tidak ada lokasi baku." />
+              </label>
+            )}
             <label>
               Semester
               <select name="semester" value={draft.semester} onChange={ubah}>
@@ -258,6 +367,35 @@ export default function GuidanceProgramPage() {
               </datalist>
               <small>Tema bebas dapat diketik; daftar saran bukan pilihan yang membatasi.</small>
             </label>
+            {draft.program === 'kokurikuler' && (
+              <>
+                <p className="guidance-program__wide guidance-program__guidance-note">
+                  Panduan mengarahkan Kelas X pada sekurang-kurangnya tiga projek bertema berbeda dan Kelas XI–XII sekurang-kurangnya dua.
+                  Fase A–D pada buku merupakan adaptasi/usulan; sesuaikan dengan kebijakan sekolah.
+                </p>
+                <fieldset className="guidance-program__dimensions guidance-program__wide" aria-describedby="guidance-dimension-error">
+                  <legend>Dimensi profil lulusan (pilih 1–4)</legend>
+                  <div>
+                    {DIMENSI_PROFIL.map((dimensi) => (
+                      <label key={dimensi}>
+                        <input
+                          type="checkbox"
+                          name="dimensi"
+                          value={dimensi}
+                          checked={draft.dimensi.includes(dimensi)}
+                          onChange={ubah}
+                          disabled={!draft.dimensi.includes(dimensi) && draft.dimensi.length >= 4}
+                        />
+                        {dimensi}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <p className="guidance-program__validation guidance-program__wide" id="guidance-dimension-error" role="alert" hidden={!galatDimensi}>
+                  {galatDimensi}
+                </p>
+              </>
+            )}
           </div>
         </section>
 
@@ -280,11 +418,17 @@ export default function GuidanceProgramPage() {
             </label>
             <label>
               Tujuan layanan atau kegiatan
-              <textarea name="tujuan" value={draft.tujuan} onChange={ubah} maxLength={800} rows={3} required />
+              <textarea name="tujuan" value={draft.tujuan} onChange={ubah} maxLength={1200} rows={3} required
+                placeholder={draft.program === 'kokurikuler'
+                  ? 'Rumuskan 3–5 tujuan yang teramati: kompetensi + konteks + bukti + ukuran mutu.'
+                  : ''} />
             </label>
             <label>
               Indikator keberhasilan
-              <textarea name="indikator" value={draft.indikator} onChange={ubah} maxLength={800} rows={3} required />
+              <textarea name="indikator" value={draft.indikator} onChange={ubah} maxLength={1000} rows={3} required
+                placeholder={draft.program === 'kokurikuler'
+                  ? 'Indikator teramati untuk tiap dimensi dan deskriptor Sangat Baik, Baik, Cukup, Kurang.'
+                  : ''} />
             </label>
             <label>
               Waktu dan durasi
@@ -294,28 +438,138 @@ export default function GuidanceProgramPage() {
               Media dan bahan
               <textarea name="media" value={draft.media} onChange={ubah} maxLength={800} rows={3} />
             </label>
-            <label className="guidance-program__wide">
-              Langkah kegiatan: pembukaan, pengalaman/inti, refleksi, dan aksi
-              <textarea name="langkah" value={draft.langkah} onChange={ubah} maxLength={2400} rows={6} required />
-            </label>
-            <label>
-              Evaluasi
-              <textarea
-                name="evaluasi"
-                value={draft.evaluasi}
-                onChange={ubah}
-                maxLength={1000}
-                rows={4}
-                placeholder={draft.program === 'bk' ? 'Contoh: pemahaman, kenyamanan, dan rencana tindakan (UCA)' : ''}
-                required
-              />
-            </label>
+            {draft.program === 'kokurikuler' ? (
+              <>
+                <label>
+                  Keterkaitan mata pelajaran
+                  <textarea name="keterkaitan" value={draft.keterkaitan} onChange={ubah} maxLength={800} rows={3} />
+                </label>
+                <label>
+                  Mitra, narasumber, dan izin
+                  <textarea name="mitra" value={draft.mitra} onChange={ubah} maxLength={1000} rows={3}
+                    placeholder="Tuliskan mitra yang telah dihubungi; rencanakan izin orang tua/narasumber sebelum kegiatan." />
+                </label>
+                <label>
+                  Etika, persetujuan, dan dokumentasi
+                  <textarea name="izinEtika" value={draft.izinEtika} onChange={ubah} maxLength={900} rows={3} required
+                    placeholder="Catat cara memperoleh izin orang tua/narasumber dan batas penggunaan foto, audio, atau video." />
+                </label>
+                <label>
+                  Hak cipta dan atribusi sumber
+                  <textarea name="hakCipta" value={draft.hakCipta} onChange={ubah} maxLength={700} rows={3}
+                    placeholder="Rencanakan pencantuman sumber dan izin sebelum karya dipublikasikan atau digunakan komersial." />
+                </label>
+                <label>
+                  Aksesibilitas dan kebutuhan dukungan
+                  <textarea name="aksesibilitas" value={draft.aksesibilitas} onChange={ubah} maxLength={700} rows={3}
+                    placeholder="Atur peran dan alternatif kegiatan agar semua murid dapat berkontribusi." />
+                </label>
+                <label className="guidance-program__wide">
+                  Rencana tahapan projek
+                  <small>Lima tahap berikut mengikuti panduan. Isi kegiatan murid dan keluaran/bukti untuk setiap tahap.</small>
+                </label>
+                {[
+                  ['tahapMengenal', '1. Mengenal · memahami konteks dan merumuskan pertanyaan'],
+                  ['tahapMenyelidiki', '2. Menyelidiki · observasi, wawancara, dan mengumpulkan data'],
+                  ['tahapMerancang', '3. Merancang · memilih solusi, membagi peran, dan membuat rencana'],
+                  ['tahapBerkarya', '4. Berkarya dan beraksi · membuat, menguji, atau melaksanakan aksi'],
+                  ['tahapMerefleksi', '5. Merefleksi dan membagikan · perbaikan, refleksi, pameran, dan umpan balik'],
+                ].map(([name, label]) => (
+                  <label key={name}>
+                    {label}
+                    <textarea name={name} value={draft[name]} onChange={ubah} maxLength={1400} rows={3} required />
+                  </label>
+                ))}
+                <label>
+                  Bukti karya yang ditargetkan
+                  <textarea name="buktiKarya" value={draft.buktiKarya} onChange={ubah} maxLength={800} rows={3}
+                    placeholder="Contoh: prototipe yang diuji, dokumentasi, jurnal individu, dan presentasi." />
+                </label>
+                <label>
+                  Pemanfaatan teknologi digital
+                  <textarea name="digital" value={draft.digital} onChange={ubah} maxLength={700} rows={3}
+                    placeholder="Gunakan alat yang tersedia; jangan jadikan aplikasi tertentu syarat penilaian." />
+                </label>
+                <label>
+                  Rencana tanpa internet
+                  <textarea name="rencanaOffline" value={draft.rencanaOffline} onChange={ubah} maxLength={700} rows={3}
+                    placeholder="Contoh: catatan kertas, sketsa, penyimpanan lokal, dan sinkronisasi saat tersedia." />
+                </label>
+                <label>
+                  Risiko dan keselamatan
+                  <textarea name="risiko" value={draft.risiko} onChange={ubah} maxLength={800} rows={3} required />
+                </label>
+                <label>
+                  Pencegahan dan rencana cadangan
+                  <textarea name="pencegahan" value={draft.pencegahan} onChange={ubah} maxLength={800} rows={3} required />
+                </label>
+                <label>
+                  Penanggung jawab risiko
+                  <input name="penanggungJawab" value={draft.penanggungJawab} onChange={ubah} maxLength={160} required />
+                </label>
+                <label>
+                  Pameran atau pembagian hasil
+                  <textarea name="pameran" value={draft.pameran} onChange={ubah} maxLength={700} rows={3} />
+                </label>
+                <label>
+                  Keberlanjutan setelah projek
+                  <textarea name="keberlanjutan" value={draft.keberlanjutan} onChange={ubah} maxLength={700} rows={3} />
+                </label>
+              </>
+            ) : (
+              <label className="guidance-program__wide">
+                Langkah kegiatan: pembukaan, pengalaman/inti, refleksi, dan aksi
+                <textarea name="langkah" value={draft.langkah} onChange={ubah} maxLength={2400} rows={6} required />
+              </label>
+            )}
+            {draft.program === 'kokurikuler' ? (
+              <>
+                <label>
+                  Asesmen formatif
+                  <textarea name="asesmenFormatif" value={draft.asesmenFormatif} onChange={ubah} maxLength={1000} rows={4} required
+                    placeholder="Contoh: observasi bertanggal, jurnal refleksi, check-in, dan umpan balik sejawat/mitra." />
+                </label>
+                <label>
+                  Asesmen sumatif dan rubrik
+                  <textarea name="asesmenSumatif" value={draft.asesmenSumatif} onChange={ubah} maxLength={1200} rows={4} required
+                    placeholder="Nilai karya, proses, presentasi, dan portofolio dengan kriteria transparan: Sangat Baik, Baik, Cukup, Kurang." />
+                </label>
+              </>
+            ) : (
+              <label>
+                Evaluasi
+                <textarea
+                  name="evaluasi"
+                  value={draft.evaluasi}
+                  onChange={ubah}
+                  maxLength={1000}
+                  rows={4}
+                  placeholder={draft.program === 'bk' ? 'Contoh: pemahaman, kenyamanan, dan rencana tindakan (UCA)' : ''}
+                  required
+                />
+              </label>
+            )}
             <label>
               Tindak lanjut
               <textarea name="tindakLanjut" value={draft.tindakLanjut} onChange={ubah} maxLength={1000} rows={4} required />
             </label>
           </div>
         </section>
+        {draft.program === 'kokurikuler' && (
+          <section className="guidance-program__section" aria-labelledby="guidance-budget-title">
+            <h2 id="guidance-budget-title">Anggaran dan asesmen</h2>
+            <p className="guidance-program__guidance-note">
+              Prioritaskan bahan lokal, daur ulang, dan sumber sekolah. Hindari iuran wajib dari murid;
+              sumber biaya harus disepakati dan mengikuti kebijakan sekolah.
+            </p>
+            <div className="guidance-program__grid">
+              <label>Bahan dan alat<textarea name="anggaranBahan" value={draft.anggaranBahan} onChange={ubah} maxLength={600} rows={3} /></label>
+              <label>Lapangan dan transportasi<textarea name="anggaranLapangan" value={draft.anggaranLapangan} onChange={ubah} maxLength={600} rows={3} /></label>
+              <label>Dokumentasi dan cetak<textarea name="anggaranDokumentasi" value={draft.anggaranDokumentasi} onChange={ubah} maxLength={600} rows={3} /></label>
+              <label>Pameran<textarea name="anggaranPameran" value={draft.anggaranPameran} onChange={ubah} maxLength={600} rows={3} /></label>
+            </div>
+          </section>
+        )}
 
         <div className="guidance-program__actions">
           <button type="submit">Buat pratinjau program</button>
@@ -333,7 +587,9 @@ export default function GuidanceProgramPage() {
             <p>{PILIHAN_PROGRAM.find(({ id }) => id === hasil.program)?.label} · Draf</p>
             <h2 id="guidance-preview-title">{hasil.tema}</h2>
             <dl className="guidance-program__summary">
-              <BarisRingkasan label="Fase" nilai={hasil.program === 'bk' ? `Fase ${hasil.fase}` : ''} />
+              <BarisRingkasan label="Fase" nilai={`Fase ${hasil.fase}`} />
+              <BarisRingkasan label="Lokasi atau lingkungan" nilai={hasil.lokasi} />
+              <BarisRingkasan label="Dimensi sasaran" nilai={hasil.dimensi.join(', ')} />
               <BarisRingkasan label="Bidang" nilai={hasil.bidang} />
               <BarisRingkasan label="Komponen" nilai={hasil.komponen} />
               <BarisRingkasan label="Sasaran" nilai={hasil.sasaran} />
@@ -346,10 +602,30 @@ export default function GuidanceProgramPage() {
           </header>
           {[
             ['Asesmen kebutuhan atau alasan program', hasil.asesmen],
+            ['Lokasi atau lingkungan belajar', hasil.lokasi],
+            ['Keterkaitan mata pelajaran', hasil.keterkaitan],
+            ['Asesmen formatif', hasil.asesmenFormatif],
+            ['Asesmen sumatif dan rubrik', hasil.asesmenSumatif],
+            ['Mitra, narasumber, dan izin', hasil.mitra],
+            ['Etika, persetujuan, dan dokumentasi', hasil.izinEtika],
+            ['Hak cipta dan atribusi sumber', hasil.hakCipta],
+            ['Aksesibilitas dan kebutuhan dukungan', hasil.aksesibilitas],
             ['Tujuan', hasil.tujuan],
             ['Indikator keberhasilan', hasil.indikator],
             ['Media dan bahan', hasil.media],
             ['Langkah kegiatan', hasil.langkah],
+            ['Bukti karya yang ditargetkan', hasil.buktiKarya],
+            ['Pemanfaatan teknologi digital', hasil.digital],
+            ['Rencana tanpa internet', hasil.rencanaOffline],
+            ['Risiko dan keselamatan', hasil.risiko],
+            ['Pencegahan dan rencana cadangan', hasil.pencegahan],
+            ['Penanggung jawab risiko', hasil.penanggungJawab],
+            ['Bahan dan alat', hasil.anggaranBahan],
+            ['Lapangan dan transportasi', hasil.anggaranLapangan],
+            ['Dokumentasi dan cetak', hasil.anggaranDokumentasi],
+            ['Anggaran pameran', hasil.anggaranPameran],
+            ['Pameran atau pembagian hasil', hasil.pameran],
+            ['Keberlanjutan setelah projek', hasil.keberlanjutan],
             ['Evaluasi', hasil.evaluasi],
             ['Tindak lanjut', hasil.tindakLanjut],
           ].filter(([, isi]) => isi).map(([judul, isi]) => (
@@ -358,6 +634,20 @@ export default function GuidanceProgramPage() {
               <p>{isi}</p>
             </section>
           ))}
+          {hasil.program === 'kokurikuler' && (
+            <section>
+              <h3>Lima tahap projek</h3>
+              {[
+                ['1. Mengenal', hasil.tahapMengenal],
+                ['2. Menyelidiki', hasil.tahapMenyelidiki],
+                ['3. Merancang', hasil.tahapMerancang],
+                ['4. Berkarya dan beraksi', hasil.tahapBerkarya],
+                ['5. Merefleksi dan membagikan', hasil.tahapMerefleksi],
+              ].map(([label, content]) => <p key={label}><strong>{label}</strong>{'\n'}{content}</p>)}
+              <h3>Rubrik capaian</h3>
+              <p>Sangat Baik · Baik · Cukup · Kurang. Tentukan deskriptor yang teramati untuk setiap dimensi sasaran sebelum projek dimulai; gunakan observasi, jurnal, karya, penilaian sejawat, dan umpan balik.</p>
+            </section>
+          )}
         </article>
       )}
     </main>

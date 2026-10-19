@@ -347,7 +347,8 @@ from unnest(array[
   'student_account_link_audit',
   'online_exams',
   'online_exam_items',
-  'online_exam_attempts'
+  'online_exam_attempts',
+  'trial_registrations'
 ]) as feature(name)
 
 order by object_type, object_name;

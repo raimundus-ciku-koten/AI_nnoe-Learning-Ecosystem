@@ -8,6 +8,10 @@ const migration = readFileSync(
   new URL('supabase/migrations/20261018000400_midtrans_billing.sql', root),
   'utf8',
 );
+const priceAdjustment = readFileSync(
+  new URL('supabase/migrations/20261019000100_indonesia_price_catalog.sql', root),
+  'utf8',
+);
 const catalogRows = new Map();
 const rowPattern = /^\s*\('([^']+)',\s*'(school|individual)',\s*'[^']+',\s*(?:null|'[^']+'),\s*'([^']+)',\s*(\d+),/gm;
 
@@ -19,8 +23,13 @@ for (const match of migration.matchAll(rowPattern)) {
     annualPrice: Number(match[4]),
   });
 }
+for (const match of priceAdjustment.matchAll(/\('([^']+)',\s*(\d+)\)/g)) {
+  const current = catalogRows.get(match[1]);
+  assert.ok(current, `Price adjustment references unknown plan ${match[1]}`);
+  catalogRows.set(match[1], { ...current, annualPrice: Number(match[2]) });
+}
 
-test('Supabase billing plan seed matches the shared annual-price catalog', () => {
+test('Supabase billing seed and price adjustments match the shared catalog', () => {
   const expected = [
     ...pricing.school.map((plan) => ({ ...plan, productType: 'school' })),
     ...pricing.student.map((plan) => ({ ...plan, productType: 'individual' })),
@@ -41,4 +50,28 @@ test('Supabase billing plan seed matches the shared annual-price catalog', () =>
 test('reapplying the billing migration preserves existing plan configuration', () => {
   assert.match(migration, /on conflict\s*\(id\)\s*do nothing\s*;/i);
   assert.doesNotMatch(migration, /on conflict\s*\(id\)\s*do update/i);
+});
+
+test('the Indonesia price adjustment only updates the three school annual prices', () => {
+  assert.match(priceAdjustment, /update public\.billing_plans/i);
+  assert.match(priceAdjustment, /set annual_price = updates\.annual_price/i);
+  assert.equal([...priceAdjustment.matchAll(/\('([^']+)',\s*(\d+)\)/g)].length, 3);
+  assert.doesNotMatch(priceAdjustment, /delete\s+from|drop\s+table|truncate/i);
+});
+
+test('all catalog prices use whole-Rupiah values and a consistent ten-month annual price', () => {
+  const plans = [
+    ...pricing.school,
+    ...pricing.student,
+    ...pricing.teacherSd,
+    ...pricing.teacherSubject,
+  ];
+  for (const plan of plans) {
+    const monthly = plan.annualPrice / pricing.monthlyDivisor;
+    assert.ok(Number.isSafeInteger(monthly), `${plan.id} monthly price must be whole Rupiah`);
+    assert.equal(monthly % 100, 0, `${plan.id} price should avoid sub-hundred-Rupiah precision`);
+  }
+  assert.deepEqual(pricing.school.map(({ annualPrice }) => annualPrice), [
+    2990000, 6990000, 14990000,
+  ]);
 });

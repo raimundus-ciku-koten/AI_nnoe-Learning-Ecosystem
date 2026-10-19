@@ -12,15 +12,15 @@ test('menghitung harga paket sekolah dari tarif bersama', () => {
   const basic = hitungTagihan({
     productType: 'school', planId: 'sekolah-basic', siklus: 'bulanan',
   });
-  assert.equal(basic.subtotal, 350000);
-  assert.equal(basic.ppn, 38500);
-  assert.equal(basic.total, 388500);
+  assert.equal(basic.subtotal, 299000);
+  assert.equal(basic.ppn, 32890);
+  assert.equal(basic.total, 331890);
   assert.deepEqual(basic.kapasitas, { siswa: 100, guru: 20 });
 
   const enterprise = hitungTagihan({
     productType: 'school', planId: 'sekolah-enterprise', siklus: 'tahunan',
   });
-  assert.equal(enterprise.subtotal, 15000000);
+  assert.equal(enterprise.subtotal, 14990000);
   assert.equal(enterprise.kapasitas.guru, null);
 });
 

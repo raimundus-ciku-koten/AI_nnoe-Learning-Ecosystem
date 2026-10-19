@@ -4,7 +4,7 @@
     {
       "id": "sekolah-basic",
       "name": "Sekolah Basic",
-      "annualPrice": 3500000,
+      "annualPrice": 2990000,
       "students": 100,
       "teachers": 20,
       "features": "100 siswa, 20 guru"
@@ -12,7 +12,7 @@
     {
       "id": "sekolah-pro",
       "name": "Sekolah Pro",
-      "annualPrice": 7500000,
+      "annualPrice": 6990000,
       "students": 500,
       "teachers": 100,
       "features": "500 siswa, 100 guru"
@@ -20,7 +20,7 @@
     {
       "id": "sekolah-enterprise",
       "name": "Sekolah Enterprise",
-      "annualPrice": 15000000,
+      "annualPrice": 14990000,
       "students": 1500,
       "teachers": null,
       "features": "1.500 siswa, jumlah guru tanpa batas"

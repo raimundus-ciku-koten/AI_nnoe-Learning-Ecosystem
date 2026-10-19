@@ -3,6 +3,55 @@
 Monorepo for the AI_nnoe Learning Ecosystem web application and its backend
 services.
 
+## Release readiness snapshot (2026-10-19)
+
+The current worktree's web build and test suite are validated locally, but the
+application is not yet a verified public release. The supplied Vercel preview
+and release-candidate URLs both returned HTTP 302 to Vercel authentication,
+so public access and runtime behavior could not be verified. The hosted
+Supabase inventory below still lacks the billing relations and migration
+history; both Midtrans Edge Functions remain fail-closed with HTTP 410.
+Midtrans charges transaction fees, so live checkout is incompatible with a
+strict zero-cost guarantee. AdSense script loading is disabled; the static
+`ads.txt` publisher entry has not been verified against an approved account.
+AdMob is not integrated: the current Android project is a Trusted Web Activity,
+not a native app with the AdMob SDK. No APK should be called a release until a
+public HTTPS hostname and matching Digital Asset Links are verified.
+
+## Product description and feature status
+
+AI_nnoe is a role-controlled school workspace whose source includes teacher
+data and planning tools, implementation and attendance screens, BK and
+kokurikuler/extracurricular program drafts, assessment and question-bank
+screens, communication, and optional Google Workspace integrations. This is a
+description of modules in the application, not a statement that every module
+is active in the hosted project. Several legacy planning links are explicitly
+marked as such in the menu; some menu destinations are not built. Program
+drafts stay in page memory until printed or saved as PDF. Chat, assessments,
+and other data modules require their Supabase schema to be deployed and
+verified; the hosted inventory currently shows those feature relations are
+missing. Google features require OAuth setup and user consent. External AI
+providers, checkout, and payment are disabled. The package catalog is
+informational and does not guarantee package entitlements or feature
+availability. Public metadata and landing-page copy should preserve these
+limitations.
+
+### Indicative Indonesia price catalog
+
+The school tiers have been adjusted to rounded Indonesian Rupiah price points:
+Basic (100 students/20 teachers) Rp299,000 monthly or Rp2,990,000 yearly;
+Pro (500/100) Rp699,000 monthly or Rp6,990,000 yearly; Enterprise (1,500
+students) Rp1,499,000 monthly or Rp14,990,000 yearly. The existing student
+and teacher monthly equivalents remain Rp14,900–Rp49,900, with their yearly
+prices set to ten monthly equivalents (two months' equivalent discount).
+Prices are indicative, before tax, and are not a claim of independently
+verified market benchmarks or a final offer. Checkout is disabled. Confirm
+scope, costs, applicable taxes, and entitlements before publishing an offer.
+The append-only SQL price adjustment is
+`supabase/migrations/20261019000100_indonesia_price_catalog.sql`; it has not
+been applied to hosted Supabase. Do not apply it until the existing schema is
+reconciled and the recovery prerequisite above is met.
+
 ## Backend migration status
 
 The staged Supabase foundation is applied to project `jvcrmzmuxgyuetkjqady`
@@ -726,6 +775,26 @@ the public site key will cause login challenges to fail; it does not enable
 server-side verification by itself. Supabase Auth rate limits remain
 independently enforced.
 
+The login page now includes a three-day promotional demo signup. It requires a
+verified email and Turnstile token, provisions only the isolated `demo` role,
+and starts its 72-hour clock after email confirmation. The demo can only open
+the sample-data page; persona choices are labels, not role grants. Its maximum
+five added sample items remain in browser memory and are not sent to Supabase.
+School data, tenant RPCs, uploads, Google, external AI, and payment are
+unavailable to demo accounts. The append-only migration
+`supabase/migrations/20261019000200_public_demo_trial.sql` stores a unique
+verified-email trial record, expires access in the database, and removes demo
+roles from active authorization. It is source-only and has **not** been
+applied to hosted Supabase. Do not publish the signup until schema parity,
+trigger/hook settings, server-side Supabase CAPTCHA verification, email
+confirmation redirects, a Supabase Auth password minimum of 12 characters,
+and recovery-tested backup have been verified. Per the selected trial policy,
+the email record is retained while the service operates to prevent another
+trial with the same address. A verified data-erasure request must be handled
+under the final privacy process; deleting the record permits that address to
+register for another trial. Publish the signup only after the service owner
+has provided the required legal identity, privacy contact, and request process.
+
 Reduced-data mode activates when a device advertises `Save-Data` or the release
 sets `VITE_ECONOMY_MODE=true`. It hides external profile/school images and
 reduces presence heartbeats to three-minute intervals. There is no verified
@@ -846,10 +915,19 @@ The teacher-only `#/program-kegiatan` workspace provides a printable draft for
 Bimbingan dan Konseling, kokurikuler, and ekstrakurikuler programs. The BK
 template follows the uploaded guide's phases A-F, four service areas, service
 components, needs assessment, goals, indicators, session steps, evaluation,
-and follow-up. Suggested themes are optional; teachers may enter a custom
-topic. Drafts stay in page memory and are not saved to Supabase or Drive. Do
-not enter student identities, counseling notes, or case details. Persistent
-storage and specialty-specific account roles are not implemented.
+and follow-up. Kokurikuler planning also follows the guide's five project
+stages, allows one to four graduate-profile dimensions, and includes fields
+for evidence, cross-curricular links, partners and permissions, consent and
+documentation ethics, copyright attribution, accessibility, offline
+alternatives, safety and risk ownership, budget, separate formative and
+summative assessment plans with a four-level rubric, showcase, and
+sustainability. Phase A-D suggestions are identified as adaptations; topic
+suggestions are location-neutral, while project location is user-entered.
+Suggested themes are optional;
+teachers may enter a custom topic. Drafts stay in page memory and are not
+saved to Supabase or Drive. Do not enter student identities, counseling notes,
+or case details. Persistent storage and specialty-specific account roles are
+not implemented.
 
 ## Common commands
 
