@@ -7,8 +7,10 @@ const { useAuthMock } = vi.hoisted(() => ({ useAuthMock: vi.fn() }));
 vi.mock('../context/AuthContext.jsx', () => ({ useAuth: useAuthMock }));
 
 import GuidanceProgramPage, {
+  BENTUK_KOKURIKULER,
   DIMENSI_PROFIL,
   SARAN_TEMA,
+  saranTema,
 } from './GuidanceProgramPage.jsx';
 
 function renderPage() {
@@ -40,6 +42,16 @@ describe('GuidanceProgramPage', () => {
     expect(html).not.toContain('<form');
   });
 
+  it('identifies imported subject CP as intrakurikuler and distinguishes the three activity types', () => {
+    useAuthMock.mockReturnValue({ role: 'guru' });
+    const html = renderPage();
+
+    expect(html).toContain('CP mata pelajaran yang diimpor, termasuk Pendidikan Agama');
+    expect(html).toContain('Kokurikuler menguatkan, mendalami, atau memperkaya pembelajaran intrakurikuler');
+    expect(html).toContain('Pasal 16–19');
+    expect(html).toContain('Pasal 22');
+  });
+
   it('provides phase-based, location-neutral kokurikuler topics and the eight graduate-profile dimensions', () => {
     expect(DIMENSI_PROFIL).toHaveLength(8);
     expect(SARAN_TEMA.kokurikuler.A.length).toBeGreaterThan(0);
@@ -50,5 +62,18 @@ describe('GuidanceProgramPage', () => {
     expect(SARAN_TEMA.kokurikuler.F.length).toBeGreaterThanOrEqual(5);
     expect(SARAN_TEMA.kokurikuler.E.join(' ')).not.toMatch(/Tanjung Bunga|Flores Timur|Lamaholot/i);
     expect(SARAN_TEMA.kokurikuler.F.join(' ')).not.toMatch(/Tanjung Bunga|Flores Timur|Lamaholot/i);
+  });
+
+  it('offers phase-specific extracurricular prompts aligned to the handbook progression', () => {
+    for (const fase of ['A', 'B', 'C', 'D', 'E', 'F']) {
+      expect(saranTema('ekstrakurikuler', fase).length).toBeGreaterThan(0);
+      expect(Array.isArray(saranTema('kokurikuler', fase))).toBe(true);
+      expect(Array.isArray(saranTema('bk', fase))).toBe(true);
+    }
+    expect(saranTema('ekstrakurikuler', 'E')).toEqual(SARAN_TEMA.ekstrakurikuler.E);
+  });
+
+  it('allows the kokurikuler approaches provided by the 2025 regulation', () => {
+    expect(BENTUK_KOKURIKULER.map(({ id }) => id)).toEqual(['projek', 'kebiasaan', 'lainnya']);
   });
 });

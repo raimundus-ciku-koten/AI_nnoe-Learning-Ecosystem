@@ -54,14 +54,14 @@ export default {
   'rpe.rumus': 'Total JP = (({g} + {n}) pekan efektif × {jp} JP) = {total} JP.',
 
   /* ATP */
-  'cp.judul': 'Capaian Pembelajaran',
-  'cp.impor': 'Impor CP dari Google Drive',
-  'cp.pilihSumber': 'Pilih satu PDF CP dari folder sumber. Isi yang sesuai dengan mata pelajaran dan fase paket akan disalin ke paket terenkripsi Anda.',
+  'cp.judul': 'Capaian Pembelajaran Intrakurikuler',
+  'cp.impor': 'Impor CP intrakurikuler dari Google Drive',
+  'cp.pilihSumber': 'Pilih PDF CP mata pelajaran dari folder sumber. CP yang sesuai dengan mata pelajaran dan fase paket akan disalin ke paket terenkripsi Anda.',
   'cp.sumber': 'Sumber: {nama}',
   'cp.fase': 'Fase {fase}',
   'cp.tanggalImpor': 'Diimpor {tanggal}',
-  'cp.kosong': 'Impor CP resmi sebelum membuat ATP.',
-  'cp.peringatan': 'Pastikan mata pelajaran dan fase paket cocok dengan bagian CP di PDF. Periksa dokumen hasil impor sebelum digunakan.',
+  'cp.kosong': 'Impor CP intrakurikuler resmi untuk mata pelajaran sebelum membuat ATP.',
+  'cp.peringatan': 'CP mata pelajaran merupakan acuan intrakurikuler. Pastikan mata pelajaran dan fase paket cocok dengan bagian CP di PDF; periksa dokumen hasil impor sebelum digunakan.',
   'cp.galatSumber': 'Bagian CP untuk mata pelajaran dan fase paket ini tidak ditemukan dalam PDF terpilih.',
   'cp.berhasil': 'Draf CP berhasil diimpor ke paket terenkripsi Drive Anda.',
   'cp.memuat': 'Membaca dan memvalidasi PDF sumber…',
@@ -115,8 +115,9 @@ export default {
   'modul.tambahPertemuan': 'Tambah pertemuan', 'modul.hapusPertemuan': 'Hapus pertemuan',
 
   /* formulir */
-  'form.bagianMapel': 'Mata pelajaran', 'form.bagianJadwal': 'Jadwal', 'form.bagianKalender': 'Hari tidak efektif / khusus', 'form.bagianIdentitas': 'Identitas dokumen',
-  'form.mapel': 'Mata pelajaran', 'form.kelas': 'Kelas', 'form.fase': 'Fase', 'form.tahunAjaran': 'Tahun ajaran', 'form.jpPerPekan': 'JP per pekan', 'form.totalJP': 'Total JP setahun (opsional)',
+  'form.bagianMapel': 'Mata pelajaran intrakurikuler', 'form.bagianJadwal': 'Jadwal', 'form.bagianKalender': 'Hari tidak efektif / khusus', 'form.bagianIdentitas': 'Identitas dokumen',
+  'form.mapel': 'Mata pelajaran intrakurikuler', 'form.mapelHint': 'Gunakan nama mata pelajaran yang sesuai dengan CP resmi yang diimpor, termasuk Pendidikan Agama dan mata pelajaran lainnya.',
+  'form.kelas': 'Kelas', 'form.fase': 'Fase', 'form.tahunAjaran': 'Tahun ajaran', 'form.jpPerPekan': 'JP per pekan', 'form.totalJP': 'Total JP setahun (opsional)',
   'form.totalJPHint': 'Isi bila ada angka resmi dari struktur kurikulum sekolah. Kosong = dihitung dari kalender.', 'form.hari': 'Hari pembelajaran mapel ini',
   'form.ganjilMulai': 'Ganjil: mulai', 'form.ganjilSelesai': 'Ganjil: selesai', 'form.genapMulai': 'Genap: mulai', 'form.genapSelesai': 'Genap: selesai',
   'form.kalenderHint': 'Tambahkan libur nasional, ujian sekolah, atau hari masuk khusus. Tanggal selesai boleh kosong untuk satu hari.',
