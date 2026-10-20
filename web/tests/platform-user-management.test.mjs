@@ -17,6 +17,12 @@ const navigation = readFileSync(new URL('../src/navigasi.js', import.meta.url), 
 test('undangan akun hanya dikirim oleh superadmin aktif untuk email allowlist aktif', () => {
   assert.match(functionConfig, /\[functions\.platform-user-invite\]\s+verify_jwt = true/);
   assert.match(inviteFunction, /supabase\.auth\.getUser\(token\)/);
+  assert.match(inviteFunction, /supabase\.auth\.getClaims\(token\)/);
+  assert.match(inviteFunction, /claimsData\.claims\.aal !== 'aal2'/);
+  assert.ok(
+    inviteFunction.indexOf("claimsData.claims.aal !== 'aal2'")
+      < inviteFunction.indexOf("supabase.auth.admin.inviteUserByEmail"),
+  );
   assert.match(inviteFunction, /actor\?\.role !== 'superadmin' \|\| actor\.active !== true/);
   assert.match(inviteFunction, /allowlistEntry\?\.active/);
   assert.match(inviteFunction, /allowlistEntry\.role === 'superadmin'/);
@@ -29,7 +35,9 @@ test('menonaktifkan akun melalui RPC dan cek akses memakai profil terbaru', () =
   assert.match(usersPage, /user\.active \? 'Nonaktifkan akses' : 'Aktifkan akses'/);
   assert.match(usersPage, /Profil dan riwayatnya akan tetap disimpan/);
   assert.match(activeMigration, /function public\.current_user_is_active\(\)[\s\S]*?security definer/);
-  assert.match(activeMigration, /where profile\.id = auth\.uid\(\)[\s\S]*?profile\.active = true/);
+  assert.match(activeMigration, /profile\.active[\s\S]*?profile\.role <> 'demo'/);
+  assert.match(activeMigration, /public\.current_app_role\(\) in \([\s\S]*?'admin_sekolah', 'superadmin'[\s\S]*?auth\.jwt\(\) ->> 'aal' = 'aal2'/);
+  assert.match(activeMigration, /where profile\.id = auth\.uid\(\)/);
 });
 
 test('undangan dijalankan setelah penyimpanan akses dan menu akun tetap ada bagi superadmin', () => {

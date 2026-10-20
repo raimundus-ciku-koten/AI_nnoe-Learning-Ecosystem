@@ -58,6 +58,15 @@ Deno.serve(async (request) => {
     return jsonResponse(401, { error: 'Sesi masuk tidak valid.' });
   }
 
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+  if (claimsError || !claimsData?.claims) {
+    console.error('[platform-user-invite] Failed to verify caller claims:', claimsError?.message || 'No claims returned.');
+    return jsonResponse(401, { error: 'Klaim sesi tidak dapat diverifikasi.' });
+  }
+  if (claimsData.claims.aal !== 'aal2') {
+    return jsonResponse(403, { error: 'Verifikasi MFA diperlukan untuk mengirim undangan.' });
+  }
+
   const { data: actor, error: actorError } = await supabase
     .from('profiles')
     .select('role,active')
