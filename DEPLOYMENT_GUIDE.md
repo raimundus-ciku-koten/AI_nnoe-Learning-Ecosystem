@@ -23,7 +23,7 @@ Do NOT apply database migrations to hosted Supabase until backups and a staging 
 
 1) Pull request and release branch
 
-- GitHub currently reports PR #1 (`chore: establish staged Supabase migration foundation`) open against `main`, and PRs #2 (`Add secure 3-day demo trial and align Indonesian pricing`) and #3 with the same trial-release scope closed without being merged. The `migration/supabase-foundation-preview` branch contains a merge-like commit referencing PR #3, but that does not change GitHub's closed/unmerged PR state. `main` remains unchanged.
+- GitHub currently reports PR #1 (`chore: establish staged Supabase migration foundation`) open against `main`, and PR #2 (`Add secure 3-day demo trial and align Indonesian pricing`) closed without merge. PR #3 with the same trial-release scope was merged into `migration/supabase-foundation-preview`. `main` remains unchanged.
 - PR #1's Web CI checks pass, but its Vercel deployment check is failing; inspect that deployment before merging. The local `fix/login-only-public-release` branch is based on `migration/supabase-foundation-preview` and is eight commits ahead, with no commits behind the Preview base. It has not yet been submitted as a PR. Keep its release PR targeted at the Preview foundation branch; do not target `main` while the foundation PR is unresolved.
 - The login-only hotfix was redeployed from commit `f616440b` with Vercel's Production environment. The Staging Preview was not promoted. Do not treat Preview environment values as Production values.
 - Keep the trial migration source-only until the backup, staging, and approval requirements below are satisfied.
