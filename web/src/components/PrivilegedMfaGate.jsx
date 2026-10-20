@@ -1,12 +1,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.ts';
+import { inspectPrivilegedMfa, totpQrCodeImageSource } from '../services/privilegedMfa.js';
 import '../styles/privileged-mfa.css';
 
 const ROLES_WITH_REQUIRED_MFA = new Set(['admin_sekolah', 'superadmin']);
 
 export default function PrivilegedMfaGate({ role, userId, children }) {
   const [state, setState] = useState({
-    loading: true, access: false, factorId: '', qrCode: '', secret: '',
+    loading: true,
+    access: false,
+    factorId: '',
+    enrollmentRequired: false,
+    pendingEnrollment: false,
+    qrCode: '',
+    secret: '',
   });
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -15,49 +22,55 @@ export default function PrivilegedMfaGate({ role, userId, children }) {
 
   const load = useCallback(async () => {
     if (!requiresMfa || !userId) {
-      setState({ loading: false, access: true, factorId: '', qrCode: '', secret: '' });
+      setState({
+        loading: false,
+        access: true,
+        factorId: '',
+        enrollmentRequired: false,
+        pendingEnrollment: false,
+        qrCode: '',
+        secret: '',
+      });
       return;
     }
 
-    setState({ loading: true, access: false, factorId: '', qrCode: '', secret: '' });
+    setState({
+      loading: true,
+      access: false,
+      factorId: '',
+      enrollmentRequired: false,
+      pendingEnrollment: false,
+      qrCode: '',
+      secret: '',
+    });
     setError('');
     try {
-      const { data: assurance, error: assuranceError } =
-        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (assuranceError) throw assuranceError;
-      if (assurance.currentLevel === 'aal2') {
-        setState({ loading: false, access: true, factorId: '', qrCode: '', secret: '' });
+      const status = await inspectPrivilegedMfa(supabase.auth.mfa);
+      if (status.enrollmentRequired) {
+        setState({
+          loading: false,
+          ...status,
+          qrCode: '',
+          secret: '',
+        });
         return;
       }
-
-      const { data: listed, error: listError } = await supabase.auth.mfa.listFactors();
-      if (listError) throw listError;
-      const verified = listed.totp.find((factor) => factor.status === 'verified');
-      if (verified) {
-        setState({ loading: false, access: false, factorId: verified.id, qrCode: '', secret: '' });
-        return;
-      }
-
-      for (const factor of listed.totp) {
-        const { error: removeError } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
-        if (removeError) throw removeError;
-      }
-      const { data: enrollment, error: enrollError } = await supabase.auth.mfa.enroll({
-        factorType: 'totp',
-        friendlyName: 'AI_nnoe administrator',
-      });
-      if (enrollError) throw enrollError;
       setState({
-        loading: false,
-        access: false,
-        factorId: enrollment.id,
-        qrCode: enrollment.totp.qr_code,
-        secret: enrollment.totp.secret,
+        loading: false, ...status, qrCode: '', secret: '',
       });
     } catch (cause) {
       console.error('[auth-mfa] Gagal menyiapkan MFA administrator:', cause);
-      setState({ loading: false, access: false, factorId: '', qrCode: '', secret: '' });
-      setError('Status MFA tidak dapat diverifikasi. Akses administrator dikunci sampai faktor autentikasi berhasil diperiksa.');
+      setState({
+        loading: false,
+        access: false,
+        factorId: '',
+        enrollmentRequired: false,
+        pendingEnrollment: false,
+        qrCode: '',
+        secret: '',
+      });
+      const status = Number.isInteger(cause?.status) ? ` (HTTP ${cause.status})` : '';
+      setError(`Status MFA tidak dapat diverifikasi${status}. Tidak ada perubahan MFA yang dilakukan. Akses administrator tetap terkunci.`);
     }
   }, [requiresMfa, userId]);
 
@@ -89,6 +102,71 @@ export default function PrivilegedMfaGate({ role, userId, children }) {
     }
   }
 
+  async function createEnrollment() {
+    const { data: enrollment, error: enrollError } = await supabase.auth.mfa.enroll({
+      factorType: 'totp',
+      friendlyName: 'AI_nnoe administrator',
+    });
+    if (enrollError) throw enrollError;
+    setState({
+      loading: false,
+      access: false,
+      factorId: enrollment.id,
+      enrollmentRequired: false,
+      pendingEnrollment: true,
+      qrCode: enrollment.totp.qr_code,
+      secret: enrollment.totp.secret,
+    });
+  }
+
+  function enrollmentErrorMessage(cause) {
+    const status = Number.isInteger(cause?.status) ? ` (HTTP ${cause.status})` : '';
+    return `Pendaftaran MFA gagal${status}. Status MFA tidak berubah; periksa konfigurasi Auth dan coba lagi.`;
+  }
+
+  async function enroll() {
+    setBusy(true);
+    setError('');
+    try {
+      await createEnrollment();
+    } catch (cause) {
+      console.error('[auth-mfa] Pendaftaran MFA administrator gagal:', cause);
+      setError(enrollmentErrorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function restartEnrollment() {
+    if (!window.confirm(
+      'Hapus hanya pendaftaran TOTP yang masih tertunda ini dan buat QR baru? Faktor MFA terverifikasi tidak akan diubah.',
+    )) return;
+
+    setBusy(true);
+    setError('');
+    try {
+      const { error: removeError } = await supabase.auth.mfa.unenroll({
+        factorId: state.factorId,
+      });
+      if (removeError) throw removeError;
+      setState({
+        loading: false,
+        access: false,
+        factorId: '',
+        enrollmentRequired: true,
+        pendingEnrollment: false,
+        qrCode: '',
+        secret: '',
+      });
+      await createEnrollment();
+    } catch (cause) {
+      console.error('[auth-mfa] Pengulangan pendaftaran MFA gagal:', cause);
+      setError(enrollmentErrorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!requiresMfa || state.access) return children;
 
   return (
@@ -103,7 +181,7 @@ export default function PrivilegedMfaGate({ role, userId, children }) {
             <p>Pindai QR ini dengan aplikasi autentikator. Simpan kode rahasia di tempat aman dan jangan bagikan.</p>
             <img
               className="privileged-mfa-qr"
-              src={`data:image/svg+xml;utf-8,${encodeURIComponent(state.qrCode)}`}
+              src={totpQrCodeImageSource(state.qrCode)}
               alt="QR untuk mendaftarkan autentikator"
             />
             <details>
@@ -112,6 +190,13 @@ export default function PrivilegedMfaGate({ role, userId, children }) {
               <code>{state.secret}</code>
             </details>
           </>
+        ) : state.enrollmentRequired ? (
+          <p>Authenticator belum terdaftar. Pendaftaran hanya dimulai setelah Anda memilih tombol di bawah.</p>
+        ) : state.pendingEnrollment ? (
+          <p>
+            Pendaftaran authenticator sudah tertunda. Masukkan kode dari QR sebelumnya jika sudah dipindai,
+            atau buat ulang QR jika QR sebelumnya tidak dapat diakses.
+          </p>
         ) : (
           <p>Masukkan kode dari aplikasi autentikator yang telah didaftarkan.</p>
         )}
@@ -131,11 +216,21 @@ export default function PrivilegedMfaGate({ role, userId, children }) {
               disabled={busy}
             />
             <button type="submit" disabled={busy || code.length < 6}>
-              {busy ? 'Memverifikasi…' : state.qrCode ? 'Aktifkan dan verifikasi MFA' : 'Verifikasi'}
+              {busy ? 'Memverifikasi…' : state.pendingEnrollment ? 'Aktifkan dan verifikasi MFA' : 'Verifikasi'}
             </button>
           </form>
         )}
-        {!state.loading && !state.factorId && (
+        {!state.loading && state.enrollmentRequired && !state.factorId && (
+          <button type="button" onClick={() => void enroll()} disabled={busy}>
+            {busy ? 'Menyiapkan…' : 'Daftarkan authenticator'}
+          </button>
+        )}
+        {!state.loading && state.pendingEnrollment && !state.qrCode && (
+          <button type="button" onClick={() => void restartEnrollment()} disabled={busy}>
+            {busy ? 'Menyiapkan…' : 'Buat ulang QR'}
+          </button>
+        )}
+        {!state.loading && !state.factorId && !state.enrollmentRequired && (
           <button type="button" onClick={() => void load()}>Periksa ulang MFA</button>
         )}
         <p className="privileged-mfa-note">Akses admin dan superadmin dikunci sampai verifikasi berhasil.</p>
