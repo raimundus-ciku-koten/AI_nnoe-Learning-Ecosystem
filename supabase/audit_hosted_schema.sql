@@ -348,7 +348,9 @@ from unnest(array[
   'online_exams',
   'online_exam_items',
   'online_exam_attempts',
-  'trial_registrations'
+  'trial_registrations',
+  'user_ai_credentials',
+  'canva_oauth_states'
 ]) as feature(name)
 
 order by object_type, object_name;

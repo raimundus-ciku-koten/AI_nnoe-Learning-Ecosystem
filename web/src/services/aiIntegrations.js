@@ -1,17 +1,19 @@
 import {
-  EXTERNAL_AI_PROVIDERS_ENABLED,
+  askBrowserAssistant,
   getBrowserAiConnections,
+  generateBrowserQuestion,
   removeBrowserKey,
   setBrowserAiPreference,
-  testAndSaveBrowserKey
+  startCanvaOAuth,
+  testAndSaveBrowserKey,
 } from './browserAi.js';
 
-export { EXTERNAL_AI_PROVIDERS_ENABLED };
-export const muatKoneksiAI = async (uid) => getBrowserAiConnections(uid);
+export const muatKoneksiAI = (uid) => getBrowserAiConnections(uid);
 export const simpanKunciPribadiAI = (uid, provider, apiKey) =>
   testAndSaveBrowserKey(uid, provider, apiKey);
 export const hapusKunciPribadiAI = (uid, provider) =>
   removeBrowserKey(uid, provider);
 export const simpanPreferensiAI = (uid, workflow, provider) =>
   setBrowserAiPreference(uid, workflow, provider);
-export { generateBrowserQuestion as buatDrafSoalAI } from './browserAi.js';
+export const sambungkanCanva = (uid) => startCanvaOAuth(uid);
+export { generateBrowserQuestion as buatDrafSoalAI, askBrowserAssistant };

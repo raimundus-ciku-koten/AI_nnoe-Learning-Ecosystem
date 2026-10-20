@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase.ts';
 
-const FORMAT_KODE = /^ALE-[A-Z0-9]{1,6}-[A-Z0-9]{6}-[0-9]{4}$/;
+const FORMAT_KODE = /^(?:ALE-[0-9A-F]{32}|ALE-[A-Z0-9]{1,6}-[A-Z0-9]{6}-[0-9]{4})$/;
 const ZONA_WAKTU = 'Asia/Makassar';
 
 export function tanggalHariIni(tanggal = new Date(), zona = ZONA_WAKTU) {

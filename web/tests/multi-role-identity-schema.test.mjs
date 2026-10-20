@@ -54,3 +54,42 @@ test('pemilih peran klien tidak dapat mengubah tenant atau peran tanpa RPC admin
   assert.match(userManagement, /supportsRoleAssignments\s*\?\s*\[\.\.\.new Set\(\[\.\.\.form\.roles, form\.role\]\)\]\s*:\s*\[form\.role\]/);
   assert.match(userManagement, /disabled=\{!supportsRoleAssignments && !LEGACY_ROLES\.has\(value\)\}/);
 });
+
+test('pembaca profil autentikasi hanya meminta kolom yang tersedia di migrasi profil', () => {
+  const auth = readFileSync(new URL('../src/auth.js', import.meta.url), 'utf8');
+  const identity = readFileSync(
+    new URL('../../supabase/migrations/20261016000100_identity_foundation.sql', import.meta.url),
+    'utf8',
+  );
+  const userManagementMigration = readFileSync(
+    new URL('../../supabase/migrations/20261017000100_platform_user_management.sql', import.meta.url),
+    'utf8',
+  );
+  const profileDefinition = identity.match(
+    /create table if not exists public\.profiles\s*\(([\s\S]*?)\n\);/,
+  )?.[1];
+
+  assert.ok(profileDefinition, 'definisi tabel profiles tidak ditemukan');
+  const profileColumns = new Set(
+    [...profileDefinition.matchAll(/^\s{2}([a-z][a-z0-9_]*)\s+/gm)]
+      .map(([, column]) => column),
+  );
+  for (const [, alteration] of userManagementMigration.matchAll(
+    /alter table public\.profiles([\s\S]*?);/gi,
+  )) {
+    for (const [, column] of alteration.matchAll(/add column if not exists ([a-z][a-z0-9_]*)/gi)) {
+      profileColumns.add(column);
+    }
+  }
+
+  const selectedColumns = auth.match(
+    /\.from\('profiles'\)\s*\.select\('([^']+)'\)/,
+  )?.[1]?.split(',');
+  assert.ok(selectedColumns, 'proyeksi tabel profiles tidak ditemukan');
+  assert.deepEqual(
+    selectedColumns.filter((column) => !profileColumns.has(column)),
+    [],
+    'query profil meminta kolom yang tidak tersedia pada skema',
+  );
+  assert.match(auth, /const activeRole = claims\.role \|\| profil\.role/);
+});

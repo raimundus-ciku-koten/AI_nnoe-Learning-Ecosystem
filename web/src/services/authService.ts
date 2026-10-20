@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { UserDoc, UserRole } from '../types/schema';
 
 export async function loginWithGoogle(): Promise<UserDoc> {
-  const redirectTo = `${window.location.origin}${window.location.pathname}#/login`;
+  const redirectTo = `${window.location.origin}${window.location.pathname}`;
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { redirectTo },

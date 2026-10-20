@@ -14,6 +14,7 @@
  *   - Penanganan galat: galat, toast (re-export)
  */
 import { esc, ikon } from '../../ui.js';
+import { buatKodeAcak } from '../../lib/kodeSiswa.js';
 import { toast } from '../../components/toast.js';
 import { muatSiswa as muatDaftarSiswa } from '../../services/students.js';
 import { muatPenugasanGuru } from '../../services/teacherAssignments.js';
@@ -134,16 +135,7 @@ export async function bekukanKodeSiswa(ctx, daftar = null) {
 /* ===========================================================================
  * 6. KODE UNIK SISWA + URL SCAN
  * ---------------------------------------------------------------------------
- * Format : ALE-<KELAS>-<HASH6>-<IDENT>
- *   KELAS : A-Z0-9, max 6 char. Default 'KELAS'.
- *   HASH6 : FNV-1a 32-bit → base36 → uppercase, 6 char. Stabilitas tinggi.
- *   IDENT : NISN (4 digit terakhir) atau 4 char terakhir docId.
- * Contoh : ALE-7A-3F9K2P-9012
- *
- * FNV-1a dipilih karena:
- *   - deterministik lintas runtime (V8/JSC/SpiderMonkey)
- *   - 32-bit → ~4.3 M ruang → tabrakan dapat diabaikan untuk skala sekolah
- *   - sederhana (tanpa dependensi)
+ * Kode baru adalah token acak kriptografis, tidak memuat kelas atau data siswa.
  * =========================================================================== */
 
 /** FNV-1a 32-bit hash. */
@@ -157,39 +149,14 @@ export function fnv1a32(str) {
 }
 
 /**
- * Buat kode unik siswa yang deterministik.
- * Bila siswa sudah memiliki `kodeUnik` tersimpan, gunakan itu (agar kode
- * tidak berubah saat nama diedit).
+ * Buat token acak untuk kartu baru. Kode tersimpan tidak pernah berubah.
  *
  * @param {Object} siswa
- * @param {string} [salt] penambah entropy saat terjadi tabrakan
  * @returns {string}
  */
-export function buatKodeSiswa(siswa, salt = '') {
-  if (!salt && siswa?.kodeUnik) return String(siswa.kodeUnik);
-
-  const kelas = String(siswa?.kelas || 'KELAS')
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '')
-    .slice(0, 6) || 'KELAS';
-
-  const seed = String(
-    siswa?.uid || siswa?.id ||
-    `${siswa?.nama || ''}|${siswa?.nisn || ''}|${siswa?.kelas || ''}`
-  ) + salt;
-
-  const hash = fnv1a32(seed)
-    .toString(36)
-    .toUpperCase()
-    .padStart(6, '0')
-    .slice(-6);
-
-  const ident = String(siswa?.nisn || seed)
-    .replace(/\D/g, '')
-    .slice(-4)
-    .padStart(4, '0');
-
-  return `ALE-${kelas}-${hash}-${ident}`;
+export function buatKodeSiswa(siswa) {
+  if (siswa?.kodeUnik) return String(siswa.kodeUnik);
+  return buatKodeAcak();
 }
 
 /**
@@ -198,7 +165,7 @@ export function buatKodeSiswa(siswa, salt = '') {
  * @returns {boolean}
  */
 export function kodeSiswaValid(kode) {
-  return /^ALE-[A-Z0-9]{1,6}-[A-Z0-9]{6}-\d{4}$/.test(String(kode ?? ''));
+  return /^(?:ALE-[0-9A-F]{32}|ALE-[A-Z0-9]{1,6}-[A-Z0-9]{6}-\d{4})$/.test(String(kode ?? ''));
 }
 
 /**

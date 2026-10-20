@@ -124,6 +124,7 @@ export async function tabSiswa(el, ctx) {
   let filter = '';
   let editId = null;
   let idSementara = null;
+  let kodeSementara = null;
   let pratinjau = null;         // { baris, siap, kelas, teks } | null
   let idTampil = [];            // id siswa yang sedang tampil (untuk "pilih semua")
   let pemicu = null;            // elemen pembuka form (untuk mengembalikan fokus)
@@ -532,6 +533,7 @@ export async function tabSiswa(el, ctx) {
     generasi += 1;
     editId = null;
     idSementara = null;
+    kodeSementara = null;
     const f = q('#sisForm');
     f.hidden = true;
     f.reset();
@@ -546,12 +548,8 @@ export async function tabSiswa(el, ctx) {
   function perbaruiPreviewKode() {
     if (editId) return;
     if (!idSementara) idSementara = idUuidSiswa();
-    q('#sisKode').value = buatKodeSiswa({
-      id: idSementara,
-      nama: q('#sisNama').value,
-      nisn: q('#sisNisn').value.replace(/\D/g, ''),
-      kelas: q('#sisKelas').value,
-    });
+    if (!kodeSementara) kodeSementara = buatKodeSiswa({});
+    q('#sisKode').value = kodeSementara;
   }
 
   function perbaruiKeteranganNisn() {
@@ -785,7 +783,7 @@ export async function tabSiswa(el, ctx) {
 
     try {
       const id = idEdit || idSementara || idUuidSiswa();
-      const kodeUnik = lama?.kodeUnik || buatKodeSiswa({ id, nama, nisn, kelas });
+      const kodeUnik = lama?.kodeUnik || kodeSementara || buatKodeSiswa({});
       const berubahKode = !lama?.kodeUnik;
       const urlScan = berubahKode || !lama?.urlScan ? urlScanKode(kodeUnik) : lama.urlScan;
 

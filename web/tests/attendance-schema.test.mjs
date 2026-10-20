@@ -29,6 +29,18 @@ test('requires owner, tenant, active profile, entitlement, and an exact student 
   assert.match(migration, /student\.kelas = attendance_records\.kelas/);
 });
 
+test('accepts opaque random tokens while retaining compatibility with already printed cards', async () => {
+  const migrationPath = new URL(
+    '../../supabase/migrations/20261019000500_random_attendance_tokens.sql',
+    import.meta.url,
+  );
+  const tokenMigration = await readFile(migrationPath, 'utf8');
+  assert.match(tokenMigration, /ALE-\[0-9A-F\]\{32\}/);
+  assert.match(tokenMigration, /ALE-\[A-Z0-9\]\{1,6\}-\[A-Z0-9\]\{6\}-\[0-9\]\{4\}/);
+  assert.match(tokenMigration, /public\.students/);
+  assert.match(tokenMigration, /public\.attendance_records/);
+});
+
 test('does not grant attendance update/delete to authenticated users or expose records anonymously', () => {
   assert.match(migration, /revoke all on table public\.attendance_records from anon, authenticated/);
   assert.doesNotMatch(migration, /grant (?:update|delete) .*public\.attendance_records/);

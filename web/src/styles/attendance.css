@@ -43,6 +43,8 @@
 .attendance-load-more:disabled { opacity: .6; cursor: wait; }
 
 .attendance-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
+.attendance-guidance { display: grid; gap: .3rem; padding: .9rem 1.1rem; border-left: 4px solid #157c77; color: #46556d; }
+.attendance-guidance strong { color: #1c2b45; }
 .attendance-stat { display: grid; gap: .35rem; padding: 1rem 1.15rem; }
 .attendance-stat span { color: #607089; font-size: .82rem; }
 .attendance-stat strong { color: #1c2b45; font-size: 1.5rem; }

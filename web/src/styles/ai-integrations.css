@@ -175,6 +175,10 @@
   color: #9a3412;
 }
 
+.ai-integrations__muted {
+  color: var(--ale-muted, #64748b);
+}
+
 .ai-integrations__ai-answer {
   margin-top: 1rem;
   padding: 1rem;

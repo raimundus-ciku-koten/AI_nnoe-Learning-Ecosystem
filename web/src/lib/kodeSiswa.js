@@ -3,35 +3,32 @@
  * Kode unik siswa untuk barcode absensi.
  * ---------------------------------------------------------------------------
  * Urutan sumber kode (sama dengan versi sebelumnya, jadi kartu lama tetap valid):
- *   1. `kodeUnik` yang sudah tersimpan di dokumen siswa  (otoritatif, tak berubah)
+ *   1. `kodeUnik` yang sudah tersimpan di dokumen siswa (otoritatif, tak berubah)
  *   2. pembuat kode aplikasi (mis. UMUM.buatKodeSiswa), bila ada
- *   3. cadangan deterministik FNV-1a  →  ALE-<KELAS>-<HASH6>-<IDENT4>
+ *   3. token acak kriptografis ALE-<UUID> untuk kartu baru/legacy tanpa kode
  */
 
-/** Hash FNV-1a 32-bit → base36 huruf besar, 6 karakter. */
-function fnv(teks) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < teks.length; i++) {
-    h ^= teks.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return (h >>> 0).toString(36).toUpperCase().padStart(6, '0').slice(0, 6);
+const KODE_LAMA = /^ALE-[A-Z0-9]{1,6}-[A-Z0-9]{6}-[0-9]{4}$/;
+const KODE_ACAK = /^ALE-[0-9A-F]{32}$/;
+
+export function buatKodeAcak() {
+  const id = globalThis.crypto?.randomUUID?.();
+  if (!id) throw new Error('Peramban tidak mendukung pembuatan token absensi yang aman.');
+  return `ALE-${id.replaceAll('-', '').toUpperCase()}`;
 }
 
 export const kelasDari = (s) => String(s?.kelas ?? '').trim();
 
-/** Kode deterministik — hanya dipakai bila aplikasi tak punya pembuat kode sendiri. */
-export function kodeCadangan(s) {
-  const kelas = kelasDari(s).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'KLS';
-  const hash = fnv(`${s?.nama ?? ''}|${s?.nisn ?? ''}|${s?.kelas ?? ''}`);
-  const ident = String(s?.nisn ?? '').replace(/\D/g, '').slice(-4) || fnv(String(s?.nama ?? '')).slice(0, 4);
-  return `ALE-${kelas}-${hash}-${ident}`;
-}
+/** Kode baru berupa token acak; tidak diturunkan dari identitas atau kelas. */
+export const kodeCadangan = () => buatKodeAcak();
 
 export const kodeTersimpan = (s) => String(s?.kodeUnik ?? '').trim();
 
 /** Format yang boleh disimpan ke tabel siswa Supabase. */
-export const kodeLayakSimpan = (k) => /^[A-Za-z0-9._-]{4,64}$/.test(String(k ?? ''));
+export const kodeLayakSimpan = (k) => {
+  const kode = String(k ?? '').toUpperCase();
+  return KODE_ACAK.test(kode) || KODE_LAMA.test(kode);
+};
 
 /**
  * @param {object} s siswa
@@ -85,7 +82,7 @@ export function rencanaKodeBaru(semua, target, pembuat = null) {
     if (!kodeLayakSimpan(dasar)) dasar = kodeCadangan(s);
 
     let kode = dasar;
-    for (let n = 2; dipakai.has(kode); n++) kode = `${dasar}-${n.toString(36).toUpperCase()}`;
+    while (dipakai.has(kode)) kode = kodeCadangan(s);
     dipakai.add(kode);
     rencana.push({ id: String(s.id), kode, nama: String(s.nama ?? '') });
   });

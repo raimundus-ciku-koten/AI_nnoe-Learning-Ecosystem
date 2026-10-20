@@ -3,31 +3,36 @@ import Ikon from '../components/Ikon.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   hapusKunciPribadiAI,
-  EXTERNAL_AI_PROVIDERS_ENABLED,
   muatKoneksiAI,
+  sambungkanCanva,
   simpanKunciPribadiAI,
-  simpanPreferensiAI
+  simpanPreferensiAI,
 } from '../services/aiIntegrations.js';
 import '../styles/ai-integrations.css';
 
-const PILIHAN_PROVIDER = [
-  ['auto', 'Otomatis (Gemini → DeepSeek → Groq)'],
+const PROVIDER_PREFERENCE_OPTIONS = [
+  ['auto', 'Otomatis (Gemini → DeepSeek → Groq → Claude)'],
   ['gemini', 'Gemini'],
   ['deepseek', 'DeepSeek'],
-  ['groq', 'Groq']
+  ['groq', 'Groq'],
+  ['claude', 'Claude'],
 ];
 
-const PROVIDER = [
-  { id: 'gemini', nama: 'Gemini', kunciPribadi: true, url: 'https://aistudio.google.com/apikey' },
-  { id: 'deepseek', nama: 'DeepSeek', kunciPribadi: true, url: 'https://platform.deepseek.com/api_keys' },
-  { id: 'groq', nama: 'Groq', kunciPribadi: true, url: 'https://console.groq.com/keys', catatan: 'Opsi inference cepat dengan kuota gratis terbatas dari GroqCloud. Batas dan model dapat berubah sesuai kebijakan provider.' }
+const PROVIDERS = [
+  { id: 'gemini', name: 'Gemini', url: 'https://aistudio.google.com/apikey' },
+  { id: 'deepseek', name: 'DeepSeek', url: 'https://platform.deepseek.com/api_keys' },
+  {
+    id: 'groq',
+    name: 'Groq',
+    url: 'https://console.groq.com/keys',
+    note: 'Kuota gratis dan model dapat berubah sesuai kebijakan provider.',
+  },
+  { id: 'claude', name: 'Claude', url: 'https://console.anthropic.com/settings/keys' },
 ];
 
-function statusProvider(provider, state) {
-  if (!EXTERNAL_AI_PROVIDERS_ENABLED) return 'Dinonaktifkan (tanpa billing)';
-  const status = state?.providers?.[provider.id];
-  if (!status?.available) return 'Belum dikonfigurasi';
-  return status.personal ? 'Kunci pribadi aktif' : 'Kunci platform aktif';
+function providerStatus(provider, connections) {
+  if (!connections.configured) return 'Server belum dikonfigurasi';
+  return connections.providers[provider.id]?.available ? 'Kunci pribadi aktif' : 'Belum tersambung';
 }
 
 export default function AIIntegrationsPage() {
@@ -36,34 +41,37 @@ export default function AIIntegrationsPage() {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [keys, setKeys] = useState({ gemini: '', deepseek: '', groq: '' });
-  const [preferences, setPreferences] = useState({ planning: 'auto', assistant: 'auto', questions: 'auto' });
+  const [consent, setConsent] = useState(false);
+  const [keys, setKeys] = useState({ gemini: '', deepseek: '', groq: '', claude: '' });
+  const [preferences, setPreferences] = useState({ assistant: 'auto', questions: 'auto' });
+
   const refresh = useCallback(async () => {
     setError('');
     const result = await muatKoneksiAI(user?.uid);
     setConnections(result);
-    setPreferences(result.preferences);
+    setPreferences((current) => ({ ...current, ...result.preferences }));
   }, [user?.uid]);
 
   useEffect(() => {
     let active = true;
-    setKeys({ gemini: '', deepseek: '', groq: '' });
-    if (user?.uid) {
-      muatKoneksiAI(user.uid)
-        .then((result) => {
-          if (active) {
-            setConnections(result);
-            setPreferences(result.preferences);
-          }
-        })
-        .catch((cause) => {
-          console.error('[ai-integrations] Gagal memuat status provider:', cause);
-          if (active) setError('Status provider AI pribadi tidak dapat dimuat.');
-        });
-    } else {
-      setConnections(null);
+    setConnections(null);
+    setKeys({ gemini: '', deepseek: '', groq: '', claude: '' });
+    setConsent(false);
+    if (!user?.uid) {
       setError('Silakan masuk sebelum mengatur provider AI.');
+      return () => { active = false; };
     }
+    muatKoneksiAI(user.uid)
+      .then((result) => {
+        if (active) {
+          setConnections(result);
+          setPreferences((current) => ({ ...current, ...result.preferences }));
+        }
+      })
+      .catch((cause) => {
+        console.error('[ai-integrations] Gagal memuat status provider:', cause);
+        if (active) setError(cause?.message || 'Status provider AI pribadi tidak dapat dimuat.');
+      });
     return () => { active = false; };
   }, [user?.uid]);
 
@@ -85,8 +93,12 @@ export default function AIIntegrationsPage() {
     }
   }
 
-  async function simpanKunci(provider) {
+  async function saveKey(provider) {
     const apiKey = keys[provider].trim();
+    if (!consent) {
+      setError('Setujui pengiriman permintaan uji dan kemungkinan biaya sebelum memeriksa kunci.');
+      return;
+    }
     if (!apiKey) {
       setError('Masukkan kunci API terlebih dahulu.');
       return;
@@ -94,124 +106,199 @@ export default function AIIntegrationsPage() {
     const saved = await withBusy(
       `key-${provider}`,
       () => simpanKunciPribadiAI(user?.uid, provider, apiKey),
-      `Kunci ${provider} valid dan aktif sementara di tab ini. Kunci tidak disimpan pada server aplikasi.`
+      `Kunci ${provider} terverifikasi dan tersimpan terenkripsi. Layanan kini akan memilih kunci ini setelah Anda masuk.`,
     );
-    if (saved) setKeys((current) => ({ ...current, [provider]: '' }));
+    if (saved) {
+      setKeys((current) => ({ ...current, [provider]: '' }));
+      setConsent(false);
+    }
   }
 
-  function hapusKunci(provider) {
-    void withBusy(`remove-${provider}`, () => hapusKunciPribadiAI(user?.uid, provider), `Kunci ${provider} dihapus dari sesi browser ini.`);
+  function removeCredential(provider) {
+    const label = provider === 'canva' ? 'Canva' : provider;
+    void withBusy(
+      `remove-${provider}`,
+      () => hapusKunciPribadiAI(user?.uid, provider),
+      `Koneksi ${label} telah dihapus.`,
+    );
   }
 
-  async function ubahPreferensi(workflow, provider) {
-    const sebelumnya = preferences[workflow];
+  async function changePreference(workflow, provider) {
+    const previous = preferences[workflow];
     setPreferences((current) => ({ ...current, [workflow]: provider }));
-    const saved = await withBusy(`pref-${workflow}`, () => simpanPreferensiAI(user?.uid, workflow, provider), 'Pilihan provider tersimpan lokal untuk akun ini di browser.');
-    if (!saved) setPreferences((current) => ({ ...current, [workflow]: sebelumnya }));
+    const saved = await withBusy(
+      `pref-${workflow}`,
+      () => simpanPreferensiAI(user?.uid, workflow, provider),
+      'Preferensi provider tersimpan pada browser ini untuk akun Anda.',
+    );
+    if (!saved) setPreferences((current) => ({ ...current, [workflow]: previous }));
   }
+
+  async function connectCanva() {
+    setBusy('canva-connect');
+    setError('');
+    setNotice('');
+    try {
+      const result = await sambungkanCanva(user?.uid);
+      const authorizationUrl = new URL(result?.authorizationUrl);
+      if (authorizationUrl.origin !== 'https://www.canva.com') {
+        throw new Error('URL otorisasi Canva tidak valid.');
+      }
+      window.location.assign(authorizationUrl.toString());
+    } catch (cause) {
+      console.error('[ai-integrations] Gagal memulai Canva OAuth:', cause);
+      setError(cause?.message || 'Koneksi Canva tidak dapat dimulai.');
+      setBusy('');
+    }
+  }
+
+  const canvaConnected = connections?.providers?.canva?.connected === true;
 
   return (
     <main className="ai-integrations" aria-labelledby="ai-integrations-title">
       <header className="ai-integrations__header">
         <p className="ai-integrations__eyebrow"><Ikon nama="settings" /> Pengaturan akun</p>
         <h1 id="ai-integrations-title">AI &amp; Layanan</h1>
-        <p>Integrasi AI pihak ketiga dinonaktifkan untuk mencegah penggunaan provider yang dapat memerlukan billing.</p>
+        <p>Sambungkan kunci AI pribadi dan layanan Canva ke akun Anda.</p>
       </header>
+
       <p className="ai-integrations__message is-warning" role="note">
-        {EXTERNAL_AI_PROVIDERS_ENABLED
-          ? 'Provider AI eksternal aktif. Pastikan ketentuan dan biaya provider dipahami sebelum mengirim data.'
-          : 'Tidak ada kunci AI yang diminta atau disimpan, dan prompt tidak dikirim ke Gemini, DeepSeek, Groq, atau layanan AI eksternal. Fitur AI yang memerlukan provider eksternal tidak tersedia.'}
+        Prompt dan materi yang Anda kirim akan diproses oleh provider AI yang dipilih. Provider dapat
+        menerapkan batas kuota atau biaya; kuota gratis tidak dijamin. Jangan kirim kata sandi atau
+        data pribadi sensitif.
       </p>
-      {!EXTERNAL_AI_PROVIDERS_ENABLED && (
-        <p className="ai-integrations__message" role="note">
-          Kunci API hanya dapat diterbitkan oleh provider, bukan dibuat otomatis oleh aplikasi.
-          Periksa syarat, kuota gratis, dan kemungkinan billing pada portal resmi sebelum membuat
-          kunci. Membuka portal tidak mengaktifkan integrasi AI di aplikasi.
+      {!connections?.configured && (
+        <p className="ai-integrations__message is-warning" role="status">
+          Penyimpanan kunci belum diaktifkan oleh administrator. Superadmin perlu mengonfigurasi
+          secret AI_CREDENTIALS_KEYRING pada Supabase Edge Functions sebelum kunci dapat disimpan.
         </p>
       )}
 
       {error && <p className="ai-integrations__message is-error" role="alert">{error}</p>}
       {notice && <p className="ai-integrations__message is-success" role="status">{notice}</p>}
 
-      <p className="ai-integrations__message" role="note">
-        Analitik penggunaan belum diaktifkan. Aplikasi tidak mengirim peristiwa analitik.
-      </p>
-
       {!connections && !error && <p role="status">Memuat status provider…</p>}
 
       {connections && (
         <>
           <section className="ai-integrations__card" aria-labelledby="ai-provider-title">
-            <h2 id="ai-provider-title">Koneksi provider</h2>
-            <p>{EXTERNAL_AI_PROVIDERS_ENABLED
-              ? 'Kunci provider hanya digunakan sesuai konfigurasi yang dipilih.'
-              : 'Koneksi provider dinonaktifkan. Pengaturan ini tidak menerima atau mengirim kunci API.'}</p>
+            <h2 id="ai-provider-title">Koneksi provider AI</h2>
+            <p>Kunci disimpan terenkripsi di backend dan tidak pernah disimpan pada browser.</p>
+            <label className="ai-integrations__acknowledgement">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(event) => setConsent(event.target.checked)}
+              />
+              <span>
+                Saya memahami bahwa pemeriksaan kunci mengirim permintaan uji ke provider terkait,
+                dan pemakaian AI dapat tunduk pada biaya serta ketentuan provider.
+              </span>
+            </label>
             <div className="ai-integrations__providers">
-              {PROVIDER.map((provider) => (
+              {PROVIDERS.map((provider) => (
                 <article className="ai-integrations__provider" key={provider.id}>
                   <div className="ai-integrations__provider-heading">
-                    <h3>{provider.nama}</h3>
+                    <h3>{provider.name}</h3>
                     <span className={`ai-integrations__badge ${connections.providers[provider.id]?.available ? 'is-ready' : ''}`}>
-                      {statusProvider(provider, connections)}
+                      {providerStatus(provider, connections)}
                     </span>
                   </div>
-                  {provider.catatan && <p>{provider.catatan}</p>}
-                  {provider.url && <a href={provider.url} target="_blank" rel="noopener noreferrer">Buka portal resmi {provider.nama}</a>}
-                  {provider.kunciPribadi ? (
-                    <div className="ai-integrations__key-controls">
-                      <label>
-                        Kunci API pribadi (hanya di memori tab ini)
-                        <input
-                          type="password"
-                          autoComplete="new-password"
-                          value={keys[provider.id]}
-                          onChange={(event) => setKeys((current) => ({ ...current, [provider.id]: event.target.value }))}
-                          placeholder={`Kunci ${provider.nama} Anda`}
-                          maxLength={4096}
-                          disabled={!EXTERNAL_AI_PROVIDERS_ENABLED}
-                        />
-                      </label>
-                      <div className="ai-integrations__actions">
-                        <button type="button" disabled={!EXTERNAL_AI_PROVIDERS_ENABLED || Boolean(busy) || !keys[provider.id].trim()} onClick={() => simpanKunci(provider.id)}>
-                          {busy === `key-${provider.id}` ? 'Memeriksa kunci…' : 'Periksa & aktifkan'}
+                  {provider.note && <p>{provider.note}</p>}
+                  <a href={provider.url} target="_blank" rel="noopener noreferrer">
+                    Buka portal resmi {provider.name}
+                  </a>
+                  <div className="ai-integrations__key-controls">
+                    <label>
+                      Kunci API pribadi
+                      <input
+                        type="password"
+                        autoComplete="new-password"
+                        value={keys[provider.id]}
+                        onChange={(event) => setKeys((current) => ({ ...current, [provider.id]: event.target.value }))}
+                        placeholder={`Kunci ${provider.name} Anda`}
+                        maxLength={4096}
+                        disabled={!connections.configured || Boolean(busy)}
+                      />
+                    </label>
+                    <div className="ai-integrations__actions">
+                      <button
+                        type="button"
+                        disabled={!connections.configured || !consent || Boolean(busy) || !keys[provider.id].trim()}
+                        onClick={() => void saveKey(provider.id)}
+                      >
+                        {busy === `key-${provider.id}` ? 'Memeriksa kunci…' : 'Verifikasi & simpan'}
+                      </button>
+                      {connections.providers[provider.id]?.personal && (
+                        <button
+                          type="button"
+                          className="is-secondary"
+                          disabled={Boolean(busy)}
+                          onClick={() => removeCredential(provider.id)}
+                        >
+                          Hapus kunci
                         </button>
-                        {connections.providers[provider.id].personal && (
-                          <button type="button" className="is-secondary" disabled={!EXTERNAL_AI_PROVIDERS_ENABLED || Boolean(busy)} onClick={() => hapusKunci(provider.id)}>
-                            Hapus dari sesi
-                          </button>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  ) : null}
+                  </div>
                 </article>
               ))}
             </div>
           </section>
 
           <section className="ai-integrations__card" aria-labelledby="ai-preferences-title">
-            <h2 id="ai-preferences-title">Preferensi per penggunaan</h2>
-            <p>{EXTERNAL_AI_PROVIDERS_ENABLED
-              ? 'Preferensi provider tersimpan di browser ini per UID akun.'
-              : 'Pengaturan provider dikunci karena layanan AI eksternal dinonaktifkan. RPE tetap dihitung oleh mesin lokal tanpa AI.'}</p>
+            <h2 id="ai-preferences-title">Preferensi layanan AI</h2>
+            <p>Kunci yang sudah tersimpan aktif otomatis saat fitur AI digunakan setelah Anda masuk.</p>
             <div className="ai-integrations__preferences">
               {[
-                ['planning', 'Perencanaan (ATP/KKTP/Modul)'],
                 ['assistant', 'Asisten AI'],
-                ['questions', 'Pembuatan soal biasa']
+                ['questions', 'Pembuatan draf soal'],
               ].map(([workflow, label]) => (
                 <label key={workflow}>
                   {label}
                   <select
-                    value={preferences[workflow]}
-                    disabled={!EXTERNAL_AI_PROVIDERS_ENABLED || Boolean(busy)}
-                    onChange={(event) => ubahPreferensi(workflow, event.target.value)}
+                    value={preferences[workflow] || 'auto'}
+                    disabled={Boolean(busy)}
+                    onChange={(event) => void changePreference(workflow, event.target.value)}
                   >
-                    {PILIHAN_PROVIDER.map(([value, text]) => (
+                    {PROVIDER_PREFERENCE_OPTIONS.map(([value, text]) => (
                       <option key={value} value={value}>{text}</option>
                     ))}
                   </select>
                 </label>
               ))}
+            </div>
+          </section>
+
+          <section className="ai-integrations__card" aria-labelledby="canva-title">
+            <h2 id="canva-title">Canva</h2>
+            <p>
+              {canvaConnected
+                ? 'Akun Canva tersambung. Pembuatan desain Canva dari aplikasi belum tersedia.'
+                : 'Sambungkan akun Canva melalui OAuth. Fitur pembuatan desain akan tersedia pada integrasi lanjutan.'}
+            </p>
+            <div className="ai-integrations__actions">
+              {!canvaConnected ? (
+                <button
+                  type="button"
+                  disabled={!connections.configured || !connections.canvaConfigured || Boolean(busy)}
+                  onClick={() => void connectCanva()}
+                >
+                  {busy === 'canva-connect' ? 'Membuka Canva…' : 'Sambungkan Canva'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="is-secondary"
+                  disabled={Boolean(busy)}
+                  onClick={() => removeCredential('canva')}
+                >
+                  Putuskan Canva
+                </button>
+              )}
+              {!connections.canvaConfigured && (
+                <span className="ai-integrations__muted">OAuth Canva belum dikonfigurasi oleh administrator.</span>
+              )}
             </div>
           </section>
         </>

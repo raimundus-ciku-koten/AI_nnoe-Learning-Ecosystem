@@ -35,3 +35,9 @@ jobs:
       - name: Test login security utilities
         run: npm run test:security
         working-directory: web
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check Supabase Edge Functions
+        run: deno check --no-lock functions/platform-user-invite/index.ts functions/ai-user-services/index.ts functions/canva-oauth-start/index.ts functions/canva-oauth-callback/index.ts
+        working-directory: supabase

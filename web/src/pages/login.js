@@ -11,6 +11,8 @@ import { getState, subscribe } from '../state.js';
 import PRICING from '../../../functions/shared/pricing.json';
 
 const TURNSTILE_SITE_KEY = import.meta.env?.VITE_TURNSTILE_SITE_KEY?.trim() || '';
+const DEMO_TRIAL_ENABLED = import.meta.env?.VITE_PUBLIC_DEMO_TRIAL_ENABLED?.trim().toLowerCase() === 'true'
+  && Boolean(TURNSTILE_SITE_KEY);
 const PESAN_AUTH = {
   invalid_credentials: 'Email atau kata sandi tidak sesuai.',
   invalid_email: 'Format email tidak valid.',
@@ -179,7 +181,7 @@ export function halamanLogin(wadah) {
             <button id="btnGoogle" class="btn btn-outline btn-block" type="button">${IKON_GOOGLE} Masuk dengan Google</button>
             <p id="loginStatus" class="login-status" role="status" aria-live="polite" hidden></p>
             <p class="card-note"><a href="#" id="btnLupaSandi">Lupa kata sandi?</a></p>
-            <p class="card-note" id="trialPrompt">Ingin mencoba dengan data simulasi? <button class="trial-link" id="btnTampilkanTrial" type="button">Coba gratis 3 hari</button></p>
+            <p class="card-note" id="trialPrompt" ${DEMO_TRIAL_ENABLED ? '' : 'hidden'}>Ingin mencoba dengan data simulasi? <button class="trial-link" id="btnTampilkanTrial" type="button">Coba gratis 3 hari</button></p>
             <p class="card-note" id="trialBack" hidden><button class="trial-link" id="btnKembaliMasuk" type="button">Kembali ke login</button></p>
           </section>
           <div class="hero-copy">
@@ -282,7 +284,7 @@ export function halamanLogin(wadah) {
     wadah.querySelector('.divider').hidden = aktif;
     tombolGoogle.hidden = aktif;
     $('#btnLupaSandi').parentElement.hidden = aktif;
-    $('#trialPrompt').hidden = aktif || modeTrial;
+    $('#trialPrompt').hidden = aktif || modeTrial || !DEMO_TRIAL_ENABLED;
     $('#trialBack').hidden = aktif || !modeTrial;
     judulMasuk.textContent = aktif ? 'Buat kata sandi akun' : 'Masuk ke akun Anda';
     keteranganMasuk.textContent = aktif
@@ -337,7 +339,7 @@ export function halamanLogin(wadah) {
     return token;
   };
   const terapkanModeTrial = (aktif) => {
-    if (modeBuatSandi) return;
+    if (modeBuatSandi || (aktif && !DEMO_TRIAL_ENABLED)) return;
     modeTrial = aktif;
     form.hidden = aktif;
     formTrial.hidden = !aktif;
@@ -345,7 +347,7 @@ export function halamanLogin(wadah) {
     wadah.querySelector('.divider').hidden = aktif;
     tombolGoogle.hidden = aktif;
     $('#btnLupaSandi').parentElement.hidden = aktif;
-    $('#trialPrompt').hidden = aktif;
+    $('#trialPrompt').hidden = aktif || !DEMO_TRIAL_ENABLED;
     $('#trialBack').hidden = !aktif;
     judulMasuk.textContent = aktif ? 'Coba AI_nnoe selama 3 hari' : 'Masuk ke akun Anda';
     keteranganMasuk.textContent = aktif
@@ -354,7 +356,9 @@ export function halamanLogin(wadah) {
     if (aktif) trialNama.focus();
   };
 
-  tombolTampilkanTrial.addEventListener('click', () => terapkanModeTrial(true));
+  if (DEMO_TRIAL_ENABLED) {
+    tombolTampilkanTrial.addEventListener('click', () => terapkanModeTrial(true));
+  }
   tombolKembaliMasuk.addEventListener('click', () => terapkanModeTrial(false));
 
   let testimoniDiminta = false;
@@ -503,6 +507,10 @@ export function halamanLogin(wadah) {
     }
     if (!TURNSTILE_SITE_KEY) {
       tampilkanError('Pendaftaran uji coba belum tersedia karena verifikasi anti-bot belum dikonfigurasi.');
+      return;
+    }
+    if (!DEMO_TRIAL_ENABLED) {
+      tampilkanError('Pendaftaran uji coba belum dibuka di lingkungan ini.');
       return;
     }
 

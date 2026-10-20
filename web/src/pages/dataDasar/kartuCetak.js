@@ -56,13 +56,13 @@ const CSS = `
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
   .k .nisn { font-size: 2.9mm; color: #475569; margin-top: .6mm; }
-  .k .bc { margin-top: 1.5mm; width: 100%; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
-  .k .bc svg { width: 100%; height: 100%; max-height: 17mm; }
+  .k .qr { width: 20mm; height: 20mm; margin-top: .5mm; flex: none; }
+  .k .qr svg { display: block; width: 20mm; height: 20mm; }
   .k code { font-family: ui-monospace, Consolas, "Courier New", monospace; font-size: 2.8mm; letter-spacing: .2mm; margin-top: 1mm; }
 `;
 
 /**
- * @param {{nama:string, nisn:string, kelas:string, kode:string, svg:string}[]} kartu
+ * @param {{nama:string, nisn:string, kelas:string, kode:string, qrSvg:string}[]} kartu
  * @param {{judul?:string, brand?:string, onGalat?:(pesan:string)=>void}} [opsi]
  */
 export function cetakKartu(kartu, { judul = 'Kartu Absensi', brand = 'AI-NNOE', onGalat } = {}) {
@@ -70,14 +70,14 @@ export function cetakKartu(kartu, { judul = 'Kartu Absensi', brand = 'AI-NNOE', 
   if (!Array.isArray(kartu) || !kartu.length) { lapor('Tidak ada kartu untuk dicetak.'); return; }
 
   const html = kartu.map((k) => {
-    const svg = SVG_AMAN.test(k.svg ?? '') && !SVG_BERBAHAYA.test(k.svg) ? k.svg : '';
+    const qrSvg = SVG_AMAN.test(k.qrSvg ?? '') && !SVG_BERBAHAYA.test(k.qrSvg) ? k.qrSvg : '';
     return `
       <article class="k">
         <header><b>${esc(brand)}</b><span>${esc(k.kelas)}</span></header>
         <div class="isi">
           <h1>${esc(k.nama)}</h1>
           <p class="nisn">NISN: ${esc(k.nisn || '-')}</p>
-          <div class="bc">${svg}</div>
+          <div class="qr">${qrSvg}</div>
           <code>${esc(k.kode)}</code>
         </div>
       </article>`;

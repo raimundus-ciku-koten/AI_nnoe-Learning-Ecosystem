@@ -197,8 +197,8 @@ export default function QuestionBankPage() {
         gemini: 'Gemini',
         deepseek: 'DeepSeek',
         groq: 'Groq',
-        cerebras: 'Cerebras'
-      }[result.penyedia] || 'AI';
+        claude: 'Claude'
+      }[result.provider] || 'AI';
       setNotice(`Draf soal dibuat dengan ${provider}. Periksa dan sunting sebelum menyimpan.`);
     } catch (err) {
       console.error('[question-bank] Gagal membuat draf AI:', err);
@@ -272,6 +272,10 @@ export default function QuestionBankPage() {
               <button type="button" className="question-bank-ai-button" disabled={aiBusy || !form.mapel.trim() || !form.kelas.trim() || !topic.trim()} onClick={() => void generateAiDraft()}>
                 {aiBusy ? 'Membuat draf…' : 'Buat draf dengan AI'}
               </button>
+              <p className="question-bank-wide">
+                Topik dan konteks ini dikirim ke provider AI pribadi Anda. Kuota gratis tidak dijamin
+                dan provider dapat mengenakan biaya.
+              </p>
             </div>
             <label className="question-bank-wide">
               Pertanyaan

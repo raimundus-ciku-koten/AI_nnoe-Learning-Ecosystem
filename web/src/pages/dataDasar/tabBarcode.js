@@ -4,7 +4,7 @@
  * ---------------------------------------------------------------------------
  * Alur pengguna
  *   1. Pilih kelas (opsional: cari nama / NISN).
- *   2. Kartu siswa tampil: nama, NISN, barcode Code128, kode unik, URL scan.
+ *   2. Kartu siswa tampil: nama, NISN, QR scan, barcode Code128, dan token.
  *   3. Cetak semua kartu yang tampil, atau satu kartu saja (10 kartu / A4, CR80).
  *   4. Unduh CSV kode (Excel-safe) atau barcode per siswa sebagai SVG.
  *
@@ -25,10 +25,11 @@
 import * as UI from '../../ui.js';
 import * as UMUM from './umum.js';
 import { svgCode128 } from '../../lib/code128.js';
+import { buatSvgQr } from '../../lib/qrCode.js';
 import { esc, normal, namaAman } from '../../lib/teks.js';
 import { csvEscape, buatCsv, unduhBerkas, salinTeks } from '../../lib/berkas.js';
 import {
-  kelasDari, kodeTersimpan, kodeUntuk, urlScan as buatUrlScan, cariKodeGanda,
+  kelasDari, kodeTersimpan, urlScan as buatUrlScan, cariKodeGanda,
 } from '../../lib/kodeSiswa.js';
 import { cetakKartu } from './kartuCetak.js';
 
@@ -75,9 +76,8 @@ function urutkanUnik(daftar) {
     .sort((a, b) => a.localeCompare(b, 'id', { numeric: true }));
 }
 
-const pembuatKode = typeof UMUM.buatKodeSiswa === 'function' ? UMUM.buatKodeSiswa : null;
 const pembuatUrl = typeof UMUM.urlScanKode === 'function' ? UMUM.urlScanKode : null;
-const kodeSiswa = (s) => kodeUntuk(s, pembuatKode);
+const kodeSiswa = (s) => kodeTersimpan(s);
 const urlScan = (kode) => buatUrlScan(kode, pembuatUrl);
 
 const BERBAHAYA = /<script|<foreignObject|\son\w+\s*=|javascript:/i;
@@ -169,6 +169,7 @@ export async function tabBarcode(el, ctx) {
   let kataKunci = '';
   let tampil = [];            // siswa yang sedang ditampilkan
   const cacheSvg = new Map(); // kode → svg (hindari render ulang tiap ketikan)
+  const cacheQr = new Map();
 
   el.innerHTML = `
     <section class="dd-kartu-utama dd-kartu-utama--teal" data-tab="barcode">
@@ -200,9 +201,8 @@ export async function tabBarcode(el, ctx) {
       </div>
 
       <p class="dd-info-teks">
-        Setiap siswa memiliki kode unik <code class="dd-kode">ALE-KELAS-HASH-IDENT</code>.
-        Barcode Code128 dapat dipindai untuk absensi
-        (rute <code class="dd-kode">#/scan/&lt;kode&gt;</code>).
+        QR membuka halaman scan dengan token acak yang tidak memuat data siswa.
+        Barcode Code128 tetap tersedia untuk pemindai khusus.
         Cetak dan CSV mengikuti daftar kartu yang sedang tampil.
       </p>
       <p class="dd-info-teks" id="bcPeringatan" hidden></p>
@@ -230,21 +230,31 @@ export async function tabBarcode(el, ctx) {
     return svg;
   }
 
+  function qrUntuk(kode) {
+    const tautan = urlScan(kode);
+    if (!cacheQr.has(tautan)) cacheQr.set(tautan, buatSvgQr(tautan));
+    return cacheQr.get(tautan);
+  }
+
   const jadikanKartu = (s) => {
     const kode = kodeSiswa(s);
-    return { nama: String(s.nama ?? ''), nisn: String(s.nisn ?? ''), kelas: kelasDari(s), kode, svg: svgUntuk(kode) };
+    return { nama: String(s.nama ?? ''), nisn: String(s.nisn ?? ''), kelas: kelasDari(s), kode };
   };
 
   /* ---------------- Render ---------------- */
 
   function render() {
-    tampil = anggotaTampil();
+    const anggota = anggotaTampil();
+    tampil = anggota.filter((s) => Boolean(kodeTersimpan(s)));
     const kelasIni = semua.filter((s) => kelasDari(s) === kelasAktif);
-    const belumTersimpan = kelasIni.filter((s) => !kodeTersimpan(s)).length;
+    const belumTersimpan = anggota.filter((s) => !kodeTersimpan(s)).length;
 
     // Kode yang dipakai >1 siswa membuat absensi salah sasaran — beri peringatan keras.
-    const ganda = cariKodeGanda(semua.map(kodeSiswa));
-    const gandaDiKelas = kelasIni.filter((s) => ganda.has(kodeSiswa(s))).length;
+    const ganda = cariKodeGanda(semua.map(kodeSiswa).filter(Boolean));
+    const gandaDiKelas = kelasIni.filter((s) => {
+      const kode = kodeSiswa(s);
+      return Boolean(kode) && ganda.has(kode);
+    }).length;
 
     q('#bcJumlah').textContent = `${tampil.length} kartu`;
     q('#bcCetak').disabled = !tampil.length;
@@ -267,7 +277,9 @@ export async function tabBarcode(el, ctx) {
     if (!tampil.length) {
       grid.innerHTML = kataKunci
         ? `<p class="dd-kosong">Tidak ada siswa di kelas ${esc(kelasAktif)} yang cocok dengan “${esc(kataKunci)}”.</p>`
-        : `<p class="dd-kosong">Belum ada siswa di kelas ${esc(kelasAktif)}.</p>`;
+        : (belumTersimpan
+          ? '<p class="dd-kosong">Kode kartu belum tersimpan permanen. Rekonsiliasi data siswa sebelum mencetak QR atau barcode.</p>'
+          : `<p class="dd-kosong">Belum ada siswa di kelas ${esc(kelasAktif)}.</p>`);
       return;
     }
 
@@ -283,23 +295,47 @@ export async function tabBarcode(el, ctx) {
           <div class="dd-kartu-isi">
             <h3 class="dd-kartu-nama">${esc(s.nama)}</h3>
             <p class="dd-kartu-nisn">NISN: ${esc(s.nisn || '-')}</p>
+            <div class="dd-kartu-qr" aria-label="QR untuk membuka halaman scan"></div>
             <div class="dd-kartu-barcode">${svgUntuk(kode)}</div>
             <p class="dd-kartu-url"><code class="dd-kode">${esc(urlScan(kode))}</code></p>
           </div>
 
           <footer class="dd-kartu-kaki">
             <button type="button" class="dd-btn dd-btn--sm" data-aksi="salin" data-kode="${esc(kode)}">Salin kode</button>
+            <button type="button" class="dd-btn dd-btn--sm" data-aksi="unduh-qr" data-kode="${esc(kode)}">Unduh QR</button>
             <button type="button" class="dd-btn dd-btn--sm" data-aksi="unduh" data-kode="${esc(kode)}">Unduh SVG</button>
             <button type="button" class="dd-btn dd-btn--sm" data-aksi="cetak" data-kode="${esc(kode)}">Cetak</button>
           </footer>
         </article>`;
     }).join('');
+
+    tampil.forEach((s) => {
+      const kode = kodeSiswa(s);
+      qrUntuk(kode).then((svg) => {
+        const kartu = [...grid.querySelectorAll('.dd-kartu')]
+          .find((item) => item.dataset.kode === kode);
+        const wadahQr = kartu?.querySelector('.dd-kartu-qr');
+        if (wadahQr) wadahQr.innerHTML = svg;
+      }).catch((error) => {
+        console.error('[tabBarcode] gagal membuat QR:', error);
+        toast('QR tidak dapat dibuat. Coba muat ulang halaman.', 'galat');
+      });
+    });
   }
 
   /* ---------------- Aksi ---------------- */
 
-  function cetak(daftar, judul) {
-    cetakKartu(daftar.map(jadikanKartu), { judul, onGalat: (m) => toast(m, 'galat') });
+  async function cetak(daftar, judul) {
+    try {
+      const kartu = await Promise.all(daftar.map(async (siswa) => ({
+        ...jadikanKartu(siswa),
+        qrSvg: await qrUntuk(kodeSiswa(siswa)),
+      })));
+      cetakKartu(kartu, { judul, onGalat: (m) => toast(m, 'galat') });
+    } catch (error) {
+      console.error('[tabBarcode] gagal menyiapkan QR untuk cetak:', error);
+      toast('QR kartu tidak dapat disiapkan untuk dicetak.', 'galat');
+    }
   }
 
   function unduhCsv() {
@@ -358,6 +394,14 @@ export async function tabBarcode(el, ctx) {
       // XMLSerializer menjamin atribut xmlns ada sehingga SVG bisa dibuka mandiri.
       const isi = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(svg)}`;
       unduhBerkas(`${namaAman(kode)}.svg`, isi, 'image/svg+xml');
+    } else if (aksi === 'unduh-qr') {
+      try {
+        const svg = await qrUntuk(kode);
+        unduhBerkas(`${namaAman(kode)}-qr.svg`, svg, 'image/svg+xml');
+      } catch (error) {
+        console.error('[tabBarcode] gagal mengunduh QR:', error);
+        toast('QR tidak dapat dibuat untuk diunduh.', 'galat');
+      }
     } else if (aksi === 'cetak') {
       const siswa = tampil.find((s) => kodeSiswa(s) === kode);
       if (siswa) cetak([siswa], `Kartu ${siswa.nama ?? kode}`);

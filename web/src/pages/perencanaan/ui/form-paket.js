@@ -113,7 +113,7 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
   const form = h('form', { class: 'form-paket', novalidate: true },
     h('fieldset', null, h('legend', null, t('form.bagianMapel')),
       h('div', { class: 'grid-form' },
-        kolom('mapel', t('form.mapel'), mapel, { lebar: 'lebar-2' }),
+        kolom('mapel', t('form.mapel'), mapel, { lebar: 'lebar-2', hint: t('form.mapelHint') }),
         kolom('kelas', t('form.kelas'), kelas),
         kolom('fase', t('form.fase'), fase),
         kolom('tahunAjaran', t('form.tahunAjaran'), ta),

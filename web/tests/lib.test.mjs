@@ -322,6 +322,8 @@ test('hosted schema audit script contains read-only SQL only', () => {
     'online_exam_items',
     'online_exam_attempts',
     'trial_registrations',
+    'user_ai_credentials',
+    'canva_oauth_states',
   ];
   for (const featureRelation of featureRelations) {
     assert.match(auditSql, new RegExp(`'${featureRelation}'`));
@@ -354,19 +356,30 @@ test('hosted schema audit script contains read-only SQL only', () => {
   assert.deepEqual([...featureRelations].sort(), [...definedRelations].sort());
 });
 
-test('kodeCadangan: deterministik & kompatibel dengan format lama', () => {
+test('kodeCadangan: acak dan tidak diturunkan dari data siswa', () => {
   const s = { nama: 'Ani', nisn: '0051234567', kelas: 'X-1' };
-  assert.equal(kodeCadangan(s), kodeCadangan({ ...s }));
-  assert.match(kodeCadangan(s), /^ALE-X1-[0-9A-Z]{6}-4567$/);
-  assert.match(kodeCadangan({ nama: 'Tanpa' }), /^ALE-KLS-[0-9A-Z]{6}-[0-9A-Z]{4}$/);
+  const first = kodeCadangan(s);
+  assert.match(first, /^ALE-[0-9A-F]{32}$/);
+  assert.notEqual(kodeCadangan({ ...s }), first);
+  assert.ok(!first.includes('0051234567'));
+  assert.ok(!first.includes('X1'));
+  assert.ok(kodeLayakSimpan('ALE-X1-ABC123-4567'));
 });
 
 test('kodeUntuk: prioritas tersimpan → pembuat → cadangan', () => {
   const s = { nama: 'A', kelas: 'X' };
   assert.equal(kodeUntuk({ ...s, kodeUnik: ' KODE-1 ' }, () => 'LAIN'), 'KODE-1');
   assert.equal(kodeUntuk(s, () => 'PEMBUAT'), 'PEMBUAT');
-  assert.equal(kodeUntuk(s, () => { throw new Error('x'); }), kodeCadangan(s));
-  assert.equal(kodeUntuk(s, null), kodeCadangan(s));
+  assert.match(kodeUntuk(s, () => { throw new Error('x'); }), /^ALE-[0-9A-F]{32}$/);
+  assert.match(kodeUntuk(s, null), /^ALE-[0-9A-F]{32}$/);
+});
+
+test('QR card encoder returns a standalone SVG for a scan URL with high error correction', async () => {
+  const { buatSvgQr } = await import('../src/lib/qrCode.js');
+  const svg = await buatSvgQr('https://ainnoe.app/#/scan/ALE-0123456789ABCDEF0123456789ABCDEF');
+  assert.match(svg, /^\s*<svg[\s>]/);
+  assert.match(svg, /<path/);
+  assert.match(svg, /<svg[^>]+viewBox=/);
 });
 
 test('cariKodeGanda', () => {
@@ -391,5 +404,5 @@ test('rencanaKodeBaru: unik, lewati yang tersimpan & tanpa id, tangani tabrakan'
 test('rencanaKodeBaru: pembuat aplikasi yang menghasilkan kode tak layak → pakai cadangan', () => {
   const s = [{ id: '1', nama: 'A', kelas: 'X' }];
   const { rencana } = rencanaKodeBaru(s, s, () => 'kode dengan spasi/garis');
-  assert.equal(rencana[0].kode, kodeCadangan(s[0]));
+  assert.match(rencana[0].kode, /^ALE-[0-9A-F]{32}$/);
 });

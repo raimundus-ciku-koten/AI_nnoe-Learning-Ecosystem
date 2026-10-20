@@ -799,6 +799,8 @@
   height: auto;
   image-rendering: pixelated;
 }
+.dd-kartu-qr { display: flex; justify-content: center; }
+.dd-kartu-qr svg { display: block; width: min(100%, 150px); height: auto; }
 
 .dd-kartu-url {
   margin: 0;

@@ -7,6 +7,11 @@ const PILIHAN_PROGRAM = [
   { id: 'kokurikuler', label: 'Kokurikuler' },
   { id: 'ekstrakurikuler', label: 'Ekstrakurikuler' },
 ];
+export const BENTUK_KOKURIKULER = [
+  { id: 'projek', label: 'Projek kolaboratif lintas disiplin (model pilihan sekolah)' },
+  { id: 'kebiasaan', label: 'Gerakan 7 Kebiasaan Anak Indonesia Hebat' },
+  { id: 'lainnya', label: 'Cara lain yang dirancang satuan pendidikan' },
+];
 
 const BIDANG_BK = ['Pribadi', 'Sosial', 'Belajar', 'Karier'];
 const FASE = [
@@ -18,7 +23,7 @@ const FASE = [
   ['F', 'Fase F · Kelas XI–XII (SMK empat tahun: XIII)'],
 ];
 export const DIMENSI_PROFIL = [
-  'Keimanan dan Ketakwaan',
+  'Keimanan dan Ketakwaan terhadap Tuhan Yang Maha Esa',
   'Kewargaan',
   'Penalaran Kritis',
   'Kreativitas',
@@ -130,13 +135,19 @@ export const SARAN_TEMA = {
       'Menyusun rekomendasi dan rencana keberlanjutan',
     ],
   },
-  ekstrakurikuler: [
-    'Kepemimpinan dan tanggung jawab',
-    'Kebugaran dan sportivitas',
-    'Kreativitas dan apresiasi seni',
-    'Kerja sama dan pengembangan minat',
-  ],
+  ekstrakurikuler: {
+    A: ['Mencoba keterampilan dasar melalui permainan dan gerak', 'Bercerita, bernyanyi, atau berkarya dengan bahan sederhana'],
+    B: ['Berlatih keterampilan mengikuti aturan dan urutan', 'Membuat karya atau penampilan kelompok kecil'],
+    C: ['Merancang karya kelompok dengan pembagian peran', 'Menyajikan hasil dan menerima masukan'],
+    D: ['Mengembangkan teknik dan tanggung jawab dalam tim', 'Menyelesaikan projek sesuai minat bersama'],
+    E: ['Merencanakan projek dan gelar karya sesuai minat', 'Berbagi peran dan mendokumentasikan proses kegiatan'],
+    F: ['Memimpin projek, membimbing teman, dan berbagi hasil', 'Mengembangkan karya serta refleksi untuk keberlanjutan kegiatan'],
+  },
 };
+export function saranTema(program, fase) {
+  const saran = SARAN_TEMA[program];
+  return Array.isArray(saran) ? saran : (saran?.[fase] ?? []);
+}
 const KOMPONEN_BK = [
   'Layanan dasar',
   'Peminatan dan perencanaan individual',
@@ -158,12 +169,16 @@ const STRATEGI_KEGIATAN = [
   'Diskusi dan refleksi',
   'Kolaborasi',
   'Latihan rutin',
+  'Latihan bertahap dan umpan balik',
+  'Mentoring sebaya',
 ];
 const KOSONG = {
   program: 'bk',
+  bentukKokurikuler: 'projek',
   fase: 'D',
   kelas: '',
   semester: '1',
+  alokasiWaktuTahunan: '',
   bidang: 'Pribadi',
   komponen: KOMPONEN_BK[0],
   tema: '',
@@ -180,7 +195,15 @@ const KOSONG = {
   dimensi: [],
   lokasi: '',
   keterkaitan: '',
+  rumpunEkstra: '',
+  minatSumberDaya: '',
+  pembinaKelompok: '',
+  kesepakatanEkstra: '',
+  kalenderEkstra: '',
+  dokumentasiEkstra: '',
   mitra: '',
+  timFasilitator: '',
+  orientasiKesepakatan: '',
   izinEtika: '',
   hakCipta: '',
   aksesibilitas: '',
@@ -194,9 +217,20 @@ const KOSONG = {
   tahapMerancang: '',
   tahapBerkarya: '',
   tahapMerefleksi: '',
+  tahapEkstraOrientasi: '',
+  tahapEkstraEksplorasi: '',
+  tahapEkstraPerencanaan: '',
+  tahapEkstraPembuatan: '',
+  tahapEkstraPenyempurnaan: '',
+  tahapEkstraPameran: '',
+  asesmenDiagnostik: '',
   risiko: '',
   pencegahan: '',
   penanggungJawab: '',
+  keamananInklusi: '',
+  rubrikEkstra: '',
+  portofolio: '',
+  kontribusiIndividu: '',
   anggaranBahan: '',
   anggaranLapangan: '',
   anggaranDokumentasi: '',
@@ -220,12 +254,7 @@ export default function GuidanceProgramPage() {
   const [draft, setDraft] = useState(KOSONG);
   const [hasil, setHasil] = useState(null);
   const [galatDimensi, setGalatDimensi] = useState('');
-  const temaSaran = useMemo(
-    () => (draft.program === 'bk'
-      ? SARAN_TEMA.bk[draft.fase]
-      : (draft.program === 'kokurikuler' ? SARAN_TEMA.kokurikuler[draft.fase] : SARAN_TEMA[draft.program])),
-    [draft.fase, draft.program],
-  );
+  const temaSaran = useMemo(() => saranTema(draft.program, draft.fase), [draft.fase, draft.program]);
   const strategi = draft.program === 'bk' ? STRATEGI_BK : STRATEGI_KEGIATAN;
 
   function ubah(event) {
@@ -284,6 +313,30 @@ export default function GuidanceProgramPage() {
       </header>
 
       <aside className="guidance-program__notice" role="note">
+        <strong>Bedakan intrakurikuler, kokurikuler, dan ekstrakurikuler.</strong>
+        <span>
+          Intrakurikuler adalah pembelajaran terjadwal dengan beban kurikulum untuk mencapai tujuan
+          belajar; CP mata pelajaran yang diimpor, termasuk Pendidikan Agama dan mata pelajaran
+          lainnya, menjadi acuannya. Kokurikuler menguatkan, mendalami, atau memperkaya pembelajaran
+          intrakurikuler. Ekstrakurikuler mengembangkan karakter dan potensi, bakat, minat,
+          kemampuan, kerja sama, serta kemandirian murid dengan bimbingan dan pengawasan sekolah.
+          Karena itu CP mapel tetap berstatus intrakurikuler, meskipun dapat menjadi acuan projek
+          kokurikuler.
+        </span>
+        <small>
+          Acuan definisi dan struktur: Permendikbudristek Nomor 12 Tahun 2024, Pasal 1 angka 6–9
+          dan Pasal 7. Pembaruan kokurikuler dan ekstrakurikuler: Permendikdasmen Nomor 13 Tahun
+          2025, Pasal 16–19 dan Pasal 22.{' '}
+          <a href="https://peraturan.go.id/files/permendikbudristek-no-12-tahun-2024.pdf" target="_blank" rel="noopener noreferrer">
+            Peraturan dasar
+          </a>{' · '}
+          <a href="https://peraturan.go.id/files/permendikdasmen-no-13-tahun-2025.pdf" target="_blank" rel="noopener noreferrer">
+            Peraturan perubahan
+          </a>.
+        </small>
+      </aside>
+
+      <aside className="guidance-program__notice" role="note">
         <strong>Draf privat, belum tersimpan ke akun.</strong>
         <span>
           Isi hanya data program yang diperlukan. Jangan masukkan nama siswa, isi konseling,
@@ -304,6 +357,19 @@ export default function GuidanceProgramPage() {
                 ))}
               </select>
             </label>
+            {draft.program === 'kokurikuler' && (
+              <label className="guidance-program__wide">
+                Bentuk kegiatan kokurikuler
+                <select name="bentukKokurikuler" value={draft.bentukKokurikuler} onChange={ubah}>
+                  {BENTUK_KOKURIKULER.map(({ id, label }) => <option key={id} value={id}>{label}</option>)}
+                </select>
+                <small>
+                  Peraturan mengizinkan pembelajaran kolaboratif lintas disiplin, Gerakan 7 Kebiasaan,
+                  dan/atau cara lain. Tahap projek di bawah adalah pola yang dipakai buku panduan sekolah,
+                  bukan satu-satunya bentuk kokurikuler.
+                </small>
+              </label>
+            )}
             {draft.program !== 'bk' && (
               <label>
                 Fase
@@ -338,9 +404,9 @@ export default function GuidanceProgramPage() {
               Kelas atau kelompok sasaran
               <input name="kelas" value={draft.kelas} onChange={ubah} maxLength={80} placeholder="Contoh: Kelas VII" />
             </label>
-            {draft.program === 'kokurikuler' && (
+            {draft.program !== 'bk' && (
               <label>
-                Lokasi atau lingkungan belajar
+                Lokasi atau lingkungan kegiatan
                 <input name="lokasi" value={draft.lokasi} onChange={ubah} maxLength={160} placeholder="Isi sesuai konteks sekolah; tidak ada lokasi baku." />
               </label>
             )}
@@ -351,6 +417,14 @@ export default function GuidanceProgramPage() {
                 <option value="2">Semester 2</option>
               </select>
             </label>
+            {draft.program === 'kokurikuler' && (
+              <label>
+                Alokasi beban belajar kokurikuler per tahun ajaran
+                <input name="alokasiWaktuTahunan" value={draft.alokasiWaktuTahunan} onChange={ubah}
+                  maxLength={120} placeholder="Contoh: 100 JP untuk satu tahun ajaran" required />
+                <small>Rumuskan alokasi satu tahun ajaran sesuai struktur dan kebijakan satuan pendidikan.</small>
+              </label>
+            )}
             <label className="guidance-program__wide">
               Tema atau topik
               <input
@@ -370,11 +444,23 @@ export default function GuidanceProgramPage() {
             {draft.program === 'kokurikuler' && (
               <>
                 <p className="guidance-program__wide guidance-program__guidance-note">
-                  Panduan mengarahkan Kelas X pada sekurang-kurangnya tiga projek bertema berbeda dan Kelas XI–XII sekurang-kurangnya dua.
-                  Fase A–D pada buku merupakan adaptasi/usulan; sesuaikan dengan kebijakan sekolah.
+                  Untuk sekolah yang menerapkan SK SMAN 1 Tanjung Bunga Nomor 03.e/I.21.25/SMAN.1.Tj.B/MN/2025,
+                  panduan menetapkan minimal tiga projek bertema berbeda pada Fase E (Kelas X)
+                  dalam satu tahun ajaran dan minimal dua projek bertema berbeda pada Fase F
+                  (Kelas XI–XII). Itu ketentuan SK
+                  sekolah tersebut, bukan angka umum Permendikdasmen. Fase A–D pada buku
+                  merupakan adaptasi/usulan; sesuaikan dengan kebijakan satuan pendidikan.
                 </p>
-                <fieldset className="guidance-program__dimensions guidance-program__wide" aria-describedby="guidance-dimension-error">
-                  <legend>Dimensi profil lulusan (pilih 1–4)</legend>
+              </>
+            )}
+            {draft.program !== 'bk' && (
+              <>
+                <fieldset className="guidance-program__dimensions guidance-program__wide"
+                  aria-describedby={draft.program === 'kokurikuler' ? 'guidance-dimension-error' : undefined}>
+                  <legend>
+                    Dimensi profil lulusan
+                    {draft.program === 'kokurikuler' ? ' (pilih 1–4)' : ' (opsional; pilih yang paling relevan)'}
+                  </legend>
                   <div>
                     {DIMENSI_PROFIL.map((dimensi) => (
                       <label key={dimensi}>
@@ -391,8 +477,46 @@ export default function GuidanceProgramPage() {
                     ))}
                   </div>
                 </fieldset>
-                <p className="guidance-program__validation guidance-program__wide" id="guidance-dimension-error" role="alert" hidden={!galatDimensi}>
-                  {galatDimensi}
+                {draft.program === 'kokurikuler' && (
+                  <p className="guidance-program__validation guidance-program__wide" id="guidance-dimension-error" role="alert" hidden={!galatDimensi}>
+                    {galatDimensi}
+                  </p>
+                )}
+              </>
+            )}
+            {draft.program === 'ekstrakurikuler' && (
+              <>
+                <label className="guidance-program__wide">
+                  Rumpun atau jenis kegiatan ekstrakurikuler
+                  <input name="rumpunEkstra" value={draft.rumpunEkstra} onChange={ubah} maxLength={160}
+                    placeholder="Contoh: olahraga, seni, Pramuka, jurnalistik, atau keterampilan" required />
+                </label>
+                <label>
+                  Pemetaan minat dan sumber daya
+                  <textarea name="minatSumberDaya" value={draft.minatSumberDaya} onChange={ubah} maxLength={900} rows={3} required
+                    placeholder="Ringkas hasil survei minat, pembina/pelatih yang tersedia, alat, bahan, tempat, dan dukungan komunitas." />
+                </label>
+                <label>
+                  Pembina, pelatih, dan pengelompokan murid
+                  <textarea name="pembinaKelompok" value={draft.pembinaKelompok} onChange={ubah} maxLength={900} rows={3} required
+                    placeholder="Tetapkan pembina/pelatih, kelompok, peran, dan cara merotasi tanggung jawab." />
+                </label>
+                <label>
+                  Pendaftaran, orientasi, dan kesepakatan belajar
+                  <textarea name="kesepakatanEkstra" value={draft.kesepakatanEkstra} onChange={ubah} maxLength={900} rows={3} required
+                    placeholder="Jelaskan tata cara pendaftaran, jadwal, kehadiran, penggunaan alat, dan kesepakatan bersama murid." />
+                </label>
+                <label>
+                  Kalender dan frekuensi kegiatan
+                  <textarea name="kalenderEkstra" value={draft.kalenderEkstra} onChange={ubah} maxLength={700} rows={3} required
+                    placeholder="Rinci jadwal latihan/pertemuan selama semester atau tahun ajaran." />
+                </label>
+                <p className="guidance-program__wide guidance-program__guidance-note">
+                  Sesuaikan target dan cara mendampingi dengan fase serta kelas. Panduan ekstrakurikuler
+                  menyusun alur enam tahap dari orientasi sampai pameran dan refleksi; asesmen mencakup
+                  proses, keterampilan, karya, kontribusi individu, dan refleksi, bukan hanya lomba.
+                  Untuk satuan pendidikan formal dasar dan menengah, aturan juga mensyaratkan layanan
+                  ekstrakurikuler dan sekurang-kurangnya menyediakan Pramuka atau kepanduan lainnya.
                 </p>
               </>
             )}
@@ -404,7 +528,12 @@ export default function GuidanceProgramPage() {
           <div className="guidance-program__grid">
             <label className="guidance-program__wide">
               Asesmen kebutuhan atau alasan program
-              <textarea name="asesmen" value={draft.asesmen} onChange={ubah} maxLength={1200} rows={3} required />
+              <textarea name="asesmen" value={draft.asesmen} onChange={ubah} maxLength={1200} rows={3} required
+                placeholder={draft.program === 'ekstrakurikuler'
+                  ? 'Petakan minat, bakat, kebutuhan murid, kemampuan awal, dan kesesuaian jenis kegiatan.'
+                  : draft.program === 'kokurikuler'
+                    ? 'Jelaskan kebutuhan murid/sekolah dan konteks sosial budaya yang mendasari tema.'
+                    : ''} />
             </label>
             <label>
               Sasaran dan cakupan
@@ -441,8 +570,24 @@ export default function GuidanceProgramPage() {
             {draft.program === 'kokurikuler' ? (
               <>
                 <label>
-                  Keterkaitan mata pelajaran
-                  <textarea name="keterkaitan" value={draft.keterkaitan} onChange={ubah} maxLength={800} rows={3} />
+                  Acuan intrakurikuler yang dikuatkan (mata pelajaran dan CP)
+                  <textarea name="keterkaitan" value={draft.keterkaitan} onChange={ubah} maxLength={1200} rows={3} required
+                    placeholder="Salin atau rujuk CP dari dokumen yang telah diimpor: nama mapel, fase, elemen, dan rumusan CP yang relevan. Contoh: Pendidikan Agama Katolik dan Budi Pekerti, Fase E." />
+                  <small>
+                    Gunakan CP yang sudah diimpor pada Perencanaan Mapel sebagai acuan. Catat
+                    mapel, fase, elemen, dan rumusan CP yang benar-benar dikuatkan; mata pelajaran
+                    beserta CP-nya tetap berstatus intrakurikuler.
+                  </small>
+                </label>
+                <label>
+                  Tim kerja dan fasilitator kokurikuler
+                  <textarea name="timFasilitator" value={draft.timFasilitator} onChange={ubah} maxLength={800} rows={3}
+                    placeholder="Tuliskan koordinator, fasilitator/guru lintas disiplin, dan tanggung jawab utama." />
+                </label>
+                <label>
+                  Orientasi dan kesepakatan belajar murid
+                  <textarea name="orientasiKesepakatan" value={draft.orientasiKesepakatan} onChange={ubah} maxLength={900} rows={3}
+                    placeholder="Jelaskan cara memperkenalkan tujuan, membentuk kelompok, membagi peran, dan menyepakati etika kegiatan." />
                 </label>
                 <label>
                   Mitra, narasumber, dan izin
@@ -464,16 +609,87 @@ export default function GuidanceProgramPage() {
                   <textarea name="aksesibilitas" value={draft.aksesibilitas} onChange={ubah} maxLength={700} rows={3}
                     placeholder="Atur peran dan alternatif kegiatan agar semua murid dapat berkontribusi." />
                 </label>
+                {draft.bentukKokurikuler === 'projek' ? (
+                  <>
+                    <label className="guidance-program__wide">
+                      Rencana tahapan projek
+                      <small>Lima tahap berikut mengikuti panduan. Isi kegiatan murid dan keluaran/bukti untuk setiap tahap.</small>
+                    </label>
+                    {[
+                      ['tahapMengenal', '1. Mengenal · memahami konteks dan merumuskan pertanyaan'],
+                      ['tahapMenyelidiki', '2. Menyelidiki · observasi, wawancara, dan mengumpulkan data'],
+                      ['tahapMerancang', '3. Merancang · memilih solusi, membagi peran, dan membuat rencana'],
+                      ['tahapBerkarya', '4. Berkarya dan beraksi · membuat, menguji, atau melaksanakan aksi'],
+                      ['tahapMerefleksi', '5. Merefleksi dan membagikan · perbaikan, refleksi, pameran, dan umpan balik'],
+                    ].map(([name, label]) => (
+                      <label key={name}>
+                        {label}
+                        <textarea name={name} value={draft[name]} onChange={ubah} maxLength={1400} rows={3} required />
+                      </label>
+                    ))}
+                    <label>
+                      Bukti karya yang ditargetkan
+                      <textarea name="buktiKarya" value={draft.buktiKarya} onChange={ubah} maxLength={800} rows={3}
+                        placeholder="Contoh: prototipe yang diuji, dokumentasi, jurnal individu, dan presentasi." />
+                    </label>
+                    <label>
+                      Pemanfaatan teknologi digital
+                      <textarea name="digital" value={draft.digital} onChange={ubah} maxLength={700} rows={3}
+                        placeholder="Gunakan alat yang tersedia; jangan jadikan aplikasi tertentu syarat penilaian." />
+                    </label>
+                    <label>
+                      Rencana tanpa internet
+                      <textarea name="rencanaOffline" value={draft.rencanaOffline} onChange={ubah} maxLength={700} rows={3}
+                        placeholder="Contoh: catatan kertas, sketsa, penyimpanan lokal, dan sinkronisasi saat tersedia." />
+                    </label>
+                    <label>
+                      Risiko dan keselamatan
+                      <textarea name="risiko" value={draft.risiko} onChange={ubah} maxLength={800} rows={3} required />
+                    </label>
+                    <label>
+                      Pencegahan dan rencana cadangan
+                      <textarea name="pencegahan" value={draft.pencegahan} onChange={ubah} maxLength={800} rows={3} required />
+                    </label>
+                    <label>
+                      Penanggung jawab risiko
+                      <input name="penanggungJawab" value={draft.penanggungJawab} onChange={ubah} maxLength={160} required />
+                    </label>
+                    <label>
+                      Pameran atau pembagian hasil
+                      <textarea name="pameran" value={draft.pameran} onChange={ubah} maxLength={700} rows={3} />
+                    </label>
+                    <label>
+                      Keberlanjutan setelah projek
+                      <textarea name="keberlanjutan" value={draft.keberlanjutan} onChange={ubah} maxLength={700} rows={3} />
+                    </label>
+                  </>
+                ) : (
+                  <>
+                    <label className="guidance-program__wide">
+                      Alur kegiatan kokurikuler
+                      <textarea name="langkah" value={draft.langkah} onChange={ubah} maxLength={2400} rows={6} required
+                        placeholder="Uraikan aktivitas, peran murid/guru, waktu, dan refleksi sesuai bentuk kegiatan yang dipilih." />
+                    </label>
+                    <label className="guidance-program__wide">
+                      Bukti kompetensi atau hasil kegiatan
+                      <textarea name="buktiKarya" value={draft.buktiKarya} onChange={ubah} maxLength={800} rows={3} required />
+                    </label>
+                  </>
+                )}
+              </>
+            ) : draft.program === 'ekstrakurikuler' ? (
+              <>
                 <label className="guidance-program__wide">
-                  Rencana tahapan projek
-                  <small>Lima tahap berikut mengikuti panduan. Isi kegiatan murid dan keluaran/bukti untuk setiap tahap.</small>
+                  Rencana tahapan kegiatan ekstrakurikuler
+                  <small>Isi kegiatan murid dan bukti/hasil di setiap tahap; sesuaikan dengan jenis kegiatan dan fase.</small>
                 </label>
                 {[
-                  ['tahapMengenal', '1. Mengenal · memahami konteks dan merumuskan pertanyaan'],
-                  ['tahapMenyelidiki', '2. Menyelidiki · observasi, wawancara, dan mengumpulkan data'],
-                  ['tahapMerancang', '3. Merancang · memilih solusi, membagi peran, dan membuat rencana'],
-                  ['tahapBerkarya', '4. Berkarya dan beraksi · membuat, menguji, atau melaksanakan aksi'],
-                  ['tahapMerefleksi', '5. Merefleksi dan membagikan · perbaikan, refleksi, pameran, dan umpan balik'],
+                  ['tahapEkstraOrientasi', '1. Orientasi · tujuan, kesepakatan, pengetahuan awal, dan pilihan tema'],
+                  ['tahapEkstraEksplorasi', '2. Eksplorasi dan latihan dasar · mencoba teknik dan menerima umpan balik'],
+                  ['tahapEkstraPerencanaan', '3. Perancangan · menyepakati kriteria, jadwal, kebutuhan, dan pembagian peran'],
+                  ['tahapEkstraPembuatan', '4. Pembuatan · mengerjakan karya/projek, mendokumentasikan, dan memperbaiki'],
+                  ['tahapEkstraPenyempurnaan', '5. Penyempurnaan · melengkapi karya dan berlatih untuk pameran/unjuk karya'],
+                  ['tahapEkstraPameran', '6. Pameran dan refleksi · menampilkan hasil, menerima umpan balik, dan merefleksikan proses'],
                 ].map(([name, label]) => (
                   <label key={name}>
                     {label}
@@ -481,39 +697,14 @@ export default function GuidanceProgramPage() {
                   </label>
                 ))}
                 <label>
-                  Bukti karya yang ditargetkan
-                  <textarea name="buktiKarya" value={draft.buktiKarya} onChange={ubah} maxLength={800} rows={3}
-                    placeholder="Contoh: prototipe yang diuji, dokumentasi, jurnal individu, dan presentasi." />
+                  Keamanan, perlindungan, dan inklusi
+                  <textarea name="keamananInklusi" value={draft.keamananInklusi} onChange={ubah} maxLength={1000} rows={4} required
+                    placeholder="Catat risiko dan pencegahan, aksesibilitas, perlindungan murid, penyesuaian peran, dan penanggung jawab." />
                 </label>
-                <label>
-                  Pemanfaatan teknologi digital
-                  <textarea name="digital" value={draft.digital} onChange={ubah} maxLength={700} rows={3}
-                    placeholder="Gunakan alat yang tersedia; jangan jadikan aplikasi tertentu syarat penilaian." />
-                </label>
-                <label>
-                  Rencana tanpa internet
-                  <textarea name="rencanaOffline" value={draft.rencanaOffline} onChange={ubah} maxLength={700} rows={3}
-                    placeholder="Contoh: catatan kertas, sketsa, penyimpanan lokal, dan sinkronisasi saat tersedia." />
-                </label>
-                <label>
-                  Risiko dan keselamatan
-                  <textarea name="risiko" value={draft.risiko} onChange={ubah} maxLength={800} rows={3} required />
-                </label>
-                <label>
-                  Pencegahan dan rencana cadangan
-                  <textarea name="pencegahan" value={draft.pencegahan} onChange={ubah} maxLength={800} rows={3} required />
-                </label>
-                <label>
-                  Penanggung jawab risiko
-                  <input name="penanggungJawab" value={draft.penanggungJawab} onChange={ubah} maxLength={160} required />
-                </label>
-                <label>
-                  Pameran atau pembagian hasil
-                  <textarea name="pameran" value={draft.pameran} onChange={ubah} maxLength={700} rows={3} />
-                </label>
-                <label>
-                  Keberlanjutan setelah projek
-                  <textarea name="keberlanjutan" value={draft.keberlanjutan} onChange={ubah} maxLength={700} rows={3} />
+                <label className="guidance-program__wide">
+                  Dokumentasi dan pencatatan perkembangan
+                  <textarea name="dokumentasiEkstra" value={draft.dokumentasiEkstra} onChange={ubah} maxLength={800} rows={3} required
+                    placeholder="Rencanakan jurnal pembina, bukti perkembangan/portofolio, izin dokumentasi, dan penyimpanan yang aman." />
                 </label>
               </>
             ) : (
@@ -522,18 +713,50 @@ export default function GuidanceProgramPage() {
                 <textarea name="langkah" value={draft.langkah} onChange={ubah} maxLength={2400} rows={6} required />
               </label>
             )}
-            {draft.program === 'kokurikuler' ? (
+            {draft.program !== 'bk' ? (
               <>
+                {draft.program !== 'bk' && (
+                  <label>
+                    Asesmen diagnostik awal
+                    <textarea name="asesmenDiagnostik" value={draft.asesmenDiagnostik} onChange={ubah} maxLength={900} rows={3} required
+                      placeholder={draft.program === 'kokurikuler'
+                        ? 'Petakan kesiapan, minat, pengetahuan awal, dan kebutuhan pendampingan sebelum kegiatan.'
+                        : 'Petakan minat dan keterampilan awal murid melalui angket, percakapan, atau unjuk kerja sederhana.'} />
+                  </label>
+                )}
                 <label>
                   Asesmen formatif
                   <textarea name="asesmenFormatif" value={draft.asesmenFormatif} onChange={ubah} maxLength={1000} rows={4} required
-                    placeholder="Contoh: observasi bertanggal, jurnal refleksi, check-in, dan umpan balik sejawat/mitra." />
+                    placeholder={draft.program === 'kokurikuler'
+                      ? 'Contoh: observasi bertanggal, jurnal refleksi, check-in, dan umpan balik sejawat/mitra.'
+                      : 'Contoh: observasi proses, jurnal latihan, umpan balik langsung, dan penilaian sejawat.'} />
                 </label>
                 <label>
-                  Asesmen sumatif dan rubrik
+                  {draft.program === 'kokurikuler' ? 'Asesmen sumatif dan rubrik' : 'Asesmen sumatif, unjuk kerja, dan rubrik'}
                   <textarea name="asesmenSumatif" value={draft.asesmenSumatif} onChange={ubah} maxLength={1200} rows={4} required
-                    placeholder="Nilai karya, proses, presentasi, dan portofolio dengan kriteria transparan: Sangat Baik, Baik, Cukup, Kurang." />
+                    placeholder={draft.program === 'kokurikuler'
+                      ? 'Nilai karya, proses, presentasi, dan portofolio dengan kriteria transparan: Sangat Baik, Baik, Cukup, Kurang.'
+                      : 'Nilai keterampilan, proses, karya/penampilan, dan refleksi dengan kriteria yang dibagikan sejak awal.'} />
                 </label>
+                {draft.program === 'ekstrakurikuler' && (
+                  <>
+                    <label>
+                      Rubrik dan kriteria yang dibagikan kepada murid
+                      <textarea name="rubrikEkstra" value={draft.rubrikEkstra} onChange={ubah} maxLength={1200} rows={4} required
+                        placeholder="Contoh kriteria: penguasaan keterampilan, ketekunan, kualitas karya, kerja sama, komunikasi, dan refleksi." />
+                    </label>
+                    <label>
+                      Portofolio dan bukti perkembangan
+                      <textarea name="portofolio" value={draft.portofolio} onChange={ubah} maxLength={900} rows={3} required
+                        placeholder="Contoh: karya, foto proses berizin, catatan latihan, umpan balik, dan refleksi murid." />
+                    </label>
+                    <label>
+                      Bukti kontribusi individu
+                      <textarea name="kontribusiIndividu" value={draft.kontribusiIndividu} onChange={ubah} maxLength={900} rows={3} required
+                        placeholder="Jelaskan cara memantau kontribusi setiap murid, bukan hanya nilai hasil kelompok." />
+                    </label>
+                  </>
+                )}
               </>
             ) : (
               <label>
@@ -555,12 +778,14 @@ export default function GuidanceProgramPage() {
             </label>
           </div>
         </section>
-        {draft.program === 'kokurikuler' && (
+        {draft.program !== 'bk' && (
           <section className="guidance-program__section" aria-labelledby="guidance-budget-title">
-            <h2 id="guidance-budget-title">Anggaran dan asesmen</h2>
+            <h2 id="guidance-budget-title">
+              {draft.program === 'kokurikuler' ? 'Anggaran kokurikuler' : 'Sumber daya dan anggaran ekstrakurikuler'}
+            </h2>
             <p className="guidance-program__guidance-note">
-              Prioritaskan bahan lokal, daur ulang, dan sumber sekolah. Hindari iuran wajib dari murid;
-              sumber biaya harus disepakati dan mengikuti kebijakan sekolah.
+              Prioritaskan alat/fasilitas sekolah, bahan lokal, dan daur ulang. Hindari iuran wajib
+              dari murid; sumber biaya harus disepakati dan mengikuti kebijakan satuan pendidikan.
             </p>
             <div className="guidance-program__grid">
               <label>Bahan dan alat<textarea name="anggaranBahan" value={draft.anggaranBahan} onChange={ubah} maxLength={600} rows={3} /></label>
@@ -588,10 +813,25 @@ export default function GuidanceProgramPage() {
             <h2 id="guidance-preview-title">{hasil.tema}</h2>
             <dl className="guidance-program__summary">
               <BarisRingkasan label="Fase" nilai={`Fase ${hasil.fase}`} />
+              {hasil.program === 'kokurikuler' && (
+                <BarisRingkasan
+                  label="Bentuk kokurikuler"
+                  nilai={BENTUK_KOKURIKULER.find(({ id }) => id === hasil.bentukKokurikuler)?.label}
+                />
+              )}
               <BarisRingkasan label="Lokasi atau lingkungan" nilai={hasil.lokasi} />
-              <BarisRingkasan label="Dimensi sasaran" nilai={hasil.dimensi.join(', ')} />
-              <BarisRingkasan label="Bidang" nilai={hasil.bidang} />
-              <BarisRingkasan label="Komponen" nilai={hasil.komponen} />
+              {hasil.program !== 'bk' && (
+                <BarisRingkasan label="Dimensi sasaran" nilai={hasil.dimensi.join(', ')} />
+              )}
+              {hasil.program === 'kokurikuler' && (
+                <BarisRingkasan label="Alokasi beban belajar tahunan" nilai={hasil.alokasiWaktuTahunan} />
+              )}
+              {hasil.program === 'bk' && (
+                <>
+                  <BarisRingkasan label="Bidang" nilai={hasil.bidang} />
+                  <BarisRingkasan label="Komponen" nilai={hasil.komponen} />
+                </>
+              )}
               <BarisRingkasan label="Sasaran" nilai={hasil.sasaran} />
               <BarisRingkasan label="Kelas/kelompok" nilai={hasil.kelas} />
               <BarisRingkasan label="Semester" nilai={`Semester ${hasil.semester}`} />
@@ -603,30 +843,60 @@ export default function GuidanceProgramPage() {
           {[
             ['Asesmen kebutuhan atau alasan program', hasil.asesmen],
             ['Lokasi atau lingkungan belajar', hasil.lokasi],
-            ['Keterkaitan mata pelajaran', hasil.keterkaitan],
-            ['Asesmen formatif', hasil.asesmenFormatif],
-            ['Asesmen sumatif dan rubrik', hasil.asesmenSumatif],
-            ['Mitra, narasumber, dan izin', hasil.mitra],
-            ['Etika, persetujuan, dan dokumentasi', hasil.izinEtika],
-            ['Hak cipta dan atribusi sumber', hasil.hakCipta],
-            ['Aksesibilitas dan kebutuhan dukungan', hasil.aksesibilitas],
+            ...(hasil.program === 'kokurikuler' ? [
+              ['Acuan intrakurikuler yang dikuatkan (mata pelajaran dan CP)', hasil.keterkaitan],
+              ['Mitra, narasumber, dan izin', hasil.mitra],
+              ['Etika, persetujuan, dan dokumentasi', hasil.izinEtika],
+              ['Hak cipta dan atribusi sumber', hasil.hakCipta],
+              ['Aksesibilitas dan kebutuhan dukungan', hasil.aksesibilitas],
+            ] : []),
+            ...(hasil.program === 'ekstrakurikuler' ? [
+              ['Rumpun/jenis ekstrakurikuler', hasil.rumpunEkstra],
+              ['Pemetaan minat dan sumber daya', hasil.minatSumberDaya],
+              ['Pembina, pelatih, dan pengelompokan murid', hasil.pembinaKelompok],
+              ['Pendaftaran, orientasi, dan kesepakatan belajar', hasil.kesepakatanEkstra],
+              ['Kalender dan frekuensi kegiatan', hasil.kalenderEkstra],
+              ['Dokumentasi dan pencatatan perkembangan', hasil.dokumentasiEkstra],
+              ['Keamanan, perlindungan, dan inklusi', hasil.keamananInklusi],
+              ['Rubrik ekstrakurikuler', hasil.rubrikEkstra],
+              ['Portofolio dan bukti perkembangan', hasil.portofolio],
+              ['Bukti kontribusi individu', hasil.kontribusiIndividu],
+            ] : []),
+            ...(hasil.program === 'kokurikuler' ? [
+              ['Tim kerja dan fasilitator kokurikuler', hasil.timFasilitator],
+              ['Orientasi dan kesepakatan belajar murid', hasil.orientasiKesepakatan],
+            ] : []),
+            ...(hasil.program !== 'bk' ? [
+              ['Asesmen diagnostik awal', hasil.asesmenDiagnostik],
+              ['Asesmen formatif', hasil.asesmenFormatif],
+              [hasil.program === 'ekstrakurikuler' ? 'Asesmen sumatif, unjuk kerja, dan rubrik' : 'Asesmen sumatif dan rubrik', hasil.asesmenSumatif],
+            ] : []),
             ['Tujuan', hasil.tujuan],
             ['Indikator keberhasilan', hasil.indikator],
             ['Media dan bahan', hasil.media],
-            ['Langkah kegiatan', hasil.langkah],
-            ['Bukti karya yang ditargetkan', hasil.buktiKarya],
-            ['Pemanfaatan teknologi digital', hasil.digital],
-            ['Rencana tanpa internet', hasil.rencanaOffline],
-            ['Risiko dan keselamatan', hasil.risiko],
-            ['Pencegahan dan rencana cadangan', hasil.pencegahan],
-            ['Penanggung jawab risiko', hasil.penanggungJawab],
-            ['Bahan dan alat', hasil.anggaranBahan],
-            ['Lapangan dan transportasi', hasil.anggaranLapangan],
-            ['Dokumentasi dan cetak', hasil.anggaranDokumentasi],
-            ['Anggaran pameran', hasil.anggaranPameran],
-            ['Pameran atau pembagian hasil', hasil.pameran],
-            ['Keberlanjutan setelah projek', hasil.keberlanjutan],
-            ['Evaluasi', hasil.evaluasi],
+            ...(hasil.program === 'bk' ? [
+              ['Langkah kegiatan', hasil.langkah],
+              ['Evaluasi', hasil.evaluasi],
+            ] : []),
+            ...(hasil.program === 'kokurikuler' ? (hasil.bentukKokurikuler === 'projek' ? [
+              ['Bukti karya yang ditargetkan', hasil.buktiKarya],
+              ['Pemanfaatan teknologi digital', hasil.digital],
+              ['Rencana tanpa internet', hasil.rencanaOffline],
+              ['Risiko dan keselamatan', hasil.risiko],
+              ['Pencegahan dan rencana cadangan', hasil.pencegahan],
+              ['Penanggung jawab risiko', hasil.penanggungJawab],
+              ['Pameran atau pembagian hasil', hasil.pameran],
+              ['Keberlanjutan setelah projek', hasil.keberlanjutan],
+            ] : [
+              ['Langkah kegiatan', hasil.langkah],
+              ['Bukti kompetensi atau hasil kegiatan', hasil.buktiKarya],
+            ]) : []),
+            ...(hasil.program !== 'bk' ? [
+              ['Bahan dan alat', hasil.anggaranBahan],
+              ['Lapangan dan transportasi', hasil.anggaranLapangan],
+              ['Dokumentasi dan cetak', hasil.anggaranDokumentasi],
+              ['Pameran', hasil.anggaranPameran],
+            ] : []),
             ['Tindak lanjut', hasil.tindakLanjut],
           ].filter(([, isi]) => isi).map(([judul, isi]) => (
             <section key={judul}>
@@ -634,7 +904,7 @@ export default function GuidanceProgramPage() {
               <p>{isi}</p>
             </section>
           ))}
-          {hasil.program === 'kokurikuler' && (
+          {hasil.program === 'kokurikuler' && hasil.bentukKokurikuler === 'projek' && (
             <section>
               <h3>Lima tahap projek</h3>
               {[
@@ -646,6 +916,20 @@ export default function GuidanceProgramPage() {
               ].map(([label, content]) => <p key={label}><strong>{label}</strong>{'\n'}{content}</p>)}
               <h3>Rubrik capaian</h3>
               <p>Sangat Baik · Baik · Cukup · Kurang. Tentukan deskriptor yang teramati untuk setiap dimensi sasaran sebelum projek dimulai; gunakan observasi, jurnal, karya, penilaian sejawat, dan umpan balik.</p>
+            </section>
+          )}
+          {hasil.program === 'ekstrakurikuler' && (
+            <section>
+              <h3>Enam tahap ekstrakurikuler</h3>
+              {[
+                ['1. Orientasi', hasil.tahapEkstraOrientasi],
+                ['2. Eksplorasi dan latihan dasar', hasil.tahapEkstraEksplorasi],
+                ['3. Perancangan', hasil.tahapEkstraPerencanaan],
+                ['4. Pembuatan', hasil.tahapEkstraPembuatan],
+                ['5. Penyempurnaan', hasil.tahapEkstraPenyempurnaan],
+                ['6. Pameran dan refleksi', hasil.tahapEkstraPameran],
+              ].map(([label, content]) => <p key={label}><strong>{label}</strong>{'\n'}{content}</p>)}
+              <p>Nilai proses dan perkembangan keterampilan dengan beberapa bukti, termasuk observasi, unjuk kerja, portofolio, presentasi, dan refleksi; jangan hanya menilai hasil lomba.</p>
             </section>
           )}
         </article>

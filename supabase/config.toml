@@ -6,3 +6,15 @@ verify_jwt = false
 
 [functions.chat-push]
 verify_jwt = true
+
+[functions.platform-user-invite]
+verify_jwt = true
+
+[functions.ai-user-services]
+verify_jwt = true
+
+[functions.canva-oauth-callback]
+verify_jwt = false
+
+[functions.canva-oauth-start]
+verify_jwt = true
