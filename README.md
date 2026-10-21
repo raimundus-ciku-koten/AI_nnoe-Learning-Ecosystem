@@ -3,7 +3,7 @@
 Monorepo for the AI_nnoe Learning Ecosystem web application and its backend
 services.
 
-## Release readiness snapshot (2026-10-20)
+## Release readiness snapshot (2026-10-21)
 
 The login-only hotfix `f616440b` is deployed to Production at
 `https://ainnoe-le.vercel.app/`. Anonymous smoke tests verified the login page,
@@ -14,10 +14,12 @@ A fresh anonymous browser check on 2026-10-20 confirmed the Production login
 page does not show the trial CTA. No credentials were entered and no signup was
 submitted.
 
-The owner reports that the Superadmin account can log in but currently sees
-only the dashboard. Superadmin menu access is controlled by the server-issued
-role claim; this remains a release blocker until the Staging profile and fresh
-JWT claim are verified and the Superadmin menu is confirmed.
+The read-only Production check on 2026-10-20 confirmed the owner's active
+Superadmin profile and matching JWT role claim. After the owner completed TOTP
+verification, the local application displayed the Super Admin dashboard and
+main navigation. This does not mean the updated MFA gate is deployed: PR #4
+merged to the Preview branch only, and Production still uses the older gate.
+The separate migration/restore and release blockers below still apply.
 
 The three accounts in the separately supplied account document are present in
 Production Auth, confirmed, and not banned. A successful login was not tested
@@ -79,6 +81,23 @@ Vercel reported a completed preview deployment for commit `61f54395` on
 `migration/supabase-foundation-preview`. The preview host redirects to Vercel
 authentication in the current browser context, so application runtime and any
 production deployment remain unverified.
+
+The chat source now supports direct messaging between users in one active
+institution without a contact request, cross-institution discovery with
+messaging and audio/video calls gated by an accepted contact request, and
+superadmin-initiated chats/calls to active users. The new
+`supabase/migrations/20261020000100_chat_access_and_calls.sql` migration adds
+the required RLS policies and Realtime call-signaling table; it has not been
+applied to hosted Supabase. Do not deploy it until the existing hosted schema
+is reconciled and the required backup/staging checks are complete.
+
+Audio/video calls require HTTPS (localhost is also supported) and browser
+microphone/camera permission. Calls use Supabase Realtime for signaling and a
+public STUN server by default. Networks that block direct peer connections
+also need a TURN service. Set `VITE_WEBRTC_ICE_SERVERS` to a JSON array of ICE
+server objects during the web build when TURN is required. Because this
+variable is delivered to browsers, use only short-lived, restricted TURN
+credentials; never put a long-lived provider secret in a `VITE_*` variable.
 
 Migrations `20261016000100` through `20261016000300` and `supabase/seed.sql`
 were applied through the Dashboard SQL Editor. On 2026-10-17,
@@ -339,6 +358,10 @@ the source PDF is not copied. Teachers can create or edit the ATP manually
 from those canonical CP elements and the package's RPE, without an AI provider
 or paid service. Review extracted CP text before relying on it, since PDF text
 layout can affect extraction.
+RPE records the scheduled JP for each selected weekday. A holiday now removes
+only the JP assigned to that day, and Prosem uses each week's actual remaining
+capacity. Existing planning packages without per-day values remain readable;
+when edited, their weekly JP is distributed across the selected weekdays.
 Unlike the connected Apps Script project, which uses a static/cache CP registry
 and Gemini-backed generation, this web flow keeps the selected PDF as the CP
 source of record and does not call an AI provider. In no-billing mode, teachers
@@ -448,6 +471,36 @@ local only and still requires deployment and payment-flow verification.
 Remaining backing schemas, authorization, data migration, and production
 verification must be completed before removing Firebase configuration or
 services.
+
+### Materi digital, impor PDF, dan pendaftaran tenant
+
+The local migrations `20261020000200_learning_materials.sql` and
+`20261020000300_school_registration_approval.sql` add private tenant-scoped
+PDF/DOCX materials and a superadmin-reviewed school registration flow. They
+have **not** been applied to hosted Supabase. Do not deploy them until the
+hosted schema has been reconciled against the existing migration baseline and a
+recoverable deployment plan is approved.
+
+Teachers can upload PDF or DOCX materials up to 20 MiB; authenticated members
+of the same active tenant can read them page by page. PDF question import
+extracts selectable text and recognizes numbered multiple-choice questions.
+Teachers must review each extracted question and choose its answer key before
+it can enter the question bank and be scheduled as a CBT exam. Scanned PDFs
+need OCR and are not supported by this importer.
+
+Exam drafts now persist in browser local storage and retry submission when the
+connection returns. The server remains authoritative: an offline answer is not
+counted as submitted until the server confirms it and accepts it within the
+server deadline.
+
+School requests remain unprovisioned until a superadmin manually confirms the
+NPSN and enters the corresponding Ministry registry details. The workspace
+does not currently have a configured official Ministry registry API, so this
+flow fails closed to manual approval instead of claiming an unverified
+automatic match. A confirmed request creates the tenant from the reviewed
+registry values and provisions its requester as school administrator.
+
+Run focused checks with `npm run test:learning` from `web/`.
 
 ### Read-only production usage snapshot (2026-10-17)
 
@@ -706,11 +759,17 @@ No-upgrade operating constraint:
 
 ### Free-tier recovery and operations
 
-The repository now contains a GitHub Actions workflow at
-`.github/workflows/supabase-backup.yml`. It runs daily and on manual dispatch,
+The current `fix/login-only-public-release` branch contains a GitHub Actions
+workflow at `.github/workflows/supabase-backup.yml`; it is not present on
+`main` yet. GitHub scheduled workflows run from the default branch, so this
+workflow cannot be scheduled or manually dispatched until it is reviewed and
+merged into the default branch. Once available there, it runs daily and on
+manual dispatch,
 creates a full custom-format PostgreSQL dump (including accessible Auth schema),
-encrypts it with AES-256-GCM before upload, and writes only the ciphertext to
-Cloudflare R2. Until the repository owner configures all of the following, the
+checks that the dump is non-empty and readable by `pg_restore`, encrypts it with
+AES-256-GCM before upload, and writes only the ciphertext to Cloudflare R2.
+This archive check is not a database restore test. Until the repository owner
+configures all of the following, the
 scheduled workflow deliberately fails at its configuration check and no backup
 is produced:
 
@@ -972,6 +1031,15 @@ prices.
 The purchase page displays package information and the user's entitlement
 status only. Client checkout is hard-disabled in `web/src/services/subscriptions.js`;
 the UI does not create orders, display payment links, or redirect to Midtrans.
+The page also offers a limited manual registration/quote request. Applicants
+can print the form to PDF locally and open a generic WhatsApp message; the
+applicant must attach the saved PDF manually. Form values are not uploaded by
+the application. The public WhatsApp contact is intentionally unconfigured
+until the owner sets `VITE_OWNER_WHATSAPP` in the target Vercel environment;
+every `VITE_*` value is visible in the public web bundle. The PDF is a request
+for follow-up, not an order, invoice, payment receipt, or service activation.
+The form deliberately omits identity-document uploads, passwords, payment-card
+details, and children's NIK/KK data.
 The local `midtrans-checkout` and `midtrans-webhook` Edge Functions now return
 HTTP 410 for every non-preflight request and contain no gateway calls or
 service-role access. The SQL billing migration remains local/inactive. The

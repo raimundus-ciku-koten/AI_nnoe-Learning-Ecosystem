@@ -42,6 +42,7 @@ export function validasiKonteks(mentah) {
     jpPerPekan: bilanganOpsional(mentah.jpPerPekan),
     totalJP: bilanganOpsional(mentah.totalJP),
     hariPembelajaran: normalisasiHari(mentah.hariPembelajaran),
+    jpPerHari: {},
     ganjil: { mulai: t('ganjilMulai', 10) || mentah.ganjil?.mulai || '', selesai: t('ganjilSelesai', 10) || mentah.ganjil?.selesai || '' },
     genap: { mulai: t('genapMulai', 10) || mentah.genap?.mulai || '', selesai: t('genapSelesai', 10) || mentah.genap?.selesai || '' },
     identitas: {
@@ -66,6 +67,30 @@ export function validasiKonteks(mentah) {
 
   if (!Number.isInteger(nilai.jpPerPekan) || nilai.jpPerPekan < BATAS.JP_PER_PEKAN_MIN || nilai.jpPerPekan > BATAS.JP_PER_PEKAN_MAX) {
     galat.jpPerPekan = 'JP_PER_PEKAN_DI_LUAR_BATAS';
+  }
+  if (mentah.jpPerHari !== undefined) {
+    let totalJpHarian = 0;
+    const jpPerHari = mentah.jpPerHari;
+    if (!jpPerHari || typeof jpPerHari !== 'object' || Array.isArray(jpPerHari)) {
+      galat.jpPerHari = 'JP_HARI_TIDAK_VALID';
+    } else {
+      for (const hari of nilai.hariPembelajaran) {
+        const jp = bilanganOpsional(jpPerHari[hari]);
+        if (!Number.isInteger(jp) || jp < 0 || jp > BATAS.JP_PER_PEKAN_MAX) {
+          galat.jpPerHari = 'JP_HARI_TIDAK_VALID';
+          continue;
+        }
+        nilai.jpPerHari[hari] = jp;
+        totalJpHarian += jp;
+      }
+      if (!Object.keys(galat).includes('jpPerHari') && totalJpHarian !== nilai.jpPerPekan) {
+        galat.jpPerHari = 'JP_HARI_TIDAK_SESUAI';
+      }
+    }
+  } else if (Number.isInteger(nilai.jpPerPekan) && nilai.hariPembelajaran.length) {
+    const dasar = Math.floor(nilai.jpPerPekan / nilai.hariPembelajaran.length);
+    let sisa = nilai.jpPerPekan % nilai.hariPembelajaran.length;
+    for (const hari of nilai.hariPembelajaran) nilai.jpPerHari[hari] = dasar + (sisa-- > 0 ? 1 : 0);
   }
   if (nilai.totalJP !== null && (!Number.isInteger(nilai.totalJP) || nilai.totalJP < BATAS.TOTAL_JP_MIN || nilai.totalJP > BATAS.TOTAL_JP_MAX)) {
     galat.totalJP = 'TOTAL_JP_DI_LUAR_BATAS';

@@ -107,6 +107,7 @@ test('menu siswa dan orang tua mengikuti perannya tanpa menampilkan modul guru a
   assert.ok(!siswa.some((item) => item.path.startsWith('/platform/')));
   assert.ok(ortu.some((item) => item.path === '/orang-tua/anak'));
   assert.ok(ortu.some((item) => item.path === '/orang-tua/nilai-kehadiran'));
+  assert.ok(ortu.some((item) => item.path === '/purchase'));
   assert.ok(!ortu.some((item) => item.path.startsWith('/admin/')));
   assert.equal(menuUntukPeran('orang_tua'), menuUntukPeran('ortu'));
 });

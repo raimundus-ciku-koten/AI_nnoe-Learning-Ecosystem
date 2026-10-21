@@ -150,7 +150,7 @@ export function pesanGalatChat(e, konteks = '') {
   if (e?.code === 'chat/attachment-unavailable') return e.message;
   if (e?.code === '42501' || /permission[-_]denied/i.test(k)) {
     return konteks === 'kirim'
-      ? 'Pesan ditolak. Pastikan Anda masih terhubung sebagai kontak dan anggota percakapan ini.'
+      ? 'Pesan ditolak. Pastikan akses instansi atau kontak Anda masih aktif dan Anda anggota percakapan ini.'
       : 'Akses ditolak oleh aturan keamanan.';
   }
   if (/network|fetch failed|unavailable/i.test(k)) return 'Koneksi bermasalah. Coba lagi.';

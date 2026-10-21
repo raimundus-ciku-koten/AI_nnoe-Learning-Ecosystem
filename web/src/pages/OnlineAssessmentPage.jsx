@@ -58,7 +58,7 @@ function StudentAssessments({ userId }) {
       simpanDraftUjian(userId, active, answers, active.submissionId || '');
       setDrafts(daftarDraftUjian(userId));
     } catch (draftError) {
-      setError(`Draft tidak dapat disimpan pada sesi browser: ${draftError.message}`);
+      setError(`Draft tidak dapat disimpan pada browser: ${draftError.message}`);
     }
     return undefined;
   }, [active, answers, userId]);
@@ -107,8 +107,8 @@ function StudentAssessments({ userId }) {
         setActive({ ...cached.exam, submissionId: cached.submissionId });
         setAnswers(cached.answers);
         setNotice(cached.submissionId
-          ? 'Pengumpulan tersimpan di sesi browser dan menunggu konfirmasi server.'
-          : 'Draft ujian dipulihkan dari sesi browser.');
+          ? 'Pengumpulan tersimpan di browser dan menunggu konfirmasi server.'
+          : 'Draft ujian dipulihkan dari browser.');
       } else {
         const started = await mulaiUjianOnline(examId);
         setActive(started);
@@ -137,7 +137,7 @@ function StudentAssessments({ userId }) {
       return;
     }
     if (!globalThis.navigator?.onLine) {
-      setNotice('Tidak ada koneksi. Jawaban disimpan pada sesi browser dan akan dikirim saat koneksi kembali, selama server masih menerima ujian.');
+      setNotice('Tidak ada koneksi. Jawaban disimpan di browser dan akan dikirim saat koneksi kembali, selama server masih menerima ujian.');
       return;
     }
     setBusy(true);
@@ -167,7 +167,7 @@ function StudentAssessments({ userId }) {
           </p>
         </div>
         <p className="ale-exam-notice">
-          Jawaban disimpan pada sesi browser ini. Muat soal sebelum koneksi terputus; pengumpulan tetap harus diterima server sebelum batas waktu.
+          Jawaban disimpan di browser ini. Muat soal sebelum koneksi terputus; pengumpulan tetap harus diterima server sebelum batas waktu.
         </p>
         {active.questions.map((question, index) => (
           <fieldset className="ale-exam-question" key={question.id}>
@@ -282,7 +282,7 @@ function StudentAssessments({ userId }) {
           <li key={draft.exam.examId}>
             <div>
               <strong>{draft.exam.title}</strong>
-              <span>Ujian tersimpan di sesi browser</span>
+              <span>Ujian tersimpan di browser</span>
             </div>
             <button type="button" disabled={busy} onClick={() => openExam(draft.exam.examId)}>
               {draft.submissionId ? 'Sinkronkan' : 'Lanjutkan'}

@@ -5,6 +5,7 @@ import {
   hapusSoalBank, muatBankSoal, tambahSoalBank, ubahSoalBank,
 } from '../services/questionBank.js';
 import { buatDrafSoalAI } from '../services/aiIntegrations.js';
+import { bacaSoalDariPdf } from './perencanaan/engine/soalPdf.js';
 import '../styles/question-bank.css';
 
 const FORM_AWAL = {
@@ -67,6 +68,10 @@ export default function QuestionBankPage() {
   const [search, setSearch] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [topic, setTopic] = useState('');
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfName, setPdfName] = useState('');
+  const [pdfQuestions, setPdfQuestions] = useState([]);
+  const [pdfQuestionIndex, setPdfQuestionIndex] = useState(0);
 
   const canView = ['guru', 'admin_sekolah'].includes(role);
   const canEdit = role === 'guru';
@@ -104,9 +109,62 @@ export default function QuestionBankPage() {
   function resetForm() {
     setForm(FORM_AWAL);
     setEditId('');
+    if (pdfQuestions.length > 0) {
+      const next = pdfQuestions[pdfQuestionIndex + 1];
+      if (next) {
+        setPdfQuestionIndex((index) => index + 1);
+        setForm((current) => ({
+          ...current,
+          jenis: 'pilihan_ganda',
+          pertanyaan: next.prompt,
+          pilihan: next.choices.join('\n'),
+          jawaban: '',
+          pembahasan: '',
+        }));
+        setNotice(`Soal ${pdfQuestionIndex + 2} dari PDF siap ditinjau. Tentukan kunci jawaban sebelum menyimpan.`);
+      } else {
+        setPdfQuestions([]);
+        setPdfQuestionIndex(0);
+        setPdfName('');
+        setNotice('Semua soal hasil ekstraksi sudah ditinjau dan disimpan.');
+      }
+    }
     setTopic('');
     setError('');
     setNotice('');
+  }
+
+  async function importPdf(event) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file) return;
+    setPdfBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const questions = await bacaSoalDariPdf(file);
+      if (questions.length === 0) {
+        throw new Error('Tidak ditemukan soal pilihan ganda berbasis teks. PDF pindai/foto memerlukan OCR dan tidak didukung.');
+      }
+      setPdfQuestions(questions);
+      setPdfQuestionIndex(0);
+      setPdfName(file.name);
+      setEditId('');
+      setForm((current) => ({
+        ...current,
+        jenis: 'pilihan_ganda',
+        pertanyaan: questions[0].prompt,
+        pilihan: questions[0].choices.join('\n'),
+        jawaban: '',
+        pembahasan: '',
+      }));
+      setNotice(`${questions.length} soal terbaca dari PDF. Tinjau setiap soal dan tetapkan kunci jawaban sebelum disimpan.`);
+    } catch (err) {
+      console.error('[question-bank] Gagal membaca soal PDF:', err);
+      setError(err?.message || 'PDF tidak dapat dibaca.');
+    } finally {
+      setPdfBusy(false);
+    }
   }
 
   async function save(event) {
@@ -249,6 +307,37 @@ export default function QuestionBankPage() {
         <section className="ale-kartu question-bank-editor">
           <h2>{editId ? 'Ubah soal' : 'Tambah soal'}</h2>
           <form onSubmit={save}>
+            <label className="question-bank-wide">
+              Impor soal dari PDF
+              <input type="file" accept="application/pdf,.pdf" disabled={pdfBusy || saving} onChange={(event) => void importPdf(event)} />
+            </label>
+            <p className="question-bank-wide" role="note">
+              {pdfBusy ? 'Membaca teks PDF…' : pdfName
+                ? `${pdfName} · soal ${pdfQuestionIndex + 1} dari ${pdfQuestions.length || 1}. Tetapkan kunci jawaban dan simpan tiap soal.`
+                : 'PDF teks (maks. 10 MB/200 halaman) dapat diekstrak otomatis. Soal hasil ekstraksi harus ditinjau guru; PDF pindai memerlukan OCR.'}
+            </p>
+            {pdfQuestions.length > 0 && (
+              <button
+                className="question-bank-ai-button"
+                type="button"
+                disabled={pdfBusy || saving || pdfQuestionIndex >= pdfQuestions.length - 1}
+                onClick={() => {
+                  const nextIndex = pdfQuestionIndex + 1;
+                  const next = pdfQuestions[nextIndex];
+                  setPdfQuestionIndex(nextIndex);
+                  setForm((current) => ({
+                    ...current,
+                    jenis: 'pilihan_ganda',
+                    pertanyaan: next.prompt,
+                    pilihan: next.choices.join('\n'),
+                    jawaban: '',
+                    pembahasan: '',
+                  }));
+                }}
+              >
+                Lewati soal ini
+              </button>
+            )}
             <div className="question-bank-fields">
               <label className="question-bank-wide">
                 Topik / konteks soal

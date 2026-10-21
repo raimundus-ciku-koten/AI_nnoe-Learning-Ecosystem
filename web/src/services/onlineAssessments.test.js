@@ -56,6 +56,7 @@ describe('online assessment service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal('sessionStorage', createStorage());
+    vi.stubGlobal('localStorage', createStorage());
   });
   afterEach(() => vi.unstubAllGlobals());
 
@@ -164,10 +165,17 @@ describe('online assessment service', () => {
       answers: { 'question-1': '2' },
       submissionId: 'submission-1',
     });
+
     expect(daftarDraftUjian('student-1')).toHaveLength(1);
     expect(daftarDraftUjian('student-2')).toEqual([]);
     hapusDraftUjian('student-1', 'exam-1');
     expect(muatDraftUjian('student-1', 'exam-1')).toBeNull();
+  });
+
+  it('persists drafts in local storage across browser reloads', () => {
+    simpanDraftUjian('student-1', exam, { 'question-1': '2' });
+    expect(globalThis.localStorage.length).toBe(1);
+    expect(muatDraftUjian('student-1', 'exam-1')?.answers).toEqual({ 'question-1': '2' });
   });
 
   it('requires server confirmation before treating an exam as submitted', async () => {

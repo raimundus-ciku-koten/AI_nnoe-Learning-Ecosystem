@@ -20,7 +20,7 @@ const KUNCI_PEMULIHAN_SANDI = 'ale-password-recovery';
 
 function ringkasProfil(profil = {}) {
   return {
-    nama: teks(profil.nama),
+    nama: normalisasiNama(profil.nama),
     sekolah: teks(profil.instansi || profil.sekolah),
     langganan: profil.langganan === true || profil.langganan === 'aktif',
     logoSekolah: teks(profil.logoSekolah),
@@ -41,7 +41,10 @@ function rakitState(user, claims = {}, profil = {}) {
   const userOut = {
     uid: user.id,
     email: user.email || '',
-    displayName: ringkas.nama || user.user_metadata?.full_name || user.user_metadata?.nama || user.email?.split('@')[0] || 'Pengguna',
+    displayName: normalisasiNama(
+      ringkas.nama || user.user_metadata?.full_name || user.user_metadata?.nama ||
+      user.email?.split('@')[0] || 'Pengguna',
+    ),
     photoURL: teks(profil.photoUrl) || user.user_metadata?.avatar_url || '',
   };
 

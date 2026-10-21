@@ -4,11 +4,13 @@ import { muatDaftarChat } from './chat.js';
 import { pantauKontak } from './contacts.js';
 import { mulaiPresence, setOffline } from './presence.js';
 import { lepaskanPerangkat } from './messaging.js';
+import { pantauSinyalPanggilan } from './chatCalls.js';
 
 let uidAktif = null;
 let kanal = null;
 let berhentiKontak = null;
 let berhentiPresence = null;
+let berhentiPanggilan = null;
 let jadwalMuat = null;
 
 function jadwalkanMuatInbox() {
@@ -29,6 +31,8 @@ function lepasListener() {
   berhentiKontak = null;
   berhentiPresence?.();
   berhentiPresence = null;
+  berhentiPanggilan?.();
+  berhentiPanggilan = null;
 }
 
 export function mulaiSinkronChat() {
@@ -43,6 +47,13 @@ export function mulaiSinkronChat() {
   });
   berhentiKontak = pantauKontak(uid, () => {});
   berhentiPresence = mulaiPresence(uid);
+  berhentiPanggilan = pantauSinyalPanggilan(uid, null, (signal) => {
+    if (signal.event_type !== 'offer') return;
+    const ruteAktif = window.location.hash.replace(/^#/, '').replace(/\/+$/, '');
+    if (ruteAktif !== `/chat/${signal.conversation_id}`) {
+      window.location.hash = `#/chat/${signal.conversation_id}`;
+    }
+  });
 
   kanal = supabase
     .channel(`chat-sync:${uid}`)
