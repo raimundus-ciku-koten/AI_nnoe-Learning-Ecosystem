@@ -1323,6 +1323,9 @@ placeholder in `twa-manifest.json` as a release target.
 To rebuild on Windows with Android Studio/SDK and Java 17 installed after
 replacing the example below with the confirmed production hostname, run:
 
+The checked-in wrapper pins Gradle 9.7.1. Android artifacts resolve through
+Google Maven and Maven Central; JCenter is retired.
+
 ```powershell
 $env:TWA_HOST = "your-confirmed-domain.example"
 $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
