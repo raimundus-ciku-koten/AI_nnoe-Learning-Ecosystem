@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// =============================================================================
+// Aturan untuk modul Barcode & Absensi.
+//
+// ⚠ GABUNGKAN dengan firestore.rules yang sudah ada — jangan menimpa begitu saja.
+//   Koleksi yang tidak tercantum di sini otomatis DITOLAK oleh Firestore, jadi
+//   salin blok `match /siswa/...` dan `match /absensi/...` plus fungsi bantu
+//   ke berkas aturan proyek Anda.
+//
+// Peran dibaca dari custom claim `role` ('admin' | 'guru') pada token Auth.
+// Claim dibaca dari token → TIDAK memakai get() (tidak menambah biaya baca dan
+// tidak menghabiskan batas 20 akses-dokumen pada writeBatch). Cara mengisinya
+// ada di PANDUAN.md.
+// =============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function masuk()   { return request.auth != null; }
+    function peran()   { return masuk() ? request.auth.token.get('role', '') : ''; }
+    function isAdmin() { return peran() == 'admin'; }
+    function isGuru()  { return peran() in ['guru', 'admin']; }
+
+    // -------------------------------------------------------------------------
+    // Siswa — dibaca guru/admin, ditulis admin. `kodeUnik` bersifat set-sekali.
+    // -------------------------------------------------------------------------
+    match /siswa/{siswaId} {
+      allow read: if isGuru();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() && kodeUnikAman();
+
+      // Kode boleh tetap sama, atau diisi SEKALI (dari kosong) dengan format valid.
+      function kodeUnikAman() {
+        let lama = resource.data.get('kodeUnik', '');
+        let baru = request.resource.data.get('kodeUnik', '');
+        return lama == baru
+          || (lama == '' && baru is string && baru.matches('^[A-Za-z0-9._-]{4,64}$'));
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Absensi — id dokumen `${tanggal}_${siswaId}`. Guru hanya dapat MEMBUAT
+    // (tidak bisa mengubah/menghapus); admin dapat mengoreksi.
+    // -------------------------------------------------------------------------
+    match /absensi/{absensiId} {
+      allow read: if isGuru();
+      allow create: if isGuru() && absensiBaruValid(request.resource.data);
+      allow update, delete: if isAdmin();
+
+      function absensiBaruValid(d) {
+        return d.keys().hasOnly(['siswaId', 'kelas', 'tanggal', 'status', 'waktu', 'dicatatOleh', 'sumber'])
+          && d.keys().hasAll(['siswaId', 'kelas', 'tanggal', 'status', 'waktu', 'dicatatOleh', 'sumber'])
+          && d.siswaId is string && d.kelas is string && d.tanggal is string
+          && d.tanggal.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && absensiId == d.tanggal + '_' + d.siswaId
+          && d.status == 'hadir'
+          && d.sumber == 'barcode'
+          && d.waktu == request.time
+          && d.dicatatOleh == request.auth.uid
+          && exists(/databases/$(database)/documents/siswa/$(d.siswaId));
+      }
+    }
+  }
+}

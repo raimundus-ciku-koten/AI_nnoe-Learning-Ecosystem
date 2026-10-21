@@ -1,0 +1,37 @@
+name: Web CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+      - name: Build web app
+        run: npm run build -- --mode ci
+        working-directory: web
+      - name: Test web app
+        run: npm test
+        working-directory: web
+      - name: Test encrypted backup utility
+        run: npm run test:backup
+        working-directory: web
+      - name: Test economy-mode utilities
+        run: npm run test:economy
+        working-directory: web
+      - name: Test login security utilities
+        run: npm run test:security
+        working-directory: web

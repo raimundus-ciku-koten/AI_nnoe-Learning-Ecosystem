@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AINNOE Learning Ecosystem">
+  <defs>
+    <linearGradient id="ale" x1="0" y1="32" x2="64" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0"   stop-color="#1e1b4b"/>
+      <stop offset="0.4" stop-color="#3730a3"/>
+      <stop offset="0.75" stop-color="#0f766e"/>
+      <stop offset="1"   stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+  <!-- Infinity: satu path kontinu, tanpa background -->
+  <path d="M32 32
+           C24.5 20 12 20 12 32
+           C12 44 24.5 44 32 32
+           C39.5 20 52 20 52 32
+           C52 44 39.5 44 32 32"
+        fill="none"
+        stroke="url(#ale)"
+        stroke-width="7"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>

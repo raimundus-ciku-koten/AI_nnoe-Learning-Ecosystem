@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.ainnoe.learningecosystem",
+      "sha256_cert_fingerprints": [
+        "77:ED:36:AC:7F:7C:F1:A2:69:89:51:7A:7E:31:19:02:71:52:4F:43:A9:31:F9:40:17:4A:4D:B4:82:B0:38:FD"
+      ]
+    }
+  }
+]
