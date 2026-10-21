@@ -27,3 +27,4 @@ android-apk/*.jks
 android-apk/*.keystore
 android-apk/keystore.properties
 web/.vercel/
+.playwright-mcp/
