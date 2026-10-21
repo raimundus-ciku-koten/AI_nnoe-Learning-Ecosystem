@@ -72,6 +72,14 @@ export function normalisasiHari(sumber) {
   return [...hasil].sort((a, b) => a - b);
 }
 
+function distribusikanJp(jumlahHari, totalJP) {
+  if (jumlahHari < 1) return [];
+  const total = Math.max(0, Math.trunc(Number(totalJP)) || 0);
+  const dasar = Math.floor(total / jumlahHari);
+  let sisa = total % jumlahHari;
+  return Array.from({ length: jumlahHari }, () => dasar + (sisa-- > 0 ? 1 : 0));
+}
+
 /**
  * Bangun peta tanggal → entri dari daftar kalender. Hari tidak efektif MENGUNGGULI efektif
  * (bila dua entri jatuh di tanggal yang sama), sama seperti masukPetaKalenderRpe_ di GAS.
@@ -104,11 +112,11 @@ export function bangunPetaKalender(kalender) {
  * @param {string} p.mulai
  * @param {string} p.selesai
  * @param {number[]} p.hari indeks 1..6
- * @param {number} p.jpPerPekan
+ * @param {Record<number, number>} p.jpPerHari
  * @param {Map<string,{ket:string,efektif:boolean}>} p.peta
  * @returns {Pekan[]}
  */
-export function hitungPekanSemester({ mulai, selesai, hari, jpPerPekan, peta }) {
+export function hitungPekanSemester({ mulai, selesai, hari, jpPerHari, peta }) {
   let a = urai(mulai);
   let b = urai(selesai);
   if (a === null || b === null || hari.length === 0) return [];
@@ -122,14 +130,20 @@ export function hitungPekanSemester({ mulai, selesai, hari, jpPerPekan, peta }) 
     const hariPekan = [];
     const tidak = [];
     let efektifCount = 0;
+    let jpEfektif = 0;
     for (const k of hari) {
       const t = tambahHari(senin, k - 1);
       if (t < a || t > b) continue;
       const iso = keIso(t);
       hariPekan.push(iso);
+      const jpHari = jpPerHari[k] ?? 0;
+      if (jpHari === 0) continue;
       const entri = peta.get(iso);
       if (entri && !entri.efektif) tidak.push({ tanggal: iso, ket: entri.ket || '' });
-      else efektifCount++;
+      else {
+        efektifCount++;
+        jpEfektif += jpHari;
+      }
     }
     if (hariPekan.length === 0) continue;
 
@@ -140,7 +154,7 @@ export function hitungPekanSemester({ mulai, selesai, hari, jpPerPekan, peta }) 
       mulai: hariPekan[0],
       selesai: hariPekan[hariPekan.length - 1],
       efektif,
-      jp: efektif ? jpPerPekan : 0,
+      jp: jpEfektif,
       hariPembelajaran: hariPekan,
       hariEfektif: efektifCount,
       hariTidakEfektif: tidak,
@@ -150,14 +164,14 @@ export function hitungPekanSemester({ mulai, selesai, hari, jpPerPekan, peta }) 
   return hasil;
 }
 
-/** @param {Pekan[]} pekan @param {number} jpPerPekan */
-export function rekapPekan(pekan, jpPerPekan) {
+/** @param {Pekan[]} pekan */
+export function rekapPekan(pekan) {
   const efektif = pekan.filter((p) => p.efektif).length;
   return {
     totalPekan: pekan.length,
     efektif,
     nonEfektif: pekan.length - efektif,
-    totalJP: efektif * jpPerPekan
+    totalJP: pekan.reduce((total, item) => total + item.jp, 0)
   };
 }
 
@@ -166,26 +180,36 @@ export function rekapPekan(pekan, jpPerPekan) {
  * @param {Object} k konteks paket
  * @param {number} k.jpPerPekan
  * @param {unknown} k.hariPembelajaran
+ * @param {Record<number, number>} [k.jpPerHari]
  * @param {{mulai:string,selesai:string}} k.ganjil
  * @param {{mulai:string,selesai:string}} k.genap
  * @param {EntriKalender[]} [k.kalender]
  * @param {number|null} [k.totalJP] bila diisi guru, menjadi acuan resmi (Prota/ATP)
  */
 export function hitungRpe(k) {
-  const jpPerPekan = Math.min(BATAS.JP_PER_PEKAN_MAX, Math.max(BATAS.JP_PER_PEKAN_MIN, Math.trunc(Number(k.jpPerPekan)) || 0));
   const hari = normalisasiHari(k.hariPembelajaran);
+  const jpTerdistribusi = distribusikanJp(hari.length, k.jpPerPekan);
+  const jpPerHari = Object.fromEntries(hari.map((hariKe, index) => {
+    const nilaiBaru = k.jpPerHari?.[hariKe];
+    const nilai = Number.isInteger(nilaiBaru) && nilaiBaru >= 0
+      ? nilaiBaru
+      : jpTerdistribusi[index];
+    return [hariKe, nilai];
+  }));
+  const jpPerPekan = Object.values(jpPerHari).reduce((total, nilai) => total + nilai, 0);
   const peta = bangunPetaKalender(k.kalender);
 
-  const pekanGanjil = hitungPekanSemester({ ...k.ganjil, hari, jpPerPekan, peta });
-  const pekanGenap = hitungPekanSemester({ ...k.genap, hari, jpPerPekan, peta });
-  const ganjil = rekapPekan(pekanGanjil, jpPerPekan);
-  const genap = rekapPekan(pekanGenap, jpPerPekan);
+  const pekanGanjil = hitungPekanSemester({ ...k.ganjil, hari, jpPerHari, peta });
+  const pekanGenap = hitungPekanSemester({ ...k.genap, hari, jpPerHari, peta });
+  const ganjil = rekapPekan(pekanGanjil);
+  const genap = rekapPekan(pekanGenap);
 
   const totalHitung = ganjil.totalJP + genap.totalJP;
   const totalResmi = Number.isInteger(k.totalJP) && k.totalJP >= BATAS.TOTAL_JP_MIN ? k.totalJP : null;
 
   return {
     jpPerPekan,
+    jpPerHari,
     hari,
     ganjil: { ...k.ganjil, pekan: pekanGanjil, rekap: ganjil },
     genap: { ...k.genap, pekan: pekanGenap, rekap: genap },

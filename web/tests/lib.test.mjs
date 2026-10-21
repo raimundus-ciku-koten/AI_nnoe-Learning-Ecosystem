@@ -316,11 +316,14 @@ test('hosted schema audit script contains read-only SQL only', () => {
     'question_bank',
     'web_push_subscriptions',
     'chat_push_dispatches',
+    'chat_call_signals',
     'student_account_links',
     'student_account_link_audit',
     'online_exams',
     'online_exam_items',
     'online_exam_attempts',
+    'learning_materials',
+    'school_registration_requests_v2',
     'trial_registrations',
     'user_ai_credentials',
     'canva_oauth_states',
@@ -328,6 +331,7 @@ test('hosted schema audit script contains read-only SQL only', () => {
   for (const featureRelation of featureRelations) {
     assert.match(auditSql, new RegExp(`'${featureRelation}'`));
   }
+  assert.match(auditSql, /'school_registration_requests'/);
 
   const migrationFiles = readdirSync(new URL('../../supabase/migrations/', import.meta.url))
     .filter((file) => file.endsWith('.sql'));
@@ -338,7 +342,7 @@ test('hosted schema audit script contains read-only SQL only', () => {
       'utf8',
     );
     for (const match of migration.matchAll(
-      /\bcreate\s+(?:(?:table)(?:\s+if\s+not\s+exists)?|(?:or\s+replace\s+)?view)\s+public\.([a-z_]+)/gi,
+      /\bcreate\s+(?:(?:table)(?:\s+if\s+not\s+exists)?|(?:or\s+replace\s+)?view)\s+public\.([a-z0-9_]+)/gi,
     )) {
       definedRelations.add(match[1]);
     }

@@ -2,7 +2,7 @@
  * @file Mesin Program Semester (Prosem) — murni & deterministik.
  *
  * Menempatkan urutan kegiatan Prota (TP lalu Ulangan Harian per modul) ke pekan-pekan
- * efektif hasil RPE, memakai kapasitas `jpPerPekan` per pekan efektif. Pekan tidak efektif
+ * efektif hasil RPE, memakai kapasitas JP aktual tiap pekan. Pekan tidak efektif
  * (libur/ujian sekolah) ikut ditampilkan dengan alasannya sehingga guru melihat kalender utuh.
  *
  * Keputusan desain (berbeda dari GAS, yang meminta AI menyusun matriks):
@@ -45,6 +45,7 @@ export function hitungProsemSemester({ rpeSemester, protaSemester, jpPerPekan })
     selesai: p.selesai,
     bulan: bulanDariIso(p.mulai),
     tahun: (() => { const ms = urai(p.mulai); return ms === null ? 0 : new Date(ms).getUTCFullYear(); })(),
+    jp: Number.isInteger(p.jp) && p.jp >= 0 ? p.jp : jpPerPekan,
     efektif: p.efektif,
     status: p.status,
     hariTidakEfektif: p.hariTidakEfektif,
@@ -59,16 +60,23 @@ export function hitungProsemSemester({ rpeSemester, protaSemester, jpPerPekan })
 
   // Tempatkan segmen ke pekan efektif berurutan.
   let ix = 0;
-  let sisaPekan = jpPerPekan;
+  let sisaPekan = efektif[0]?.jp ?? jpPerPekan;
   for (const item of urutan) {
     let sisa = item.jp;
     while (sisa > 0) {
+      while (ix < efektif.length && sisaPekan === 0) {
+        ix++;
+        sisaPekan = efektif[ix]?.jp ?? jpPerPekan;
+      }
       if (ix >= efektif.length) { kekuranganJP += sisa; break; }
       const ambil = Math.min(sisa, sisaPekan);
       efektif[ix].segmen.push({ ...item, jp: ambil });
       sisa -= ambil;
       sisaPekan -= ambil;
-      if (sisaPekan === 0) { ix++; sisaPekan = jpPerPekan; }
+      if (sisaPekan === 0) {
+        ix++;
+        sisaPekan = efektif[ix]?.jp ?? jpPerPekan;
+      }
     }
   }
 
@@ -94,7 +102,7 @@ export function hitungProsemSemester({ rpeSemester, protaSemester, jpPerPekan })
     pekanEfektif: e,
     jpTerjadwal: urutan.reduce((s, i) => s + i.jp, 0) - kekuranganJP,
     kekuranganJP,
-    kapasitasJP: e * jpPerPekan
+    kapasitasJP: efektif.reduce((total, p) => total + p.jp, 0)
   };
 }
 

@@ -10,6 +10,9 @@ verify_jwt = true
 [functions.platform-user-invite]
 verify_jwt = true
 
+[functions.school-registry]
+verify_jwt = true
+
 [functions.ai-user-services]
 verify_jwt = true
 

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  envDir: mode === 'staging' ? './env/staging' : '.',
   server: {
     port: 5173,
     strictPort: true,
@@ -29,4 +30,4 @@ export default defineConfig({
     drop: ['console', 'debugger'],
     legalComments: 'none',
   },
-});
+}));

@@ -88,6 +88,18 @@ test('RPE: libur satu hari → pekan sebagian efektif; libur sepekan penuh → n
   assert.equal(r.ganjil.rekap.efektif, 22);
 });
 
+test('RPE: JP per hari mengurangi kapasitas pekan ketika hari belajar libur', () => {
+  const r = hitungRpe({
+    ...konteksDasar,
+    jpPerHari: { 1: 3, 4: 1 },
+    kalender: [{ mulai: '2026-08-17', ket: 'Libur Senin', efektif: false }]
+  });
+  const pekan = r.ganjil.pekan.find((item) => item.hariPembelajaran.includes('2026-08-17'));
+  assert.equal(pekan.jp, 1);
+  assert.equal(pekan.hariEfektif, 1);
+  assert.equal(r.jpPerPekan, 4);
+});
+
 test('RPE: hari tidak efektif mengungguli entri efektif pada tanggal sama', () => {
   const peta = bangunPetaKalender([
     { mulai: '2026-08-17', ket: 'Hari efektif', efektif: true },
@@ -213,6 +225,28 @@ test('Prosem: melaporkan kekurangan JP bila pekan efektif tidak cukup', () => {
   assert.equal(prosem.ganjil.jpTerjadwal + prosem.ganjil.kekuranganJP, prota.program[1].jp);
 });
 
+test('Prosem: kapasitas dan penempatan mengikuti JP aktual per pekan', () => {
+  const hasil = hitungProsem({
+    rpe: {
+      jpPerPekan: 4,
+      ganjil: { pekan: [
+        { noSemester: 1, mulai: '2026-07-13', selesai: '2026-07-17', bulan: 7, efektif: true, jp: 2, status: 'sebagian', hariTidakEfektif: [] },
+        { noSemester: 2, mulai: '2026-07-20', selesai: '2026-07-24', bulan: 7, efektif: true, jp: 4, status: 'efektif', hariTidakEfektif: [] }
+      ] },
+      genap: { pekan: [] }
+    },
+    prota: {
+      program: {
+        1: { modul: [{ no: 1, baris: [{ kode: 'E.1', materi: 'Materi', jp: 5 }], uh: 0 }] },
+        2: { modul: [] }
+      }
+    }
+  });
+  assert.equal(hasil.ganjil.kapasitasJP, 6);
+  const pekan = hasil.ganjil.bulan.flatMap((bulan) => bulan.pekan);
+  assert.deepEqual(pekan.map((item) => item.segmen.reduce((total, segmen) => total + segmen.jp, 0)), [2, 3]);
+});
+
 /* ---------- Validator ---------- */
 const formDasar = () => ({
   mapel: 'Matematika', kelas: 'X', fase: 'e', tahunAjaran: '2026/2027',
@@ -228,6 +262,13 @@ test('validasiKonteks: formulir sah lolos dan dinormalkan', () => {
   assert.equal(v.nilai.fase, 'E');
   assert.equal(v.nilai.jpPerPekan, 4);
   assert.deepEqual(v.nilai.hariPembelajaran, [1, 4]);
+  assert.deepEqual(v.nilai.jpPerHari, { 1: 2, 4: 2 });
+});
+
+test('validasiKonteks: JP per hari harus sama dengan total mingguan', () => {
+  const v = validasiKonteks({ ...formDasar(), jpPerHari: { 1: '3', 4: '2' } });
+  assert.equal(v.ok, false);
+  assert.equal(v.galat.jpPerHari, 'JP_HARI_TIDAK_SESUAI');
 });
 
 test('validasiKonteks: menangkap tanggal terbalik, TA salah, semester tumpang tindih, JP di luar batas', () => {

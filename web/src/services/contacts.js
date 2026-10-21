@@ -172,6 +172,7 @@ export async function muatDirektori({ paksa = false } = {}) {
       uid: person.uid,
       nama: person.nama,
       role: person.role,
+      sameInstansi: person.same_instansi === true,
       photoUrl: typeof person.photo_url === 'string' && /^https:\/\//i.test(person.photo_url)
         ? person.photo_url
         : '',

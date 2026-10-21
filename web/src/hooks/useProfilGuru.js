@@ -1,6 +1,7 @@
 // web/src/hooks/useProfilGuru.js
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.ts';
+import { normalisasiNama } from '../utils/nama.js';
 
 export function useProfilGuru() {
   const [profil, setProfil] = useState(null);
@@ -43,7 +44,9 @@ export function useProfilGuru() {
       }
 
       const profilUser = {
-        nama: data?.nama || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Tanpa Nama',
+        nama: normalisasiNama(
+          data?.nama || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Tanpa Nama',
+        ),
         email: data?.email || user.email,
         peran: data?.role || 'Guru',
         ...(data || {}),

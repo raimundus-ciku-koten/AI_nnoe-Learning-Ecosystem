@@ -12,9 +12,18 @@ test('Kepala Sekolah dan Wali Kelas hanya dapat membuka dashboard sampai ada izi
 });
 
 test('peran lain tetap mengikuti otorisasi rute yang sudah ada', () => {
-  for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'siswa', 'superadmin']) {
+  for (const role of [
+    'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',
+    'siswa', 'ortu', 'orang_tua', 'superadmin',
+  ]) {
     assert.equal(canOpenRolePath(role, '/dashboard'), true);
     assert.equal(canOpenRolePath(role, '/perencanaan'), true);
+  }
+});
+
+test('akun orang tua dapat membuka halaman paket untuk permintaan manual', () => {
+  for (const role of ['ortu', 'orang_tua']) {
+    assert.equal(canOpenRolePath(role, '/purchase'), true);
   }
 });
 

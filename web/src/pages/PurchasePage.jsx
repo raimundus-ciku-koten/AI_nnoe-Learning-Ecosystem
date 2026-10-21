@@ -4,6 +4,7 @@ import {
   muatLanggananPersonal,
   muatLanggananTenant,
 } from '../services/subscriptions.js';
+import ManualRegistrationForm from './ManualRegistrationForm.jsx';
 import PRICING from '../../../functions/shared/pricing.json';
 import '../styles/purchase.css';
 
@@ -14,6 +15,7 @@ const formatRupiah = (value) => new Intl.NumberFormat('id-ID', {
 const HARGA = (paket, siklus) => siklus === 'tahunan'
   ? paket.annualPrice
   : Math.round(paket.annualPrice / PRICING.monthlyDivisor);
+const PERAN_PEMBELI = ['admin_sekolah', 'guru', 'siswa', 'ortu', 'orang_tua'];
 
 function pilihanPaket(paket, idTerpilih, pilih, siklus) {
   const harga = HARGA(paket, siklus);
@@ -48,7 +50,7 @@ export default function PurchasePage() {
   useEffect(() => {
     let aktif = true;
     async function muatLangganan() {
-      if (!user?.uid || !['admin_sekolah', 'guru', 'siswa'].includes(role)) return;
+      if (!user?.uid || !PERAN_PEMBELI.includes(role)) return;
       setGalatLangganan('');
       try {
         const rekaman = role === 'admin_sekolah'
@@ -74,8 +76,8 @@ export default function PurchasePage() {
   const productType = role === 'admin_sekolah' ? 'school' : 'individual';
   const daftarPaket = useMemo(() => {
     if (role === 'admin_sekolah') return PRICING.school;
-    if (role === 'siswa') return PRICING.student;
     if (role === 'guru') return PRICING[jenisGuru];
+    if (['siswa', 'ortu', 'orang_tua'].includes(role)) return PRICING.student;
     return [];
   }, [role, jenisGuru]);
   const paketAktif = daftarPaket.find((paket) => paket.id === planId) || daftarPaket[0] || null;
@@ -93,7 +95,7 @@ export default function PurchasePage() {
     setPlanId('');
   }
 
-  if (!['admin_sekolah', 'guru', 'siswa'].includes(role)) {
+  if (!PERAN_PEMBELI.includes(role)) {
     return (
       <main className="ale-purchase">
         <section className="ale-purchase-card" role="status">
@@ -159,6 +161,7 @@ export default function PurchasePage() {
           Tarif ini hanya referensi dalam Rupiah dan belum termasuk pajak. Harga tahunan setara 10 bulan harga bulanan (diskon 2 bulan); pajak dan harga final harus dikonfirmasi sebelum transaksi. Tidak ada checkout atau aktivasi pembelian dari halaman ini.
         </p>
       </section>
+      <ManualRegistrationForm />
     </main>
   );
 }
