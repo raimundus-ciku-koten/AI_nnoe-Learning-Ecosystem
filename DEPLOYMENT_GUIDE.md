@@ -68,7 +68,7 @@ Do NOT apply database migrations to hosted Supabase until backups and a staging 
   - npm --prefix web run build
   - npm --prefix web test
 - The GitHub Actions web CI also type-checks the new Supabase Edge Functions with Deno. The build, tests, and Edge Function checks must pass on the release PR.
-- Workspace design analyzer `skillui@1.3.4` is a development-only dependency and is not bundled into the web application. The owner accepted its unresolved dependency advisories for local use; do not run `skillui --repo` on untrusted repositories. The production dependency audit (`npm audit --omit=dev`) currently reports zero vulnerabilities, while the full development dependency audit still reports four advisories (two critical, one high, one low).
+- The unused `skillui` development dependency was removed because it introduced vulnerable transitive tooling. On 2026-10-21, `npm audit --prefix web` reported zero vulnerabilities across production and development dependencies.
 
 3) Supabase migration policy (CRITICAL, manual step)
 

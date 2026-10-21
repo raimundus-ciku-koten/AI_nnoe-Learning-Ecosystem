@@ -39,7 +39,6 @@
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
-    "skillui": "^1.3.4",
     "vite": "^6.0.0",
     "vitest": "^5.0.4"
   },
