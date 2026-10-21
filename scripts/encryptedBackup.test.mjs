@@ -81,9 +81,13 @@ test('encrypted backup refuses empty dump files', async () => {
   }
 });
 
-test('limits backup credentials to the workflow steps that need them', async () => {
+test('limits encrypted database backups to manually triggered Staging artifacts', async () => {
   const workflow = await readFile(
     new URL('../.github/workflows/supabase-backup.yml', import.meta.url),
+    'utf8',
+  );
+  const targetValidator = await readFile(
+    new URL('./validateStagingBackupTarget.mjs', import.meta.url),
     'utf8',
   );
   const validate = workflow.match(
@@ -93,24 +97,33 @@ test('limits backup credentials to the workflow steps that need them', async () 
     /      - name: Create and encrypt database dump([\s\S]*?)(?=      - name:|$)/,
   )?.[1];
   const upload = workflow.match(
-    /      - name: Upload encrypted backup to Cloudflare R2([\s\S]*?)$/,
+    /      - name: Upload encrypted backup artifact([\s\S]*?)(?=      - name:|$)/,
   )?.[1];
 
   assert.doesNotMatch(workflow, /^    env:/m);
+  assert.doesNotMatch(workflow, /^  schedule:/m);
+  assert.doesNotMatch(workflow, /Cloudflare R2|AWS_ACCESS_KEY_ID|AWS_SECRET_ACCESS_KEY/);
   assert.ok(validate);
   assert.ok(create);
   assert.ok(upload);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /Run this workflow from main only/);
+  assert.match(validate, /validateStagingBackupTarget\.mjs/);
+  assert.match(targetValidator, /samszhfyhbjuculrcffg/);
+  assert.match(targetValidator, /sessionPoolerStaging/);
   assert.match(create, /pg_dump --format=custom/);
   assert.match(create, /pg_restore --list "\$dump" > \/dev\/null/);
   assert.match(create, /test -s "\$dump"/);
   assert.match(create, /test -s "\$encrypted"/);
+  assert.match(create, /400 \* 1024 \* 1024/);
   assert.match(validate, /SUPABASE_DB_URL:/);
   assert.match(validate, /BACKUP_ENCRYPTION_KEY:/);
-  assert.match(validate, /AWS_SECRET_ACCESS_KEY:/);
   assert.match(create, /SUPABASE_DB_URL:/);
   assert.match(create, /BACKUP_ENCRYPTION_KEY:/);
-  assert.doesNotMatch(create, /AWS_SECRET_ACCESS_KEY:/);
-  assert.match(upload, /AWS_SECRET_ACCESS_KEY:/);
+  assert.match(upload, /actions\/upload-artifact@v4/);
+  assert.match(upload, /retention-days: 1/);
+  assert.match(upload, /compression-level: 0/);
+  assert.match(upload, /if-no-files-found: error/);
   assert.doesNotMatch(upload, /SUPABASE_DB_URL:/);
   assert.doesNotMatch(upload, /BACKUP_ENCRYPTION_KEY:/);
 });

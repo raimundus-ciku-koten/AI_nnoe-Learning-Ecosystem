@@ -1,15 +1,13 @@
-name: Supabase encrypted backup
+name: Supabase encrypted Staging backup
 
 on:
-  schedule:
-    - cron: '33 19 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: supabase-encrypted-backup
+  group: supabase-encrypted-staging-backup
   cancel-in-progress: false
 
 jobs:
@@ -23,30 +21,17 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
-          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
-          R2_BUCKET: ${{ vars.R2_BACKUP_BUCKET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
           set -euo pipefail
-          for name in SUPABASE_DB_URL BACKUP_ENCRYPTION_KEY R2_ACCOUNT_ID R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
-            if [[ -z "${!name:-}" ]]; then
-              echo "::error::Required GitHub secret or variable is missing: ${name}"
-              exit 1
-            fi
-          done
-          if [[ ! "$R2_ACCOUNT_ID" =~ ^[a-fA-F0-9]{32}$ ]]; then
-            echo "::error::R2_ACCOUNT_ID must be a 32-character Cloudflare account ID."
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Run this workflow from main only."
             exit 1
           fi
-          if [[ ! "$R2_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$ ]]; then
-            echo "::error::R2_BACKUP_BUCKET must be a valid lowercase bucket name."
+          if [[ -z "$SUPABASE_DB_URL" || -z "$BACKUP_ENCRYPTION_KEY" ]]; then
+            echo "::error::Add SUPABASE_DB_URL and BACKUP_ENCRYPTION_KEY in GitHub Actions secrets."
             exit 1
           fi
-          if [[ ! "$SUPABASE_DB_URL" =~ ^postgres(ql)?:// ]]; then
-            echo "::error::SUPABASE_DB_URL must be a PostgreSQL connection URL."
-            exit 1
-          fi
+          node scripts/validateStagingBackupTarget.mjs
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
@@ -59,27 +44,31 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
-          dump="${RUNNER_TEMP}/supabase-${GITHUB_RUN_ID}.dump"
-          encrypted="${RUNNER_TEMP}/supabase-${GITHUB_RUN_ID}.aeb"
-          trap 'rm -f "$dump"' EXIT
+          dump="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.dump"
+          encrypted="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.aeb"
           pg_dump --format=custom --no-owner --no-acl --file "$dump" "$SUPABASE_DB_URL"
           test -s "$dump"
           pg_restore --list "$dump" > /dev/null
           node scripts/encryptedBackup.mjs encrypt "$dump" "$encrypted"
           test -s "$encrypted"
-          echo "BACKUP_FILE=$encrypted" >> "$GITHUB_ENV"
-          echo "BACKUP_NAME=supabase-$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_RUN_ID}.aeb" >> "$GITHUB_ENV"
-      - name: Upload encrypted backup to Cloudflare R2
+          size=$(stat --format=%s "$encrypted")
+          max_size=$((400 * 1024 * 1024))
+          if (( size > max_size )); then
+            echo "::error::Encrypted backup exceeds the 400 MiB free-storage safety cap."
+            exit 1
+          fi
+          echo "BACKUP_PATH=$encrypted" >> "$GITHUB_ENV"
+      - name: Upload encrypted backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-staging-encrypted-${{ github.run_id }}
+          path: ${{ runner.temp }}/supabase-staging-${{ github.run_id }}.aeb
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+      - name: Remove temporary database files
+        if: always()
         shell: bash
-        env:
-          R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
-          R2_BUCKET: ${{ vars.R2_BACKUP_BUCKET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
         run: |
-          set -euo pipefail
-          trap 'rm -f "$BACKUP_FILE"' EXIT
-          aws s3 cp "$BACKUP_FILE" "s3://${R2_BUCKET}/daily/${BACKUP_NAME}" \
-            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
-            --only-show-errors
+          rm -f "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.dump"
+          rm -f "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.aeb"

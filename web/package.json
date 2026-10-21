@@ -13,7 +13,7 @@
     "preview": "vite preview --port 4173",
     "test": "npm run test:unit && npm run test:planning-source && npm run test:assessment && npm run test:vitest && npm run test:assessment-ui && npm run test:role-access",
     "test:planning-source": "node --test tests/capaian-pembelajaran.test.mjs tests/planning-ai-schema.test.mjs",
-    "test:backup": "node --test ../scripts/encryptedBackup.test.mjs",
+    "test:backup": "node --test ../scripts/encryptedBackup.test.mjs ../scripts/validateStagingBackupTarget.test.mjs",
     "test:assessment": "node --test tests/online-assessments-schema.test.mjs",
     "test:assessment-ui": "vitest run src/services/onlineAssessments.test.js",
     "test:role-access": "node --test src/services/roleAccess.test.js",
@@ -31,7 +31,7 @@
     "pdfjs-dist": "5.4.296",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.6"
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "vite": "^6.0.0",

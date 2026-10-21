@@ -3,25 +3,21 @@
 Monorepo for the AI_nnoe Learning Ecosystem web application and its backend
 services.
 
-## Release readiness snapshot (2026-10-21)
+## Release readiness snapshot (2026-10-22)
 
-**Production domain currently returns `404 NOT_FOUND`.** The latest Vercel
-Production deployment was created from `main` after PR #5 merged; its unique
-deployment URL and `https://ainnoe-le.vercel.app/` both returned 404 in an
-anonymous check on 2026-10-21. The remote `main` tree currently contains the
-backup workflow, README, and helper scripts, but not the web application. The
-previous immutable Production deployment
-(`https://ainnoe-k5n02q9hy-kotenraimundusc-4094.vercel.app/`) still serves the
-login-only application. The owner declined an Instant Rollback, so the
-Production alias was not changed. Do not claim the current Production domain
-is healthy; restore the application source/deployment path to `main` or obtain
-owner approval for a rollback before stating that the domain is recovered.
+**Production login access was restored** by merging PR #7
+(`832d04d`) to `main` on 2026-10-22. The outage observed on 2026-10-21 was
+caused by the Production branch missing the web application source. An
+anonymous check on 2026-10-22 confirmed that
+`https://ainnoe-le.vercel.app/#/login` renders the login-only application and
+the domain returns HTTP 200. This restores the login surface only; it does not
+mean every data-backed module is ready for release.
 
-The previous login-only deployment has email and Google sign-in controls;
-public signup, trial registration, checkout, and ads remain disabled. No
-database migration was applied. An anonymous smoke check of the immutable
-previous deployment confirmed it renders the login screen; no credentials were
-entered and no signup was submitted.
+The login page has email/password and Google sign-in controls; public signup,
+trial registration, checkout, and ads remain disabled. No hosted database
+migration was applied, no credentials were entered, and no signup was
+submitted. The Staging schema, verified backup/restore, and server-side
+CAPTCHA blockers below still apply.
 
 The read-only Production check on 2026-10-20 confirmed the owner's active
 Superadmin profile and matching JWT role claim. After the owner completed TOTP
@@ -745,9 +741,10 @@ No-upgrade operating constraint:
   scripts. Legacy Firebase code remains only as uninvoked migration/recovery
   material; do not run Firebase CLI commands or deploy it.
 - Firebase Functions and large cloud exports are not part of the zero-billing
-  path. The encrypted R2 backup workflow is merged into `main` but cannot
-  create backups until the owner supplies its GitHub secrets and variables;
-  no database migration or production deployment is run automatically.
+  path. The existing R2 backup workflow cannot produce backups without R2
+  credentials, and the owner declined R2 because of potential charges. This
+  branch replaces it with a manual, encrypted Staging artifact after merge;
+  do not trigger a backup until Actions quota and billing are verified.
 - Vercel Hobby eligibility and quotas must be checked against current terms.
   Do not use that plan for a monetized/commercial deployment unless its terms
   explicitly permit the use; do not upgrade to resolve a restriction.
@@ -768,42 +765,35 @@ No-upgrade operating constraint:
 
 ### Free-tier recovery and operations
 
-The GitHub Actions workflow at `.github/workflows/supabase-backup.yml` was
-merged into `main` through PR #5 on 2026-10-21 and is active. It runs daily and
-supports manual dispatch. No successful workflow run or backup artifact is
-currently evidenced. Until the repository owner configures the remaining
-required settings, the scheduled or manually dispatched workflow deliberately
-fails at its configuration check and no backup is produced:
-
-It creates a full custom-format PostgreSQL dump (including accessible Auth
-schema), checks that the dump is non-empty and readable by `pg_restore`,
-encrypts it with AES-256-GCM before upload, and writes only the ciphertext to
-Cloudflare R2. This archive check is not a database restore test.
+The current `main` workflow still targets Cloudflare R2 until the proposed
+replacement is merged. The owner declined R2 due to potential charges. The
+replacement on `deploy/free-encrypted-backup-artifact` is Staging-only and
+manual-only; it rejects non-`main` runs, creates a custom-format PostgreSQL
+dump, validates it with `pg_restore`, encrypts it with AES-256-GCM, limits the
+artifact to 400 MiB, and retains the encrypted GitHub Actions artifact for one
+day. No backup has yet been created. This is not a guarantee of zero cost:
+check the repository's Actions storage usage and billing limits before
+triggering a run. Artifact creation and archive validation are not a restore
+test.
 
 | GitHub setting | Value |
 | --- | --- |
-| Secret `SUPABASE_DB_URL` | Supabase direct or session-pooler PostgreSQL URL; never the transaction pooler URL. |
+| Secret `SUPABASE_DB_URL` | PostgreSQL direct or session-pooler URL for Staging project `samszhfyhbjuculrcffg`; never the transaction pooler URL. The workflow validates the target. |
 | Secret `BACKUP_ENCRYPTION_KEY` | Base64 encoding of 32 cryptographically random bytes. Generate locally with `node -p "require('node:crypto').randomBytes(32).toString('base64')"` and store only as a GitHub secret. |
-| Secret `R2_ACCESS_KEY_ID` | Dedicated Cloudflare R2 access key with write permission only to the backup bucket. |
-| Secret `R2_SECRET_ACCESS_KEY` | Secret for the dedicated R2 key. |
-| Variable `R2_ACCOUNT_ID` | Cloudflare account ID for the R2 S3-compatible endpoint. |
-| Variable `R2_BACKUP_BUCKET` | Private R2 bucket name. |
 
-`R2_ACCOUNT_ID` has been added as a repository variable from the signed-in
-Cloudflare dashboard. The other five entries remain owner setup requirements;
-the R2 bucket and credentials cannot be created until the owner enables the R2
-subscription and accepts any applicable account terms or charges. On
-2026-10-21, the owner chose not to activate that subscription; no R2 bucket or
-access key has been created.
+After the replacement is merged, configure both secrets directly in GitHub
+Actions settings; never send their values through chat or commit them. Before
+the first manual run, verify current Actions storage usage and billing
+settings. Download the encrypted artifact within its one-day retention period,
+decrypt it on a trusted machine, and complete a restore into a disposable
+PostgreSQL instance before any hosted schema/data mutation. Until that drill
+passes, Staging migrations remain blocked.
 
-Keep the GitHub repository private, restrict Actions permissions, and configure
-an R2 lifecycle rule for the agreed retention period. A scheduled workflow can
-be delayed or fail; verify each run and alert on failures. Do not attach billing
-to Google Cloud or upgrade any provider to make this workflow run. Free quotas
-and GitHub Actions minutes are provider/account dependent and must be checked
-by the owner. Backup credentials are scoped to the validation, dump/encryption,
-or upload step that needs them; the checkout and PostgreSQL client installation
-steps do not receive those secrets.
+The workflow does not run on a schedule, configure R2, or touch Production.
+GitHub Actions free quotas and billing behavior are account-dependent. Backup
+credentials are exposed only to the validation and dump/encryption steps;
+they are not passed to checkout, PostgreSQL client installation, or artifact
+upload.
 
 The encryption utility is tested for round-trip integrity, wrong keys, and
 tampering (`npm --prefix web run test:backup`); this is **not** a verified
@@ -899,8 +889,8 @@ obligations, and unverified retention behavior. Before inviting students,
 publish the controller's legal identity and privacy contact, document lawful
 basis/parent consent and data-subject request handling, and obtain local legal
 review under UU Pelindungan Data Pribadi (UU 27/2022). The requested Singapore
-region, hosted retention jobs, automated R2/Drive double-copy, and restore test
-still require owner action and validation. No hosted migration or account
+region, hosted retention jobs, an automated independent backup copy, and a
+restore test still require owner action and validation. No hosted migration or account
 configuration was changed as part of this repository work.
 
 After an encrypted backup and a reviewed collection-to-table mapping exist,
