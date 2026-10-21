@@ -100,6 +100,10 @@ test('limits backup credentials to the workflow steps that need them', async () 
   assert.ok(validate);
   assert.ok(create);
   assert.ok(upload);
+  assert.match(create, /pg_dump --format=custom/);
+  assert.match(create, /pg_restore --list "\$dump" > \/dev\/null/);
+  assert.match(create, /test -s "\$dump"/);
+  assert.match(create, /test -s "\$encrypted"/);
   assert.match(validate, /SUPABASE_DB_URL:/);
   assert.match(validate, /BACKUP_ENCRYPTION_KEY:/);
   assert.match(validate, /AWS_SECRET_ACCESS_KEY:/);

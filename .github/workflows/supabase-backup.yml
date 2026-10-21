@@ -63,7 +63,10 @@ jobs:
           encrypted="${RUNNER_TEMP}/supabase-${GITHUB_RUN_ID}.aeb"
           trap 'rm -f "$dump"' EXIT
           pg_dump --format=custom --no-owner --no-acl --file "$dump" "$SUPABASE_DB_URL"
+          test -s "$dump"
+          pg_restore --list "$dump" > /dev/null
           node scripts/encryptedBackup.mjs encrypt "$dump" "$encrypted"
+          test -s "$encrypted"
           echo "BACKUP_FILE=$encrypted" >> "$GITHUB_ENV"
           echo "BACKUP_NAME=supabase-$(date -u +%Y%m%dT%H%M%SZ)-${GITHUB_RUN_ID}.aeb" >> "$GITHUB_ENV"
       - name: Upload encrypted backup to Cloudflare R2
