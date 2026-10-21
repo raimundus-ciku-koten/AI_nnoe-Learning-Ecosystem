@@ -1,0 +1,775 @@
+rules_version = '2';
+
+/**
+ * Firestore Security Rules — AI-nnoe (multi-sekolah / multi-tenant)
+ *
+ * Prinsip:
+ *   1. Tolak secara bawaan; hanya jalur yang tertulis di bawah yang terbuka.
+ *   2. Peran & sekolah datang dari custom claims (request.auth.token.role / tenantId)
+ *      yang hanya bisa diubah server. Klien TIDAK bisa menaikkan perannya sendiri.
+ *   3. Semua data sekolah ada di /tenants/{tenantId}/...; anggota sekolah lain
+ *      tidak bisa membacanya.
+ *   4. Tulis data kerja butuh langganan sekolah aktif (tenants/{id}.langganan).
+ *   5. Setiap tulis divalidasi: kunci yang diizinkan, tipe, panjang, cap waktu server.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------------- Helper identitas ---------------- */
+    function masuk()      { return request.auth != null; }
+    function peran()      { return masuk() ? request.auth.token.get('role', '') : ''; }
+    function tenantSaya() { return masuk() ? request.auth.token.get('tenantId', '') : ''; }
+
+    function superadmin() { return peran() == 'superadmin'; }
+
+    function anggota(tid) {
+      return masuk() && tenantSaya() == tid && tid != ''
+        && peran() in ['admin_sekolah', 'operator', 'guru', 'siswa', 'ortu', 'orang_tua', 'demo'];
+    }
+    function adminSekolah(tid) { return anggota(tid) && peran() == 'admin_sekolah'; }
+    function staf(tid)         { return anggota(tid) && peran() in ['admin_sekolah', 'operator']; }
+    function pendidik(tid)     { return anggota(tid) && peran() in ['admin_sekolah', 'operator', 'guru', 'demo']; }
+    function pemilikDataGuru(uid) {
+      return masuk() && request.auth.uid == uid && pendidik(tenantSaya());
+    }
+
+    /* ---------------- Helper langganan ---------------- */
+    function langgananAktif(tid) {
+      let path = /databases/$(database)/documents/tenants/$(tid);
+      return exists(path)
+        && get(path).data.get('langganan', {}).get('aktif', false) == true
+        && get(path).data.get('langganan', {}).get('sampai', request.time) >= request.time;
+    }
+    function langgananIndividuAktif(uid) {
+      let path = /databases/$(database)/documents/userSubscriptions/$(uid);
+      return exists(path)
+        && get(path).data.get('subscription', {}).get('aktif', false) == true
+        && get(path).data.get('subscription', {}).get('sampai', request.time) >= request.time;
+    }
+    function langgananAkses(tid, uid) {
+      return langgananAktif(tid) || langgananIndividuAktif(uid);
+    }
+
+    /* ---------------- Helper validasi ---------------- */
+    function teks(v, maks) { return v is string && v.size() > 0 && v.size() <= maks; }
+    function waktuServer(k) { return request.resource.data[k] == request.time; }
+    function kunciSaja(daftar) { return request.resource.data.keys().hasOnly(daftar); }
+    function ubahSaja(daftar) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(daftar);
+    }
+
+    /* ============================================================
+       /users/{uid} — profil akun. Peran/sekolah/klaimVersi hanya via server.
+       ============================================================ */
+    match /privateAiSettings/{uid} {
+      allow read, write: if false;
+    }
+
+    match /privateCanvaOAuthStates/{stateId} {
+      allow read, write: if false;
+    }
+
+    match /users/{uid} {
+      function konteksValid(k) {
+        return k is map
+          && k.keys().hasOnly(['mapel', 'kelas', 'tahunAjaran'])
+          && (!('mapel' in k) || (k.mapel is string && k.mapel.size() <= 60))
+          && (!('kelas' in k) || (k.kelas is string && k.kelas.size() <= 60))
+          && (!('tahunAjaran' in k) || (k.tahunAjaran is string && k.tahunAjaran.size() <= 20));
+      }
+
+      allow get: if masuk() && (
+        request.auth.uid == uid
+        || superadmin()
+        || adminSekolah(resource.data.get('tenantId', ''))
+      );
+
+      // Daftar akun: superadmin semua; admin sekolah hanya sekolahnya
+      // (query wajib memakai where('tenantId', '==', <sekolahnya>)).
+      allow list: if superadmin()
+        || (peran() == 'admin_sekolah' && resource.data.get('tenantId', '') == tenantSaya());
+
+      // Dokumen dasar dibuat sendiri saat pertama masuk (tanpa peran).
+      allow create: if masuk() && request.auth.uid == uid
+        && kunciSaja(['nama', 'email', 'dibuat'])
+        && teks(request.resource.data.nama, 120)
+        && request.resource.data.email == request.auth.token.get('email', '')
+        && waktuServer('dibuat');
+
+      // Pemilik hanya boleh mengubah preferensi miliknya.
+      allow update: if masuk() && request.auth.uid == uid
+        && ubahSaja(['nama', 'konteks', 'tema'])
+        && teks(request.resource.data.nama, 120)
+        && (!('tema' in request.resource.data)
+            || request.resource.data.tema in ['terang', 'gelap', 'auto'])
+        && (!('konteks' in request.resource.data) || konteksValid(request.resource.data.konteks));
+
+      allow delete: if false;
+    }
+
+    /* Penugasan dibuat lewat proses administrasi tepercaya; klien hanya membaca. */
+    match /penugasan/{uid} {
+      allow get: if masuk() && (
+        request.auth.uid == uid
+        || superadmin()
+        || adminSekolah(resource.data.get('tenantId', ''))
+      );
+      allow list: if superadmin()
+        || (peran() == 'admin_sekolah' && resource.data.get('tenantId', '') == tenantSaya());
+      allow create, update, delete: if superadmin();
+    }
+
+    /* Langganan paket individual ditulis webhook, pemilik hanya dapat membaca miliknya. */
+    match /userSubscriptions/{uid} {
+      allow get: if masuk() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
+    /* ---------------- Direktori chat terbatas per sekolah ---------------- */
+    match /directory/{uid} {
+      function direktoriValid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['uid', 'nama', 'role', 'tenantId', 'updatedAt', 'photoUrl'])
+          && d.keys().hasAll(['uid', 'nama', 'role', 'tenantId', 'updatedAt'])
+          && d.uid == uid
+          && teks(d.nama, 120)
+          && d.role == peran()
+          && d.tenantId == tenantSaya()
+          && d.role in ['superadmin', 'admin_sekolah', 'operator', 'guru', 'siswa', 'ortu', 'orang_tua', 'demo']
+          && waktuServer('updatedAt')
+          && (!('photoUrl' in d) || (d.photoUrl is string && d.photoUrl.size() <= 600
+              && d.photoUrl.matches('^https://.*')));
+      }
+
+      allow get: if masuk() && (
+        request.auth.uid == uid
+        || superadmin()
+        || (anggota(tenantSaya()) && resource.data.tenantId == tenantSaya())
+      );
+      allow list: if superadmin()
+        || (anggota(tenantSaya()) && resource.data.tenantId == tenantSaya());
+      allow create, update: if masuk() && request.auth.uid == uid && direktoriValid();
+      allow delete: if false;
+    }
+
+    /* ---------------- Testimoni publik harus disetujui sekolah ---------------- */
+    match /testimonials/{uid} {
+      function sumberDisetujui(tid) {
+        let sumber = getAfter(
+          /databases/$(database)/documents/tenants/$(tid)/testimonials/$(uid)
+        ).data;
+        return sumber.status == 'published'
+          && sumber.consent == true
+          && sumber.quoteFinal == request.resource.data.quote
+          && sumber.displayName == request.resource.data.displayName
+          && sumber.role == request.resource.data.role;
+      }
+
+      allow get, list: if resource.data.status == 'published'
+        && resource.data.consent == true;
+      allow create: if adminSekolah(request.resource.data.tenantId)
+        && request.resource.data.keys().hasOnly([
+          'tenantId', 'sourceId', 'status', 'consent', 'displayName', 'role', 'quote'
+        ])
+        && request.resource.data.sourceId == uid
+        && request.resource.data.status == 'published'
+        && request.resource.data.consent == true
+        && teks(request.resource.data.displayName, 80)
+        && teks(request.resource.data.role, 40)
+        && teks(request.resource.data.quote, 300)
+        && sumberDisetujui(request.resource.data.tenantId);
+      allow update: if adminSekolah(resource.data.tenantId)
+        && request.resource.data.tenantId == resource.data.tenantId
+        && request.resource.data.sourceId == uid
+        && request.resource.data.status == 'published'
+        && request.resource.data.consent == true
+        && teks(request.resource.data.quote, 300)
+        && sumberDisetujui(resource.data.tenantId);
+      allow delete: if false;
+    }
+
+    /* ============================================================
+       /tenants/{tid} — profil sekolah & langganan
+       ============================================================ */
+    match /guru/{uid}/siswa/{siswaId} {
+      allow get, list: if pemilikDataGuru(uid);
+      function siswaValid(d) {
+        return d.keys().hasAll(['nama', 'kelas', 'diperbarui'])
+          && teks(d.nama, 100)
+          && teks(d.kelas, 30)
+          && (!('nisn' in d) || d.nisn == ''
+              || (d.nisn is string && d.nisn.matches('^[0-9]{1,20}$')))
+          && (!('jk' in d) || d.jk in ['', 'L', 'P'])
+          && (!('kodeUnik' in d)
+              || (d.kodeUnik is string
+                  && d.kodeUnik.matches('^ALE-[A-Z0-9]{1,6}-[A-Z0-9]{6}-[0-9]{4}$')))
+          && (!('urlScan' in d)
+              || ('kodeUnik' in d
+                  && d.urlScan is string
+                  && (d.urlScan.matches('^https://[^#]+/#/scan/' + d.kodeUnik + '$')
+                      || d.urlScan.matches('^http://localhost(:[0-9]{1,5})?(/[^#]*)?/#/scan/' + d.kodeUnik + '$'))))
+          && (!('dibuat' in d) || d.dibuat is timestamp)
+          && waktuServer('diperbarui');
+      }
+
+      allow create: if pemilikDataGuru(uid)
+        && langgananAkses(tenantSaya(), request.auth.uid)
+        && request.resource.data.keys().hasOnly([
+          'nama', 'nisn', 'jk', 'kelas', 'kodeUnik', 'urlScan', 'dibuat', 'diperbarui'
+        ])
+        && request.resource.data.keys().hasAll([
+          'nama', 'nisn', 'jk', 'kelas', 'kodeUnik', 'urlScan', 'dibuat', 'diperbarui'
+        ])
+        && waktuServer('dibuat')
+        && siswaValid(request.resource.data);
+
+      allow update: if pemilikDataGuru(uid)
+        && langgananAkses(tenantSaya(), request.auth.uid)
+        && siswaValid(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'nama', 'nisn', 'jk', 'kelas', 'kodeUnik', 'urlScan', 'diperbarui'
+        ])
+        && request.resource.data.get('dibuat', null) == resource.data.get('dibuat', null)
+        && (!('kodeUnik' in resource.data)
+            || request.resource.data.get('kodeUnik', '') == resource.data.kodeUnik)
+        && (!('urlScan' in resource.data)
+            || request.resource.data.get('urlScan', '') == resource.data.urlScan);
+
+      allow delete: if pemilikDataGuru(uid)
+        && langgananAkses(tenantSaya(), request.auth.uid);
+    }
+
+    match /guru/{uid}/pengaturan/{id} {
+      allow get, list: if pemilikDataGuru(uid);
+      allow create, update: if id == 'jadwal'
+        && pemilikDataGuru(uid)
+        && langgananAkses(tenantSaya(), request.auth.uid)
+        && request.resource.data.keys().hasOnly(['entri', 'diperbarui'])
+        && request.resource.data.keys().hasAll(['entri', 'diperbarui'])
+        && request.resource.data.entri is list
+        && request.resource.data.entri.size() <= 100
+        && waktuServer('diperbarui');
+      allow delete: if false;
+    }
+
+    match /guru/{uid}/denah/{id} {
+      allow get, list: if pemilikDataGuru(uid);
+      allow create, update: if pemilikDataGuru(uid)
+        && langgananAkses(tenantSaya(), request.auth.uid)
+        && request.resource.data.keys().hasOnly([
+          'kelas', 'baris', 'kolom', 'kursi', 'kelompok', 'jumlahKelompok', 'diperbarui'
+        ])
+        && request.resource.data.keys().hasAll([
+          'kelas', 'baris', 'kolom', 'kursi', 'kelompok', 'jumlahKelompok', 'diperbarui'
+        ])
+        && teks(request.resource.data.kelas, 30)
+        && request.resource.data.baris is int
+        && request.resource.data.baris >= 1
+        && request.resource.data.baris <= 10
+        && request.resource.data.kolom is int
+        && request.resource.data.kolom >= 1
+        && request.resource.data.kolom <= 10
+        && request.resource.data.jumlahKelompok is int
+        && request.resource.data.jumlahKelompok >= 2
+        && request.resource.data.jumlahKelompok <= 10
+        && request.resource.data.kursi is map
+        && request.resource.data.kursi.keys().size() <= 100
+        && request.resource.data.kelompok is map
+        && request.resource.data.kelompok.keys().size() <= 100
+        && waktuServer('diperbarui');
+      allow delete: if false;
+    }
+
+    match /guru/{uid}/absensi/{absensiId} {
+      allow get, list: if pemilikDataGuru(uid);
+      allow create: if pemilikDataGuru(uid)
+        && langgananAktif(tenantSaya())
+        && request.resource.data.keys().hasOnly([
+          'siswaId', 'tanggal', 'status', 'metode', 'kodeUnik', 'nama', 'kelas', 'waktu'
+        ])
+        && request.resource.data.siswaId is string
+        && request.resource.data.tanggal is string
+        && request.resource.data.tanggal.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && absensiId == request.resource.data.tanggal + '_' + request.resource.data.siswaId
+        && request.resource.data.status == 'hadir'
+        && request.resource.data.metode == 'scan'
+        && request.resource.data.kodeUnik is string
+        && request.resource.data.kodeUnik.size() <= 64
+        && request.resource.data.nama is string
+        && request.resource.data.nama.size() <= 200
+        && request.resource.data.kelas is string
+        && request.resource.data.kelas.size() <= 50
+        && waktuServer('waktu')
+        && exists(/databases/$(database)/documents/guru/$(uid)/siswa/$(request.resource.data.siswaId))
+        && request.resource.data.kodeUnik
+          == get(/databases/$(database)/documents/guru/$(uid)/siswa/$(request.resource.data.siswaId)).data.get('kodeUnik', '')
+        && request.resource.data.nama
+          == get(/databases/$(database)/documents/guru/$(uid)/siswa/$(request.resource.data.siswaId)).data.get('nama', '')
+        && request.resource.data.kelas
+          == get(/databases/$(database)/documents/guru/$(uid)/siswa/$(request.resource.data.siswaId)).data.get('kelas', '');
+      allow update, delete: if false;
+    }
+
+    match /tenants/{tid} {
+      allow get: if superadmin() || anggota(tid);
+      allow list: if superadmin();
+      allow create, delete: if false;
+
+      // Tenant and subscription provisioning must use trusted server credentials.
+      // Admin sekolah may update only the validated identity and academic fields below.
+      allow update: if adminSekolah(tid)
+            && ubahSaja([
+              'nama', 'alamat', 'npsn', 'kepalaSekolah', 'nipKepalaSekolah',
+              'kop', 'logoSekolah', 'tahunAjaran', 'semester', 'diperbaruiOleh', 'waktuUbah'
+            ])
+            && teks(request.resource.data.nama, 200)
+            && (!('npsn' in request.resource.data)
+                || (request.resource.data.npsn is string
+                    && request.resource.data.npsn.matches('^[0-9]{0,12}$')))
+            && (!('kepalaSekolah' in request.resource.data)
+                || (request.resource.data.kepalaSekolah is string
+                    && request.resource.data.kepalaSekolah.size() <= 150))
+            && (!('nipKepalaSekolah' in request.resource.data)
+                || (request.resource.data.nipKepalaSekolah is string
+                    && request.resource.data.nipKepalaSekolah.size() <= 25
+                    && request.resource.data.nipKepalaSekolah.matches('^[0-9 ]*$')))
+            && (!('tahunAjaran' in request.resource.data)
+                || (request.resource.data.tahunAjaran is string
+                    && request.resource.data.tahunAjaran.matches('^[0-9]{4}/[0-9]{4}$')))
+            && (!('semester' in request.resource.data)
+                || request.resource.data.semester in ['Ganjil', 'Genap'])
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                  'diperbaruiOleh', 'waktuUbah'
+                ])
+                || (request.resource.data.diperbaruiOleh == request.auth.uid
+                    && waktuServer('waktuUbah')));
+
+      /* ---------- Ruang kerja privat guru: bukan data akademik resmi ---------- */
+      match /guruWorkspace/{uid}/entries/{entryId} {
+        function guruPemilik() {
+          return masuk() && request.auth.uid == uid
+            && anggota(tid) && peran() == 'guru';
+        }
+        function catatanValid(d) {
+          return d.keys().hasOnly([
+              'ownerUid', 'modulePath', 'moduleLabel', 'judul', 'tanggal',
+              'kelas', 'mapel', 'isi', 'status', 'createdAt', 'updatedAt'
+            ])
+            && d.keys().hasAll([
+              'ownerUid', 'modulePath', 'moduleLabel', 'judul', 'tanggal',
+              'kelas', 'mapel', 'isi', 'status', 'createdAt', 'updatedAt'
+            ])
+            && d.ownerUid == uid
+            && d.modulePath is string
+            && d.modulePath.matches('^/(pelaksanaan|asesmen|pemantauan|refleksi|laporan|kolaborasi|pengaturan|perangkat)/[a-z0-9-]+$')
+            && teks(d.moduleLabel, 100)
+            && teks(d.judul, 120)
+            && d.tanggal is string
+            && d.tanggal.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && d.kelas is string && d.kelas.size() <= 80
+            && d.mapel is string && d.mapel.size() <= 80
+            && teks(d.isi, 6000)
+            && d.status in ['draf', 'selesai']
+            && d.createdAt is timestamp
+            && d.updatedAt is timestamp;
+        }
+
+        allow get, list: if guruPemilik();
+        allow create: if guruPemilik()
+          && langgananAkses(tid, uid)
+          && catatanValid(request.resource.data)
+          && waktuServer('createdAt')
+          && waktuServer('updatedAt');
+        allow update: if guruPemilik()
+          && langgananAkses(tid, uid)
+          && catatanValid(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt
+          && ubahSaja([
+            'modulePath', 'moduleLabel', 'judul', 'tanggal', 'kelas',
+            'mapel', 'isi', 'status', 'updatedAt'
+          ])
+          && waktuServer('updatedAt');
+        allow delete: if guruPemilik() && langgananAkses(tid, uid);
+      }
+
+      /* ---------- Bank soal: hanya staf sekolah, kunci tidak dibuka ke siswa ---------- */
+      match /questionBank/{questionId} {
+        function pilihanValid(d) {
+          return d.jenis == 'uraian'
+            ? d.pilihan is list && d.pilihan.size() == 0
+            : d.pilihan is list && d.pilihan.size() >= 2 && d.pilihan.size() <= 5
+              && d.pilihan[0] is string && teks(d.pilihan[0], 300)
+              && d.pilihan[1] is string && teks(d.pilihan[1], 300)
+              && (d.pilihan.size() < 3 || (d.pilihan[2] is string && teks(d.pilihan[2], 300)))
+              && (d.pilihan.size() < 4 || (d.pilihan[3] is string && teks(d.pilihan[3], 300)))
+              && (d.pilihan.size() < 5 || (d.pilihan[4] is string && teks(d.pilihan[4], 300)))
+              && d.jawaban in d.pilihan;
+        }
+        function soalValid(d) {
+          return d.keys().hasOnly([
+              'ownerUid', 'mapel', 'kelas', 'jenis', 'pertanyaan',
+              'pilihan', 'jawaban', 'pembahasan', 'createdAt', 'updatedAt'
+            ])
+            && d.keys().hasAll([
+              'ownerUid', 'mapel', 'kelas', 'jenis', 'pertanyaan',
+              'pilihan', 'jawaban', 'pembahasan', 'createdAt', 'updatedAt'
+            ])
+            && teks(d.ownerUid, 128)
+            && teks(d.mapel, 80)
+            && teks(d.kelas, 30)
+            && d.jenis in ['pilihan_ganda', 'uraian']
+            && teks(d.pertanyaan, 2000)
+            && d.jawaban is string && d.jawaban.size() > 0 && d.jawaban.size() <= 1000
+            && (d.pembahasan is string && d.pembahasan.size() <= 2000)
+            && pilihanValid(d)
+            && d.createdAt is timestamp
+            && d.updatedAt is timestamp;
+        }
+
+        allow get, list: if superadmin()
+          || (anggota(tid) && peran() in ['admin_sekolah', 'guru']);
+
+        allow create: if anggota(tid) && peran() == 'guru' && langgananAkses(tid, request.auth.uid)
+          && soalValid(request.resource.data)
+          && request.resource.data.ownerUid == request.auth.uid
+          && waktuServer('createdAt') && waktuServer('updatedAt');
+
+        allow update: if anggota(tid) && peran() == 'guru' && langgananAkses(tid, request.auth.uid)
+          && resource.data.ownerUid == request.auth.uid
+          && soalValid(request.resource.data)
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && request.resource.data.createdAt == resource.data.createdAt
+          && waktuServer('updatedAt');
+
+        allow delete: if anggota(tid) && peran() == 'guru' && langgananAkses(tid, request.auth.uid)
+          && resource.data.ownerUid == request.auth.uid;
+      }
+
+      /* ---------- Perangkat ajar (ATP / RPE / Modul) ---------- */
+      match /perangkat/{id} {
+        function perangkatValid() {
+          let d = request.resource.data;
+          return d.keys().hasOnly(['ownerUid', 'jenis', 'judul', 'mapel', 'kelas', 'status', 'isi', 'dibuat', 'diubah'])
+            && d.keys().hasAll(['ownerUid', 'jenis', 'judul', 'status', 'dibuat', 'diubah'])
+            && d.jenis in ['atp', 'rpe', 'modul', 'lainnya']
+            && teks(d.judul, 200)
+            && d.status in ['draf', 'final', 'terkunci']
+            && (!('mapel' in d) || teks(d.mapel, 100))
+            && (!('kelas' in d) || teks(d.kelas, 50))
+            && (!('isi' in d) || (d.isi is string && d.isi.size() <= 200000));
+        }
+
+        allow get, list: if superadmin()
+          || (anggota(tid) && (resource.data.ownerUid == request.auth.uid || staf(tid)));
+
+        allow create: if pendidik(tid) && langgananAktif(tid)
+          && perangkatValid()
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.status == 'draf'
+          && waktuServer('dibuat') && waktuServer('diubah');
+
+        // Dokumen "terkunci" (sudah jadi PDF resmi) tidak bisa diubah dari klien.
+        allow update: if pendidik(tid) && langgananAktif(tid)
+          && resource.data.ownerUid == request.auth.uid
+          && resource.data.status != 'terkunci'
+          && perangkatValid()
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && request.resource.data.dibuat == resource.data.dibuat
+          && waktuServer('diubah');
+
+        allow delete: if pendidik(tid)
+          && resource.data.ownerUid == request.auth.uid
+          && resource.data.status == 'draf';
+      }
+
+      /* ---------- Chat ---------- */
+      match /chats/{chatId} {
+        allow get, list: if anggota(tid) && request.auth.uid in resource.data.peserta;
+
+        allow create: if anggota(tid)
+          && kunciSaja(['peserta', 'judul', 'terakhirPesan', 'terakhirWaktu', 'baca', 'dibuat'])
+          && request.resource.data.peserta is list
+          && request.resource.data.peserta.size() >= 2
+          && request.resource.data.peserta.size() <= 50
+          && request.auth.uid in request.resource.data.peserta
+          && request.resource.data.baca == {}
+          && waktuServer('dibuat');
+
+        // Hanya ringkasan terakhir & tanda baca milik sendiri yang bisa berubah.
+        allow update: if anggota(tid) && request.auth.uid in resource.data.peserta
+          && ubahSaja(['terakhirPesan', 'terakhirWaktu', 'baca'])
+          && request.resource.data.baca.diff(resource.data.baca).affectedKeys().hasOnly([request.auth.uid]);
+
+        allow delete: if false;
+
+        match /pesan/{pesanId} {
+          function pesertaChat() {
+            return get(/databases/$(database)/documents/tenants/$(tid)/chats/$(chatId)).data.peserta;
+          }
+
+          allow get, list: if anggota(tid) && request.auth.uid in pesertaChat();
+
+          allow create: if anggota(tid) && langgananAktif(tid)
+            && request.auth.uid in pesertaChat()
+            && kunciSaja(['pengirim', 'teks', 'dibuat'])
+            && request.resource.data.pengirim == request.auth.uid
+            && teks(request.resource.data.teks, 2000)
+            && waktuServer('dibuat');
+
+          allow update, delete: if false;   // pesan tidak bisa diubah/dihapus
+        }
+      }
+
+      /* ---------- Pengumuman sekolah ---------- */
+      match /pengumuman/{id} {
+        allow get, list: if superadmin() || anggota(tid);
+
+        allow create: if staf(tid) && langgananAktif(tid)
+          && kunciSaja(['judul', 'isi', 'penulisUid', 'dibuat'])
+          && teks(request.resource.data.judul, 200)
+          && teks(request.resource.data.isi, 5000)
+          && request.resource.data.penulisUid == request.auth.uid
+          && waktuServer('dibuat');
+
+        allow update: if staf(tid) && langgananAktif(tid)
+          && ubahSaja(['judul', 'isi'])
+          && teks(request.resource.data.judul, 200)
+          && teks(request.resource.data.isi, 5000);
+
+        allow delete: if staf(tid);
+      }
+
+      /* ---------- Testimoni pengguna: antrean privat, publikasi dengan persetujuan ---------- */
+      match /testimonials/{uid} {
+        function testimoniValid() {
+          let d = request.resource.data;
+          return d.keys().hasOnly([
+              'ownerUid', 'tenantId', 'displayName', 'role', 'quote', 'rating',
+              'consent', 'status', 'submittedAt', 'updatedAt', 'quoteFinal', 'reviewedAt'
+            ])
+            && d.ownerUid == uid
+            && d.tenantId == tid
+            && d.role == peran()
+            && teks(d.displayName, 80)
+            && teks(d.quote, 500)
+            && d.rating in [4, 5]
+            && d.consent == true;
+        }
+
+        allow get: if (anggota(tid) && request.auth.uid == uid) || adminSekolah(tid);
+        allow list: if adminSekolah(tid);
+        allow create: if anggota(tid)
+          && request.auth.uid == uid
+          && testimoniValid()
+          && request.resource.data.status == 'pending'
+          && waktuServer('submittedAt')
+          && waktuServer('updatedAt');
+        allow update: if anggota(tid)
+          && request.auth.uid == uid
+          && resource.data.ownerUid == uid
+          && resource.data.status in ['pending', 'rejected']
+          && request.resource.data.status == 'pending'
+          && testimoniValid()
+          && request.resource.data.submittedAt == resource.data.submittedAt
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'displayName', 'quote', 'rating', 'consent', 'status', 'updatedAt'
+          ])
+          && waktuServer('updatedAt');
+        allow update: if adminSekolah(tid)
+          && resource.data.status == 'pending'
+          && request.resource.data.status in ['published', 'rejected']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'quoteFinal', 'reviewedAt'
+          ])
+          && (request.resource.data.status == 'rejected'
+              || teks(request.resource.data.quoteFinal, 300))
+          && waktuServer('reviewedAt');
+        allow delete: if false;
+      }
+    }
+
+    /* ---------- Paket perencanaan guru ---------- */
+    match /perencanaan/{uid}/paket/{paketId} {
+      function pemilik() {
+        return masuk() && request.auth.uid == uid && peran() == 'guru';
+      }
+
+      function pengelola(tid) {
+        return superadmin() || adminSekolah(tid);
+      }
+
+      function guruTerdaftar(tid) {
+        let path = /databases/$(database)/documents/directory/$(uid);
+        return exists(path)
+          && get(path).data.get('role', '') == 'guru'
+          && get(path).data.get('tenantId', '') == tid;
+      }
+
+      function bolehBacaPaket() {
+        return pemilik()
+          || superadmin()
+          || (peran() == 'admin_sekolah' && resource.data.get('tenantId', '') == tenantSaya());
+      }
+
+      function paketValid() {
+        let d = request.resource.data;
+        return d.keys().hasOnly([
+            'mapel', 'kelas', 'fase', 'tahunAjaran', 'jpPerPekan', 'totalJP',
+            'hariPembelajaran', 'ganjil', 'genap', 'kalender', 'identitas',
+            'ownerUid', 'tenantId', 'schemaVersion', 'rev', 'createdAt', 'updatedAt'
+          ])
+          && d.keys().hasAll([
+            'mapel', 'kelas', 'fase', 'tahunAjaran', 'jpPerPekan',
+            'hariPembelajaran', 'ganjil', 'genap', 'kalender', 'identitas',
+            'ownerUid', 'tenantId', 'schemaVersion', 'rev', 'createdAt', 'updatedAt'
+          ])
+          && teks(d.mapel, 120)
+          && teks(d.kelas, 20)
+          && d.fase in ['A', 'B', 'C', 'D', 'E', 'F']
+          && d.tahunAjaran is string
+          && d.tahunAjaran.matches('^[0-9]{4}/[0-9]{4}$')
+          && d.jpPerPekan is int && d.jpPerPekan >= 1 && d.jpPerPekan <= 20
+          && (!('totalJP' in d) || d.totalJP == null || (d.totalJP is int && d.totalJP >= 4 && d.totalJP <= 600))
+          && d.hariPembelajaran is list && d.hariPembelajaran.size() <= 6
+          && d.ganjil is map && d.genap is map
+          && d.kalender is list && d.kalender.size() <= 120
+          && d.identitas is map
+          && d.ownerUid == uid
+          && guruTerdaftar(d.tenantId)
+          && d.schemaVersion == 1
+          && d.rev is int && d.rev >= 1;
+      }
+
+      function dokumenValid(jenisDokumen) {
+        let d = request.resource.data;
+        let paket = get(/databases/$(database)/documents/perencanaan/$(uid)/paket/$(paketId)).data;
+        return exists(/databases/$(database)/documents/perencanaan/$(uid)/paket/$(paketId))
+          && d.keys().hasOnly([
+            'ownerUid', 'tenantId', 'paketId', 'jenis', 'schemaVersion', 'rev',
+            'sumber', 'sumberRev', 'payload', 'createdAt', 'updatedAt'
+          ])
+          && d.keys().hasAll([
+            'ownerUid', 'tenantId', 'paketId', 'jenis', 'schemaVersion', 'rev',
+            'sumber', 'sumberRev', 'payload', 'createdAt', 'updatedAt'
+          ])
+          && d.ownerUid == uid
+          && d.tenantId == paket.tenantId
+          && d.paketId == paketId
+          && d.jenis == jenisDokumen
+          && d.schemaVersion == 1
+          && d.rev is int && d.rev >= 1
+          && d.sumber in ['mesin', 'ai', 'manual']
+          && d.sumberRev is map
+          && d.payload is map;
+      }
+
+      function modulValid() {
+        let d = request.resource.data;
+        let paket = get(/databases/$(database)/documents/perencanaan/$(uid)/paket/$(paketId)).data;
+        return exists(/databases/$(database)/documents/perencanaan/$(uid)/paket/$(paketId))
+          && d.keys().hasOnly([
+            'ownerUid', 'tenantId', 'paketId', 'jenis', 'noUnit', 'schemaVersion',
+            'rev', 'sumber', 'sumberRev', 'payload', 'createdAt', 'updatedAt'
+          ])
+          && d.keys().hasAll([
+            'ownerUid', 'tenantId', 'paketId', 'jenis', 'noUnit', 'schemaVersion',
+            'rev', 'sumber', 'sumberRev', 'payload', 'createdAt', 'updatedAt'
+          ])
+          && d.ownerUid == uid
+          && d.tenantId == paket.tenantId
+          && d.paketId == paketId
+          && d.jenis == 'modul'
+          && d.noUnit is int && d.noUnit >= 1 && d.noUnit <= 30
+          && d.schemaVersion == 1
+          && d.rev is int && d.rev >= 1
+          && d.sumber in ['mesin', 'ai', 'manual']
+          && d.sumberRev is map
+          && d.payload is map;
+      }
+
+      allow get, list: if bolehBacaPaket();
+      allow create: if pengelola(request.resource.data.tenantId)
+        && paketValid()
+        && request.resource.data.rev == 1
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if pengelola(resource.data.tenantId)
+        && resource.data.ownerUid == uid
+        && paketValid()
+        && request.resource.data.tenantId == resource.data.tenantId
+        && request.resource.data.rev == resource.data.rev + 1
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'mapel', 'kelas', 'fase', 'tahunAjaran', 'jpPerPekan', 'totalJP',
+          'hariPembelajaran', 'ganjil', 'genap', 'kalender', 'identitas', 'rev', 'updatedAt'
+        ]);
+      allow delete: if pengelola(resource.data.tenantId) && resource.data.ownerUid == uid;
+
+      match /dokumen/{jenisDokumen} {
+        allow get, list: if pemilik()
+          || superadmin()
+          || (peran() == 'admin_sekolah' && resource.data.get('tenantId', '') == tenantSaya());
+        allow create: if pemilik()
+          && jenisDokumen in ['rpe', 'atp', 'prota', 'prosem', 'kktp']
+          && dokumenValid(jenisDokumen)
+          && request.resource.data.rev == 1
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if pemilik()
+          && jenisDokumen in ['rpe', 'atp', 'prota', 'prosem', 'kktp']
+          && resource.data.ownerUid == uid
+          && dokumenValid(jenisDokumen)
+          && request.resource.data.rev == resource.data.rev + 1
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'sumber', 'sumberRev', 'payload', 'rev', 'updatedAt'
+          ]);
+        allow delete: if (pemilik() || pengelola(resource.data.get('tenantId', '')))
+          && resource.data.ownerUid == uid;
+      }
+
+      match /modul/{noUnit} {
+        allow get, list: if pemilik()
+          || superadmin()
+          || (peran() == 'admin_sekolah' && resource.data.get('tenantId', '') == tenantSaya());
+        allow create: if pemilik()
+          && modulValid()
+          && request.resource.data.rev == 1
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if pemilik()
+          && resource.data.ownerUid == uid
+          && modulValid()
+          && request.resource.data.rev == resource.data.rev + 1
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'sumber', 'sumberRev', 'payload', 'rev', 'updatedAt'
+          ]);
+        allow delete: if (pemilik() || pengelola(resource.data.get('tenantId', '')))
+          && resource.data.ownerUid == uid;
+      }
+    }
+
+    /* Public runtime controls contain only non-secret feature availability and maintenance state. */
+    match /publicConfig/{configId} {
+      allow get: if configId == 'platform';
+      allow list, create, update, delete: if false;
+    }
+
+    /* Platform control audit is visible only to superadmins and immutable to clients. */
+    match /platformAudit/{entryId} {
+      allow get, list: if superadmin();
+      allow create, update, delete: if false;
+    }
+
+    /* Global platform documents are read-only from client SDKs.
+       Privileged updates must use an audited trusted server workflow. */
+    match /platform/{dokumen=**} {
+      allow read: if superadmin();
+      allow write: if false;
+    }
+  }
+}
