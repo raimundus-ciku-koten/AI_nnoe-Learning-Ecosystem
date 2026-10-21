@@ -1,0 +1,115 @@
+/* web/src/styles/scan.css — Halaman hasil scan absensi.
+ * Impor sekali, mis. di web/src/main.js:  import './styles/scan.css';
+ * Warna memakai variabel tema aplikasi bila ada (fallback disediakan). */
+
+.scan-hasil {
+  --scan-sukses: var(--color-success, #15803d);
+  --scan-sudah: var(--color-info, #1d4ed8);
+  --scan-gagal: var(--color-danger, #b91c1c);
+  --scan-aksen: var(--scan-sudah);
+  --scan-latar: var(--color-surface, #ffffff);
+  --scan-teks: var(--color-text, #111827);
+  --scan-redup: var(--color-text-muted, #4b5563);
+
+  box-sizing: border-box;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: max(1.5rem, env(safe-area-inset-top)) 1.25rem max(1.5rem, env(safe-area-inset-bottom));
+  text-align: center;
+  color: var(--scan-teks);
+  background: var(--scan-latar);
+  border-top: 0.5rem solid var(--scan-aksen);
+}
+
+.scan-hasil--sukses { --scan-aksen: var(--scan-sukses); }
+.scan-hasil--sudah  { --scan-aksen: var(--scan-sudah); }
+.scan-hasil--gagal  { --scan-aksen: var(--scan-gagal); }
+
+.scan-hasil h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 6vw, 2.25rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.scan-hasil p { margin: 0; max-width: 32rem; color: var(--scan-redup); }
+
+.scan-ikon {
+  display: grid;
+  place-items: center;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  font-size: 2.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  background: var(--scan-aksen);
+}
+
+.scan-detail {
+  display: grid;
+  gap: 0.5rem;
+  width: min(100%, 24rem);
+  margin: 0.5rem 0;
+  padding: 1rem;
+  text-align: left;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 0.75rem;
+}
+.scan-detail > div { display: flex; justify-content: space-between; gap: 1rem; }
+.scan-detail dt { color: var(--scan-redup); }
+.scan-detail dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; text-align: right; }
+
+.scan-info { font-size: 0.95rem; }
+.scan-sisa { font-size: 0.85rem; }
+
+.dd-kode {
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.375rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--color-surface-alt, #f3f4f6);
+  overflow-wrap: anywhere;
+}
+
+.btn-tautan {
+  margin-left: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.scan-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 0.3rem solid var(--color-border, #e5e7eb);
+  border-top-color: var(--scan-aksen);
+  border-radius: 50%;
+  animation: scan-putar 0.8s linear infinite;
+}
+@keyframes scan-putar { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-spinner { animation-duration: 3s; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .scan-hasil {
+    --scan-latar: var(--color-surface, #111827);
+    --scan-teks: var(--color-text, #f9fafb);
+    --scan-redup: var(--color-text-muted, #9ca3af);
+    --scan-sukses: #22c55e;
+    --scan-sudah: #60a5fa;
+    --scan-gagal: #f87171;
+  }
+  .scan-ikon { color: #111827; }
+  .dd-kode { background: var(--color-surface-alt, #1f2937); }
+}

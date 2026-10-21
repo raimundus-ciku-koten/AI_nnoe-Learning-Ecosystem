@@ -1,0 +1,230 @@
+/* =========================================================
+   login.css — halaman landing + masuk
+   Memakai token dari dashboard.css (--ale-*); setiap var punya fallback
+   agar file ini tetap utuh bila dimuat sendiri.
+   ========================================================= */
+.ale-login {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  background: var(--ale-bg, #fff);
+  color: var(--ale-ink, #0f172a);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ---------- Panel merek ---------- */
+.ale-login-merek {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: clamp(2rem, 6vw, 5rem);
+  color: #fff;
+  background: var(--ale-side-bg, linear-gradient(180deg, #172554 0%, #1e293b 55%, #164e63 100%));
+  overflow: hidden;
+}
+.ale-login-merek::after {
+  content: "";
+  position: absolute;
+  right: -8rem; bottom: -8rem;
+  width: 26rem; height: 26rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(20 184 166 / 0.24), transparent 68%);
+  pointer-events: none;
+}
+.ale-login-lencana {
+  display: grid;
+  place-items: center;
+  width: 3.5rem; height: 3.5rem;
+  border-radius: 1rem;
+  background: #fff;
+  color: var(--ale-indigo, #3730a3);
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  box-shadow: 0 10px 24px -10px rgb(0 0 0 / 0.6);
+}
+.ale-login-nama {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ale-mint, #99f6e4);
+}
+.ale-login-merek h1 {
+  margin: 0;
+  max-width: 20ch;
+  font-size: clamp(1.9rem, 3.6vw, 3rem);
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.ale-login-lead {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 1.02rem;
+  line-height: 1.65;
+  color: rgb(255 255 255 / 0.84);
+}
+.ale-login-siklus {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.9rem;
+  margin: 0.75rem 0 0;
+  padding: 0 0 0 1.25rem;
+  list-style: none;
+  border-left: 2px solid rgb(255 255 255 / 0.2);
+}
+.ale-login-siklus li { display: grid; gap: 0.1rem; }
+.ale-login-siklus strong { font-size: 1rem; font-weight: 700; }
+.ale-login-siklus span { font-size: 0.9rem; color: rgb(255 255 255 / 0.72); }
+
+/* ---------- Panel form ---------- */
+.ale-login-panel {
+  display: grid;
+  place-items: center;
+  padding: clamp(1.25rem, 4vw, 3rem);
+}
+.ale-login-kartu {
+  width: 100%;
+  max-width: 26rem;
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+  background: var(--ale-kartu, #fff);
+  border: 1px solid var(--ale-line, #e2e8f0);
+  border-radius: var(--ale-radius, 1.125rem);
+  box-shadow: var(--ale-bayangan, 0 10px 26px -14px rgb(15 23 42 / 0.16));
+}
+.ale-login-kartu h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ale-judul, #1e1b4b);
+}
+.ale-login-ket { margin: 0.35rem 0 1.25rem; color: var(--ale-muted, #475569); font-size: 0.95rem; }
+
+.ale-login-galat {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.75rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.ale-login-galat[hidden] { display: none; }
+
+.ale-login-field { display: grid; gap: 0.35rem; margin-bottom: 0.95rem; }
+.ale-login-field label { font-size: 0.85rem; font-weight: 700; color: var(--ale-ink, #0f172a); }
+.ale-login-field input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2.9rem;
+  padding: 0.6rem 0.85rem;
+  font: 500 1rem system-ui, sans-serif;     /* ≥16px: cegah zoom otomatis iOS */
+  color: var(--ale-ink, #0f172a);
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ale-login-field input:hover:not(:disabled) { border-color: #94a3b8; }
+.ale-login-field input:focus-visible {
+  outline: none;
+  border-color: var(--ale-teal-700, #0f766e);
+  box-shadow: 0 0 0 3px rgb(19 185 171 / 0.3);
+}
+.ale-login-field input[aria-invalid="true"] { border-color: #dc2626; }
+.ale-login-field input:disabled { background: #f1f5f9; cursor: not-allowed; }
+.login-captcha { min-height: 4.5rem; margin: 0 0 0.75rem; }
+
+.ale-login-sandi-wrap { position: relative; }
+.ale-login-sandi-wrap input { padding-right: 6.25rem; }
+#ale-login-lihat {
+  position: absolute;
+  top: 50%; right: 0.4rem;
+  transform: translateY(-50%);
+  min-height: 2.25rem;
+  padding: 0 0.7rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: none;
+  color: var(--ale-teal-700, #0f766e);
+  font: 700 0.82rem system-ui, sans-serif;
+  cursor: pointer;
+}
+#ale-login-lihat:hover { background: #f0fdfa; }
+#ale-login-lihat:focus-visible { outline: 3px solid var(--ale-teal-700, #0f766e); outline-offset: 1px; }
+
+.ale-login-utama-btn,
+.ale-login-google {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 2.9rem;
+  padding: 0.6rem 1rem;
+  border-radius: 0.75rem;
+  font: 700 0.98rem system-ui, sans-serif;
+  cursor: pointer;
+  transition: filter 0.15s, background 0.15s, border-color 0.15s;
+}
+.ale-login-utama-btn {
+  margin-top: 0.25rem;
+  border: 0;
+  color: #fff;
+  background: var(--ale-brand, linear-gradient(135deg, #1e1b4b 0%, #3730a3 56%, #0f766e 100%));
+}
+.ale-login-utama-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.ale-login-google {
+  color: var(--ale-ink, #0f172a);
+  background: #fff;
+  border: 1px solid #cbd5e1;
+}
+.ale-login-google:hover:not(:disabled) { background: #f8fafc; border-color: #94a3b8; }
+.ale-login-utama-btn:disabled,
+.ale-login-google:disabled,
+.ale-login-tautan:disabled { opacity: 0.6; cursor: progress; }
+.ale-login button:focus-visible { outline: 3px solid var(--ale-teal-700, #0f766e); outline-offset: 2px; }
+
+.ale-login-atau {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.1rem 0;
+  color: var(--ale-teks-2, #6b7280);
+  font-size: 0.82rem;
+}
+.ale-login-atau::before,
+.ale-login-atau::after { content: ""; flex: 1; border-top: 1px solid var(--ale-line, #e2e8f0); }
+
+.ale-login-tautan {
+  display: block;
+  margin: 1rem auto 0;
+  min-height: 2.5rem;
+  padding: 0.3rem 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--ale-ungu-2, #4338ca);
+  font: 700 0.9rem system-ui, sans-serif;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ---------- Responsif ---------- */
+@media (max-width: 860px) {
+  .ale-login { grid-template-columns: minmax(0, 1fr); }
+  .ale-login-merek { padding: 1.5rem 1.25rem; gap: 0.8rem; }
+  .ale-login-merek h1 { font-size: 1.55rem; max-width: none; }
+  .ale-login-lead, .ale-login-siklus { display: none; }  /* form tampil lebih dulu di layar kecil */
+  .ale-login-panel { align-items: start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ale-login * { transition: none !important; }
+}

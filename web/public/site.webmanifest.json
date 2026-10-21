@@ -1,0 +1,16 @@
+{
+  "name": "AINNOE Learning Ecosystem",
+  "short_name": "AINNOE",
+  "description": "Ruang kerja sekolah untuk data, perencanaan ajar, program BK dan kegiatan, asesmen, komunikasi, serta integrasi pilihan. Aktivasi bergantung pada kesiapan backend.",
+  "lang": "id",
+  "start_url": "/#/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#172554",
+  "background_color": "#ffffff",
+  "icons": [
+    { "src": "/favicon.svg",  "sizes": "any",     "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/logo-ale.png", "sizes": "256x256", "type": "image/png", "purpose": "any" }
+  ]
+}
