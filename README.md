@@ -107,31 +107,18 @@ credentials; never put a long-lived provider secret in a `VITE_*` variable.
 Migrations `20261016000100` through `20261016000300` and `supabase/seed.sql`
 were applied through the Dashboard SQL Editor. On 2026-10-17,
 `20261016000400_verified_superadmin_bootstrap.sql` was also applied to the
-hosted project through the SQL Editor. The confirmed owner identity
-`kotenraimundusc@gmail.com` was verified in Supabase Auth; its allowlist and
-profile both report `role = 'superadmin'` and `active = true`, with no tenant.
-The `public.custom_access_token_hook` exists and is enabled under
-Authentication → Hooks. The bootstrap migration provisions allowlisted
-identities only after email confirmation. Roles and tenant fields are not
-writable by browser clients.
+hosted project through the SQL Editor. The owner allowlist/profile and the
+`public.custom_access_token_hook` were verified in Supabase Auth. The bootstrap
+migration provisions allowlisted identities only after email confirmation.
+Roles and tenant fields are not writable by browser clients. Do not document
+real account identifiers or profile data in this public repository.
 
 On 2026-10-17, migration
 `20261017000100_platform_user_management.sql` was also applied to the hosted
 project. It adds teacher profile fields and an audited
-`public.manage_platform_user` function restricted to active superadmins. The
-following hosted identities are confirmed and active:
-
-| Email | Role | Tenant |
-| --- | --- | --- |
-| `kotenraimundusc@gmail.com` | `superadmin` | Global |
-| `raimunduscikukoten@gmail.com` | `admin_sekolah` | SMAN 1 Tanjung Bunga |
-| `raimunduskoten21@guru.sma.belajar.id` | `guru` | SMAN 1 Tanjung Bunga |
-
-The owner profile is `CEO AI_nnoe Corp.` / `AI_nnoe Corp`. The teacher profile
-stores NIP/NUPTK `199211222019031001`, subjects `Matematika` and
-`Matematika Tingkat Lanjut`, and classes X, XI, XII. The admin display name is
-`Operator SMAN 1 Tanjung Bunga`. The tenant ID is
-`sman-1-tanjung-bunga`; the teacher email was verified exactly as supplied.
+`public.manage_platform_user` function restricted to active superadmins.
+Account-specific emails, identity numbers, names, and tenant assignments are
+intentionally omitted from this public documentation.
 
 The hosted project has no `supabase_migrations.schema_migrations` table, so
 Dashboard-applied migrations are not registered in CLI migration history. The
@@ -223,7 +210,7 @@ SQL Editor with:
 ```sql
 select id, email, role, tenant_id, active
 from public.profiles
-where email = lower('kotenraimundusc@gmail.com');
+where id = '<verified-owner-user-id>';
 ```
 
 Expect one confirmed, active `superadmin` row with a null `tenant_id`. The
@@ -1322,6 +1309,9 @@ placeholder in `twa-manifest.json` as a release target.
 
 To rebuild on Windows with Android Studio/SDK and Java 17 installed after
 replacing the example below with the confirmed production hostname, run:
+
+The Android build uses AGP 8.13.2 with Gradle 8.13 and compile SDK 36. Android
+artifacts resolve through Google Maven and Maven Central; JCenter is retired.
 
 ```powershell
 $env:TWA_HOST = "your-confirmed-domain.example"

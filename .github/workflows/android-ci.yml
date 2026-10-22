@@ -1,0 +1,56 @@
+name: Android CI
+
+on:
+  pull_request:
+    paths:
+      - "android-apk/**"
+      - ".github/workflows/android-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "android-apk/**"
+      - ".github/workflows/android-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: ""
+      - name: Install Android SDK platform
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Create temporary CI signing key
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -noprompt \
+            -keystore "$RUNNER_TEMP/ci-upload.jks" \
+            -storepass ci-only-not-for-release \
+            -alias ci-upload \
+            -keypass ci-only-not-for-release \
+            -keyalg RSA -keysize 2048 -validity 1 \
+            -dname "CN=Temporary CI Signing Key"
+          cat > "$HOME/.android/ainnoe-upload-signing.properties" <<EOF
+          storeFile=$RUNNER_TEMP/ci-upload.jks
+          storePassword=ci-only-not-for-release
+          keyAlias=ci-upload
+          keyPassword=ci-only-not-for-release
+          EOF
+      - name: Assemble release packages
+        working-directory: android-apk
+        env:
+          TWA_HOST: ainnoe-le.vercel.app
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease bundleRelease
