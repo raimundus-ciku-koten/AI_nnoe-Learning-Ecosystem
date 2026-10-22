@@ -1,0 +1,3 @@
+[submodule "ale-web"]
+	path = ale-web
+	url = https://github.com/raimundus-ciku-koten/ale-web.git

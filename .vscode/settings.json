@@ -1,3 +1,4 @@
 {
-    "deepseekv4.reasoningEffort": "high"
+    "deepseekv4.reasoningEffort": "high",
+    "java.configuration.updateBuildConfiguration": "automatic"
 }
