@@ -106,9 +106,11 @@ const HalamanGoogleWorkspace = lazy(() => import('./pages/GoogleWorkspacePage.js
 const HalamanIntegrasiAI = lazy(() => import('./pages/AIIntegrationsPage.jsx'));
 const HalamanBankSoal = lazy(() => import('./pages/QuestionBankPage.jsx'));
 const HalamanUjianOnline = lazy(() => import('./pages/OnlineAssessmentPage.jsx'));
+const HalamanMateriBelajar = lazy(() => import('./pages/LearningMaterialsPage.jsx'));
 const HalamanNilaiUjianSiswa = lazy(() => import('./pages/OnlineAssessmentResultsPage.jsx'));
 const HalamanTautkanAkunSiswa = lazy(() => import('./pages/StudentAccountLinkPage.jsx'));
 const HalamanTenantPlatform = lazy(() => import('./pages/PlatformTenantsPage.jsx'));
+const HalamanRegistrasiSekolah = lazy(() => import('./pages/SchoolRegistrationPage.jsx'));
 const HalamanPenggunaPlatform = lazy(() => import('./pages/PlatformUsersPage.jsx'));
 const HalamanOperasiPlatform = lazy(() => import('./pages/PlatformOperationsPage.jsx'));
 const HalamanPenggunaSupabase = lazy(() => import('./pages/SupabasePlatformUsersPage.jsx'));
@@ -123,6 +125,9 @@ function PrivateShell({ children }) {
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;
   if ((activeRole || role) === 'demo') return <Navigate to="/trial" replace />;
+  if (role === 'unprovisioned' && location.pathname !== '/daftar-sekolah') {
+    return <Navigate to="/daftar-sekolah" replace />;
+  }
   if (!canOpenRolePath(activeRole || role, location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -180,6 +185,7 @@ function RouteWrapper() {
         <Route path="/trial" element={user ? (selectedRole === 'demo' ? <HalamanTrial /> : <Navigate to="/dashboard" replace />) : <Navigate to="/login" replace />} />
         <Route path="/privacy" element={<HalamanPrivasi />} />
         <Route path="/platform/supabase-users" element={<HalamanPenggunaSupabase />} />
+        <Route path="/daftar-sekolah" element={<PrivateShell><HalamanRegistrasiSekolah /></PrivateShell>} />
         <Route path="/scan/:kode" element={<HalamanScan />} />
         <Route path="/" element={<Navigate to={user ? (passwordRecovery ? '/login' : selectedRole === 'demo' ? '/trial' : '/dashboard') : '/login'} replace />} />
         
@@ -195,6 +201,7 @@ function RouteWrapper() {
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/ujian" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
+        <Route path="/siswa/materi" element={<PrivateShell><HalamanMateriBelajar /></PrivateShell>} />
         <Route path="/siswa/nilai" element={<PrivateShell><HalamanNilaiUjianSiswa /></PrivateShell>} />
         <Route path="/admin/perencanaan/paket/:id?/:jenis?" element={<PrivateShell><HalamanPerencanaan /></PrivateShell>} />
         <Route path="/platform/tenant/sekolah" element={<PrivateShell><HalamanTenantPlatform /></PrivateShell>} />

@@ -28,6 +28,8 @@ test('undangan akun hanya dikirim oleh superadmin aktif untuk email allowlist ak
   assert.match(inviteFunction, /allowlistEntry\.role === 'superadmin'/);
   assert.match(inviteFunction, /auth\.admin\.inviteUserByEmail\(email/);
   assert.doesNotMatch(usersPage, /SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(usersPage, /const \[emailInput, setEmailInput\] = useState\(''\);/);
+  assert.doesNotMatch(usersPage, /kotenraimundusc@gmail\.com/);
 });
 
 test('menonaktifkan akun melalui RPC dan cek akses memakai profil terbaru', () => {

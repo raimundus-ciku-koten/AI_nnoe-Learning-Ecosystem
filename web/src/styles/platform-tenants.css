@@ -71,3 +71,15 @@
   .platform-control-row { grid-template-columns: 1fr; align-items: stretch; }
   .platform-control-row .platform-tenants-button { width: 100%; }
 }
+.school-registration-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.school-registration-form h2, .school-registration-form > button { grid-column: 1 / -1; }
+.school-registration-form label, .school-registration-review-fields label { display: grid; gap: .35rem; color: #42516a; font-size: .84rem; font-weight: 700; }
+.school-registration-form input, .school-registration-review-fields input { min-height: 2.6rem; padding: .5rem .7rem; border: 1px solid #cbd5e1; border-radius: .6rem; color: #0f172a; font: inherit; }
+.school-registration-request, .school-registration-review { display: grid; gap: .55rem; padding: 1rem; border: 1px solid #e5eaf1; border-radius: .75rem; background: #fbfdff; }
+.school-registration-request span, .school-registration-review > p { color: #58677c; font-size: .85rem; line-height: 1.5; overflow-wrap: anywhere; }
+.school-registration-review-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.school-registration-review-wide { grid-column: 1 / -1; }
+@media (max-width: 640px) {
+  .school-registration-form, .school-registration-review-fields { grid-template-columns: 1fr; }
+  .school-registration-form h2, .school-registration-form > button, .school-registration-review-wide { grid-column: auto; }
+}

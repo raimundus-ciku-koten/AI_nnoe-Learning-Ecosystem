@@ -8,13 +8,13 @@ import { NAMA_HARI } from '../../constants.js';
 import { kopDokumen, tabelIdentitas, blokTtd, peringatan } from './umum.js';
 import { rentangTanggal, keteranganPekan } from './format.js';
 
-function tabelSemester(nama, sem, jpPerPekan) {
+function tabelSemester(nama, sem) {
   const baris = sem.pekan.map((p) => {
     const b = [
       String(p.noSemester),
       rentangTanggal(p.mulai, p.selesai),
       p.efektif ? t('rpe.efektif') : t('rpe.nonEfektif'),
-      p.efektif ? String(jpPerPekan) : '–',
+      p.jp ? String(p.jp) : '–',
       keteranganPekan(p)
     ];
     b.kelas = p.efektif ? '' : 'baris-nonefektif'; // dipakai tabel() sebagai class <tr>
@@ -34,7 +34,9 @@ function tabelSemester(nama, sem, jpPerPekan) {
  * @returns {HTMLElement}
  */
 export function renderRpe(rpe, konteks) {
-  const hariTeks = rpe.hari.map((i) => NAMA_HARI[i]).join(', ');
+  const hariTeks = rpe.hari
+    .map((i) => `${NAMA_HARI[i]} (${rpe.jpPerHari?.[i] ?? rpe.jpPerPekan} JP)`)
+    .join(', ');
   const rekap = tabel({
     caption: t('rpe.rekap'),
     kepala: [t('umum.semester'), t('rpe.totalPekan'), t('rpe.pekanEfektif'), t('rpe.pekanNon'), t('rpe.jp')],
@@ -58,11 +60,9 @@ export function renderRpe(rpe, konteks) {
     rpe.selisihDenganResmi !== 0
       ? peringatan(t('rpe.peringatanSelisih', { resmi: angka(rpe.totalJP), hitung: angka(rpe.totalJPHitung), selisih: angka(Math.abs(rpe.selisihDenganResmi)) }))
       : null,
-    h('section', null, h('h2', null, t('rpe.bagianSemester', { semester: t('umum.ganjil') })), tabelSemester(t('umum.ganjil'), rpe.ganjil, rpe.jpPerPekan)),
-    h('section', null, h('h2', null, t('rpe.bagianSemester', { semester: t('umum.genap') })), tabelSemester(t('umum.genap'), rpe.genap, rpe.jpPerPekan)),
+    h('section', null, h('h2', null, t('rpe.bagianSemester', { semester: t('umum.ganjil') })), tabelSemester(t('umum.ganjil'), rpe.ganjil)),
+    h('section', null, h('h2', null, t('rpe.bagianSemester', { semester: t('umum.genap') })), tabelSemester(t('umum.genap'), rpe.genap)),
     h('section', null, h('h2', null, t('rpe.rekap')), rekap,
-      h('p', { class: 'rumus' }, t('rpe.rumus', {
-        g: rpe.ganjil.rekap.efektif, n: rpe.genap.rekap.efektif, jp: rpe.jpPerPekan, total: angka(rpe.totalJPHitung)
-      }))),
+      h('p', { class: 'rumus' }, t('rpe.rumus'))),
     blokTtd(konteks));
 }

@@ -6,6 +6,7 @@ const dataGroups = [
   ['Pendaftaran uji coba', 'Alamat email terverifikasi dan nama tampilan untuk mencegah penggunaan uji coba berulang; pilihan persona demo tidak menjadi peran akun.'],
   ['Data pembelajaran', 'Data siswa, kelas, kehadiran, bank soal, nilai atau asesmen, dan dokumen yang dimasukkan oleh sekolah atau pengguna.'],
   ['Komunikasi', 'Pesan, metadata percakapan, lampiran yang dipilih pengguna, dan token notifikasi perangkat bila notifikasi diaktifkan.'],
+  ['Permintaan pendaftaran manual', 'Nama, email, nomor WhatsApp pemohon, pilihan paket, dan bila memilih jalur sekolah: nama, NPSN, jenjang, provinsi, kabupaten/kota, serta alamat lembaga yang dimasukkan ke formulir.'],
   ['Integrasi pilihan pengguna', 'Berkas Drive/Sheets yang dibuat atau dipilih langsung oleh pengguna. Token Google Workspace hanya disimpan sementara di memori halaman.'],
   ['Draf program BK dan kegiatan', 'Draf program hanya berada di memori halaman hingga ditutup. Gunakan cetak atau Simpan sebagai PDF untuk membuat salinan lokal; jangan masukkan identitas siswa atau isi konseling.'],
 ];
@@ -33,6 +34,13 @@ export default function PrivacyNoticePage() {
           yang dipilih pengguna. Akses seharusnya dibatasi menurut peran dan sekolah; jangan memasukkan data
           yang tidak diperlukan. Jangan membagikan tautan rapat, berkas, atau informasi siswa kepada pihak
           yang tidak berwenang.
+        </p>
+        <p>
+          Pada formulir pendaftaran manual, isian hanya berada di memori halaman dan tidak dikirim atau
+          disimpan oleh aplikasi. Jika pemohon memilih membuat PDF, berkas tersimpan di perangkat melalui
+          dialog cetak browser. Pemohon sendiri yang memilih apakah akan melampirkannya di WhatsApp; aplikasi
+          hanya membuka pesan umum dan tidak mengirim PDF maupun isian formulir secara otomatis. Jangan
+          mencantumkan kata sandi, NIK/KK anak, nomor kartu pembayaran, atau salinan dokumen identitas.
         </p>
         <h2>Penyimpanan dan layanan terkait</h2>
         <p>
@@ -63,7 +71,7 @@ export default function PrivacyNoticePage() {
           Sebelum halaman ini diterbitkan sebagai kebijakan final, pemilik layanan wajib menambahkan nama badan
           hukum, alamat/kontak privasi resmi, serta proses eskalasi dan tenggat respons.
         </p>
-        <p className="privacy-notice-updated">Terakhir diperbarui: 19 Oktober 2026 · Informasi operasional, bukan nasihat hukum.</p>
+        <p className="privacy-notice-updated">Terakhir diperbarui: 21 Oktober 2026 · Informasi operasional, bukan nasihat hukum.</p>
         <a href="#/login">Kembali ke halaman masuk</a>
       </article>
     </main>

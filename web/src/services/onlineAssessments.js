@@ -2,6 +2,10 @@ import { supabase } from '../lib/supabase.ts';
 
 const DRAFT_PREFIX = 'ale-online-exam-draft-v1';
 
+function draftStorage() {
+  return globalThis.localStorage || globalThis.sessionStorage;
+}
+
 function wajibText(value, label) {
   if (typeof value !== 'string' || !value.trim()) {
     throw new TypeError(`${label} tidak valid.`);
@@ -209,8 +213,8 @@ export function simpanDraftUjian(userId, exam, answers, submissionId = '') {
     throw new TypeError('Draft jawaban tidak valid.');
   }
   const key = draftKey(userId, exam.examId);
-  const storage = globalThis.sessionStorage;
-  if (!storage) throw new Error('Penyimpanan sesi browser tidak tersedia.');
+  const storage = draftStorage();
+  if (!storage) throw new Error('Penyimpanan lokal browser tidak tersedia.');
   storage.setItem(key, JSON.stringify({
     exam,
     answers,
@@ -220,7 +224,7 @@ export function simpanDraftUjian(userId, exam, answers, submissionId = '') {
 }
 
 export function muatDraftUjian(userId, examId) {
-  const storage = globalThis.sessionStorage;
+  const storage = draftStorage();
   if (!storage) return null;
   const raw = storage.getItem(draftKey(userId, examId));
   if (!raw) return null;
@@ -244,14 +248,14 @@ export function muatDraftUjian(userId, examId) {
 }
 
 export function hapusDraftUjian(userId, examId) {
-  const storage = globalThis.sessionStorage;
+  const storage = draftStorage();
   if (!storage) return;
   storage.removeItem(draftKey(userId, examId));
 }
 
 export function daftarDraftUjian(userId) {
   wajibText(userId, 'Akun siswa');
-  const storage = globalThis.sessionStorage;
+  const storage = draftStorage();
   if (!storage) return [];
   const prefix = `${DRAFT_PREFIX}:${userId}:`;
   const drafts = [];

@@ -51,7 +51,7 @@ export default {
   'rpe.totalJPHitung': 'Total JP hasil hitung', 'rpe.totalJPResmi': 'Total JP resmi (acuan)', 'rpe.rekap': 'Rekapitulasi pekan efektif',
   'rpe.totalPekan': 'Total pekan', 'rpe.pekanEfektif': 'Pekan efektif', 'rpe.pekanNon': 'Pekan tidak efektif',
   'rpe.peringatanSelisih': 'Total JP resmi ({resmi}) berbeda {selisih} JP dari hasil hitung kalender ({hitung}). Dokumen turunan memakai angka resmi.',
-  'rpe.rumus': 'Total JP = (({g} + {n}) pekan efektif × {jp} JP) = {total} JP.',
+  'rpe.rumus': 'Total JP dihitung dengan menjumlahkan JP harian pada hari belajar yang efektif. Pekan parsial dihitung sesuai JP pada hari yang tidak libur.',
 
   /* ATP */
   'cp.judul': 'Capaian Pembelajaran Intrakurikuler',
@@ -117,8 +117,10 @@ export default {
   /* formulir */
   'form.bagianMapel': 'Mata pelajaran intrakurikuler', 'form.bagianJadwal': 'Jadwal', 'form.bagianKalender': 'Hari tidak efektif / khusus', 'form.bagianIdentitas': 'Identitas dokumen',
   'form.mapel': 'Mata pelajaran intrakurikuler', 'form.mapelHint': 'Gunakan nama mata pelajaran yang sesuai dengan CP resmi yang diimpor, termasuk Pendidikan Agama dan mata pelajaran lainnya.',
-  'form.kelas': 'Kelas', 'form.fase': 'Fase', 'form.tahunAjaran': 'Tahun ajaran', 'form.jpPerPekan': 'JP per pekan', 'form.totalJP': 'Total JP setahun (opsional)',
+  'form.kelas': 'Kelas', 'form.fase': 'Fase', 'form.tahunAjaran': 'Tahun ajaran', 'form.jpPerPekan': 'Total JP per pekan', 'form.totalJP': 'Total JP setahun (opsional)',
   'form.totalJPHint': 'Isi bila ada angka resmi dari struktur kurikulum sekolah. Kosong = dihitung dari kalender.', 'form.hari': 'Hari pembelajaran mapel ini',
+  'form.jpPerHari': 'JP per hari', 'form.jpPerHariHint': 'Pilih hari belajar dan isi JP pada setiap hari. Saat hari libur, JP hari tersebut tidak dihitung.',
+  'form.jpPerPekanHint': 'Dihitung otomatis dari JP tiap hari yang dipilih.',
   'form.ganjilMulai': 'Ganjil: mulai', 'form.ganjilSelesai': 'Ganjil: selesai', 'form.genapMulai': 'Genap: mulai', 'form.genapSelesai': 'Genap: selesai',
   'form.kalenderHint': 'Tambahkan libur nasional, ujian sekolah, atau hari masuk khusus. Tanggal selesai boleh kosong untuk satu hari.',
   'form.rujukanKalender': 'Dokumen rujukan kalender pendidikan TA 2026/2027',
@@ -131,7 +133,7 @@ export default {
 
   /* galat */
   'galat.UMUM': 'Terjadi kesalahan. Coba lagi.', 'galat.WAJIB': 'Wajib diisi.', 'galat.FASE_TIDAK_VALID': 'Pilih fase A–F.', 'galat.FORMAT_TAHUN_AJARAN': 'Gunakan format 2026/2027 (tahun berurutan).',
-  'galat.JP_PER_PEKAN_DI_LUAR_BATAS': 'JP per pekan harus 1–20.', 'galat.TOTAL_JP_DI_LUAR_BATAS': 'Total JP harus 4–600.', 'galat.TANGGAL_TIDAK_VALID': 'Tanggal tidak valid.',
+  'galat.JP_PER_PEKAN_DI_LUAR_BATAS': 'JP per pekan harus 1–20.', 'galat.JP_HARI_TIDAK_VALID': 'JP tiap hari harus berupa bilangan bulat 0–20.', 'galat.JP_HARI_TIDAK_SESUAI': 'Jumlah JP tiap hari harus sama dengan total JP per pekan.', 'galat.TOTAL_JP_DI_LUAR_BATAS': 'Total JP harus 4–600.', 'galat.TANGGAL_TIDAK_VALID': 'Tanggal tidak valid.',
   'galat.SELESAI_SEBELUM_MULAI': 'Tanggal selesai tidak boleh sebelum tanggal mulai.', 'galat.RENTANG_TERLALU_PANJANG': 'Rentang semester terlalu panjang.',
   'galat.TUMPANG_TINDIH_SEMESTER': 'Semester Genap harus dimulai setelah Semester Ganjil berakhir.', 'galat.TERLALU_BANYAK_ENTRI': 'Terlalu banyak entri kalender.',
   'galat.ENTRI_KALENDER_TIDAK_VALID': 'Ada entri kalender dengan tanggal tidak valid.', 'galat.PILIH_HARI': 'Pilih minimal satu hari pembelajaran.',

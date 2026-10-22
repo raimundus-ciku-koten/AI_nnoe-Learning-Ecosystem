@@ -63,6 +63,9 @@ export async function tampilkanKontak(wadah) {
   const sibuk = new Set(); // id/uid yang sedang diproses (cegah klik ganda)
 
   const tabChat = buatTabChat('kontak');
+  const petunjukKontak = getState().role === 'superadmin'
+    ? 'Superadmin dapat langsung chat, telepon, dan video call pengguna aktif di semua instansi.'
+    : 'Pengguna satu instansi dapat langsung chat. Untuk lintas instansi, kirim permintaan kontak terlebih dahulu.';
   const panelTab = h('div', { class: 'chat-subtab', role: 'tablist' });
   const kepalaCari = h('div', { class: 'chat-contacts__alat' });
   const isi = h('div', { class: 'chat-contacts__list', 'aria-live': 'polite' });
@@ -91,7 +94,7 @@ export async function tampilkanKontak(wadah) {
     tabChat.el,
     h('header', { class: 'chat-contacts__head' },
       h('div', {}, h('h2', {}, 'Kontak'),
-        h('p', { class: 'muted' }, 'Chat pribadi hanya dapat dimulai setelah permintaan kontak disetujui.'))),
+      h('p', { class: 'muted' }, petunjukKontak))),
     panelTab, kepalaCari, isi));
 
   /* ---------- helper data ---------- */
@@ -173,21 +176,47 @@ export async function tampilkanKontak(wadah) {
   }
 
   function tabKontak() {
-    const aksi = kontak().filter((k) => k.status === 'accepted')
-      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'id'));
+    const terlihat = new Map(kontak()
+      .filter((k) => k.status === 'accepted')
+      .map((k) => [k.peerUid, {
+        uid: k.peerUid,
+        nama: k.name,
+        contact: k,
+        sameInstansi: false,
+      }]));
+    orang
+      .filter((person) => person.sameInstansi || getState().role === 'superadmin')
+      .forEach((person) => {
+        terlihat.set(person.uid, { ...person, contact: statusDengan(person.uid) });
+      });
+    const aksi = [...terlihat.values()]
+      .sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id'));
     if (!aksi.length) return [h('p', { class: 'muted' }, 'Belum ada kontak. Buka tab "Cari Orang" untuk mengirim permintaan.')];
-    return aksi.map((k) => baris({
-      nama: k.name || 'Pengguna',
-      onKlik: () => bukaChat(k.peerUid, k.name),
-      aksi: [
-        tombol('Chat', 'btn-ale', () => bukaChat(k.peerUid, k.name), sibuk.has(`chat:${k.peerUid}`)),
-        tombol('Hapus', 'btn-outline-danger', () => {
-          if (window.confirm(`Hapus ${k.name || 'kontak ini'} dari kontak? Riwayat chat tetap ada, tetapi pesan baru tidak dapat dikirim.`)) {
-            jalankan(`hapus:${k.id}`, () => hapusKontak(saya, k.id), 'Kontak dihapus.');
+    return aksi.map((person) => {
+      const relation = person.contact;
+      const peerUid = person.uid;
+      const nama = person.nama || 'Pengguna';
+      const tindakan = [
+        tombol('Chat', 'btn-ale', () => bukaChat(peerUid, nama), sibuk.has(`chat:${peerUid}`)),
+      ];
+      if (relation?.status === 'accepted' && !person.sameInstansi && getState().role !== 'superadmin') {
+        tindakan.push(tombol('Hapus', 'btn-outline-danger', () => {
+          if (window.confirm(`Hapus ${nama} dari kontak? Riwayat chat tetap ada.`)) {
+            jalankan(`hapus:${relation.id}`, () => hapusKontak(saya, relation.id), 'Kontak dihapus.');
           }
-        }, sibuk.has(`hapus:${k.id}`))
-      ]
-    }));
+        }, sibuk.has(`hapus:${relation.id}`)));
+      }
+      return baris({
+        nama,
+        sub: person.sameInstansi
+          ? 'Instansi Anda'
+          : getState().role === 'superadmin' ? 'Semua instansi' : 'Kontak lintas instansi',
+        role: person.role,
+        foto: person.photoUrl,
+        onKlik: () => bukaChat(peerUid, nama),
+        aksi: tindakan,
+      });
+    });
   }
 
   function tabPermintaan() {
@@ -202,8 +231,7 @@ export async function tampilkanKontak(wadah) {
       aksi: [
         tombol('Terima', 'btn-ale', () => jalankan(`terima:${k.id}`, async () => {
           await terimaPermintaan(saya, k.id);
-          // Buat ruang chat segera; bila gagal, tetap bisa dibuat dari tab Kontak.
-          try { await mulaiChatPribadi(saya, { uid: k.peerUid, nama: k.name }); } catch { /* abaikan */ }
+          await mulaiChatPribadi(saya, { uid: k.peerUid, nama: k.name });
         }, 'Permintaan diterima.'), sibuk.has(`terima:${k.id}`)),
         tombol('Tolak', 'btn-outline-secondary', () =>
           jalankan(`tolak:${k.id}`, () => hapusKontak(saya, k.id), 'Permintaan ditolak.'), sibuk.has(`tolak:${k.id}`))
@@ -233,17 +261,17 @@ export async function tampilkanKontak(wadah) {
       const st = statusDengan(u.uid);
       const id = st?.id;
       let aksi;
-      if (st?.status === 'accepted') {
+      if (st?.status === 'accepted' || u.sameInstansi || getState().role === 'superadmin') {
         aksi = [tombol('Chat', 'btn-ale', () => bukaChat(u.uid, u.nama), sibuk.has(`chat:${u.uid}`))];
       } else if (st?.status === 'pending' && st.arah === 'keluar') {
         aksi = [tombol('Menunggu', 'btn-light', () => {}, true)];
       } else if (st?.status === 'pending' && st.arah === 'masuk') {
         aksi = [tombol('Terima', 'btn-ale', () => jalankan(`terima:${id}`, async () => {
           await terimaPermintaan(saya, id);
-          try { await mulaiChatPribadi(saya, { uid: u.uid, nama: u.nama }); } catch { /* abaikan */ }
+          await mulaiChatPribadi(saya, { uid: u.uid, nama: u.nama });
         }, 'Permintaan diterima.'), sibuk.has(`terima:${id}`))];
       } else {
-        aksi = [tombol('Tambah', 'btn-outline-primary', () =>
+        aksi = [tombol('Tambah kontak', 'btn-outline-primary', () =>
           jalankan(`kirim:${u.uid}`, () => kirimPermintaan(saya, { uid: u.uid, nama: u.nama }), 'Permintaan terkirim.'),
           sibuk.has(`kirim:${u.uid}`))];
       }

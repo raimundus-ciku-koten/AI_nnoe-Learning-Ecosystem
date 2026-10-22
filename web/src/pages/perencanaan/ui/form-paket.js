@@ -54,12 +54,50 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
   const kelas = input('kelas', 'text', A.kelas, { maxlength: 20, required: true, placeholder: 'X' });
   const fase = h('select', { name: 'fase' }, ['A', 'B', 'C', 'D', 'E', 'F'].map((f) => h('option', { value: f, selected: f === A.fase }, f)));
   const ta = input('tahunAjaran', 'text', A.tahunAjaran, { maxlength: 9, placeholder: '2026/2027', pattern: '\\d{4}/\\d{4}' });
-  const jp = input('jpPerPekan', 'number', A.jpPerPekan, { min: BATAS.JP_PER_PEKAN_MIN, max: BATAS.JP_PER_PEKAN_MAX, step: 1, inputmode: 'numeric', required: true });
   const totalJP = input('totalJP', 'number', A.totalJP ?? '', { min: BATAS.TOTAL_JP_MIN, max: BATAS.TOTAL_JP_MAX, step: 1, inputmode: 'numeric' });
 
-  const cekHari = [1, 2, 3, 4, 5, 6].map((i) => h('label', { class: 'cek' },
-    h('input', { type: 'checkbox', name: 'hari', value: i, checked: (A.hariPembelajaran ?? []).includes(i) }), NAMA_HARI[i]));
-  const grupHari = h('fieldset', { class: 'grup-hari' }, h('legend', null, t('form.hari')), h('div', { class: 'baris-cek' }, cekHari),
+  const hariAwal = A.hariPembelajaran ?? [];
+  const jpAwal = A.jpPerHari && typeof A.jpPerHari === 'object'
+    ? A.jpPerHari
+    : Object.fromEntries(hariAwal.map((hari, index) => {
+      const dasar = Math.floor((Number(A.jpPerPekan) || 0) / hariAwal.length);
+      const sisa = (Number(A.jpPerPekan) || 0) % hariAwal.length;
+      return [hari, dasar + (index < sisa ? 1 : 0)];
+    }));
+  const cekHari = [1, 2, 3, 4, 5, 6].map((i) => {
+    const dipilih = hariAwal.includes(i);
+    const jpHari = input(`jpHari${i}`, 'number', jpAwal[i] ?? (dipilih ? 1 : 0), {
+      min: 0, max: BATAS.JP_PER_PEKAN_MAX, step: 1, inputmode: 'numeric', disabled: !dipilih,
+      'aria-label': `${NAMA_HARI[i]} — ${t('form.jpPerHari')}`
+    });
+    return h('label', { class: 'cek cek-hari' },
+      h('input', { type: 'checkbox', name: 'hari', value: i, checked: dipilih }),
+      h('span', null, NAMA_HARI[i]), jpHari, h('span', null, 'JP'));
+  });
+  const jp = input('jpPerPekan', 'number', A.jpPerPekan, {
+    min: BATAS.JP_PER_PEKAN_MIN, max: BATAS.JP_PER_PEKAN_MAX, step: 1, readonly: true, required: true,
+    'aria-describedby': `${uid}-jp-total-h`
+  });
+  const hitungJpPekan = () => {
+    jp.value = String(cekHari.reduce((total, label) => {
+      const [checkbox, , value] = label.children;
+      return total + (checkbox.checked ? Math.max(0, Math.trunc(Number(value.value) || 0)) : 0);
+    }, 0));
+  };
+  for (const label of cekHari) {
+    const [checkbox, , value] = label.children;
+    checkbox.addEventListener('change', () => {
+      value.disabled = !checkbox.checked;
+      if (checkbox.checked && !Number(value.value)) value.value = '1';
+      hitungJpPekan();
+    });
+    value.addEventListener('input', hitungJpPekan);
+  }
+  hitungJpPekan();
+  const grupHari = h('fieldset', { class: 'grup-hari' }, h('legend', null, t('form.hari')),
+    h('p', { class: 'hint' }, t('form.jpPerHariHint')),
+    h('div', { class: 'baris-cek' }, cekHari),
+    kolom('jpPerPekan', t('form.jpPerPekan'), jp, { hint: t('form.jpPerPekanHint') }),
     h('p', { class: 'galat-kolom', role: 'alert', id: `${uid}-hari-g` }));
 
   const tgl = (nama, nilai) => input(nama, 'date', nilai, { required: true });
@@ -117,7 +155,6 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
         kolom('kelas', t('form.kelas'), kelas),
         kolom('fase', t('form.fase'), fase),
         kolom('tahunAjaran', t('form.tahunAjaran'), ta),
-        kolom('jpPerPekan', t('form.jpPerPekan'), jp),
         kolom('totalJP', t('form.totalJP'), totalJP, { hint: t('form.totalJPHint') }))),
     h('fieldset', null, h('legend', null, t('form.bagianJadwal')), grupHari,
       h('div', { class: 'grid-form' },
@@ -146,7 +183,11 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
   const kumpulkan = () => ({
     mapel: mapel.value, kelas: kelas.value, fase: fase.value, tahunAjaran: ta.value,
     jpPerPekan: jp.value, totalJP: totalJP.value,
-    hariPembelajaran: cekHari.map((l) => l.firstChild).filter((c) => c.checked).map((c) => Number(c.value)),
+    hariPembelajaran: cekHari.map((l) => l.children[0]).filter((c) => c.checked).map((c) => Number(c.value)),
+    jpPerHari: Object.fromEntries(cekHari
+      .filter((label) => label.children[0].checked)
+      .map((label) => [Number(label.children[0].value), Number(label.children[2].value)])),
+    jpPerPekan: jp.value,
     ganjilMulai: gm.value, ganjilSelesai: gs.value, genapMulai: nm.value, genapSelesai: ns.value,
     sekolah: sekolah.value, guru: guru.value, nipGuru: nipGuru.value, kepsek: kepsek.value, nipKepsek: nipKepsek.value, lokasi: lokasi.value,
     kalender: [...barisKal.children].map((b) => ({
@@ -175,7 +216,7 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
     for (const [k, kode] of Object.entries(galat)) {
       const teksGalat = t(`galat.${kode}`);
       if (k === 'kalender') { galatKal.textContent = teksGalat; continue; }
-      if (k === 'hariPembelajaran') { form.querySelector(`#${uid}-hari-g`).textContent = teksGalat; pertama.push(cekHari[0].firstChild); continue; }
+      if (k === 'hariPembelajaran') { form.querySelector(`#${uid}-hari-g`).textContent = teksGalat; pertama.push(cekHari[0].children[0]); continue; }
       const r = refGalat[k];
       if (r) { r.pesan.textContent = teksGalat; r.kontrol.setAttribute('aria-invalid', 'true'); pertama.push(r.kontrol); }
     }
@@ -192,7 +233,7 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
       await onSimpan({
         mapel: nilai.mapel, kelas: nilai.kelas, fase: nilai.fase, tahunAjaran: nilai.tahunAjaran,
         jpPerPekan: nilai.jpPerPekan, totalJP: nilai.totalJP,
-        hariPembelajaran: mentah.hariPembelajaran.sort((a, b) => a - b),
+        hariPembelajaran: nilai.hariPembelajaran, jpPerHari: nilai.jpPerHari,
         ganjil: nilai.ganjil, genap: nilai.genap, kalender: nilai.kalender, identitas: nilai.identitas
       });
       tutup();

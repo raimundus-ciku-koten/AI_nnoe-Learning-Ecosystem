@@ -110,6 +110,20 @@
   display: flex; align-items: center; gap: .6rem;
   padding: .6rem .9rem; border-bottom: 1px solid var(--ale-garis, #dbe6ea);
 }
+.chat-kepala__aksi { display: flex; gap: .35rem; margin-left: auto; }
+.chat-call {
+  display: flex; flex-direction: column; gap: .6rem;
+  padding: .75rem; border-bottom: 1px solid var(--ale-garis, #dbe6ea);
+  background: #f8fafc;
+}
+.chat-call[hidden], .chat-call video[hidden], .chat-call button[hidden] { display: none; }
+.chat-call__media { display: flex; justify-content: center; gap: .5rem; min-height: 1px; }
+.chat-call video {
+  width: min(100%, 360px); max-height: 240px; background: #111827;
+  border-radius: .75rem; object-fit: cover;
+}
+.chat-call__status { margin: 0; text-align: center; }
+.chat-call__aksi { display: flex; justify-content: center; gap: .5rem; }
 .chat-kepala__teks { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
 .chat-pesan {
   flex: 1; overflow-y: auto; padding: .8rem;

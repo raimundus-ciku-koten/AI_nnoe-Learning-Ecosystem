@@ -103,8 +103,55 @@
 .ale-purchase-current { display: grid; gap: .2rem; padding: .85rem 1rem; border: 1px solid #b9e3d2; border-radius: .7rem; background: #f0fbf6; color: #1b6047; }
 .ale-purchase-current small { color: #526d63; }
 .ale-purchase-footnote { color: var(--ale-muted, #475569); font-size: .85rem; }
+.ale-registration { scroll-margin-top: 1rem; }
+.ale-registration h2, .ale-registration h3 { margin: 0; }
+.ale-registration-screen { display: grid; gap: 1rem; }
+.ale-registration-warning { padding: .85rem 1rem; border: 1px solid #f2cf8d; border-radius: .65rem; background: #fffbeb; color: #713f12; line-height: 1.55; }
+.ale-registration-form { display: grid; gap: 1rem; }
+.ale-registration-form input, .ale-registration-form select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: .55rem .7rem;
+  border: 1px solid var(--ale-line, #cbd5e1);
+  border-radius: .6rem;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+.ale-registration-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1rem; }
+.ale-registration-consent { display: grid; gap: .8rem; margin: 0; padding: 1rem; border: 1px solid var(--ale-line, #cbd5e1); border-radius: .7rem; }
+.ale-registration-consent legend { padding: 0 .35rem; font-weight: 800; }
+.ale-registration-consent label, .ale-registration-save-check { display: flex; align-items: flex-start; gap: .65rem; line-height: 1.5; }
+.ale-registration-consent input, .ale-registration-save-check input { flex: none; width: 1.15rem; min-height: 1.15rem; margin-top: .2rem; accent-color: var(--ale-teal-700, #0f766e); }
+.ale-registration-actions { display: grid; gap: .85rem; padding-top: 1rem; border-top: 1px solid var(--ale-line, #e2e8f0); }
+.ale-registration-whatsapp { display: inline-flex; align-items: center; justify-content: center; width: fit-content; text-decoration: none; }
+.ale-registration-whatsapp.is-disabled { opacity: .55; cursor: not-allowed; }
+.ale-registration-print { display: none; }
 @media (max-width: 560px) {
   .ale-purchase-seat { align-items: flex-start; }
   .ale-purchase-plan { flex-wrap: wrap; }
   .ale-purchase-plan-price { margin-left: 1.5rem; text-align: left; }
+}
+@media print {
+  @page { size: A4; margin: 16mm; }
+  body * { visibility: hidden !important; }
+  .ale-registration-print, .ale-registration-print * { visibility: visible !important; }
+  .ale-registration-print {
+    position: absolute;
+    inset: 0 auto auto 0;
+    display: block;
+    width: 100%;
+    color: #111827;
+    background: #fff;
+    font: 11pt/1.5 Arial, sans-serif;
+  }
+  .ale-registration-print header { margin-bottom: 1rem; border-bottom: 2px solid #0f766e; }
+  .ale-registration-print header p { margin: .2rem 0; }
+  .ale-registration-print h1 { margin: .5rem 0; font-size: 18pt; }
+  .ale-registration-print h2 { font-size: 13pt; }
+  .ale-registration-print dl { margin: 1rem 0; }
+  .ale-registration-print-row { display: grid; grid-template-columns: 38% 1fr; gap: .75rem; padding: .35rem 0; border-bottom: 1px solid #d1d5db; }
+  .ale-registration-print-row dt { font-weight: 700; }
+  .ale-registration-print-row dd { margin: 0; overflow-wrap: anywhere; }
+  .ale-registration-print footer { margin-top: 2rem; padding-top: .5rem; border-top: 1px solid #9ca3af; color: #4b5563; font-size: 9pt; }
 }
