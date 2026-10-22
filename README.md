@@ -16,8 +16,10 @@ mean every data-backed module is ready for release.
 The login page has email/password and Google sign-in controls; public signup,
 trial registration, checkout, and ads remain disabled. No hosted database
 migration was applied, no credentials were entered, and no signup was
-submitted. The Staging schema, verified backup/restore, and server-side
-CAPTCHA blockers below still apply.
+submitted. The current source now includes the reviewed read-only MFA gate,
+explicit TOTP enrollment, and an active-profile/AAL2 database policy migration.
+These changes have not been deployed. The Staging schema, verified
+backup/restore, and server-side CAPTCHA blockers below still apply.
 
 The read-only Production check on 2026-10-20 confirmed the owner's active
 Superadmin profile and matching JWT role claim. After the owner completed TOTP
