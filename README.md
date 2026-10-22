@@ -5,7 +5,7 @@ services.
 
 ## Release readiness snapshot (2026-10-22)
 
-The latest web feature PR (#6, head `96bf3a05`) remains Draft against the
+The latest web feature PR (#6) remains Draft against the
 Preview migration branch. Its GitHub CI, Staging build, and anonymous Preview
 page check passed, but this is not a Production feature release. Production
 remains login-only. The latest Staging backup run failed PostgreSQL password
