@@ -6,7 +6,7 @@ This document records the release state and the remaining safe rollout steps for
 
 Current release status (verified 2026-10-22):
 - Production remains a login-only release. The anonymous Production page renders email/password and Google sign-in controls; public signup remains disabled.
-- PR #6 (`feature/learning-registration-release`, head `7cb3e699`) is still Draft and targets `migration/supabase-foundation-preview`, not `main`. Its GitHub CI and Vercel Preview checks pass; the web test suite and Staging-mode build also pass from its worktree. The Preview is not a Production deployment.
+- PR #6 (`feature/learning-registration-release`, head `0e53797a`) is still Draft and targets `migration/supabase-foundation-preview`, not `main`. Its latest GitHub CI and Vercel Preview checks pass; the web test suite and Staging-mode build also pass from its worktree. The Preview is not a Production deployment.
 - A local Staging-mode login cannot authenticate until the owner supplies the Staging anon/publishable key in the ignored `web/env/staging/.env.staging.local` file. Use the checked-in `.env.staging.local.example` as a template; never copy Production credentials or a `service_role` key.
 - The latest encrypted Staging backup workflow run (#6, 2026-10-22) failed during `pg_dump` with PostgreSQL password authentication failure. No backup artifact or restore drill was produced. A failure proves the connection used by that run was rejected; it does not reveal the current masked GitHub secret value.
 - The Preview Google OAuth authorization check returned `Unsupported provider: provider is not enabled`. Enable/configure the Staging provider and matching callback settings before claiming Google sign-in works.

@@ -5,14 +5,15 @@ services.
 
 ## Release readiness snapshot (2026-10-22)
 
-The latest web feature PR (#6, head `7cb3e699`) remains Draft against the
-Preview migration branch. Its CI, Staging build, and anonymous Preview page
-check passed, but this is not a Production feature release. Production remains
-login-only. The latest Staging backup run failed PostgreSQL password
-authentication, and no restore drill is evidenced. The Preview Google OAuth
-check reported that the provider is not enabled. Keep public signup and hosted
-migrations disabled until backup/restore, schema/RLS, and Auth verification
-are complete. See the deployment guide for the detailed release gates.
+The latest web feature PR (#6, head `0e53797a`) remains Draft against the
+Preview migration branch. Its GitHub CI, Staging build, and anonymous Preview
+page check passed, but this is not a Production feature release. Production
+remains login-only. The latest Staging backup run failed PostgreSQL password
+authentication, and no backup artifact or restore drill is evidenced. The
+Preview Google OAuth check reported that the provider is not enabled. Keep
+public signup and hosted migrations disabled until backup/restore, schema/RLS,
+and Auth verification are complete. See the deployment guide for the detailed
+release gates.
 
 The login-only hotfix `f616440b` is deployed to Production at
 `https://ainnoe-le.vercel.app/`. Anonymous smoke tests verified the login page,
@@ -111,31 +112,18 @@ credentials; never put a long-lived provider secret in a `VITE_*` variable.
 Migrations `20261016000100` through `20261016000300` and `supabase/seed.sql`
 were applied through the Dashboard SQL Editor. On 2026-10-17,
 `20261016000400_verified_superadmin_bootstrap.sql` was also applied to the
-hosted project through the SQL Editor. The confirmed owner identity
-`kotenraimundusc@gmail.com` was verified in Supabase Auth; its allowlist and
-profile both report `role = 'superadmin'` and `active = true`, with no tenant.
-The `public.custom_access_token_hook` exists and is enabled under
-Authentication → Hooks. The bootstrap migration provisions allowlisted
-identities only after email confirmation. Roles and tenant fields are not
-writable by browser clients.
+hosted project through the SQL Editor. The owner allowlist/profile and the
+`public.custom_access_token_hook` were verified in Supabase Auth. The bootstrap
+migration provisions allowlisted identities only after email confirmation.
+Roles and tenant fields are not writable by browser clients. Do not document
+real account identifiers or profile data in this public repository.
 
 On 2026-10-17, migration
 `20261017000100_platform_user_management.sql` was also applied to the hosted
 project. It adds teacher profile fields and an audited
-`public.manage_platform_user` function restricted to active superadmins. The
-following hosted identities are confirmed and active:
-
-| Email | Role | Tenant |
-| --- | --- | --- |
-| `kotenraimundusc@gmail.com` | `superadmin` | Global |
-| `raimunduscikukoten@gmail.com` | `admin_sekolah` | SMAN 1 Tanjung Bunga |
-| `raimunduskoten21@guru.sma.belajar.id` | `guru` | SMAN 1 Tanjung Bunga |
-
-The owner profile is `CEO AI_nnoe Corp.` / `AI_nnoe Corp`. The teacher profile
-stores NIP/NUPTK `199211222019031001`, subjects `Matematika` and
-`Matematika Tingkat Lanjut`, and classes X, XI, XII. The admin display name is
-`Operator SMAN 1 Tanjung Bunga`. The tenant ID is
-`sman-1-tanjung-bunga`; the teacher email was verified exactly as supplied.
+`public.manage_platform_user` function restricted to active superadmins.
+Account-specific emails, identity numbers, names, and tenant assignments are
+intentionally omitted from this public documentation.
 
 The hosted project has no `supabase_migrations.schema_migrations` table, so
 Dashboard-applied migrations are not registered in CLI migration history. The
@@ -227,7 +215,7 @@ SQL Editor with:
 ```sql
 select id, email, role, tenant_id, active
 from public.profiles
-where email = lower('kotenraimundusc@gmail.com');
+where id = '<verified-owner-user-id>';
 ```
 
 Expect one confirmed, active `superadmin` row with a null `tenant_id`. The
