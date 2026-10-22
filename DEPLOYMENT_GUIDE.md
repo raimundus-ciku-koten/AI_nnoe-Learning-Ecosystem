@@ -119,10 +119,11 @@ Set these environment variables in Vercel (Project Settings → Environment Vari
 - MIDTRANS_SERVER_KEY / MIDTRANS_CLIENT_KEY — use Midtrans sandbox keys for testing
 - ADSENSE_PUBLISHER_ID, ADMOB_APP_ID — placeholders until accounts are approved
 
-For local Staging work, run `npm run dev:staging` from `web`. This uses the
-isolated `web/env/staging/.env.staging` profile and does not load the root
-`web/.env.local` Production configuration. Obtain the Staging anon/publishable
-key from the Staging Supabase project and place it in
+For local Staging work, run `npm run dev:staging` from `web`; use
+`npm run build:staging` to build the same isolated profile. These scripts load
+`web/env/staging/.env.staging` and do not load the root `web/.env.local` or
+`web/.env.production` configuration. Obtain the Staging anon/publishable key
+from the Staging Supabase project and place it in
 `web/env/staging/.env.staging.local`; that local file is ignored by Git. Do
 not copy a Production key into the Staging profile. Trial registration and the
 owner WhatsApp contact remain disabled/unset by default.

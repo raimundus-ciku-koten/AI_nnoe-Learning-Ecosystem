@@ -28,7 +28,6 @@ yarn-error.log*
 /.env.*
 /web/.env.local
 /web/.env.production
-/web/env/staging/.env.staging
 /web/env/staging/.env.staging.local
 
 # Local credentials and generated build artifacts

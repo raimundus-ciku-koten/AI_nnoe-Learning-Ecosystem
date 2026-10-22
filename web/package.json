@@ -9,7 +9,9 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:staging": "vite --mode staging",
     "build": "vite build",
+    "build:staging": "vite build --mode staging",
     "preview": "vite preview --port 4173",
     "test": "npm run test:unit && npm run test:planning-source && npm run test:assessment && npm run test:vitest && npm run test:assessment-ui && npm run test:role-access && npm run test:mfa && npm run test:privileged-access",
     "test:planning-source": "node --test tests/capaian-pembelajaran.test.mjs tests/planning-ai-schema.test.mjs",
