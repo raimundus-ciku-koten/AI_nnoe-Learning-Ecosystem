@@ -96,7 +96,7 @@ export default function SupabasePlatformUsersPage() {
   const [supportsRoleAssignments, setSupportsRoleAssignments] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editing, setEditing] = useState(false);
-  const [emailInput, setEmailInput] = useState('kotenraimundusc@gmail.com');
+  const [emailInput, setEmailInput] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [sendingLink, setSendingLink] = useState(false);
