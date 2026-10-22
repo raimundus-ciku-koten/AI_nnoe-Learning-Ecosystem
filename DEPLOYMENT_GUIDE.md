@@ -4,7 +4,15 @@ Overview
 
 This document records the release state and the remaining safe rollout steps for AI_nnoe Learning Ecosystem.
 
-Current release status:
+Current release status (verified 2026-10-22):
+- Production remains a login-only release. The anonymous Production page renders email/password and Google sign-in controls; public signup remains disabled.
+- PR #6 (`feature/learning-registration-release`, head `7cb3e699`) is still Draft and targets `migration/supabase-foundation-preview`, not `main`. Its GitHub CI and Vercel Preview checks pass; the web test suite and Staging-mode build also pass from its worktree. The Preview is not a Production deployment.
+- A local Staging-mode login cannot authenticate until the owner supplies the Staging anon/publishable key in the ignored `web/env/staging/.env.staging.local` file. Use the checked-in `.env.staging.local.example` as a template; never copy Production credentials or a `service_role` key.
+- The latest encrypted Staging backup workflow run (#6, 2026-10-22) failed during `pg_dump` with PostgreSQL password authentication failure. No backup artifact or restore drill was produced. A failure proves the connection used by that run was rejected; it does not reveal the current masked GitHub secret value.
+- The Preview Google OAuth authorization check returned `Unsupported provider: provider is not enabled`. Enable/configure the Staging provider and matching callback settings before claiming Google sign-in works.
+- Keep public registration and hosted migrations disabled. Staging still has schema/migration-provenance gaps; a verified backup restored to a disposable database and a schema/RLS reconciliation are prerequisites for any hosted migration.
+
+Historical release and rollout observations (dated entries below):
 - The login-only hotfix `f616440b` is deployed as a new Vercel Production deployment from the Production environment. The Preview deployment was not promoted because it uses Staging environment values.
 - The Production site and login page load anonymously. The email/password and Google sign-in controls are present; trial/signup controls are not shown. The primary JavaScript and CSS assets and `/.well-known/assetlinks.json` return HTTP 200.
 - Production Supabase Auth has the email and Google providers enabled, while “Allow new users to sign up” is disabled. The three accounts in the separately supplied account document are present, confirmed, and not banned. One has a prior sign-in; two have no recorded sign-in, so their credentials still require owner-run sign-in verification.
@@ -122,9 +130,10 @@ For local Staging work, run `npm run dev:staging` from `web`. This uses the
 isolated `web/env/staging/.env.staging` profile and does not load the root
 `web/.env.local` Production configuration. Obtain the Staging anon/publishable
 key from the Staging Supabase project and place it in
-`web/env/staging/.env.staging.local`; that local file is ignored by Git. Do
-not copy a Production key into the Staging profile. Trial registration and the
-owner WhatsApp contact remain disabled/unset by default.
+`web/env/staging/.env.staging.local`; start from
+`web/env/staging/.env.staging.local.example`. That local file is ignored by
+Git. Do not copy a Production key into the Staging profile. Trial registration
+and the owner WhatsApp contact remain disabled/unset by default.
 
 Starting the app with this profile does not verify Staging schema parity,
 backup/restore, authentication providers, or deployment readiness. Do not

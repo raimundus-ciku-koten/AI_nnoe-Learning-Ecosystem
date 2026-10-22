@@ -3,7 +3,16 @@
 Monorepo for the AI_nnoe Learning Ecosystem web application and its backend
 services.
 
-## Release readiness snapshot (2026-10-21)
+## Release readiness snapshot (2026-10-22)
+
+The latest web feature PR (#6, head `7cb3e699`) remains Draft against the
+Preview migration branch. Its CI, Staging build, and anonymous Preview page
+check passed, but this is not a Production feature release. Production remains
+login-only. The latest Staging backup run failed PostgreSQL password
+authentication, and no restore drill is evidenced. The Preview Google OAuth
+check reported that the provider is not enabled. Keep public signup and hosted
+migrations disabled until backup/restore, schema/RLS, and Auth verification
+are complete. See the deployment guide for the detailed release gates.
 
 The login-only hotfix `f616440b` is deployed to Production at
 `https://ainnoe-le.vercel.app/`. Anonymous smoke tests verified the login page,
