@@ -11,6 +11,8 @@ const roomPath = new URL('../src/views/chat/chatRoom.js', import.meta.url);
 const room = await readFile(roomPath, 'utf8');
 const contactsPath = new URL('../src/views/chat/contactsPage.js', import.meta.url);
 const contacts = await readFile(contactsPath, 'utf8');
+const rootVercelConfig = JSON.parse(await readFile(new URL('../../vercel.json', import.meta.url), 'utf8'));
+const webVercelConfig = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
 
 test('allows same-institution direct chat and gates cross-institution chat on accepted requests', () => {
   assert.match(migration, /private\.chat_direct_participants_are_allowed/);
@@ -45,6 +47,13 @@ test('adds restricted realtime signaling rows for direct audio and video calls',
   assert.match(room, /bi-telephone/);
   assert.match(room, /bi-camera-video/);
   assert.match(room, /VITE_WEBRTC_ICE_SERVERS/);
+  for (const config of [rootVercelConfig, webVercelConfig]) {
+    const policy = config.headers
+      .find((header) => header.source === '/(.*)')
+      .headers.find((header) => header.key === 'Permissions-Policy').value;
+    assert.match(policy, /microphone=\(self\)/);
+    assert.match(policy, /camera=\(self\)/);
+  }
 });
 
 test('shows same-institution users as directly chat-ready and cross-institution users as request-gated', () => {
