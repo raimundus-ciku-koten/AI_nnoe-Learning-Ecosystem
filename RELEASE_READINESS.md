@@ -24,6 +24,11 @@ Mode zero-billing tetap menjadi batas operasional: jangan mengaktifkan layanan b
 - Pencarian nama persis “AI_nnoe Corp” pada portal AHU Ditjen AHU Online → Pencarian Perseroan memberikan “Pencarian Tidak Ditemukan”. Pencarian itu terbatas pada data PT yang dapat dicari AHU dan tidak membuktikan ketiadaan badan hukum dengan bentuk/yurisdiksi lain. Belum ada yurisdiksi, nomor registrasi, akta, atau sertifikat yang dapat dicocokkan; status legal identitas pengelola belum terverifikasi. Dasar pemrosesan, pembagian peran pengendali/prosesor, instruksi sekolah, dan ketentuan hukum masih memerlukan review profesional sebelum penggunaan data nyata.
 - Tidak ada OAuth credential/provider yang dibuat atau diubah, backup yang dijalankan, migrasi yang diregistrasi/diterapkan, query database yang dieksekusi, data yang dibaca/ditulis, atau promosi Production yang dilakukan. Keputusan **NO-GO untuk penggunaan data nyata/rilis penuh** tetap berlaku.
 
+## Guard tampilan OAuth pada Preview 24 Oktober 2026
+
+- Karena provider Google Staging terpantau nonaktif dan backend Preview belum dipastikan, source login kini mendukung `VITE_SHOW_GOOGLE_SIGN_IN=false` untuk menyembunyikan tombol Google dan pemisah login pada environment yang belum siap. Default source tetap menampilkan tombol seperti sebelumnya; flag ini hanya mengatur tampilan dan bukan kontrol autentikasi.
+- Vercel mengonfirmasi flag tersebut disimpan sebagai konfigurasi Preview khusus branch `feature/ai-nnoe-learning-workspaces`; Production tidak dipilih atau diubah. Pengaturan baru berlaku setelah deployment berikutnya. CI/build dan verifikasi tampilan deployment baru masih harus selesai sebelum perilaku Preview diklaim teruji.
+
 ## Pemeriksaan kuota dan backup 24 Oktober 2026
 
 - Halaman GitHub Billing menunjukkan pemakaian Actions saat pemeriksaan sebesar **7 dari 2.000 menit** dan **0 dari 0,5 GB storage**; pemakaian Actions terukur $0,98 dan seluruhnya tertutup diskon included usage, sehingga billable usage saat itu $0. Ini hanya snapshot kuota periode berjalan, bukan jaminan bahwa penggunaan berikutnya akan tetap tanpa biaya.

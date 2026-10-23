@@ -7,9 +7,11 @@ import {
   supabaseConfigError,
 } from '../lib/supabase.ts';
 import { pasangTurnstile } from '../services/turnstile.js';
+import { isGoogleSignInVisible } from '../services/loginOptions.js';
 import { getState, subscribe } from '../state.js';
 
 const TURNSTILE_SITE_KEY = import.meta.env?.VITE_TURNSTILE_SITE_KEY?.trim() || '';
+const GOOGLE_SIGN_IN_VISIBLE = isGoogleSignInVisible(import.meta.env?.VITE_SHOW_GOOGLE_SIGN_IN);
 const PESAN_AUTH = {
   invalid_credentials: 'Email atau kata sandi tidak sesuai.',
   invalid_email: 'Format email tidak valid.',
@@ -125,8 +127,8 @@ export function halamanLogin(wadah) {
               <button id="btnSimpanSandi" class="btn btn-primary btn-block" type="submit">Simpan kata sandi</button>
             </form>
             ${TURNSTILE_SITE_KEY ? '<div id="loginCaptcha" class="login-captcha" aria-label="Verifikasi keamanan Cloudflare"></div>' : ''}
-            <div class="divider" role="separator"><span>atau</span></div>
-            <button id="btnGoogle" class="btn btn-outline btn-block" type="button">${IKON_GOOGLE} Masuk dengan Google</button>
+            <div class="divider" role="separator" ${GOOGLE_SIGN_IN_VISIBLE ? '' : 'hidden'}><span>atau</span></div>
+            <button id="btnGoogle" class="btn btn-outline btn-block" type="button" ${GOOGLE_SIGN_IN_VISIBLE ? '' : 'hidden'}>${IKON_GOOGLE} Masuk dengan Google</button>
             <p id="loginStatus" class="login-status" role="status" aria-live="polite" hidden></p>
             <p class="card-note"><a href="#" id="btnLupaSandi">Lupa kata sandi?</a></p>
           </section>
@@ -189,8 +191,8 @@ export function halamanLogin(wadah) {
     form.hidden = aktif;
     formBuatSandi.hidden = !aktif;
     if (loginCaptcha) loginCaptcha.hidden = aktif;
-    wadah.querySelector('.divider').hidden = aktif;
-    tombolGoogle.hidden = aktif;
+    wadah.querySelector('.divider').hidden = aktif || !GOOGLE_SIGN_IN_VISIBLE;
+    tombolGoogle.hidden = aktif || !GOOGLE_SIGN_IN_VISIBLE;
     $('#btnLupaSandi').parentElement.hidden = aktif;
     judulMasuk.textContent = aktif ? 'Buat kata sandi akun' : 'Masuk ke akun Anda';
     keteranganMasuk.textContent = aktif
@@ -383,7 +385,7 @@ export function halamanLogin(wadah) {
     }
   });
 
-  tombolGoogle.addEventListener('click', async () => {
+  if (GOOGLE_SIGN_IN_VISIBLE) tombolGoogle.addEventListener('click', async () => {
     if (!isSupabaseConfigured) {
       tampilkanError(supabaseConfigError?.message || 'Supabase belum dikonfigurasi. Hubungi administrator untuk mengatur variabel lingkungan.', email);
       return;
