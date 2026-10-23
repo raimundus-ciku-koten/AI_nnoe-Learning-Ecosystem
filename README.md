@@ -18,13 +18,16 @@ latest source commit's Preview deployment has not been confirmed.
 **Preview verification (2026-10-24):** an earlier revision of the professional
 landing page and documentation was deployed to Vercel Preview from
 `feature/ai-nnoe-learning-workspaces`; its GitHub Web CI passed and Vercel
-marked that deployment Ready. The latest source commit
-(`20d4818c`, OAuth redirect hardening) also passed GitHub Web CI, but its Vercel
-Preview deployment has not been confirmed. The previously documented Preview
-URL was opened again and rendered a login page with Google sign-in visible and
-a Cloudflare Turnstile error; its commit provenance is unknown, so this is not
-evidence of the latest source behavior. No credentials were entered and no
-authentication request was submitted. Supabase Auth, OAuth, RLS, database
+marked that deployment Ready. The latest source commit (`20d4818c`, OAuth
+redirect hardening) and the follow-up documentation commit (`5e5a6df8`) passed
+GitHub Web CI, but Vercel
+Preview deployment provenance for the latest source has not been confirmed.
+The currently shared Preview URL rendered the login page without a Google
+sign-in button; a Cloudflare cross-origin `postMessage` warning was observed.
+An older documented Preview URL still showed Google sign-in and a Turnstile
+error. Neither URL could be matched to the latest source commit, so neither is
+conclusive evidence of its deployed behavior. No credentials were entered and
+no authentication request was submitted. Supabase Auth, OAuth, RLS, database
 schema, and feature data remain unvalidated. Production remains unchanged.
 The overall release decision remains **NO-GO for public full release** until
 the backend, privacy, recovery, and feature verification gates below are closed.
