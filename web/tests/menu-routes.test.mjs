@@ -16,31 +16,31 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
           const [path, query = ''] = item.href.slice(1).split('?');
           assert.ok(cariMenu(path, query ? `?${query}` : '', role), `${item.judul} tidak terdaftar pada rute ${item.href}`);
         }
-
-        it('akun demo legacy tidak lagi mendapat menu fitur trial', () => {
-          const items = menuUntuk('demo').flatMap((group) => group.items);
-          assert.deepEqual(items.map((item) => item.href), ['#/dashboard']);
-        });
       }
-    });
-
-    describe('menu legacy untuk siswa dan orang tua', () => {
-      for (const [role, href] of [
-        ['siswa', '#/siswa/jadwal'],
-        ['ortu', '#/orang-tua/anak'],
-        ['orang_tua', '#/orang-tua/anak'],
-      ]) {
-        it(`menampilkan tautan yang sesuai untuk ${role}`, () => {
-          const items = menuUntuk(role).flatMap((group) => group.items);
-          assert.ok(items.some((item) => item.href === href));
-          assert.ok(items.every((item) => item.status === 'rute'));
-        });
-      }
-
-      it('membatasi peran yang tidak dikenal ke dashboard', () => {
-        const items = menuUntuk('role-tidak-dikenal').flatMap((group) => group.items);
-        assert.deepEqual(items.map((item) => item.href), ['#/dashboard']);
-      });
     });
   }
+
+  it('akun demo legacy tidak lagi mendapat menu fitur trial', () => {
+    const items = menuUntuk('demo').flatMap((group) => group.items);
+    assert.deepEqual(items.map((item) => item.href), ['#/dashboard']);
+  });
+
+  describe('menu legacy untuk siswa dan orang tua', () => {
+    for (const [role, href] of [
+      ['siswa', '#/siswa/jadwal'],
+      ['ortu', '#/orang-tua/anak'],
+      ['orang_tua', '#/orang-tua/anak'],
+    ]) {
+      it(`menampilkan tautan yang sesuai untuk ${role}`, () => {
+        const items = menuUntuk(role).flatMap((group) => group.items);
+        assert.ok(items.some((item) => item.href === href));
+        assert.ok(items.every((item) => item.status === 'rute'));
+      });
+    }
+
+    it('membatasi peran yang tidak dikenal ke dashboard', () => {
+      const items = menuUntuk('role-tidak-dikenal').flatMap((group) => group.items);
+      assert.deepEqual(items.map((item) => item.href), ['#/dashboard']);
+    });
+  });
 });
