@@ -70,14 +70,15 @@ produk tanpa dasar pemrosesan, pemberitahuan, dan persetujuan yang sesuai.
 - Domain kustom, email profesional, layanan AI, penyimpanan tambahan, backup,
   TURN, atau skala penggunaan dapat menimbulkan biaya. Fitur berbayar jangan
   diaktifkan tanpa persetujuan pemilik dan perkiraan biaya.
-- Tanpa nama legal, kontak resmi, ketentuan layanan, dan kebijakan privasi
-  final, materi ini adalah profil produk—bukan penawaran komersial atau
-  dokumen legal.
+- Sebelum status identitas pengelola diverifikasi dan ketentuan layanan serta
+  kebijakan privasi disahkan, materi ini adalah profil produk—bukan penawaran
+  komersial atau dokumen legal.
 
 ## Rencana bertahap
 
-1. **Fondasi:** konfirmasi nama/identitas pemilik publik, pemetaan peran,
-   kebijakan privasi, dan daftar fitur yang tersedia pada Staging.
+1. **Fondasi:** verifikasi identitas pengelola yang diberikan pemilik,
+   tetapkan dasar pemrosesan, persetujuan orang tua/wali dan retensi, petakan
+   peran, lalu validasi daftar fitur yang tersedia pada Staging.
 2. **Pilot terbatas:** uji alur terpilih menggunakan akun dan data sintetis,
    selesaikan review akses/RLS, pemulihan cadangan, serta verifikasi operasional.
 3. **Peluncuran terbatas:** aktifkan hanya fungsi yang lolos validasi,
@@ -88,6 +89,9 @@ produk tanpa dasar pemrosesan, pemberitahuan, dan persetujuan yang sesuai.
 ## Identitas publik
 
 Implementasi menggunakan merek **AI_nnoe Learning Ecosystem** dan atribusi
-inisiatif **Raimundus Ciku Koten**, sesuai metadata author repository. Atribusi
-ini adalah byline produk, bukan pernyataan badan hukum atau pengganti identitas
-legal, alamat, dan kontak resmi yang perlu dilengkapi sebelum peluncuran publik.
+inisiatif **Raimundus Ciku Koten**, sesuai metadata author repository. Pemilik
+memberikan **AI_nnoe Corp** sebagai identitas pengelola dan
+`kotenraimundus@gmail.com` sebagai kontak privasi publik. Status legal formal
+identitas tersebut belum diverifikasi secara independen. Data ini tidak
+menggantikan dasar pemrosesan, prosedur persetujuan orang tua/wali, jadwal
+retensi, atau ketentuan layanan yang perlu disetujui sebelum peluncuran publik.

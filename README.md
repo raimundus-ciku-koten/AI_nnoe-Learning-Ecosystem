@@ -896,9 +896,9 @@ defer.
 The public `#/privacy` route is a transparent interim notice, not a legally
 final policy. It calls out the current India South region, child-data
 obligations, and unverified retention behavior. Before inviting students,
-publish the controller's legal identity and privacy contact, document lawful
-basis/parent consent and data-subject request handling, and obtain local legal
-review under UU Pelindungan Data Pribadi (UU 27/2022). The requested Singapore
+verify the owner-provided controller identity and privacy contact, document
+lawful basis/parent consent and data-subject request handling, and obtain local
+legal review under UU Pelindungan Data Pribadi (UU 27/2022). The requested Singapore
 region, hosted retention jobs, an automated independent backup copy, and a
 restore test still require owner action and validation. No hosted migration or account
 configuration was changed as part of this repository work.
