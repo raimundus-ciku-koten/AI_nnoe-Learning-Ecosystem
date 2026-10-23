@@ -24,6 +24,13 @@ Mode zero-billing tetap menjadi batas operasional: jangan mengaktifkan layanan b
 - Pencarian nama persis “AI_nnoe Corp” pada portal AHU Ditjen AHU Online → Pencarian Perseroan memberikan “Pencarian Tidak Ditemukan”. Pencarian itu terbatas pada data PT yang dapat dicari AHU dan tidak membuktikan ketiadaan badan hukum dengan bentuk/yurisdiksi lain. Belum ada yurisdiksi, nomor registrasi, akta, atau sertifikat yang dapat dicocokkan; status legal identitas pengelola belum terverifikasi. Dasar pemrosesan, pembagian peran pengendali/prosesor, instruksi sekolah, dan ketentuan hukum masih memerlukan review profesional sebelum penggunaan data nyata.
 - Tidak ada OAuth credential/provider yang dibuat atau diubah, backup yang dijalankan, migrasi yang diregistrasi/diterapkan, query database yang dieksekusi, data yang dibaca/ditulis, atau promosi Production yang dilakukan. Keputusan **NO-GO untuk penggunaan data nyata/rilis penuh** tetap berlaku.
 
+## Pemeriksaan kuota dan backup 24 Oktober 2026
+
+- Halaman GitHub Billing menunjukkan pemakaian Actions saat pemeriksaan sebesar **7 dari 2.000 menit** dan **0 dari 0,5 GB storage**; pemakaian Actions terukur $0,98 dan seluruhnya tertutup diskon included usage, sehingga billable usage saat itu $0. Ini hanya snapshot kuota periode berjalan, bukan jaminan bahwa penggunaan berikutnya akan tetap tanpa biaya.
+- Pengaturan Actions repository menampilkan nama secret `SUPABASE_DB_URL` dan `BACKUP_ENCRYPTION_KEY`; nilainya tidak dibuka atau disalin. Keberadaan secret tidak membuktikan URL masih valid atau menunjuk Staging.
+- Run backup Staging terakhir yang terlihat (workflow run 6, 22 Oktober) gagal pada `pg_dump` dengan `password authentication failed` untuk role `postgres`; artifact tidak diunggah. Jangan ulangi workflow sampai URL koneksi Staging diperbarui langsung oleh pemilik di GitHub dan target tervalidasi.
+- Tidak ada konfirmasi bahwa database Staging hanya berisi data sintetis atau bahwa lingkungan restore disposable gratis sudah tersedia. Karena backup menyalin isi database ke artifact GitHub terenkripsi (retensi satu hari), workflow tidak dijalankan ulang dan tidak ada restore dilakukan. Pemakaian kuota saat ini tidak menghapus kebutuhan mengonfirmasi klasifikasi data dan tujuan pemulihan.
+
 ## Pembaruan eksekusi 23 Oktober 2026
 
 - `npm test` lulus (exit code 0); tes tambahan backup (8), economy mode (3), dan Turnstile (2) lulus. Build production, build Staging, dan build CI sesuai workflow berhasil. Pemeriksaan bundle hasil build tidak menemukan penanda fitur Midtrans, iklan, trial, atau billing yang telah dihapus. Build mengeluarkan peringatan React Router bahwa direktif `"use client"` diabaikan.
