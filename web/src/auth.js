@@ -5,6 +5,7 @@ import { simpanProfil, hapusProfil } from './ui.js';
 import { normalisasiNama } from './utils/nama.js';
 import { hapusSesiGoogleWorkspace } from './services/googleWorkspaceAuth.js';
 import { hapusIdentitasEnkripsiDriveDalamSesi } from './services/driveEncryption.js';
+import { createAuthRedirectUrl } from './services/authRedirect.js';
 
 const BATAS_LOGIN_MS = 20000;
 const BATAS_PROFIL_MS = 6000;
@@ -104,11 +105,8 @@ export async function logout() {
 }
 
 export function resetPassword(email, captchaToken) {
-  const redirectTo = new URL(window.location.pathname, window.location.origin);
-  redirectTo.searchParams.set('setup-password', '1');
-  redirectTo.hash = '/login';
   return supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: redirectTo.toString(),
+    redirectTo: createAuthRedirectUrl(window.location, { 'setup-password': '1' }),
     ...(captchaToken ? { captchaToken } : {}),
   }).then(({ error }) => {
     if (error) throw error;
@@ -125,10 +123,12 @@ export async function buatKataSandi(password) {
 }
 
 export async function masukGoogle(captchaToken) {
-  const redirectTo = `${window.location.origin}${window.location.pathname}`;
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo, ...(captchaToken ? { captchaToken } : {}) },
+    options: {
+      redirectTo: createAuthRedirectUrl(window.location),
+      ...(captchaToken ? { captchaToken } : {}),
+    },
   });
   if (error) throw error;
 }
