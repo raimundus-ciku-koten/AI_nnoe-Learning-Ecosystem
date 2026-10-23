@@ -9,7 +9,7 @@
  *
  * Emulator (tanpa kredensial):
  *   FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
- *     node scripts/set-role.mjs --proyek demo-ainnoe --email guru@contoh.id --peran guru --tenant sekolah-a
+ *     node scripts/set-role.mjs --proyek emulator-ainnoe --email guru@contoh.id --peran guru --tenant sekolah-a
  *
  * Produksi: `gcloud auth application-default login` atau set GOOGLE_APPLICATION_CREDENTIALS.
  * Pengguna tidak perlu keluar-masuk: klaimVersi berubah → sesi di browser menyegarkan token sendiri.
