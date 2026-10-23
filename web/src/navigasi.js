@@ -2,6 +2,11 @@ const tautan = (label, path, ikon, search = '') => ({ label, path, ikon, search 
 const perencanaan = (label, jenis, ikon) =>
   tautan(label, '/perencanaan', ikon, `?jenis=${jenis}`);
 
+export const PENGALIHAN_MENU = Object.freeze({
+  '/pemantauan/komunikasi': '/chat',
+  '/kolaborasi/grup-chat': '/chat/grup',
+});
+
 export function isGuardianRole(role) {
   const normalizedRole = String(role || '').trim().toLowerCase();
   return normalizedRole === 'ortu' || normalizedRole === 'orang_tua';

@@ -12,7 +12,150 @@ import {
   sesiGoogleWorkspacePerPengguna,
 } from '../services/googleWorkspaceAuth.js';
 import { identitasEnkripsiDriveDalamSesi } from '../services/driveEncryption.js';
+import { buatKerangkaCatatan } from '../services/teacherWorkspaceTemplates.js';
 import '../styles/teacher-workspace.css';
+
+export const MODUL_AKTIF_TERKAIT = Object.freeze({
+  '/pelaksanaan/realisasi': [
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+    { label: 'Presensi siswa', path: '/pelaksanaan/presensi' },
+  ],
+  '/pelaksanaan/berdiferensiasi': [
+    { label: 'Perencanaan pembelajaran', path: '/perencanaan' },
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+  ],
+  '/pelaksanaan/kelas-khusus': [
+    { label: 'Program BK & kegiatan', path: '/program-kegiatan' },
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+  ],
+  '/pelaksanaan/catatan-cepat': [
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+    { label: 'Presensi siswa', path: '/pelaksanaan/presensi' },
+  ],
+  '/asesmen/diagnostik': [
+    { label: 'Bank soal', path: '/asesmen/bank-soal' },
+    { label: 'Analisis hasil', path: '/asesmen/analisis' },
+  ],
+  '/asesmen/formatif': [
+    { label: 'Bank soal', path: '/asesmen/bank-soal' },
+    { label: 'Analisis hasil', path: '/asesmen/analisis' },
+  ],
+  '/asesmen/sumatif': [
+    { label: 'Ujian online', path: '/asesmen/ujian-online' },
+    { label: 'Laporan penilaian', path: '/laporan/penilaian' },
+  ],
+  '/asesmen/rubrik': [
+    { label: 'Bank soal', path: '/asesmen/bank-soal' },
+    { label: 'Analisis hasil', path: '/asesmen/analisis' },
+  ],
+  '/asesmen/remedial': [
+    { label: 'Analisis hasil', path: '/asesmen/analisis' },
+    { label: 'Laporan penilaian', path: '/laporan/penilaian' },
+  ],
+  '/asesmen/rapor': [
+    { label: 'Laporan penilaian', path: '/laporan/penilaian' },
+    { label: 'Analisis hasil', path: '/asesmen/analisis' },
+  ],
+  '/perangkat/modul-siswa': [
+    { label: 'Perencanaan pembelajaran', path: '/perencanaan' },
+    { label: 'Arsip perencanaan', path: '/hasil/perencanaan' },
+  ],
+  '/perangkat/cover': [
+    { label: 'Perencanaan pembelajaran', path: '/perencanaan' },
+    { label: 'Arsip perencanaan', path: '/hasil/perencanaan' },
+  ],
+  '/pemantauan/profil-siswa': [
+    { label: 'Presensi siswa', path: '/pelaksanaan/presensi' },
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+  ],
+  '/pemantauan/catatan': [
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+    { label: 'Komunikasi', path: '/chat' },
+  ],
+  '/pemantauan/karakter': [
+    { label: 'Program BK & kegiatan', path: '/program-kegiatan' },
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+  ],
+  '/pemantauan/pendampingan': [
+    { label: 'Komunikasi', path: '/chat' },
+    { label: 'Program BK & kegiatan', path: '/program-kegiatan' },
+  ],
+  '/refleksi/pembelajaran': [
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+    { label: 'Laporan harian dan bulanan', path: '/laporan/harian-bulanan' },
+  ],
+  '/refleksi/supervisi': [
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+    { label: 'Laporan harian dan bulanan', path: '/laporan/harian-bulanan' },
+  ],
+  '/refleksi/portofolio': [
+    { label: 'Arsip perencanaan', path: '/hasil/perencanaan' },
+    { label: 'Laporan harian dan bulanan', path: '/laporan/harian-bulanan' },
+  ],
+  '/refleksi/kompetensi': [
+    { label: 'Perencanaan pembelajaran', path: '/perencanaan' },
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+  ],
+  '/refleksi/perbaikan': [
+    { label: 'Perencanaan pembelajaran', path: '/perencanaan' },
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+  ],
+  '/laporan/ketercapaian': [
+    { label: 'Analisis hasil', path: '/asesmen/analisis' },
+    { label: 'Arsip perencanaan', path: '/hasil/perencanaan' },
+  ],
+  '/laporan/kinerja-guru': [
+    { label: 'Laporan harian dan bulanan', path: '/laporan/harian-bulanan' },
+    { label: 'Jurnal mengajar', path: '/pelaksanaan/jurnal' },
+  ],
+  '/laporan/ekspor-cetak': [
+    { label: 'Laporan harian dan bulanan', path: '/laporan/harian-bulanan' },
+    { label: 'Laporan penilaian', path: '/laporan/penilaian' },
+  ],
+  '/laporan/dokumen': [
+    { label: 'Arsip perencanaan', path: '/hasil/perencanaan' },
+    { label: 'Laporan harian dan bulanan', path: '/laporan/harian-bulanan' },
+  ],
+  '/laporan/riwayat-cetak': [
+    { label: 'Arsip perencanaan', path: '/hasil/perencanaan' },
+    { label: 'Laporan penilaian', path: '/laporan/penilaian' },
+  ],
+  '/kolaborasi/ruang-kerja': [
+    { label: 'Grup chat', path: '/chat/grup' },
+    { label: 'Komunikasi', path: '/chat' },
+  ],
+  '/kolaborasi/praktik-baik': [
+    { label: 'Grup chat', path: '/chat/grup' },
+    { label: 'Program BK & kegiatan', path: '/program-kegiatan' },
+  ],
+  '/kolaborasi/kepala-sekolah': [
+    { label: 'Komunikasi', path: '/chat' },
+    { label: 'Pengumuman sekolah', path: '/pengumuman/sekolah' },
+  ],
+  '/kolaborasi/guru-pengganti': [
+    { label: 'Jadwal mengajar', path: '/datadasar/jadwal' },
+    { label: 'Komunikasi', path: '/chat' },
+  ],
+  '/pengaturan/peran': [
+    { label: 'Akun & keamanan', path: '/pengaturan/akun' },
+  ],
+  '/pengaturan/preferensi': [
+    { label: 'Akun & keamanan', path: '/pengaturan/akun' },
+    { label: 'Google Workspace', path: '/pengaturan/google' },
+  ],
+  '/pengaturan/cadangan': [
+    { label: 'Google Workspace', path: '/pengaturan/google' },
+    { label: 'Akun & keamanan', path: '/pengaturan/akun' },
+  ],
+  '/pengaturan/notifikasi': [
+    { label: 'Komunikasi', path: '/chat' },
+    { label: 'Pengumuman sekolah', path: '/pengumuman/sekolah' },
+  ],
+  '/pengaturan/bantuan': [
+    { label: 'Komunikasi', path: '/chat' },
+    { label: 'Pengumuman sekolah', path: '/pengumuman/sekolah' },
+  ],
+});
 
 function tanggalHariIni() {
   const sekarang = new Date();
@@ -86,6 +229,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
   const tokenAktif = koneksi?.expiresAt > Date.now() ? koneksi.accessToken : '';
   const vaultSiap = Boolean(tokenAktif && identitasVault);
   const [catatanOwnerKey, setCatatanOwnerKey] = useState('');
+  const modulTerkait = MODUL_AKTIF_TERKAIT[item.path] || [];
 
   const muat = useCallback(async ({ berikutnya = false } = {}) => {
     const requestId = ++loadRequest.current;
@@ -177,6 +321,15 @@ export default function TeacherWorkspacePage({ grup, item }) {
 
   function ubahForm(kunci, nilai) {
     setForm((sebelumnya) => ({ ...sebelumnya, [kunci]: nilai }));
+  }
+
+  function terapkanKerangka() {
+    const template = buatKerangkaCatatan(grup.id, item.label, item.path);
+    if ((form.judul || form.isi) &&
+        !window.confirm('Kerangka akan mengganti judul dan isi formulir saat ini. Lanjutkan?')) return;
+    setForm((current) => ({ ...current, judul: template.judul, isi: template.isi }));
+    setError('');
+    setNotice('Kerangka catatan siap disunting. Catatan belum disimpan.');
   }
 
   function mulaiEdit(entry) {
@@ -286,11 +439,21 @@ export default function TeacherWorkspacePage({ grup, item }) {
         </button>
       </header>
 
+      {modulTerkait.length > 0 && (
+        <nav className="teacher-workspace-shortcuts" aria-label="Buka modul yang sudah tersedia">
+          <strong>Modul yang sudah tersedia</strong>
+          <div>
+            {modulTerkait.map((modul) => (
+              <a key={modul.path} href={`#${modul.path}`}>{modul.label}</a>
+            ))}
+          </div>
+        </nav>
+      )}
+
       <aside className="teacher-workspace-privacy" role="note">
         <Ikon nama="shield" />
         <p>
-          Isi catatan dienkripsi di browser sebelum disimpan ke Google Drive pribadi Anda.
-          Isi catatan dienkripsi sebelum disimpan ke Google Drive; Supabase tidak menerima isi catatan.
+          Isi catatan dienkripsi di browser sebelum disimpan ke Google Drive pribadi Anda; Supabase tidak menerima isi catatan.
           Catatan Firestore lama belum diimpor dan tidak akan muncul di daftar ini sampai migrasi terenkripsi selesai.
         </p>
       </aside>
@@ -311,7 +474,15 @@ export default function TeacherWorkspacePage({ grup, item }) {
               <p className="teacher-workspace-eyebrow">{editId ? 'Perbarui catatan' : 'Catatan baru'}</p>
               <h2 id="teacher-workspace-form-title">{editId ? 'Edit catatan kerja' : 'Buat catatan kerja'}</h2>
             </div>
-            <span className="teacher-workspace-status">{editId ? 'Mengedit' : 'Pribadi'}</span>
+            <div className="teacher-workspace-section-actions">
+              {!editId && (
+                <button type="button" className="teacher-workspace-secondary"
+                  onClick={terapkanKerangka} disabled={!vaultSiap || saving}>
+                  Gunakan kerangka
+                </button>
+              )}
+              <span className="teacher-workspace-status">{editId ? 'Mengedit' : 'Pribadi'}</span>
+            </div>
           </div>
 
           <form onSubmit={simpan}>

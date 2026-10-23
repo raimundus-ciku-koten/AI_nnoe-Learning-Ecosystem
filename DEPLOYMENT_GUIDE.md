@@ -4,6 +4,38 @@ Overview
 
 This document records the release state and the remaining safe rollout steps for AI_nnoe Learning Ecosystem.
 
+## Public landing page and Preview deployment (2026-10-24)
+
+- The local source now includes a public product landing page at `/`, product
+  and architecture documentation, and attribution to Raimundus Ciku Koten.
+  It preserves administrator-provisioned sign-in and does not add public
+  registration, payment, or a claim that every product module is available.
+- The implementation is local to branch
+  `feature/ai-nnoe-learning-workspaces`; the Production URL
+  `https://ainnoe-le.vercel.app/` still serves the previously deployed build.
+  Local build and targeted UI tests passed, but no deployment of this landing
+  page has been performed or verified.
+- This checkout has no Vercel CLI/project link or Vercel deployment workflow,
+  and the available Vercel browser session is not authenticated. Do not place
+  deployment tokens or Supabase keys in chat or source control. A project owner
+  must authenticate to the connected Vercel project and review the Preview
+  deployment before sharing it.
+- Use **Preview**, not Production, for initial validation. In the connected
+  Vercel project, verify the Git integration targets this repository and the
+  feature branch, the project root is `web`, install is `npm ci`, build is
+  `npm run build`, and output is `dist`. Confirm the Preview environment has
+  only the intended public Supabase URL and anon/publishable key if login is
+  being tested; never configure service-role or provider secrets as `VITE_*`.
+- Preview verification must cover the public landing page, its login and
+  privacy links, mobile layout, and expected browser errors. A successful
+  static build or rendered landing page does not verify Supabase Auth, RLS,
+  migrations, OAuth, or feature data.
+- Do not promote this build to Production as a full application release. The
+  current release decision remains **NO-GO for full release** until the
+  staging migration provenance, schema/RLS parity, backup and restore,
+  privacy/legal contact, and feature-level runtime checks described below
+  have passed and the owner approves the release.
+
 Current release status:
 - **Source cleanup on 2026-10-23:** public self-registration/trial signup, the demo-trial simulation page and demo-role application access, public package/purchase page, Midtrans checkout/webhook source and Supabase function registrations, and advertising component/`ads.txt` asset were removed from this checkout. Unknown legacy roles are denied with the general account-provisioning notice. Login, password recovery, and administrator-provisioned account flows remain. Historical migrations, existing users/data, hosted settings/secrets, Git history, and deployments were not changed. Deploy a reviewed build before assuming hosted behavior has changed; separately verify and decommission any provider-side resources with owner approval.
 - **Forward database cleanup on 2026-10-23:** `supabase/migrations/20261023000100_remove_billing_signup_demo.sql` removes the active billing/trial relations, trial profile field, demo-role allowlist entries, and entitlement-based RLS gates. It has not been executed or validated against a restored disposable Staging backup. It is destructive and must remain unapplied until migration provenance and schema parity are reconciled, backup/restore succeeds, SQL and data effects are reviewed, and Staging-only approval is recorded. It does not delete Auth identities or school tenant data.

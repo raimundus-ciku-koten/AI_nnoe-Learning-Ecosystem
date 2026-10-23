@@ -8,6 +8,7 @@ import { MaintenanceGuard, PlatformControlProvider } from './context/PlatformCon
 import { logout } from './auth.js';
 import PrivilegedMfaGate from './components/PrivilegedMfaGate.jsx';
 import { canOpenRolePath } from './services/roleAccess.js';
+import { PENGALIHAN_MENU } from './navigasi.js';
 
 // Legacy Alias Mapper[cite: 10]
 const LEGACY_ALIAS = {
@@ -121,6 +122,7 @@ const HalamanPenggunaPlatform = lazy(() => import('./pages/PlatformUsersPage.jsx
 const HalamanOperasiPlatform = lazy(() => import('./pages/PlatformOperationsPage.jsx'));
 const HalamanPenggunaSupabase = lazy(() => import('./pages/SupabasePlatformUsersPage.jsx'));
 const HalamanPrivasi = lazy(() => import('./pages/PrivacyNoticePage.jsx'));
+const HalamanPublik = lazy(() => import('./pages/PublicHomePage.jsx'));
 const AppShell = lazy(() => import('./components/AppShell.jsx'));
 
 function AccountAccessUnavailable() {
@@ -220,7 +222,9 @@ function RouteWrapper() {
         <Route path="/privacy" element={<HalamanPrivasi />} />
         <Route path="/platform/supabase-users" element={<HalamanPenggunaSupabase />} />
         <Route path="/scan/:kode" element={<HalamanScan />} />
-        <Route path="/" element={<Navigate to={user ? (passwordRecovery ? '/login' : '/dashboard') : '/login'} replace />} />
+        <Route path="/" element={user
+          ? <Navigate to={passwordRecovery ? '/login' : '/dashboard'} replace />
+          : <HalamanPublik />} />
         
         <Route path="/dashboard" element={<PrivateShell><HalamanDashboard /></PrivateShell>} />
         <Route path="/testimoni" element={<PrivateShell><HalamanTestimoni /></PrivateShell>} />
@@ -272,6 +276,13 @@ function RouteWrapper() {
         <Route path="/chat/grup" element={<PrivateShell><HalamanChat /></PrivateShell>} />
         <Route path="/chat/:chatId" element={<PrivateShell><HalamanChat /></PrivateShell>} /> {/*[cite: 9] */}
         <Route path="/asisten" element={<PrivateShell><HalamanAsisten /></PrivateShell>} />
+        {Object.entries(PENGALIHAN_MENU).map(([path, target]) => (
+          <Route
+            key={path}
+            path={path}
+            element={<PrivateShell><Navigate to={target} replace /></PrivateShell>}
+          />
+        ))}
         
         <Route path="/profil" element={<Navigate to="/pengaturan/akun" replace />} />
         <Route path="*" element={user

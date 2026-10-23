@@ -8,7 +8,27 @@ import SchoolLearningPage from './SchoolLearningPage.jsx';
 import StudentAttendancePage from './StudentAttendancePage.jsx';
 import TeacherWorkspacePage from './TeacherWorkspacePage.jsx';
 import TeacherAccountPage from './TeacherAccountPage.jsx';
+import TeacherRubricPage from './TeacherRubricPage.jsx';
 import '../styles/submenu.css';
+
+const FITUR_GURU_NONAKTIF = {
+  '/asesmen/generator-ai': {
+    status: 'Generator soal AI belum diaktifkan.',
+    penjelasan: 'Integrasi AI eksternal tidak digunakan dalam konfigurasi tanpa penagihan. Halaman ini tidak mengirim soal atau data ke penyedia AI.',
+    alternatif: [
+      { label: 'Susun soal di Bank Soal', path: '/asesmen/bank-soal' },
+      { label: 'Lihat Ujian Online', path: '/asesmen/ujian-online' },
+    ],
+  },
+  '/asesmen/penilaian-otomatis': {
+    status: 'Penilaian otomatis belum tersedia sebagai alur resmi.',
+    penjelasan: 'Jangan gunakan halaman catatan sebagai nilai resmi. Ketersediaan penilaian bergantung pada konfigurasi ujian dan data sekolah.',
+    alternatif: [
+      { label: 'Lihat Ujian Online', path: '/asesmen/ujian-online' },
+      { label: 'Buka Laporan Penilaian', path: '/laporan/penilaian' },
+    ],
+  },
+};
 
 const ALUR = {
   'admin-dashboard': {
@@ -159,7 +179,7 @@ const ALUR = {
 
 export default function SubMenuPage() {
   const { pathname, search } = useLocation();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const menu = cariMenu(pathname, search, role);
 
   if (!menu) {
@@ -190,6 +210,35 @@ export default function SubMenuPage() {
     return <ParentPortalPage />;
   }
   if (isTeacherRole(role) && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
+  if (isTeacherRole(role) && item.path === '/asesmen/rubrik') {
+    return <TeacherRubricPage key={user?.uid || 'teacher'} />;
+  }
+  const fiturGuruNonaktif = isTeacherRole(role) ? FITUR_GURU_NONAKTIF[item.path] : null;
+  if (fiturGuruNonaktif) {
+    return (
+      <main className="ale-submenu-page">
+        <header className="ale-submenu-hero">
+          <div className="ale-submenu-hero-copy">
+            <p className="ale-submenu-kicker"><Ikon nama={grup.ikon} />{grup.label}</p>
+            <h2>{item.label}</h2>
+            <p>{fiturGuruNonaktif.status}</p>
+          </div>
+          <span className="ale-submenu-state is-unavailable"><span aria-hidden="true" />Belum aktif</span>
+        </header>
+        <section className="ale-kartu ale-submenu-unavailable" role="status">
+          <h3>Status dan alternatif</h3>
+          <p>{fiturGuruNonaktif.penjelasan}</p>
+          <nav aria-label="Modul asesmen yang tersedia">
+            {fiturGuruNonaktif.alternatif.map((alternatif) => (
+              <a key={alternatif.path} href={`#${alternatif.path}`}>
+                {alternatif.label}
+              </a>
+            ))}
+          </nav>
+        </section>
+      </main>
+    );
+  }
   if (isTeacherRole(role)) return <TeacherWorkspacePage grup={grup} item={item} />;
 
   const alur = ALUR[grup.id] || {

@@ -3,6 +3,16 @@
 Monorepo for the AI_nnoe Learning Ecosystem web application and its backend
 services.
 
+[Product brief](./docs/PRODUCT_BRIEF.md) ·
+[Architecture and cost strategy](./docs/ARCHITECTURE.md) ·
+[Deployment and release guide](./DEPLOYMENT_GUIDE.md) ·
+[Release readiness](./RELEASE_READINESS.md)
+
+The public landing page and product documentation identify AI_nnoe Learning
+Ecosystem as an initiative by Raimundus Ciku Koten, based on the repository
+author metadata. This attribution is not a legal-entity declaration. The
+landing-page changes currently in the local worktree are not deployed.
+
 ## Release readiness snapshot (2026-10-23)
 
 **Source-level decommissioning:** Public self-registration/trial signup,

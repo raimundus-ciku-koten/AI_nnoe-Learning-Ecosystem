@@ -35,6 +35,8 @@ vi.mock('../services/platformAdminApi.js', () => ({
 }));
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }));
 import SubMenuPage from './SubMenuPage.jsx';
+import TeacherRubricPage from './TeacherRubricPage.jsx';
+import { MODUL_AKTIF_TERKAIT } from './TeacherWorkspacePage.jsx';
 import PlatformTenantsPage from './PlatformTenantsPage.jsx';
 import PlatformUsersPage from './PlatformUsersPage.jsx';
 import PlatformOperationsPage, { aktivitasAudit, rincianAudit } from './PlatformOperationsPage.jsx';
@@ -109,9 +111,60 @@ describe('submenu platform superadmin', () => {
         const html = renderSubmenu(path);
         expect(html, path).toContain(`<h1>${item.label.replaceAll('&', '&amp;')}</h1>`);
         expect(html, path).toContain('Buat catatan kerja');
+        expect(html, path).toContain('Gunakan kerangka');
         expect(html, path).toContain('Hindari memasukkan nama');
         expect(html, path).not.toContain('Halaman informasi');
       }
+    });
+
+    it('menghubungkan ruang kerja guru ke modul aktif yang dapat diakses peran guru', () => {
+      const teacherItems = GRUP_MENU.flatMap((group) => group.item);
+
+      for (const [source, modules] of Object.entries(MODUL_AKTIF_TERKAIT)) {
+        expect(teacherItems.some((item) => item.path === source), source).toBe(true);
+        for (const module of modules) {
+          expect(
+            teacherItems.some((item) => item.path === module.path),
+            `${source} -> ${module.path}`,
+          ).toBe(true);
+        }
+      }
+
+      const html = renderSubmenu('/asesmen/remedial');
+      expect(html).toContain('Modul yang sudah tersedia');
+      expect(html).toContain('href="#/asesmen/analisis"');
+      expect(html).toContain('href="#/laporan/penilaian"');
+    });
+
+    it('menandai fitur AI/nonaktif dengan jelas tanpa membuka workspace catatan', () => {
+      const generator = renderSubmenu('/asesmen/generator-ai');
+      expect(generator).toContain('Generator soal AI belum diaktifkan.');
+      expect(generator).toContain('tidak mengirim soal atau data ke penyedia AI');
+      expect(generator).toContain('href="#/asesmen/bank-soal"');
+      expect(generator).not.toContain('Buat catatan kerja');
+
+      const grading = renderSubmenu('/asesmen/penilaian-otomatis');
+      expect(grading).toContain('Penilaian otomatis belum tersedia sebagai alur resmi.');
+      expect(grading).toContain('Jangan gunakan halaman catatan sebagai nilai resmi.');
+      expect(grading).toContain('href="#/asesmen/ujian-online"');
+      expect(grading).toContain('href="#/laporan/penilaian"');
+      expect(grading).not.toContain('Buat catatan kerja');
+    });
+
+    it('menyediakan pembuat rubrik manual tanpa layanan eksternal', () => {
+      const html = renderToStaticMarkup(React.createElement(TeacherRubricPage));
+      expect(html).toContain('Pembuat Rubrik Penilaian');
+      expect(html).toContain('Tidak ada data yang dikirim ke layanan AI.');
+      expect(html).toContain('Draf disimpan hanya pada browser dan perangkat ini');
+      expect(html).toContain('Sangat baik');
+      expect(html).toContain('Perlu bimbingan');
+      expect(html).toContain('Pratinjau skor rubrik');
+      expect(html).toContain('tidak disimpan atau dikaitkan dengan identitas siswa');
+      expect(html).toContain('Ekspor pratinjau skor anonim');
+      expect(html).toContain('tanpa kolom nama atau identitas siswa');
+      expect(html).toContain('Impor JSON');
+      expect(html).toContain('Cadangan JSON');
+      expect(html).toContain('Ekspor CSV');
     });
 
     it('menyediakan ruang kerja guru untuk seluruh peran spesialisasi guru', () => {

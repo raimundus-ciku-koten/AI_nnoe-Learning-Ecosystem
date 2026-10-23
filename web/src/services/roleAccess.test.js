@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { menuUntuk } from '../menu.js';
+import { PENGALIHAN_MENU } from '../navigasi.js';
 import { canOpenRolePath } from './roleAccess.js';
 
 test('Kepala Sekolah dan Wali Kelas hanya dapat membuka dashboard sampai ada izin terukur', () => {
@@ -40,6 +41,16 @@ test('rute lintas peran yang tidak tercantum pada menu ditolak', () => {
   assert.equal(canOpenRolePath('admin_sekolah', '/platform/keamanan/audit'), false);
   assert.equal(canOpenRolePath('superadmin', '/siswa/nilai'), false);
   assert.equal(canOpenRolePath('operator', '/trial'), false);
+});
+
+test('submenu komunikasi guru membuka modul chat yang sudah tersedia', () => {
+  const teacherItems = menuUntuk('guru').flatMap((group) => group.items);
+
+  for (const [source, target] of Object.entries(PENGALIHAN_MENU)) {
+    assert.ok(teacherItems.some((item) => item.href === `#${source}`), `${source} ada di menu guru`);
+    assert.equal(canOpenRolePath('guru', source), true, `${source} dapat dibuka guru`);
+    assert.equal(canOpenRolePath('guru', target), true, `${target} dapat dibuka guru`);
+  }
 });
 
 test('role yang tidak disediakan aplikasi tidak dapat membuka rute', () => {
