@@ -26,11 +26,13 @@ through Vercel SSO and blocked by CORS. A later accessible Preview alias,
 also rendered without Google sign-in or public signup but reported Turnstile
 error `300030`; the dashboard did not establish which commit that alias uses.
 The latest documentation commit passed GitHub CI, but its matching Vercel
-deployment has not been confirmed. Source commit `a382bac0` preserves
-Turnstile error codes and displays them if login is attempted; no login form
-was submitted. No credentials were entered and no authentication request was
-sent. Supabase Auth, OAuth, RLS, database schema, and feature data remain
-unvalidated. Production remains unchanged.
+deployment has not been confirmed. The source now maps captured Turnstile
+setup and challenge errors to actionable login messages; unit tests cover the
+error-code display and safe Auth fallbacks. No login form was submitted in the
+browser, so runtime CAPTCHA behavior remains unverified. No credentials were
+entered and no authentication request was sent. Supabase Auth, OAuth, RLS,
+database schema, and feature data remain unvalidated. Production remains
+unchanged.
 The overall release decision remains **NO-GO for public full release** until
 the backend, privacy, recovery, and feature verification gates below are closed.
 

@@ -7,35 +7,12 @@ import {
   supabaseConfigError,
 } from '../lib/supabase.ts';
 import { pasangTurnstile } from '../services/turnstile.js';
+import { buatErrorCaptcha, pesanLogin } from '../services/loginError.js';
 import { isGoogleSignInVisible } from '../services/loginOptions.js';
 import { getState, subscribe } from '../state.js';
 
 const TURNSTILE_SITE_KEY = import.meta.env?.VITE_TURNSTILE_SITE_KEY?.trim() || '';
 const GOOGLE_SIGN_IN_VISIBLE = isGoogleSignInVisible(import.meta.env?.VITE_SHOW_GOOGLE_SIGN_IN);
-const PESAN_AUTH = {
-  invalid_credentials: 'Email atau kata sandi tidak sesuai.',
-  invalid_email: 'Format email tidak valid.',
-  invalid_captcha: 'Verifikasi keamanan tidak valid. Selesaikan kembali pemeriksaan Cloudflare.',
-  captcha_failed: 'Verifikasi keamanan gagal. Selesaikan kembali pemeriksaan Cloudflare.',
-  email_not_confirmed: 'Email belum dikonfirmasi. Periksa kotak masuk Anda.',
-  user_banned: 'Akun ini dinonaktifkan. Hubungi admin sekolah.',
-  over_request_rate_limit: 'Terlalu banyak percobaan. Tunggu beberapa saat.',
-  over_email_send_rate_limit: 'Batas pengiriman email tercapai. Tunggu sebelum mencoba lagi.',
-  otp_expired: 'Tautan masuk kedaluwarsa. Minta tautan baru.',
-  'auth/workspace-account-not-provisioned': 'Akun Google belum terdaftar aktif. Hubungi administrator sekolah.',
-  '42501': 'Izin akses profil Supabase ditolak. Periksa status akun dan peran Anda.',
-  'PGRST116': 'Profil akun tidak ditemukan. Hubungi administrator sekolah.',
-};
-
-function pesanLogin(error, google = false) {
-  const code = error?.code;
-  const message = PESAN_AUTH[code]
-    || (google
-      ? 'Login Google gagal. Pastikan provider Google dan URL pengalihan telah dikonfigurasi di Supabase Auth.'
-      : 'Tidak dapat masuk saat ini. Silakan coba lagi.');
-  const diagnostic = code ? ` (kode: ${code})` : '';
-  return `${message}${diagnostic}`;
-}
 
 const IKON_CEK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>';
 const IKON_GOOGLE = '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.616z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>';
@@ -240,15 +217,17 @@ export function halamanLogin(wadah) {
     : Promise.resolve();
   const ambilCaptchaToken = async () => {
     await captchaReady;
-    if (captchaSetupError) throw captchaSetupError;
+    if (captchaSetupError) {
+      throw buatErrorCaptcha(captchaSetupError.message || 'Cloudflare Turnstile tidak dapat disiapkan.');
+    }
     if (!TURNSTILE_SITE_KEY) return undefined;
     const token = captchaWidget?.token();
     if (!token) {
       const errorCode = captchaWidget?.error();
       if (errorCode) {
-        throw new Error(`Verifikasi Cloudflare gagal (kode ${errorCode}). Hubungi administrator situs.`);
+        throw buatErrorCaptcha(`Verifikasi Cloudflare gagal (kode ${errorCode}). Hubungi administrator situs.`);
       }
-      throw new Error('Selesaikan verifikasi Cloudflare sebelum melanjutkan.');
+      throw buatErrorCaptcha('Selesaikan verifikasi Cloudflare sebelum melanjutkan.');
     }
     return token;
   };
@@ -314,7 +293,7 @@ export function halamanLogin(wadah) {
       toast(`Tautan reset kata sandi dikirim ke ${alamat}.`, 'success', 8000);
       captchaWidget?.reset();
     } catch (err) {
-      tampilkanError(err?.message || PESAN_AUTH[err?.code] || 'Tidak dapat mengirim email reset. Coba lagi nanti.');
+      tampilkanError(err?.message || 'Tidak dapat mengirim email reset. Coba lagi nanti.');
       captchaWidget?.reset();
     }
   });
