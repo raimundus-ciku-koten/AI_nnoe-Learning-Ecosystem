@@ -11,20 +11,26 @@ services.
 The public landing page and product documentation identify AI_nnoe Learning
 Ecosystem as an initiative by Raimundus Ciku Koten, based on the repository
 author metadata. This attribution is not a legal-entity declaration. The
-verified Preview deployment is protected by Vercel authentication. A newer
-source follow-up has passed CI and Vercel has deployed it to Preview.
+verified Preview deployment is protected by Vercel authentication. The latest
+documentation commit has passed CI, but its matching Vercel deployment has not
+been confirmed.
 
 **Preview verification (2026-10-24):** Vercel lists source commit `a382bac0`
 and documentation commit `d6f9f4a5` as Ready on
 `feature/ai-nnoe-learning-workspaces`. The
-[Preview login](https://ainnoe-d5ikn7ny3-kotenraimundusc-4094.vercel.app/#/login)
+[confirmed Preview login](https://ainnoe-d5ikn7ny3-kotenraimundusc-4094.vercel.app/#/login)
 rendered without Google sign-in or public signup. The browser reported
 Cloudflare Turnstile error `110200`, and the manifest request was redirected
-through Vercel SSO and blocked by CORS. Source commit `a382bac0` now preserves
-Turnstile error codes and displays them if login is attempted; that interaction
-was not submitted during this smoke test. No credentials were entered and no
-authentication request was sent. Supabase Auth, OAuth, RLS, database schema,
-and feature data remain unvalidated. Production remains unchanged.
+through Vercel SSO and blocked by CORS. A later accessible Preview alias,
+[login page](https://ainnoe-hrfzgzl9w-kotenraimundusc-4094.vercel.app/#/login),
+also rendered without Google sign-in or public signup but reported Turnstile
+error `300030`; the dashboard did not establish which commit that alias uses.
+The latest documentation commit passed GitHub CI, but its matching Vercel
+deployment has not been confirmed. Source commit `a382bac0` preserves
+Turnstile error codes and displays them if login is attempted; no login form
+was submitted. No credentials were entered and no authentication request was
+sent. Supabase Auth, OAuth, RLS, database schema, and feature data remain
+unvalidated. Production remains unchanged.
 The overall release decision remains **NO-GO for public full release** until
 the backend, privacy, recovery, and feature verification gates below are closed.
 
