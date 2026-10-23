@@ -1,0 +1,69 @@
+# Laporan Kesiapan Rilis
+
+**Tanggal pemeriksaan:** 23 Oktober 2026
+**Keputusan:** **NO-GO untuk rilis publik penuh.** Pertahankan aplikasi pada cakupan login-only sampai semua gate P0 di bawah ditutup.
+
+**Perubahan source 23 Oktober:** sesuai permintaan pemilik, public signup/trial signup, halaman simulasi demo-trial dan akses aplikasi role `demo`, UI purchase/paket publik, implementasi Midtrans, registrasi Edge Function pembayaran, komponen iklan, dan aset `ads.txt` telah dihapus dari checkout. Sesi legacy role `demo` diblokir dengan pemberitahuan penghentian dan opsi logout. Admin account provisioning dan login tetap ada. Penghapusan ini tidak mengubah migrations historis, akun/data hosted, secrets/provider settings, deployment, atau Git history.
+
+## Ringkasan eksekutif
+
+Validasi kode lokal berhasil. Snapshot Supabase Staging yang terakhir menunjukkan switch “Allow new users to sign up” tidak tercentang dan tombol “Save changes” nonaktif; signup Staging tampak nonaktif saat snapshot itu diambil, tetapi persistensi belum dapat dikonfirmasi. Saat dibuka melalui sesi browser terintegrasi VS Code, Supabase menyatakan sesi kedaluwarsa dan meminta login ulang. Signup Production belum diperiksa. Provider Google Staging nonaktif dan permintaan otorisasi menghasilkan HTTP 400 `provider is not enabled`. File `ads.txt` masih tersaji dari Production. GitHub Actions dapat dibaca melalui browser terintegrasi, tetapi run terbaru yang terlihat adalah Web CI pada 18–19 Oktober 2026 di branch `feature/demo-trial`, bukan kandidat cleanup. Vercel dashboard menampilkan halaman login. Setelah pengguna menyatakan login selesai, pemeriksaan ulang pada tab yang sama masih menampilkan sesi Supabase kedaluwarsa dan halaman login Vercel; autentikasi belum terkonfirmasi pada sesi browser yang dikendalikan. Tidak ada pengaturan hosted, provider, kredensial, deployment, signup, atau transaksi yang diubah/dilakukan.
+
+Mode zero-billing tetap menjadi batas operasional: jangan mengaktifkan layanan berbayar atau memicu workflow backup sebelum pemilik memeriksa kuota, tagihan, dan persyaratan akun. Tidak ada jaminan bahwa free tier akan selalu bebas biaya atau mencukupi.
+
+## Hasil pemeriksaan dan gate
+
+| Gate | Status | Bukti / kondisi | Syarat untuk menutup gate |
+|---|---|---|---|
+| OAuth Google Staging | **BLOCKED — P0** | Permintaan otorisasi Staging menghasilkan HTTP 400: `provider is not enabled`. Panduan deployment mencatat provider Supabase Staging nonaktif dan client OAuth terdampak harus dianggap kompromi. | Administrator Google Cloud mencabut/menghapus client terdampak, membuat client Staging baru, lalu mengonfigurasi ID dan secret langsung di Supabase Staging. Uji redirect dan sign-in berhasil. Jangan mengubah client Production. |
+| Provenance dan kesesuaian skema | **BLOCKED — P0** | Inventaris metadata bertanggal 21 Oktober mencatat 8 tabel publik; 2 dari 36 relasi aplikasi yang diaudit tersedia, 34 belum ada, dan `supabase_migrations.schema_migrations` tidak ditemukan. Tabel permintaan sekolah yang lama memiliki kontrak berbeda dari aplikasi. | Rekonsiliasi setiap migrasi dan relasi dengan skema hosted; pertahankan tabel/RPC legacy; dokumentasikan baseline dan hasil audit baru sebelum perubahan. |
+| Backup dan pemulihan | **BLOCKED — P0** | Tes enkripsi lokal lulus, tetapi tidak membuktikan backup hosted maupun restore. Panduan deployment mencatat eksekusi backup terdahulu gagal karena kredensial database ditolak. | Pemilik memeriksa kuota/biaya Actions, memperbarui secret langsung di GitHub bila perlu, membuat backup Staging terenkripsi, lalu memulihkan dan memverifikasinya pada PostgreSQL disposable. Jangan mengirim secret melalui chat. |
+| Migrasi Staging | **BLOCKED — P0** | Tidak ada migrasi hosted yang dijalankan; gate backup/restore dan provenance belum terpenuhi. | Setelah dua gate di atas selesai, tinjau SQL dan dampaknya, dapatkan persetujuan pemilik, terapkan ke Staging saja, lalu audit ulang skema dan uji regresi. |
+| RLS, tenant, role, MFA/AAL2 | **BELUM DIVERIFIKASI DI HOSTED — P0** | Tes lokal memvalidasi sebagian logika role, MFA, dan migration policy. Tes lokal tidak membuktikan policy aktif pada database Staging. | Uji dengan akun uji per role dan tenant: akses lintas-tenant ditolak, akses role sesuai kebijakan, AAL2 wajib untuk akses istimewa, dan audit tidak membocorkan data. |
+| Signup dan demo trial | **SOURCE REMOVED; HOSTED STATE UNVERIFIED** | Source/config lokal menonaktifkan pendaftaran publik; signup publik/trial, halaman simulasi demo-trial, route/menu aktif, dan akses aplikasi role `demo` dihapus. Snapshot dashboard Staging terbaru menunjukkan signup toggle off dan “Save changes” nonaktif, tetapi persistensi setelah reload dan status Production belum diperiksa. Migrasi historis dan data hosted tetap dipertahankan. | Muat ulang Auth settings Staging dan Production, pastikan “Allow new users to sign up” mati pada keduanya. Pastikan deployment kandidat menolak akses role legacy `demo`; jangan menghapus data hosted atau menjalankan migrasi historis tanpa rencana dan persetujuan terpisah. Verifikasi login dan provisioning admin tetap tersedia. |
+| CAPTCHA, privasi/legal | **PARTIAL / ENVIRONMENT-DEPENDENT** | Login masih dapat memakai Turnstile jika dikonfigurasi; penghapusan signup tidak mengubah CAPTCHA/Auth settings. Proses privasi/legal tetap relevan untuk data akun yang sudah ada. | Uji CAPTCHA pada login/password recovery bila diaktifkan; lengkapi pengelolaan privasi dan penghapusan data untuk pengguna yang ada. |
+| CI, tes, dan build lokal | **PASS LOKAL; CANDIDATE CI NOT RUN** | `npm test`: 539 lulus, 0 gagal. Build Production dan Staging lulus berurutan setelah penghapusan demo-trial. Browser GitHub Actions menampilkan run terbaru Web CI 18 Oktober 2026 pada `feature/demo-trial`, bukan kandidat cleanup. Kandidat belum dipush sehingga CI hosted belum berjalan. | Jalankan CI pada commit kandidat yang berisi cleanup dan arsipkan hasil job sukses. Ini bukan bukti acceptance test hosted. |
+| Android/PWA dan aksesibilitas | **PARTIAL — belum release-verified** | Proyek Android dan workflow Android CI ada. Tidak ada hasil uji perangkat nyata, uji signed release key, atau audit aksesibilitas lintas halaman dalam pemeriksaan ini. | Jalankan Android CI pada kandidat rilis; uji TWA di perangkat Android representatif, login/redirect, tautan eksternal, jaringan buruk, ukuran layar, dan alur pemulihan. Lakukan keyboard, screen reader, zoom/reflow, dan contrast review. |
+| Smoke test deployment dan promosi | **BLOCKED — P0** | Tidak ada deployment/promosi yang dilakukan. Smoke test hosted lengkap belum berhasil; alur Google Staging saat ini gagal. | Gunakan Preview yang dilindungi SSO atau akses uji yang disetujui; jalankan smoke test autentikasi dan fitur yang telah dimigrasikan. Promosi memerlukan persetujuan eksplisit dan rencana rollback teruji. |
+| Midtrans dan iklan | **SOURCE REMOVED; HOSTED DECOMMISSION INCOMPLETE** | Source/config Midtrans, UI, komponen iklan, dan `ads.txt` sudah tidak ada di checkout. Namun, `https://ainnoe-le.vercel.app/ads.txt` masih menyajikan record AdSense `google.com, pub-4633857238549209, DIRECT, f08c47fec0942fa0`. Status Edge Function dan provider Midtrans belum diverifikasi ulang pada dashboard hosted sesi ini. | Hapus ads.txt dari deployment aktif melalui build yang ditinjau, lalu pastikan URL mengembalikan 404/410 dan tidak ada referensi iklan pada halaman/asset yang ter-deploy. Verifikasi Edge Function Midtrans tidak ter-deploy dan nonaktifkan/revoke integrasi provider hanya setelah memastikan cakupan/resource yang tepat. |
+
+## Validasi yang dijalankan
+
+Semua perintah berikut dijalankan dari checkout lokal pada 23 Oktober 2026:
+
+- `npm test` — **539 lulus, 0 gagal**.
+- `npm run build` — berhasil setelah penghapusan demo-trial.
+- `npm --prefix web run build:staging` — berhasil setelah build Production selesai.
+- `npm --prefix web run test:backup` — **8 lulus**.
+- `npm --prefix web run test:economy` — **3 lulus**.
+- `npm --prefix web run test:security` — **2 lulus**.
+- `git diff --check` — berhasil.
+
+Build mengeluarkan peringatan bundler bahwa direktif `"use client"` pada dependensi React Router diabaikan. Peringatan tidak menghentikan build, tetapi perlu ditinjau saat pembaruan dependensi berikutnya.
+
+## Rencana eksekusi aman
+
+### A. Tindakan administrator/pemilik
+
+1. Jika Google sign-in Staging tetap diperlukan, cabut client OAuth Staging yang terdampak dan siapkan client baru khusus Staging. Jangan memakai ulang client atau secret terdampak.
+2. Simpan client baru langsung di pengaturan Supabase Staging dengan callback yang tepat; jangan mengirim secret lewat chat atau memasukkannya ke frontend.
+3. Aktifkan Google provider Staging hanya setelah credential pengganti siap, lalu uji sign-in dan redirect dengan akun uji yang disetujui. Jika belum siap, biarkan provider nonaktif.
+4. Verifikasi kuota dan kemungkinan biaya GitHub Actions sebelum menjalankan workflow backup manual. Pastikan secret database hanya menunjuk Staging.
+5. Buat backup terenkripsi, unduh sesuai masa retensi, pulihkan ke database disposable, dan catat hasil verifikasi. Jangan menguji restore pada Production.
+
+### B. Tindakan engineering setelah A
+
+1. Audit baseline migrasi dan skema Staging tanpa menyalin data Production. Cocokkan tabel, fungsi, trigger, policy, dan RPC dengan kontrak aplikasi.
+2. Siapkan rencana migrasi per versi berikut dampak, validasi, dan rollback. Tidak boleh ada perubahan hosted tanpa persetujuan pemilik.
+3. Terapkan migrasi yang disetujui ke Staging setelah backup/restore terverifikasi. Jalankan ulang audit skema serta tes integrasi RLS, tenant, role, MFA/AAL2, Auth redirect, dan fitur yang berubah.
+4. Matikan signup publik di project Supabase Staging dan Production; verifikasi login/password recovery dan provisioning admin tetap utuh. Source cleanup sendiri belum mengubah hosted state.
+5. Hapus ads.txt dari deployment Production dan verifikasi URL, halaman, serta asset build. Pastikan fungsi Midtrans tidak ter-deploy dan lakukan dekomisioning provider yang sesuai tanpa memengaruhi data/akun.
+6. Perubahan Production/deployment perlu persetujuan eksplisit, rencana rollback, dan akses dashboard interaktif. OAuth Google untuk sign-in tetap terpisah dari signup; jangan aktifkan provider Staging dengan credential terdampak.
+7. Jalankan CI pada commit kandidat, acceptance test browser, accessibility review, dan uji perangkat Android. Catat commit, hasil tes, lingkungan, serta bukti tanpa rahasia atau data pribadi.
+8. Lakukan smoke test Preview yang telah diotorisasi. Promosikan hanya setelah persetujuan eksplisit, verifikasi konfigurasi Production, dan rollback plan tersedia.
+
+## Batas pemeriksaan ini
+
+Pemeriksaan ini tidak menggunakan atau mengubah secret, tidak menjalankan query tulis, tidak menjalankan workflow backup, tidak mengubah Supabase/Google Cloud/Vercel, dan tidak melakukan deployment. Browser terintegrasi VS Code dapat membaca halaman GitHub Actions tetapi hanya memperlihatkan run historis. Pada pemeriksaan ulang pasca-login, tab Supabase masih meminta login ulang/MFA dan Vercel masih pada halaman login; status autentikasi belum tercermin pada sesi yang dikendalikan. Pemilik perlu login pada tab browser terintegrasi yang sama dan memastikan dashboard tujuan terbuka; jangan mengirim password atau MFA ke chat. Worktree masih memiliki perubahan lokal dan perubahan tak terkait yang belum di-commit; jangan deploy sebelum review terisolasi pada kandidat bersih. Data hosted yang dirangkum dari audit schema dan backup mengacu pada catatan terdokumentasi dalam [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md), bukan inventaris database baru. Hasil build dan tes hanya berlaku untuk checkout lokal saat pemeriksaan; hasil itu tidak membuktikan kesiapan Production.
+
+**Keputusan akhir:** pertahankan login-only release. Jangan promosi ke rilis umum atau jalankan hosted migration sebelum gate P0 lain ditutup. Jangan aktifkan kembali signup, Midtrans, atau iklan. Deployment source cleanup dan dekomisioning provider hosted belum dilakukan.

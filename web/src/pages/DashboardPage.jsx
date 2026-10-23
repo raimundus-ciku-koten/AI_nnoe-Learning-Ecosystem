@@ -39,7 +39,7 @@ function Aksi({ href, warna, ikon, judul, ket, luar }) {
 }
 
 export default function DashboardPage() {
-  const { user, profile, role, isDemo } = useAuth();
+  const { user, profile, role } = useAuth();
   const sekarang = useMemo(() => new Date(), []);
   const namaDepan = (user?.displayName || 'Pengguna').split(' ')[0];
 
@@ -62,8 +62,7 @@ export default function DashboardPage() {
 
       <section className="ale-stat-grid" aria-label="Ringkasan akun" style={{ marginBottom: '1.25rem' }}>
         <Statistik warna="sky" ikon="user" label="Peran"
-                   nilai={LABEL_PERAN[role] || role || '—'}
-                   ket={isDemo ? 'Mode demonstrasi' : undefined} />
+                   nilai={LABEL_PERAN[role] || role || '—'} />
         <Statistik warna="grape" ikon="school" label="Sekolah"
                    nilai={profile?.sekolah || 'Belum diisi'}
                    ket={profile?.sekolah ? undefined : 'Dilengkapi oleh administrator'} />

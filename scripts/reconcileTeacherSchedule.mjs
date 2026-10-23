@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { bersihBawaan, normalisasiEntri } from '../web/src/pages/dataDasar/jadwalUtil.js';
 
 const UUID_NAMESPACE = '20c95208-3dd1-5339-a6af-684be3116e31';
-const OWNER_ROLES = ['admin_sekolah', 'operator', 'guru', 'demo'];
+const OWNER_ROLES = ['admin_sekolah', 'operator', 'guru'];
 
 const isUuid = value =>
   typeof value === 'string' &&

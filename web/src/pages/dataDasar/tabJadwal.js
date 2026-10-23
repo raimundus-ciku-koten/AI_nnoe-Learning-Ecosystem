@@ -43,7 +43,7 @@ export async function tabJadwal(el, ctx) {
     return;
   }
 
-  if (!ctx.tenantId || !['admin_sekolah', 'operator', 'guru', 'demo'].includes(ctx.role)) {
+  if (!ctx.tenantId || !['admin_sekolah', 'operator', 'guru'].includes(ctx.role)) {
     tampilkanGalatMuat(el, 'Jadwal hanya tersedia bagi anggota sekolah yang terhubung ke tenant.', null);
     return;
   }

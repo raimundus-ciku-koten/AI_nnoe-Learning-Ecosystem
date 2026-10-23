@@ -12,10 +12,9 @@ const LABEL_PERAN = {
   siswa: 'Siswa',
   ortu: 'Orang tua',
   orang_tua: 'Orang tua',
-  demo: 'Akun demo',
 };
 const KATEGORI = {
-  guru: { judul: 'Guru', roles: ['guru', 'operator', 'demo'] },
+  guru: { judul: 'Guru', roles: ['guru', 'operator'] },
   siswa: { judul: 'Siswa', roles: ['siswa'] },
   'orang-tua': { judul: 'Orang tua', roles: ['ortu', 'orang_tua'] },
   admin: { judul: 'Admin sekolah', roles: ['admin_sekolah'] },

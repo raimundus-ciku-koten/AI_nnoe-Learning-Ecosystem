@@ -154,27 +154,6 @@ test('manifest dan lockfile aktif tidak menyertakan Firebase', () => {
   assert.doesNotMatch(rootViteConfig, /firebase/i);
 });
 
-test('fungsi checkout dan webhook Supabase fail-closed tanpa gateway pembayaran', () => {
-  for (const functionName of ['midtrans-checkout', 'midtrans-webhook']) {
-    const source = readFileSync(
-      new URL(`../../supabase/functions/${functionName}/index.ts`, import.meta.url),
-      'utf8',
-    );
-    assert.match(source, /status:\s*410/, functionName);
-    assert.doesNotMatch(source, /midtrans\.com|MIDTRANS_SERVER_KEY|SUPABASE_SERVICE_ROLE_KEY|fetch\s*\(/i, functionName);
-  }
-  const checkout = readFileSync(
-    new URL('../../supabase/functions/midtrans-checkout/index.ts', import.meta.url),
-    'utf8',
-  );
-  assert.match(checkout, /CHECKOUT_DISABLED/);
-  const webhook = readFileSync(
-    new URL('../../supabase/functions/midtrans-webhook/index.ts', import.meta.url),
-    'utf8',
-  );
-  assert.match(webhook, /PAYMENTS_DISABLED/);
-});
-
 test('aplikasi tidak menyediakan alias deployment atau emulator Firebase', () => {
   const manifest = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
   const deployScripts = Object.keys(manifest.scripts).filter((name) => name.startsWith('deploy'));

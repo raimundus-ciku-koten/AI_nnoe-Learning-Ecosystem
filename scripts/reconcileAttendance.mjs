@@ -15,7 +15,7 @@ const ATTENDANCE_FIELDS = [
   'kelas',
   'waktu',
 ];
-const OWNER_ROLES = ['admin_sekolah', 'operator', 'guru', 'demo'];
+const OWNER_ROLES = ['admin_sekolah', 'operator', 'guru'];
 
 const isUuid = value =>
   typeof value === 'string' &&

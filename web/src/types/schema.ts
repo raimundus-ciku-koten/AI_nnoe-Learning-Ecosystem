@@ -14,8 +14,7 @@ export type UserRole =
   | 'guru_ekstrakurikuler'
   | 'siswa'
   | 'ortu'
-  | 'orang_tua'
-  | 'demo';
+  | 'orang_tua';
 
 export interface UserDoc {
   uid: string;

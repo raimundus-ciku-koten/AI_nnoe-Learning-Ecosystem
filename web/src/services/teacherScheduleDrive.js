@@ -6,7 +6,7 @@ import {
 import { terapkanOperasi } from '../pages/dataDasar/jadwalUtil.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const ROLES = new Set(['admin_sekolah', 'operator', 'guru', 'demo']);
+const ROLES = new Set(['admin_sekolah', 'operator', 'guru']);
 
 function entitlementActive(entitlement) {
   return ['trial', 'active'].includes(entitlement?.status) &&

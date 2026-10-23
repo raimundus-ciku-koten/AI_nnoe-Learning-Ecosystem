@@ -72,7 +72,6 @@ export const LABEL_PERAN = {
   siswa: 'Siswa',
   ortu: 'Orang Tua',
   orang_tua: 'Orang Tua',
-  demo: 'Demo',
 };
 
 export const SUBJUDUL_PERAN = {

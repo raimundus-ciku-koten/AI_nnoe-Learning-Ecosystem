@@ -14,7 +14,6 @@ const PROFILE_ROLES = [
   'siswa',
   'ortu',
   'orang_tua',
-  'demo',
 ];
 
 const isRecord = value =>

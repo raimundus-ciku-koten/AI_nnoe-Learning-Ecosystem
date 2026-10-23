@@ -70,7 +70,7 @@ test('semua submenu memiliki rute aktif dan dapat ditemukan kembali', () => {
 
 test('semua tautan untuk guru, siswa, orang tua, sekolah, dan platform cocok dengan halamannya', () => {
   for (const role of [
-    'guru', 'operator', 'demo', 'siswa', 'ortu', 'orang_tua',
+    'guru', 'operator', 'siswa', 'ortu', 'orang_tua',
     'admin_sekolah', 'admin', 'superadmin', 'kepala_sekolah', 'wali_kelas',
     'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',
   ]) {
@@ -102,7 +102,7 @@ test('menu siswa dan orang tua mengikuti perannya tanpa menampilkan modul guru a
 
   assert.ok(siswa.some((item) => item.path === '/siswa/jadwal'));
   assert.ok(siswa.some((item) => item.path === '/siswa/ujian'));
-  assert.ok(siswa.some((item) => item.path === '/purchase'));
+  assert.ok(!siswa.some((item) => item.path === '/purchase'));
   assert.ok(!siswa.some((item) => item.path.startsWith('/datadasar/')));
   assert.ok(!siswa.some((item) => item.path.startsWith('/platform/')));
   assert.ok(ortu.some((item) => item.path === '/orang-tua/anak'));
@@ -136,7 +136,7 @@ test('peran yang tidak dikenal tidak menerima menu guru, admin, atau platform', 
 });
 
 test('admin sekolah dan superadmin mendapat menu sesuai ruang lingkupnya', () => {
-  assert.equal(MENU_ADMIN_SEKOLAH.length - 1, 13, '13 grup administrasi sekolah di luar grup Chat');
+  assert.equal(MENU_ADMIN_SEKOLAH.length - 1, 12, '12 grup administrasi sekolah di luar grup Chat');
   assert.equal(MENU_SUPERADMIN.length, 11, '10 grup pengelolaan platform dan grup chat dukungan');
   assert.ok(!MENU_SUPERADMIN.some((group) => group.id === 'platform-firebase'));
   assert.ok(!MENU_SUPERADMIN.some((group) => group.item.some((item) => item.path === '/platform/keamanan/app-check')));
@@ -156,7 +156,7 @@ test('admin sekolah dan superadmin mendapat menu sesuai ruang lingkupnya', () =>
   assert.equal(cariMenu('/chat', '', 'superadmin')?.grup.id, 'platform-chat');
   assert.equal(cariMenu('/chat/kontak', '', 'siswa')?.item.label, 'Kontak');
   assert.equal(cariMenu('/testimoni', '', 'guru')?.item.label, 'Testimoni');
-  assert.equal(cariMenu('/purchase', '', 'admin_sekolah')?.item.label, 'Purchase Lisensi');
+  assert.equal(cariMenu('/purchase', '', 'admin_sekolah'), null);
   assert.equal(cariMenu('/asesmen/bank-soal', '', 'admin_sekolah')?.item.label, 'Bank Soal');
 
   for (const menu of [MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN]) {

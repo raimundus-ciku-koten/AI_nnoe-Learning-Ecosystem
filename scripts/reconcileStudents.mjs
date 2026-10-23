@@ -270,7 +270,7 @@ export function reconcileStudents(input) {
     if (
       !isUuid(owner.id) ||
       owner.active !== true ||
-      !['admin_sekolah', 'operator', 'guru', 'demo'].includes(owner.role) ||
+      !['admin_sekolah', 'operator', 'guru'].includes(owner.role) ||
       typeof owner.tenant_id !== 'string' ||
       !owner.tenant_id
     ) {

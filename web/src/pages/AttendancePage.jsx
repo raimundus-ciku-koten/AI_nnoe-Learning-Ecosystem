@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
 import '../styles/attendance.css';
 
-const PERAN_PENDIDIK = new Set(['admin_sekolah', 'operator', 'guru', 'demo']);
+const PERAN_PENDIDIK = new Set(['admin_sekolah', 'operator', 'guru']);
 
 function AttendanceAccessDenied() {
   return (

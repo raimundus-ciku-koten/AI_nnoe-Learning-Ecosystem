@@ -8,8 +8,6 @@ const state = {
   activeRole: null,
   roles: [],
   tenantId: null,
-  isDemo: false,
-  trialExpiresAt: null,
   claims: null,
   passwordRecovery: false,
   authReady: false,

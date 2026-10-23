@@ -12,11 +12,13 @@ Functions, and data reconciliation remain incomplete; this does not prove that
 the deployed Firebase services have been stopped or replaced.
 
 Legacy endpoints still present in this directory include authentication and
-platform administration, AI provider settings/generation, Canva OAuth,
-Midtrans checkout/webhooks, chat notifications, and protected media. Their
-source and tests are not evidence of current hosted deployment, traffic, or
-feature parity. Do not delete or deploy them in this step; keep them only for
-later source-level reconciliation, without invoking Firebase.
+platform administration, AI provider settings/generation, Canva OAuth, chat
+notifications, and protected media. The archived Midtrans checkout/webhook
+implementations have been removed from this source tree. Supabase payment and
+trial migrations remain as historical records; no hosted settings, functions,
+secrets, accounts, or data were changed. Remaining legacy source is not
+evidence of current hosted deployment, traffic, or feature parity. Do not
+deploy these archived functions or invoke Firebase.
 
 For an operational application, use only the active web scripts:
 

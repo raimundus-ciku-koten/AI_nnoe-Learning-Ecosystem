@@ -372,7 +372,7 @@ export async function halamanDashboard(wadah) {
   }
 
   if (peran === 'operator' || peran === 'siswa' || peran === 'ortu' || peran === 'orang_tua' ||
-      !['guru', 'operator', 'demo'].includes(peran)) {
+      !['guru', 'operator'].includes(peran)) {
     wadah.innerHTML = tampilanPortal({ role, nama: namaAwal });
     document.title = `${LABEL_PERAN[role] || 'Ruang kerja'} · AI_nnoe Learning Ecosystem`;
     return () => {};

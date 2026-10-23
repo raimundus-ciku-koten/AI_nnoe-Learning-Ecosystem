@@ -136,11 +136,6 @@ const MENU_TANPA_PERAN = [
     tautan('Dashboard', '/dashboard', 'home'),
   ]),
 ];
-const MENU_DEMO = [
-  grup('uji-coba', 'Uji Coba', 'book', [
-    tautan('Simulasi data contoh', '/trial', 'book'),
-  ]),
-];
 const MENU_SISWA = [
   grup('siswa-dashboard', 'Dashboard', 'home', [
     tautan('Dashboard', '/dashboard', 'home'),
@@ -150,9 +145,6 @@ const MENU_SISWA = [
     tautan('Materi', '/siswa/materi', 'book'),
     tautan('Ujian Saya', '/siswa/ujian', 'check'),
     tautan('Nilai Saya', '/siswa/nilai', 'chart'),
-  ]),
-  grup('siswa-akun', 'Akun dan Langganan', 'settings', [
-    tautan('Paket dan Langganan', '/purchase', 'badge'),
   ]),
   grup('siswa-chat', 'Komunikasi', 'chat', [
     tautan('Percakapan', '/chat', 'chat'),
@@ -252,12 +244,6 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Monitoring Agregat', '/admin/komunikasi/monitoring', 'chart'),
     tautan('Moderasi Testimoni', '/testimoni', 'chat'),
   ]),
-  grup('admin-keuangan', 'Manajemen Keuangan', 'chart', [
-    tautan('Purchase Lisensi', '/purchase', 'file'),
-    tautan('Pembayaran', '/admin/keuangan/pembayaran', 'file'),
-    tautan('Tagihan', '/admin/keuangan/tagihan', 'file'),
-    tautan('Laporan Keuangan', '/admin/keuangan/laporan', 'chart'),
-  ]),
   grup('admin-laporan', 'Laporan dan Analitik', 'chart', [
     tautan('Laporan Akademik', '/admin/laporan/akademik', 'file'),
     tautan('Laporan Keuangan', '/admin/laporan/keuangan', 'file'),
@@ -352,7 +338,6 @@ export function menuUntukPeran(role) {
   if (peran === 'siswa') return MENU_SISWA;
   if (peran === 'ortu' || peran === 'orang_tua') return MENU_ORTU;
   if (peran === 'operator') return MENU_OPERATOR;
-  if (peran === 'demo') return MENU_DEMO;
   if (['kepala_sekolah', 'wali_kelas'].includes(peran)) return MENU_KONTEKS_TERBATAS;
   if (['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(peran)) return GRUP_MENU;
   return MENU_TANPA_PERAN;

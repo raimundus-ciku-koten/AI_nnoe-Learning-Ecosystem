@@ -20,13 +20,6 @@ export function PlatformControlProvider({ children }) {
       setState(DEFAULT_STATE);
       return undefined;
     }
-    if (role === 'demo') {
-      setState({
-        ...DEFAULT_STATE,
-        features: { aiAssistant: false, aiGeneration: false },
-      });
-      return undefined;
-    }
 
     let active = true;
     setState((current) => ({ ...current, loading: true, error: '' }));

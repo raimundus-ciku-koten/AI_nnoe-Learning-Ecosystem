@@ -8,7 +8,6 @@ const NAMA_PERAN = {
   guru: 'Guru',
   admin_sekolah: 'Administrator sekolah',
   operator: 'Operator',
-  demo: 'Akun demo',
 };
 
 export default function TeacherAccountPage() {

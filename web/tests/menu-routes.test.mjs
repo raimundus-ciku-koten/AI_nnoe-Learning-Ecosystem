@@ -4,7 +4,7 @@ import { menuUntuk } from '../src/menu.js';
 import { cariMenu } from '../src/navigasi.js';
 
 describe('rute menu guru, staf pengajar, dan superadmin', () => {
-  for (const role of ['guru', 'operator', 'demo', 'superadmin']) {
+  for (const role of ['guru', 'operator', 'superadmin']) {
     it(`setiap item ${role} memiliki tujuan yang dapat dibuka`, () => {
       const groups = menuUntuk(role);
       assert.ok(groups.length > 0);
@@ -16,6 +16,11 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
           const [path, query = ''] = item.href.slice(1).split('?');
           assert.ok(cariMenu(path, query ? `?${query}` : '', role), `${item.judul} tidak terdaftar pada rute ${item.href}`);
         }
+
+        it('akun demo legacy tidak lagi mendapat menu fitur trial', () => {
+          const items = menuUntuk('demo').flatMap((group) => group.items);
+          assert.deepEqual(items.map((item) => item.href), ['#/dashboard']);
+        });
       }
     });
 

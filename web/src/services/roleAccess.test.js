@@ -18,9 +18,8 @@ test('peran lain tetap mengikuti otorisasi rute yang sudah ada', () => {
   }
 });
 
-test('peran demo hanya dapat membuka simulasi uji coba', () => {
-  assert.equal(canOpenRolePath('demo', '/trial'), true);
-  for (const path of ['/dashboard', '/admin/pengguna/guru', '/perencanaan', '/chat']) {
+test('akun demo legacy tidak lagi dapat membuka rute aplikasi', () => {
+  for (const path of ['/dashboard', '/admin/pengguna/guru', '/perencanaan', '/chat', '/trial']) {
     assert.equal(canOpenRolePath('demo', path), false);
   }
 });

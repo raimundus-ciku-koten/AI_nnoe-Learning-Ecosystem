@@ -3,7 +3,17 @@
 Monorepo for the AI_nnoe Learning Ecosystem web application and its backend
 services.
 
-## Release readiness snapshot (2026-10-22)
+## Release readiness snapshot (2026-10-23)
+
+**Source-level decommissioning:** Public self-registration/trial signup,
+the demo-trial simulation and application access for legacy `demo` accounts,
+Midtrans checkout/webhook integrations, the public package-purchase UI, and
+advertising assets/components have been removed from the active source tree.
+Legacy `demo` sessions receive an account-retired notice and can sign out.
+Admin-provisioned accounts and sign-in remain available. Historical Supabase
+migrations, hosted provider settings/secrets, existing accounts/data, and Git
+history were not changed. A new deployment is required before these source
+changes affect any hosted environment.
 
 **Production login access was restored** by merging PR #7
 (`832d04d`) to `main` on 2026-10-22. The outage observed on 2026-10-21 was
@@ -13,10 +23,11 @@ anonymous check on 2026-10-22 confirmed that
 the domain returns HTTP 200. This restores the login surface only; it does not
 mean every data-backed module is ready for release.
 
-The login page has email/password and Google sign-in controls; public signup,
-trial registration, checkout, and ads remain disabled. No hosted database
-migration was applied, no credentials were entered, and no signup was
-submitted. The current source now includes the reviewed read-only MFA gate,
+The login page has email/password and Google sign-in controls; there is no
+public signup, purchase/checkout, or ad integration in the active source.
+Supabase local Auth configuration also disables new signup. No hosted database
+migration, provider setting, credential, or deployment was changed during the
+source cleanup. The current source includes the reviewed read-only MFA gate,
 explicit TOTP enrollment, and an active-profile/AAL2 database policy migration.
 These changes have not been deployed. The Staging schema, verified
 backup/restore, and server-side CAPTCHA blockers below still apply.
@@ -35,14 +46,14 @@ recorded sign-in. The account owner must verify those sign-ins after deployment.
 The supplied document contains plaintext password fields; keep it out of the
 repository and rotate those passwords through the account provider.
 
-This is a limited login release, not a full public release of signup, trials,
-payments, or ads. The hosted Supabase inventory still lacks the billing
-relations and migration history; both Midtrans Edge Functions remain fail-closed
-with HTTP 410. Midtrans charges transaction fees, so live checkout is
-incompatible with a strict zero-cost guarantee. AdSense script loading is
-disabled and the static `ads.txt` publisher entry has not been verified against
-an approved account. AdMob is not integrated: the current Android project is a
-Trusted Web Activity, not a native app with the AdMob SDK.
+This remains a limited login release, not a full public release. The hosted
+Supabase inventory still lacks feature relations and migration history. The
+Midtrans Edge Function source/config entries and web purchase UI have been
+removed locally; hosted functions/settings were not changed by this cleanup.
+The ads component and `ads.txt` source asset have been removed locally;
+previously deployed assets may remain until a reviewed deployment. AdMob was
+not integrated: the Android project is a Trusted Web Activity, not a native
+app with the AdMob SDK.
 
 ## Product description and feature status
 
@@ -57,26 +68,17 @@ drafts stay in page memory until printed or saved as PDF. Chat, assessments,
 and other data modules require their Supabase schema to be deployed and
 verified; the hosted inventory currently shows those feature relations are
 missing. Google features require OAuth setup and user consent. External AI
-providers, checkout, and payment are disabled. The package catalog is
-informational and does not guarantee package entitlements or feature
-availability. Public metadata and landing-page copy should preserve these
-limitations.
+providers are disabled. Public package purchase, checkout, payment, and ads
+are removed from active source. Internal plan/entitlement metadata remains for
+access-control compatibility and does not represent an offer or payment flow.
 
-### Indicative Indonesia price catalog
+### Internal plan metadata
 
-The school tiers have been adjusted to rounded Indonesian Rupiah price points:
-Basic (100 students/20 teachers) Rp299,000 monthly or Rp2,990,000 yearly;
-Pro (500/100) Rp699,000 monthly or Rp6,990,000 yearly; Enterprise (1,500
-students) Rp1,499,000 monthly or Rp14,990,000 yearly. The existing student
-and teacher monthly equivalents remain Rp14,900–Rp49,900, with their yearly
-prices set to ten monthly equivalents (two months' equivalent discount).
-Prices are indicative, before tax, and are not a claim of independently
-verified market benchmarks or a final offer. Checkout is disabled. Confirm
-scope, costs, applicable taxes, and entitlements before publishing an offer.
-The append-only SQL price adjustment is
-`supabase/migrations/20261019000100_indonesia_price_catalog.sql`; it has not
-been applied to hosted Supabase. Do not apply it until the existing schema is
-reconciled and the recovery prerequisite above is met.
+Package and entitlement metadata may still be used for existing administrative
+access controls. The public pricing/purchase interface has been removed; no
+price in the repository is a current offer. Historical billing and price
+migrations remain append-only and were not applied, deleted, or rewritten as
+part of source cleanup.
 
 ## Backend migration status
 
@@ -198,9 +200,11 @@ confirm a recoverable deployment plan.
 
 The Edge Functions page was rechecked on 2026-10-18 and showed “Deploy your
 first edge function”; `chat-push`, `midtrans-checkout`, and `midtrans-webhook`
-are not deployed to this project. Do not rely on chat push or automated
-checkout/webhooks until their reviewed source, secrets, provider configuration,
-and end-to-end behavior have been deployed and verified.
+were not deployed at that time. The Midtrans function source and registrations
+have since been removed from this checkout. No hosted function configuration
+was changed; verify the hosted project separately before claiming removal
+there. Do not rely on chat push until its reviewed source, secrets, provider
+configuration, and end-to-end behavior have been deployed and verified.
 
 The owner bootstrap is complete for project `jvcrmzmuxgyuetkjqady`. The Auth
 identity is confirmed and the matching profile/allowlist have been verified
@@ -608,7 +612,7 @@ names, class labels, source path or seat-map content appears in the proposal.
 The approved teacher-owned student-roster mapping has a local report-only
 checker at `scripts/reconcileStudents.mjs`. It targets the existing
 `public.students` schema, requires an active owner role permitted by the source
-rules (`admin_sekolah`, `operator`, `guru`, or `demo`), active tenant and unexpired
+rules (`admin_sekolah`, `operator`, or `guru`), active tenant and unexpired
 `trial`/`active` tenant entitlement, and uses the existing `buatKodeSiswa()`
 helper to derive QR codes only when the source has none. Duplicate source
 codes/NISNs and target collisions are quarantined; empty NISN/gender values
@@ -737,17 +741,18 @@ No-upgrade operating constraint:
 - Vercel Hobby eligibility and quotas must be checked against current terms.
   Do not use that plan for a monetized/commercial deployment unless its terms
   explicitly permit the use; do not upgrade to resolve a restriction.
-- Midtrans charges merchant transaction fees, and external AI APIs can incur
-  charges or change their free quotas. They are optional integrations, not
-  zero-cost guarantees. Do not configure live payment credentials or
-  billable/shared AI keys under a no-billing constraint.
+- External AI APIs can incur charges or change their free quotas. They are
+  optional integrations, not zero-cost guarantees. Do not configure
+  billable/shared AI keys under a no-billing constraint. Midtrans source and
+  public checkout are removed from this checkout; no hosted credentials or
+  provider settings were changed.
 - Provider API keys are issued by their providers, not generated by this app.
   A provider's free quota or eligibility is not guaranteed. External AI remains
   disabled in the client; opening an official provider portal does not enable
   the integration or authorize sending prompts or keys.
-- Checkout is disabled both in the purchase UI and in the client service; the
-  app does not create orders or redirect to Midtrans. Ad display and automatic
-  AdSense script loading are disabled regardless of environment variables.
+- Public purchase/checkout and ad UI/assets are removed from active source.
+  Existing hosted deployments or provider configurations require a separate
+  owner-approved decommission and deployment.
 - Free-tier limits and provider terms can change. When a limit would require
   an upgrade, stop that feature rather than upgrading, enabling billing, or
   attempting to bypass the provider's limit.
@@ -844,25 +849,14 @@ the public site key will cause login challenges to fail; it does not enable
 server-side verification by itself. Supabase Auth rate limits remain
 independently enforced.
 
-The login page now includes a three-day promotional demo signup. It requires a
-verified email and Turnstile token, provisions only the isolated `demo` role,
-and starts its 72-hour clock after email confirmation. The demo can only open
-the sample-data page; persona choices are labels, not role grants. Its maximum
-five added sample items remain in browser memory and are not sent to Supabase.
-School data, tenant RPCs, uploads, Google, external AI, and payment are
-unavailable to demo accounts. The append-only migration
-`supabase/migrations/20261019000200_public_demo_trial.sql` stores a unique
-verified-email trial record, expires access in the database, and removes demo
-roles from active authorization. It is source-only and has **not** been
-applied to hosted Supabase. Do not publish the signup until schema parity,
-trigger/hook settings, server-side Supabase CAPTCHA verification, email
-confirmation redirects, a Supabase Auth password minimum of 12 characters,
-and recovery-tested backup have been verified. Per the selected trial policy,
-the email record is retained while the service operates to prevent another
-trial with the same address. A verified data-erasure request must be handled
-under the final privacy process; deleting the record permits that address to
-register for another trial. Publish the signup only after the service owner
-has provided the required legal identity, privacy contact, and request process.
+Public self-registration, the demo-trial simulation page, and demo-role app
+access have been removed from active source. Legacy demo-role sessions are
+blocked and shown an account-retired notice with a sign-out action. Account
+creation remains administrator-controlled. Historical trial migrations and
+hosted records are retained; this source cleanup does not delete users or
+hosted data. The append-only migration
+`supabase/migrations/20261019000200_public_demo_trial.sql` remains historical
+and must not be applied or used to re-enable signup as part of this change.
 
 Reduced-data mode activates when a device advertises `Save-Data` or the release
 sets `VITE_ECONOMY_MODE=true`. It hides external profile/school images and
@@ -1013,50 +1007,19 @@ Frontend-specific tests and builds can also be run with
 source and tests are retained for migration analysis but intentionally have no
 active npm run or deploy aliases.
 
-## Purchase plans and Google Workspace
+## Plan metadata and Google Workspace
 
-The plan catalog used to display prices is `functions/shared/pricing.json`.
-Its values are seeded into the server-only `public.billing_plans` table by
-`supabase/migrations/20261018000400_midtrans_billing.sql`; keep the two
-catalogs in sync when changing plans. Monthly prices are one tenth of annual
-prices.
+The internal plan catalog and entitlements remain for existing access-control
+compatibility. Public package pricing, purchase, checkout, and payment UI and
+the Midtrans function source have been removed from this checkout. Historical
+billing migrations are retained as append-only records; do not apply or replay
+them as part of this removal. No hosted functions, provider settings, secrets,
+accounts, or data were changed. A separately approved hosted decommission and
+deployment would be required to remove previously deployed resources.
 
-The purchase page displays package information and the user's entitlement
-status only. Client checkout is hard-disabled in `web/src/services/subscriptions.js`;
-the UI does not create orders, display payment links, or redirect to Midtrans.
-The page also offers a limited manual registration/quote request. Applicants
-can print the form to PDF locally and open a generic WhatsApp message; the
-applicant must attach the saved PDF manually. Form values are not uploaded by
-the application. The public WhatsApp contact is intentionally unconfigured
-until the owner sets `VITE_OWNER_WHATSAPP` in the target Vercel environment;
-every `VITE_*` value is visible in the public web bundle. The PDF is a request
-for follow-up, not an order, invoice, payment receipt, or service activation.
-The form deliberately omits identity-document uploads, passwords, payment-card
-details, and children's NIK/KK data.
-The local `midtrans-checkout` and `midtrans-webhook` Edge Functions now return
-HTTP 410 for every non-preflight request and contain no gateway calls or
-service-role access. The SQL billing migration remains local/inactive. The
-hosted functions have not been updated or verified, so do not configure
-payment secrets or deploy payment components under the no-billing requirement.
-Entitlement reads are separate and remain subject to the hosted schema
-availability noted above.
-
-## Google AdSense for web/PWA
-
-AdSense/AdMob display and AdSense script loading are disabled in the active
-application. Do not add publisher/slot IDs or enable ad serving while operating
-under the no-billing constraint. The retained static `ads.txt` file is not
-proof of publisher ownership or approval and is not an active ad integration.
-
-The Android project is a Trusted Web Activity (TWA) for this same web/PWA, not
-a native AdMob app. AdSense configuration applies to its web content; a native
-Android/iOS application would require a separate AdMob SDK integration and
-app/ad-unit IDs. Creating or approving either Google publisher account,
-setting up payments, and publishing the Android app require the owner's
-Google/Play Console actions. Do not release a Play Store build until its
-payment flow and Google Play billing-policy requirements have been reviewed.
-See [functions/README.md](./functions/README.md) for checkout, webhook, and
-merchant setup.
+The active web source contains no ad component or `ads.txt` asset. The Android
+project is a Trusted Web Activity, not a native AdMob application. No AdSense
+or AdMob account, hosted configuration, or provider secret was changed.
 
 Google Workspace is available only to provisioned application users. Each user
 can link their own same-email Google account from **Pengaturan → Google
@@ -1154,11 +1117,12 @@ relying on generated paraphrases. Structured AI output validation rejects
 unknown or missing fields, oversized values, unlinked CP elements, and
 out-of-order semester plans instead of silently truncating them.
 
-Sidebar navigation is scoped by role: teachers/operators/demo accounts,
-school administrators, superadmins, students, and parent-account aliases receive
-their respective menu catalogs. Unknown or missing roles receive only the
-dashboard link. Existing teacher features such as planning, attendance, the
-question bank, chat, and Google Workspace keep their dedicated workflows.
+Sidebar navigation is scoped by role: teachers/operators, school
+administrators, superadmins, students, and parent-account aliases receive their
+respective menu catalogs. Unknown or missing roles receive only the dashboard
+link; legacy demo-role accounts are denied application routes. Existing teacher
+features such as planning, attendance, the question bank, chat, and Google
+Workspace keep their dedicated workflows.
 Teacher submenu destinations without a dedicated data module open a private,
 tenant-scoped work-notes space at
 `tenants/{tenantId}/guruWorkspace/{uid}/entries/{entryId}`. Only that teacher
@@ -1257,12 +1221,12 @@ deployed. The following names are retained for migration inventory only:
 - `notifikasiPesanBaru` and `buatChat`: legacy Realtime Database/FCM chat
   paths. Supabase `chat-push` is the local push replacement; verify the
   Supabase chat creation flow and deployed push delivery before retiring either.
-- `buatPembayaran`, `buatPembayaranPaket`, and `midtransWebhook`: legacy
-  checkout/webhook paths. The Supabase `midtrans-checkout` and
-  `midtrans-webhook` functions plus `finalize_midtrans_payment` SQL routine
-  are local replacements for the package billing flow; do not rely on them
-  until their migrations, secrets, deployment, and payment end-to-end checks
-  are complete. `buatPembayaran` explicitly rejects its retired per-seat flow.
+- `buatPembayaran`, `buatPembayaranPaket`, and `midtransWebhook`: removed from
+  the archived Firebase source. The Supabase checkout/webhook source and
+  function registrations were also removed from this checkout. Historical
+  SQL routines and migrations remain unchanged. This source cleanup does not
+  remove functions, secrets, or data from hosted providers; verify and
+  decommission those separately only with owner approval.
 - `getAIProviderConnections`, `savePersonalAIProviderKey`,
   `removePersonalAIProviderKey`, `setAIProviderPreference`,
   `generateQuestionDraft`, `generatePerangkat`, and `chatAsisten`: server-side

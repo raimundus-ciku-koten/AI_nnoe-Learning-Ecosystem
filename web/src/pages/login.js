@@ -1,5 +1,5 @@
 import '../styles/login.css';
-import { buatKataSandi, daftarUjiCoba, login, resetPassword, masukGoogle } from '../auth.js';
+import { buatKataSandi, login, resetPassword, masukGoogle } from '../auth.js';
 import { toast } from '../components/toast.js';
 import {
   isSupabaseConfigured,
@@ -8,11 +8,8 @@ import {
 } from '../lib/supabase.ts';
 import { pasangTurnstile } from '../services/turnstile.js';
 import { getState, subscribe } from '../state.js';
-import PRICING from '../../../functions/shared/pricing.json';
 
 const TURNSTILE_SITE_KEY = import.meta.env?.VITE_TURNSTILE_SITE_KEY?.trim() || '';
-const DEMO_TRIAL_ENABLED = import.meta.env?.VITE_PUBLIC_DEMO_TRIAL_ENABLED?.trim().toLowerCase() === 'true'
-  && Boolean(TURNSTILE_SITE_KEY);
 const PESAN_AUTH = {
   invalid_credentials: 'Email atau kata sandi tidak sesuai.',
   invalid_email: 'Format email tidak valid.',
@@ -22,7 +19,6 @@ const PESAN_AUTH = {
   user_banned: 'Akun ini dinonaktifkan. Hubungi admin sekolah.',
   over_request_rate_limit: 'Terlalu banyak percobaan. Tunggu beberapa saat.',
   over_email_send_rate_limit: 'Batas pengiriman email tercapai. Tunggu sebelum mencoba lagi.',
-  signup_disabled: 'Pendaftaran akun tidak tersedia. Hubungi admin sekolah.',
   otp_expired: 'Tautan masuk kedaluwarsa. Minta tautan baru.',
   'auth/workspace-account-not-provisioned': 'Akun Google belum terdaftar aktif. Hubungi administrator sekolah.',
   '42501': 'Izin akses profil Supabase ditolak. Periksa status akun dan peran Anda.',
@@ -37,40 +33,6 @@ function pesanLogin(error, google = false) {
       : 'Tidak dapat masuk saat ini. Silakan coba lagi.');
   const diagnostic = code ? ` (kode: ${code})` : '';
   return `${message}${diagnostic}`;
-}
-
-const formatRupiah = (value) => new Intl.NumberFormat('id-ID', {
-  style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
-}).format(value);
-const daftarPaket = [
-  ...PRICING.school.map((paket) => ({ ...paket, jenis: 'Paket Sekolah' })),
-  ...PRICING.student.map((paket) => ({ ...paket, jenis: 'Paket Siswa' })),
-  ...PRICING.teacherSd.map((paket) => ({ ...paket, jenis: 'Paket Guru Kelas SD' })),
-  ...PRICING.teacherSubject.map((paket) => ({ ...paket, jenis: 'Paket Guru Mapel' })),
-];
-const hargaSiklus = (paket, siklus) => siklus === 'tahunan'
-  ? paket.annualPrice
-  : Math.round(paket.annualPrice / PRICING.monthlyDivisor);
-
-function kartuPaket(paket) {
-  const harga = hargaSiklus(paket, 'bulanan');
-  return `
-    <article class="plan-card">
-      <div class="plan-card-copy"><h4>${paket.name}</h4><p>Katalog harga indikatif; rincian fitur, kapasitas, dan aktivasi paket perlu dikonfirmasi. Checkout belum tersedia.</p></div>
-      <strong class="plan-price" data-plan-id="${paket.id}" data-annual-price="${paket.annualPrice}">
-        ${formatRupiah(harga)}<small> / bulan</small>
-      </strong>
-    </article>`;
-}
-
-function grupPaket(id, judul, paket) {
-  return `
-    <section class="plan-group" aria-labelledby="${id}">
-      <h3 id="${id}">${judul}</h3>
-      <div class="plan-scroller" role="region" tabindex="0" aria-label="Daftar ${judul}. Gunakan tombol panah atau geser untuk melihat semua paket.">
-        ${paket.map(kartuPaket).join('')}
-      </div>
-    </section>`;
 }
 
 const IKON_CEK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>';
@@ -136,7 +98,7 @@ export function halamanLogin(wadah) {
           <span class="brand-text"><strong>AI_nnoe</strong><small>Learning Ecosystem</small></span>
         </a>
         <nav class="nav" aria-label="Navigasi utama">
-          <a href="#/login" data-ke="fitur">Fitur</a><a href="#/login" data-ke="harga">Harga</a><a href="#/login" data-ke="testimoni">Testimoni</a>
+          <a href="#/login" data-ke="fitur">Fitur</a><a href="#/login" data-ke="testimoni">Testimoni</a>
           <a class="btn btn-ghost" href="#/login" data-ke="masuk">Masuk</a>
         </nav>
       </div>
@@ -155,20 +117,6 @@ export function halamanLogin(wadah) {
                   <button type="button" class="toggle-pw" id="btnLihat" aria-controls="lgnSandi" aria-pressed="false">Tampilkan</button></div></div>
               <button id="btnMasuk" class="btn btn-primary btn-block" type="submit"><span class="btn-label">Masuk</span></button>
             </form>
-            <form id="formTrial" novalidate hidden>
-              <div class="field"><label for="trialNama">Nama tampilan</label>
-                <input class="input" type="text" id="trialNama" name="nama" autocomplete="name" maxlength="120" required></div>
-              <div class="field"><label for="trialEmail">Email</label>
-                <input class="input" type="email" id="trialEmail" name="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="254" required></div>
-              <div class="field"><label for="trialSandi">Kata sandi (minimal 12 karakter)</label>
-                <input class="input" type="password" id="trialSandi" name="sandi" autocomplete="new-password" minlength="12" maxlength="72" required></div>
-              <div class="field"><label for="trialKonfirmasi">Ulangi kata sandi</label>
-                <input class="input" type="password" id="trialKonfirmasi" name="konfirmasi" autocomplete="new-password" minlength="12" maxlength="72" required></div>
-              <label class="trial-consent"><input id="trialConsent" type="checkbox" required>
-                <span>Saya memahami bahwa uji coba hanya menggunakan data contoh, bukan data sekolah nyata; saya berusia minimal 18 tahun atau memiliki persetujuan orang tua/wali, dan berwenang menggunakan alamat email ini.</span></label>
-              <button id="btnDaftarTrial" class="btn btn-primary btn-block" type="submit">Kirim tautan verifikasi</button>
-              <p class="card-note">Trial aktif selama 72 jam setelah email diverifikasi. Satu trial per alamat email.</p>
-            </form>
             <form id="formBuatSandi" novalidate hidden>
               <div class="field"><label for="sandiBaru">Kata sandi baru</label>
                 <input class="input" type="password" id="sandiBaru" name="sandiBaru" autocomplete="new-password" minlength="8" required></div>
@@ -181,17 +129,15 @@ export function halamanLogin(wadah) {
             <button id="btnGoogle" class="btn btn-outline btn-block" type="button">${IKON_GOOGLE} Masuk dengan Google</button>
             <p id="loginStatus" class="login-status" role="status" aria-live="polite" hidden></p>
             <p class="card-note"><a href="#" id="btnLupaSandi">Lupa kata sandi?</a></p>
-            <p class="card-note" id="trialPrompt" ${DEMO_TRIAL_ENABLED ? '' : 'hidden'}>Ingin mencoba dengan data simulasi? <button class="trial-link" id="btnTampilkanTrial" type="button">Coba gratis 3 hari</button></p>
-            <p class="card-note" id="trialBack" hidden><button class="trial-link" id="btnKembaliMasuk" type="button">Kembali ke login</button></p>
           </section>
           <div class="hero-copy">
             <span class="eyebrow">Ruang kerja digital untuk warga sekolah</span>
             <h1 id="judulHero">Ruang kerja digital untuk pembelajaran dan administrasi sekolah.</h1>
             <p class="hero-lead">Kelola data dasar, rencanakan pembelajaran, susun program BK dan kegiatan, serta akses modul asesmen dan komunikasi sesuai peran. Ketersediaan tiap modul bergantung pada kesiapan backend dan layanan yang diperlukan.</p>
-            <div class="hero-cta"><a class="btn btn-brand" href="#/login" data-ke="harga">Lihat paket</a><a class="btn btn-outline" href="#/login" data-ke="fitur">Lihat fitur</a></div>
+            <div class="hero-cta"><a class="btn btn-outline" href="#/login" data-ke="fitur">Lihat fitur</a></div>
             <ul class="trust-list">
               <li>${IKON_CEK}Akses mengikuti akun dan peran yang disahkan administrator</li>
-              <li>${IKON_CEK}Harga paket hanya referensi; checkout dan penagihan belum aktif</li>
+              <li>${IKON_CEK}Akun diberikan melalui administrator; pendaftaran publik tidak tersedia</li>
             </ul>
           </div>
         </div>
@@ -204,33 +150,6 @@ export function halamanLogin(wadah) {
             <article class="feature"><span class="feature-icon">${IKON_FITUR.perencanaan}</span><h3>Data dan perencanaan pembelajaran</h3><p>Antarmuka mencakup profil, kelas, data siswa, jadwal, denah, dan perangkat seperti ATP, RPE, Prota, Prosem, KKTP, serta modul ajar. Sebagian alat perencanaan masih bergantung pada layanan lama atau belum tersedia di lingkungan Supabase.</p></article>
             <article class="feature"><span class="feature-icon tone-blue">${IKON_FITUR.komunikasi}</span><h3>Pelaksanaan, program, dan asesmen</h3><p>Kode aplikasi memuat modul presensi, bank soal, ujian online, serta draf program BK, kokurikuler, dan ekstrakurikuler. Draf program hanya di browser sampai dicetak/disimpan sebagai PDF; fungsi asesmen dan data memerlukan backend yang telah diterapkan.</p></article>
             <article class="feature"><span class="feature-icon tone-amber">${IKON_FITUR.akses}</span><h3>Kolaborasi dan integrasi pilihan</h3><p>Antarmuka mencakup chat, akun berbasis peran, serta Google Drive, Sheets, Calendar, dan Meet. Chat memerlukan schema backend; Google memerlukan OAuth dan izin pengguna. Asisten AI ada di aplikasi, tetapi provider eksternal dinonaktifkan. Akses mengikuti peran yang disahkan server.</p></article>
-          </div>
-        </div>
-      </section>
-      <section class="section section-alt" id="harga" aria-labelledby="judulHarga" hidden>
-        <div class="container"><div class="section-head"><p class="kicker">Harga dan lisensi</p>
-          <h2 id="judulHarga">Paket sekolah dan paket pengguna</h2>
-          <p>Katalog harga indikatif dalam Rupiah sebelum pajak, bukan penawaran final atau deskripsi kemampuan yang sudah aktif. Harga, kapasitas, dan rincian paket perlu divalidasi sebelum ditawarkan; checkout, pembayaran, dan aktivasi langganan dinonaktifkan.</p></div>
-          <div class="pricing-grid">
-            <div class="card pricing-card">
-              <div class="pricing-period"><label for="siklusHarga">Siklus pembayaran</label>
-                <select class="input" id="siklusHarga"><option value="bulanan">Bulanan</option><option value="tahunan">Tahunan (hemat dua bulan)</option></select></div>
-              <p class="sr-only" id="pengumumanHarga" aria-live="polite" aria-atomic="true"></p>
-              <p class="plan-scroll-hint">Geser kartu ke samping atau gunakan tombol panah untuk melihat paket lainnya.</p>
-              <div class="plan-list">
-                ${grupPaket('judulPaketSekolah', 'Paket sekolah', PRICING.school)}
-                ${grupPaket('judulPaketSiswa', 'Paket siswa', PRICING.student)}
-                ${grupPaket('judulPaketGuruSd', 'Paket guru kelas SD', PRICING.teacherSd)}
-                ${grupPaket('judulPaketGuruMapel', 'Paket guru mapel', PRICING.teacherSubject)}
-              </div>
-              <p class="card-note">Akun orang tua mendapatkan akses melalui sekolah/anak; panduan ini tidak mencantumkan paket harga orang tua tersendiri.</p>
-              <p class="card-note">Harga tahunan setara 10 bulan harga bulanan (diskon 2 bulan); semua harga belum termasuk pajak. Harga, pajak, paket, dan entitlement perlu dikonfirmasi sebelum transaksi. Pembelian, pembayaran online, dan aktivasi paket saat ini dinonaktifkan.</p>
-            </div>
-            <ul class="benefits">
-              <li>${IKON_CEK}<span>Paket sekolah menyesuaikan kapasitas peserta didik dan guru.</span></li>
-              <li>${IKON_CEK}<span>Paket guru dan siswa ditampilkan sebagai informasi; transaksi belum tersedia.</span></li>
-              <li>${IKON_CEK}<span>Halaman paket hanya menampilkan informasi; tidak ada transaksi.</span></li>
-            </ul>
           </div>
         </div>
       </section>
@@ -256,16 +175,7 @@ export function halamanLogin(wadah) {
   const labelMasuk = tombolMasuk.querySelector('.btn-label');
   const statusLogin = $('#loginStatus');
   const tombolGoogle = $('#btnGoogle');
-  const formTrial = $('#formTrial');
-  const tombolDaftarTrial = $('#btnDaftarTrial');
-  const trialNama = $('#trialNama');
-  const trialEmail = $('#trialEmail');
-  const trialSandi = $('#trialSandi');
-  const trialKonfirmasi = $('#trialKonfirmasi');
-  const trialConsent = $('#trialConsent');
   const loginCaptcha = $('#loginCaptcha');
-  const tombolTampilkanTrial = $('#btnTampilkanTrial');
-  const tombolKembaliMasuk = $('#btnKembaliMasuk');
   const tombolSimpanSandi = $('#btnSimpanSandi');
   const formBuatSandi = $('#formBuatSandi');
   const sandiBaru = $('#sandiBaru');
@@ -273,19 +183,15 @@ export function halamanLogin(wadah) {
   const judulMasuk = $('#judulMasuk');
   const keteranganMasuk = judulMasuk.nextElementSibling;
   let modeBuatSandi = false;
-  let modeTrial = false;
 
   const terapkanModeBuatSandi = (aktif) => {
     modeBuatSandi = aktif;
     form.hidden = aktif;
-    formTrial.hidden = aktif || !modeTrial;
     formBuatSandi.hidden = !aktif;
     if (loginCaptcha) loginCaptcha.hidden = aktif;
     wadah.querySelector('.divider').hidden = aktif;
     tombolGoogle.hidden = aktif;
     $('#btnLupaSandi').parentElement.hidden = aktif;
-    $('#trialPrompt').hidden = aktif || modeTrial || !DEMO_TRIAL_ENABLED;
-    $('#trialBack').hidden = aktif || !modeTrial;
     judulMasuk.textContent = aktif ? 'Buat kata sandi akun' : 'Masuk ke akun Anda';
     keteranganMasuk.textContent = aktif
       ? 'Tautan verifikasi berhasil. Buat kata sandi untuk masuk ke AI_nnoe Learning Ecosystem.'
@@ -338,35 +244,12 @@ export function halamanLogin(wadah) {
     if (!token) throw new Error('Selesaikan verifikasi Cloudflare sebelum melanjutkan.');
     return token;
   };
-  const terapkanModeTrial = (aktif) => {
-    if (modeBuatSandi || (aktif && !DEMO_TRIAL_ENABLED)) return;
-    modeTrial = aktif;
-    form.hidden = aktif;
-    formTrial.hidden = !aktif;
-    if (loginCaptcha) loginCaptcha.hidden = false;
-    wadah.querySelector('.divider').hidden = aktif;
-    tombolGoogle.hidden = aktif;
-    $('#btnLupaSandi').parentElement.hidden = aktif;
-    $('#trialPrompt').hidden = aktif || !DEMO_TRIAL_ENABLED;
-    $('#trialBack').hidden = !aktif;
-    judulMasuk.textContent = aktif ? 'Coba AI_nnoe selama 3 hari' : 'Masuk ke akun Anda';
-    keteranganMasuk.textContent = aktif
-      ? 'Buat akun demo terisolasi. Akses hanya ke simulasi lokal dengan data contoh.'
-      : 'Akses dasbor AI_nnoe Learning Ecosystem.';
-    if (aktif) trialNama.focus();
-  };
-
-  if (DEMO_TRIAL_ENABLED) {
-    tombolTampilkanTrial.addEventListener('click', () => terapkanModeTrial(true));
-  }
-  tombolKembaliMasuk.addEventListener('click', () => terapkanModeTrial(false));
-
   let testimoniDiminta = false;
   wadah.querySelectorAll('[data-ke]').forEach((link) => {
     link.addEventListener('click', (event) => {
       event.preventDefault();
       const tujuan = link.dataset.ke;
-      const panelId = ['fitur', 'harga', 'testimoni'].includes(tujuan) ? tujuan : 'top';
+      const panelId = ['fitur', 'testimoni'].includes(tujuan) ? tujuan : 'top';
       const panel = panelId === 'top' ? wadah.querySelector('.hero') : wadah.querySelector(`#${panelId}`);
       if (!panel) return;
 
@@ -375,7 +258,7 @@ export function halamanLogin(wadah) {
         bagian.hidden = bagian !== panel;
       });
       wadah.querySelectorAll('.nav [data-ke]').forEach((tautan) => {
-        if (['fitur', 'harga', 'testimoni'].includes(tautan.dataset.ke)) {
+        if (['fitur', 'testimoni'].includes(tautan.dataset.ke)) {
           if (tautan.dataset.ke === panelId) tautan.setAttribute('aria-current', 'page');
           else tautan.removeAttribute('aria-current');
         }
@@ -398,14 +281,6 @@ export function halamanLogin(wadah) {
     });
   });
 
-  $('#siklusHarga').addEventListener('change', (event) => {
-    const siklus = event.target.value;
-    daftarPaket.forEach((paket) => {
-      const harga = wadah.querySelector(`[data-plan-id="${paket.id}"]`);
-      harga.innerHTML = `${formatRupiah(hargaSiklus(paket, siklus))}<small> / ${siklus === 'tahunan' ? 'tahun' : 'bulan'}</small>`;
-    });
-    $('#pengumumanHarga').textContent = `Harga diperbarui untuk pembayaran ${siklus === 'tahunan' ? 'tahunan' : 'bulanan'}.`;
-  });
   $('#btnLihat').addEventListener('click', (event) => {
     const terlihat = sandi.type === 'password';
     sandi.type = terlihat ? 'text' : 'password';
@@ -468,78 +343,6 @@ export function halamanLogin(wadah) {
     } finally {
       tombolSimpanSandi.disabled = false;
       tombolSimpanSandi.textContent = 'Simpan kata sandi';
-    }
-  });
-
-  formTrial.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (!isSupabaseConfigured) {
-      tampilkanError(supabaseConfigError?.message || 'Supabase belum dikonfigurasi. Hubungi administrator.', trialEmail);
-      return;
-    }
-    hapusError();
-    const nama = trialNama.value.trim();
-    const alamat = trialEmail.value.trim().toLowerCase();
-    if (nama.length < 2 || nama.length > 120 || /[\u0000-\u001f\u007f]/.test(nama)) {
-      tampilkanError('Nama tampilan harus 2–120 karakter dan tidak boleh berisi karakter kontrol.', trialNama);
-      trialNama.focus();
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(alamat) || alamat.length > 254) {
-      tampilkanError('Masukkan alamat email yang valid.', trialEmail);
-      trialEmail.focus();
-      return;
-    }
-    if (trialSandi.value.length < 12) {
-      tampilkanError('Kata sandi uji coba minimal 12 karakter.', trialSandi);
-      trialSandi.focus();
-      return;
-    }
-    if (trialSandi.value !== trialKonfirmasi.value) {
-      tampilkanError('Konfirmasi kata sandi belum sama.', trialKonfirmasi);
-      trialKonfirmasi.focus();
-      return;
-    }
-    if (!trialConsent.checked) {
-      tampilkanError('Setujui ketentuan penggunaan data contoh dan alamat email sebelum melanjutkan.', trialConsent);
-      trialConsent.focus();
-      return;
-    }
-    if (!TURNSTILE_SITE_KEY) {
-      tampilkanError('Pendaftaran uji coba belum tersedia karena verifikasi anti-bot belum dikonfigurasi.');
-      return;
-    }
-    if (!DEMO_TRIAL_ENABLED) {
-      tampilkanError('Pendaftaran uji coba belum dibuka di lingkungan ini.');
-      return;
-    }
-
-    tombolDaftarTrial.disabled = true;
-    tombolDaftarTrial.textContent = 'Mengirim...';
-    statusLogin.textContent = 'Meminta verifikasi email...';
-    statusLogin.hidden = false;
-    try {
-      await daftarUjiCoba({
-        nama,
-        email: alamat,
-        sandi: trialSandi.value,
-        captchaToken: await ambilCaptchaToken(),
-      });
-      formTrial.reset();
-      statusLogin.textContent = 'Jika alamat memenuhi syarat, tautan verifikasi akan dikirim. Trial berlangsung 72 jam setelah email diverifikasi; satu trial tersedia untuk setiap alamat email.';
-      captchaWidget?.reset();
-    } catch (err) {
-      console.error('[trial] Pendaftaran uji coba gagal:', err);
-      statusLogin.hidden = true;
-      const alreadyRegistered = err?.code === 'user_already_exists'
-        || /already registered|already been registered/i.test(err?.message || '');
-      tampilkanError(alreadyRegistered
-        ? 'Jika akun dengan alamat tersebut sudah ada, silakan masuk. Pendaftaran demo menggunakan alamat email yang belum terdaftar.'
-        : err?.message || PESAN_AUTH[err?.code] || 'Pendaftaran belum dapat diproses. Coba lagi nanti.');
-      captchaWidget?.reset();
-    } finally {
-      tombolDaftarTrial.disabled = false;
-      tombolDaftarTrial.textContent = 'Kirim tautan verifikasi';
     }
   });
 

@@ -12,7 +12,7 @@ const BATAS_SESI_MS = 8000;
 
 const STATE_KOSONG = Object.freeze({
   user: null, profile: null, role: null, activeRole: null, roles: [], tenantId: null,
-  isDemo: false, trialExpiresAt: null, claims: null, passwordRecovery: false, sesiMemuat: false,
+  claims: null, passwordRecovery: false, sesiMemuat: false,
 });
 
 const teks = (v) => (typeof v === 'string' ? v.trim() : '');
@@ -52,8 +52,6 @@ function rakitState(user, claims = {}, profil = {}) {
     activeRole,
     roles,
     tenantId: claims.tenantId || claims.tenant_id || profil.tenant_id || profil.tenantId || null,
-    isDemo: role === 'demo' || claims.isDemo === true,
-    trialExpiresAt: claims.trialExpiresAt || claims.trial_expires_at || null,
     claims,
     authReady: true,
   };
@@ -80,22 +78,6 @@ export async function login(email, sandi, captchaToken) {
   const { data, error } = await supabase.auth.signInWithPassword(credentials);
   if (error) throw error;
   return data.user;
-}
-
-export async function daftarUjiCoba({ nama, email, sandi, captchaToken }) {
-  if (!captchaToken) throw new Error('Verifikasi anti-bot wajib diselesaikan untuk mendaftar uji coba.');
-  const emailRedirectTo = `${window.location.origin}${window.location.pathname}`;
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password: sandi,
-    options: {
-      captchaToken,
-      emailRedirectTo,
-      data: { full_name: nama },
-    },
-  });
-  if (error) throw error;
-  return data;
 }
 
 export async function logout() {
@@ -181,8 +163,6 @@ export async function switchRole(role) {
     role: user.app_metadata?.role || null,
     roles: Array.isArray(user.app_metadata?.roles) ? user.app_metadata.roles : [],
     tenantId: user.app_metadata?.tenant_id || null,
-    isDemo: user.app_metadata?.role === 'demo',
-    trialExpiresAt: user.app_metadata?.trial_expires_at || null,
   };
   setState({ ...rakitState(user, claims, profil), sesiMemuat: false });
 }
@@ -209,8 +189,6 @@ export function pantaulogin(onReady, onUbah) {
       role: user.app_metadata?.role || profil.role || null,
       roles: Array.isArray(user.app_metadata?.roles) ? user.app_metadata.roles : [],
       tenantId: user.app_metadata?.tenant_id || profil.tenant_id || null,
-      isDemo: user.app_metadata?.role === 'demo',
-      trialExpiresAt: user.app_metadata?.trial_expires_at || null,
     };
     const next = rakitState(user, claims, profil);
     setState({ ...next, sesiMemuat: false });

@@ -98,7 +98,6 @@ const HalamanScan = lazy(() => import('./pages/scan.js').then(({ halamanScan }) 
 })));
 const HalamanSubMenu = lazy(() => import('./pages/SubMenuPage.jsx'));
 const HalamanArsipPerencanaan = lazy(() => import('./pages/PlanningArchivePage.jsx'));
-const HalamanPurchase = lazy(() => import('./pages/PurchasePage.jsx'));
 const HalamanTestimoni = lazy(() => import('./pages/TestimonialPage.jsx'));
 const HalamanAdminPengguna = lazy(() => import('./pages/AdminUsersPage.jsx'));
 const HalamanPresensi = lazy(() => import('./pages/AttendancePage.jsx'));
@@ -113,17 +112,47 @@ const HalamanPenggunaPlatform = lazy(() => import('./pages/PlatformUsersPage.jsx
 const HalamanOperasiPlatform = lazy(() => import('./pages/PlatformOperationsPage.jsx'));
 const HalamanPenggunaSupabase = lazy(() => import('./pages/SupabasePlatformUsersPage.jsx'));
 const HalamanPrivasi = lazy(() => import('./pages/PrivacyNoticePage.jsx'));
-const HalamanTrial = lazy(() => import('./pages/TrialDemoPage.jsx'));
 const AppShell = lazy(() => import('./components/AppShell.jsx'));
+
+function RetiredDemoAccount() {
+  const [error, setError] = useState('');
+  const [signingOut, setSigningOut] = useState(false);
+
+  const keluar = async () => {
+    setSigningOut(true);
+    setError('');
+    try {
+      await logout();
+    } catch (logoutError) {
+      console.error('[app] Gagal mengakhiri sesi akun demo yang dihentikan:', logoutError);
+      setError('Belum dapat keluar. Muat ulang halaman lalu coba kembali.');
+      setSigningOut(false);
+    }
+  };
+
+  return (
+    <main className="app-loader">
+      <section className="card empty-state" role="status">
+        <h1>Akses akun demo dihentikan</h1>
+        <p>Fitur demo trial tidak lagi tersedia. Hubungi administrator untuk akun aplikasi yang diprovisikan.</p>
+        {error && <p role="alert">{error}</p>}
+        <button className="btn btn-primary" type="button" onClick={keluar} disabled={signingOut}>
+          {signingOut ? 'Keluar…' : 'Keluar'}
+        </button>
+      </section>
+    </main>
+  );
+}
 
 function PrivateShell({ children }) {
   const { user, role, activeRole, passwordRecovery } = useAuth();
   const location = useLocation();
+  const selectedRole = activeRole || role;
 
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;
-  if ((activeRole || role) === 'demo') return <Navigate to="/trial" replace />;
-  if (!canOpenRolePath(activeRole || role, location.pathname)) {
+  if (selectedRole === 'demo') return <RetiredDemoAccount />;
+  if (!canOpenRolePath(selectedRole, location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }
   return (
@@ -176,15 +205,14 @@ function RouteWrapper() {
   return (
     <Suspense fallback={<div className="loading-spinner">Memuat...</div>}>
       <Routes>
-        <Route path="/login" element={user && !passwordRecovery ? <Navigate to={selectedRole === 'demo' ? '/trial' : '/dashboard'} replace /> : <HalamanLogin />} />
-        <Route path="/trial" element={user ? (selectedRole === 'demo' ? <HalamanTrial /> : <Navigate to="/dashboard" replace />) : <Navigate to="/login" replace />} />
+        <Route path="/login" element={user && !passwordRecovery ? <Navigate to="/dashboard" replace /> : <HalamanLogin />} />
         <Route path="/privacy" element={<HalamanPrivasi />} />
         <Route path="/platform/supabase-users" element={<HalamanPenggunaSupabase />} />
         <Route path="/scan/:kode" element={<HalamanScan />} />
-        <Route path="/" element={<Navigate to={user ? (passwordRecovery ? '/login' : selectedRole === 'demo' ? '/trial' : '/dashboard') : '/login'} replace />} />
+        <Route path="/" element={<Navigate to={user ? (passwordRecovery ? '/login' : '/dashboard') : '/login'} replace />} />
+        <Route path="/trial" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
         
         <Route path="/dashboard" element={<PrivateShell><HalamanDashboard /></PrivateShell>} />
-        <Route path="/purchase" element={<PrivateShell><HalamanPurchase /></PrivateShell>} />
         <Route path="/testimoni" element={<PrivateShell><HalamanTestimoni /></PrivateShell>} />
         <Route path="/admin/pengguna/:sub" element={<PrivateShell><HalamanAdminPengguna /></PrivateShell>} />
         <Route path="/admin/pengguna/tautkan-siswa" element={<PrivateShell><HalamanTautkanAkunSiswa /></PrivateShell>} />
@@ -226,7 +254,7 @@ function RouteWrapper() {
         
         <Route path="/profil" element={<Navigate to="/pengaturan/akun" replace />} />
         <Route path="*" element={user
-          ? (passwordRecovery ? <Navigate to="/login" replace /> : selectedRole === 'demo' ? <Navigate to="/trial" replace /> : <PrivateShell><HalamanSubMenu /></PrivateShell>)
+          ? (passwordRecovery ? <Navigate to="/login" replace /> : <PrivateShell><HalamanSubMenu /></PrivateShell>)
           : <Navigate to="/login" replace />} /> {/*[cite: 9] */}
       </Routes>
     </Suspense>

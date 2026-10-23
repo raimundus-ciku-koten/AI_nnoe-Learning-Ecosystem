@@ -287,14 +287,6 @@ const TAMBAHAN = {
       ],
     },
     {
-      id: 'x-bayar', judul: 'Pembayaran dan Langganan', ikon: 'cash-coin',
-      items: [
-        s('Paket Purchase',         'box'),
-        s('Tagihan dan Pembayaran', 'receipt'),
-        s('Status Langganan',       'credit-card-2-front'),
-      ],
-    },
-    {
       id: 'x-ai', judul: 'Prompt dan AI', ikon: 'robot',
       items: [
         s('Prompt AI Global', 'journal-code'),
@@ -439,7 +431,6 @@ export function menuUntuk(role) {
     return dariNavigasi(menuUntukPeran(bersih));
   }
   if (bersih === 'operator') return dariNavigasi(MENU_NAV_OPERATOR);
-  if (bersih === 'demo') return dariNavigasi(menuUntukPeran(bersih));
   if (bersih === 'guru') {
     return dariNavigasi(MENU_NAV_GURU);
   }
