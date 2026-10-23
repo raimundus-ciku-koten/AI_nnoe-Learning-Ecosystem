@@ -17,11 +17,14 @@ Preview runtime access remains subject to Vercel authentication.
 **Preview deployment update (2026-10-24):** the professional landing page and
 documentation are deployed to Vercel Preview from
 `feature/ai-nnoe-learning-workspaces`; GitHub Web CI passed and Vercel marked
-the deployment Ready. Preview access is protected by Vercel authentication,
-so hosted runtime behavior has not yet been smoke-tested. Production remains
-unchanged. The overall release decision remains **NO-GO for public full
-release** until the backend, privacy, recovery, and feature verification gates
-below are closed.
+the deployment Ready. Using the owner's authenticated Vercel session, the
+landing page, login route, and privacy notice were rendered; the mobile
+landing page had no horizontal overflow and no signup control appeared on
+login. Credentials were not entered. A manifest request was redirected to
+Vercel SSO and produced a CORS warning; Supabase Auth, OAuth, RLS, database
+schema, and feature data were not validated. Production remains unchanged.
+The overall release decision remains **NO-GO for public full release** until
+the backend, privacy, recovery, and feature verification gates below are closed.
 
 ## Release readiness snapshot (2026-10-23)
 

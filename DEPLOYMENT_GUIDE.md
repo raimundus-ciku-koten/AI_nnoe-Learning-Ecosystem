@@ -15,10 +15,25 @@ This document records the release state and the remaining safe rollout steps for
   **Preview** environment. Vercel marked the deployment Ready and the GitHub
   Web CI workflow completed successfully. No Production promotion, hosted
   migration, Supabase setting, or provider change was performed.
-- The Preview deployment requires Vercel authentication; an unauthenticated
-  request redirects to the Vercel login page. The landing page was rendered
-  and checked locally in the VS Code browser. The protected hosted Preview
-  itself could not be smoke-tested without access to its protected runtime.
+- The latest Preview deployment was opened through the owner's authenticated
+  Vercel session at
+  <https://ainnoe-rd5no94gm-kotenraimundusc-4094.vercel.app/>. The hosted
+  landing page, login route, and privacy-notice route rendered. At a 390 px
+  viewport the landing page had no horizontal overflow and its images loaded.
+  The login page showed email/password, Google sign-in, and password recovery;
+  public signup was absent. No credentials were entered and no authentication
+  request was submitted.
+- Vercel Preview environment-variable settings list
+  `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for Preview. Their values
+  were not revealed, so this inspection does not verify which Supabase project
+  Preview targets or whether the Auth provider configuration works. Google
+  sign-in was not tested; the latest documented Staging state says its Google
+  provider is disabled.
+- The browser logged a CORS error when the protected Preview's
+  `/site.webmanifest` request redirected to Vercel SSO. The core landing, login,
+  and privacy routes still rendered. Recheck the web manifest/PWA behavior
+  after an authorized Preview access method is available; do not turn off
+  deployment protection to hide this diagnostic.
 - Do not place deployment tokens or Supabase keys in chat or source control.
   Keep Preview protection enabled unless the owner explicitly approves a
   reviewed alternative access method.
@@ -28,10 +43,10 @@ This document records the release state and the remaining safe rollout steps for
   `npm run build`, and output is `dist`. Confirm the Preview environment has
   only the intended public Supabase URL and anon/publishable key if login is
   being tested; never configure service-role or provider secrets as `VITE_*`.
-- Complete a smoke test from an authorized Preview session for the public
-  landing page, its login and privacy links, mobile layout, and browser errors.
-  A successful static build or local rendering does not verify Supabase Auth,
-  RLS, migrations, OAuth, or feature data.
+- Complete authenticated feature smoke tests with approved Staging test
+  accounts and synthetic data. The public landing/login/privacy surface has
+  been checked, but this does not verify successful Supabase Auth, RLS,
+  migrations, OAuth, or feature data.
 - Do not promote this build to Production as a full application release. The
   current release decision remains **NO-GO for full release** until the
   staging migration provenance, schema/RLS parity, backup and restore,
