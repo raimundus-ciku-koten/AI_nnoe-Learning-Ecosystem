@@ -100,11 +100,20 @@ const HalamanSubMenu = lazy(() => import('./pages/SubMenuPage.jsx'));
 const HalamanArsipPerencanaan = lazy(() => import('./pages/PlanningArchivePage.jsx'));
 const HalamanTestimoni = lazy(() => import('./pages/TestimonialPage.jsx'));
 const HalamanAdminPengguna = lazy(() => import('./pages/AdminUsersPage.jsx'));
+const HalamanHubunganWali = lazy(() => import('./pages/GuardianAccountLinkPage.jsx'));
 const HalamanPresensi = lazy(() => import('./pages/AttendancePage.jsx'));
+const HalamanJurnalGuru = lazy(() => import('./pages/TeacherJournalPage.jsx'));
+const HalamanLaporanJurnalGuru = lazy(() => import('./pages/TeacherJournalReportPage.jsx'));
+const HalamanPenugasanGuru = lazy(() => import('./pages/TeacherAssignmentsPage.jsx'));
+const HalamanPengaturanSekolah = lazy(() => import('./pages/SchoolSettingsPage.jsx'));
+const HalamanBantuanAdmin = lazy(() => import('./pages/AdminHelpPage.jsx'));
+const HalamanPengumumanSekolah = lazy(() => import('./pages/SchoolAnnouncementsPage.jsx'));
 const HalamanGoogleWorkspace = lazy(() => import('./pages/GoogleWorkspacePage.jsx'));
 const HalamanIntegrasiAI = lazy(() => import('./pages/AIIntegrationsPage.jsx'));
 const HalamanBankSoal = lazy(() => import('./pages/QuestionBankPage.jsx'));
 const HalamanUjianOnline = lazy(() => import('./pages/OnlineAssessmentPage.jsx'));
+const HalamanLaporanPenilaianGuru = lazy(() => import('./pages/TeacherAssessmentReportPage.jsx'));
+const HalamanAnalisisPenilaianGuru = lazy(() => import('./pages/TeacherAssessmentAnalysisPage.jsx'));
 const HalamanNilaiUjianSiswa = lazy(() => import('./pages/OnlineAssessmentResultsPage.jsx'));
 const HalamanTautkanAkunSiswa = lazy(() => import('./pages/StudentAccountLinkPage.jsx'));
 const HalamanTenantPlatform = lazy(() => import('./pages/PlatformTenantsPage.jsx'));
@@ -151,7 +160,7 @@ function PrivateShell({ children }) {
 
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;
-  if (!canOpenRolePath(selectedRole, location.pathname)) {
+  if (!canOpenRolePath(selectedRole, location.pathname, location.search)) {
     if (!selectedRole || !canOpenRolePath(selectedRole, '/dashboard')) {
       return <AccountAccessUnavailable />;
     }
@@ -216,13 +225,24 @@ function RouteWrapper() {
         <Route path="/dashboard" element={<PrivateShell><HalamanDashboard /></PrivateShell>} />
         <Route path="/testimoni" element={<PrivateShell><HalamanTestimoni /></PrivateShell>} />
         <Route path="/admin/pengguna/:sub" element={<PrivateShell><HalamanAdminPengguna /></PrivateShell>} />
+        <Route path="/admin/pengguna/hubungan-wali" element={<PrivateShell><HalamanHubunganWali /></PrivateShell>} />
+        <Route path="/admin/komunikasi/pengumuman" element={<PrivateShell><HalamanPengumumanSekolah /></PrivateShell>} />
+        <Route path="/pengumuman/sekolah" element={<PrivateShell><HalamanPengumumanSekolah /></PrivateShell>} />
         <Route path="/admin/pengguna/tautkan-siswa" element={<PrivateShell><HalamanTautkanAkunSiswa /></PrivateShell>} />
         <Route path="/pelaksanaan/presensi" element={<PrivateShell><HalamanPresensi /></PrivateShell>} />
+        <Route path="/admin/laporan/akademik" element={<PrivateShell><HalamanPresensi reportMode /></PrivateShell>} />
+        <Route path="/pelaksanaan/jurnal" element={<PrivateShell><HalamanJurnalGuru /></PrivateShell>} />
+        <Route path="/laporan/harian-bulanan" element={<PrivateShell><HalamanLaporanJurnalGuru /></PrivateShell>} />
+        <Route path="/datadasar/kelas" element={<PrivateShell><HalamanPenugasanGuru /></PrivateShell>} />
+        <Route path="/admin/instansi/:sub" element={<PrivateShell><HalamanPengaturanSekolah /></PrivateShell>} />
+        <Route path="/admin/bantuan/:sub" element={<PrivateShell><HalamanBantuanAdmin /></PrivateShell>} />
         <Route path="/program-kegiatan" element={<PrivateShell><HalamanProgramKegiatan /></PrivateShell>} />
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
         <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanIntegrasiAI /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
+        <Route path="/laporan/penilaian" element={<PrivateShell><HalamanLaporanPenilaianGuru /></PrivateShell>} />
+        <Route path="/asesmen/analisis" element={<PrivateShell><HalamanAnalisisPenilaianGuru /></PrivateShell>} />
         <Route path="/siswa/ujian" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/nilai" element={<PrivateShell><HalamanNilaiUjianSiswa /></PrivateShell>} />
         <Route path="/admin/perencanaan/paket/:id?/:jenis?" element={<PrivateShell><HalamanPerencanaan /></PrivateShell>} />

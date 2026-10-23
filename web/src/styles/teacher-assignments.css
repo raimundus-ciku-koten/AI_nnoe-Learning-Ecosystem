@@ -1,0 +1,31 @@
+.teacher-assignments { display: grid; gap: 1rem; width: min(100%, 1120px); margin: 0 auto; }
+.teacher-assignments-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: clamp(1.15rem, 3vw, 1.8rem); border: 1px solid #dce7f2; border-radius: 1rem;
+  background: linear-gradient(125deg, #fff, #f1f8ff);
+}
+.teacher-assignments-header h1 { margin: .2rem 0; color: #18233d; font-size: clamp(1.45rem, 3vw, 2rem); }
+.teacher-assignments-header p { margin: .35rem 0 0; color: #59677d; line-height: 1.5; }
+.teacher-assignments-header > a { flex: none; color: #176e78; font-weight: 700; }
+.teacher-assignments-kicker, .teacher-assignments-eyebrow {
+  color: #137b75; font-size: .75rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+}
+.teacher-assignments-kicker { display: flex; align-items: center; gap: .4rem; margin: 0 0 .35rem; }
+.teacher-assignments-note, .teacher-assignments-error {
+  margin: 0; padding: .8rem .95rem; border-radius: .7rem; font-size: .84rem; line-height: 1.5;
+}
+.teacher-assignments-note { border: 1px solid #f1dca6; background: #fff9e9; color: #675324; }
+.teacher-assignments-error { background: #fff1f0; color: #9d302b; }
+.teacher-assignments-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.teacher-assignments-card { min-width: 0; padding: clamp(1rem, 2vw, 1.35rem); }
+.teacher-assignments-card::before { content: none; }
+.teacher-assignments-card h2 { margin: 0 0 1rem; color: #1d2a43; font-size: 1.1rem; }
+.teacher-assignments-card ul { display: flex; flex-wrap: wrap; gap: .55rem; margin: 0; padding: 0; list-style: none; }
+.teacher-assignments-card li { padding: .45rem .7rem; border: 1px solid #dce7f2; border-radius: 999px; background: #f6f9fc; color: #34445c; font-size: .85rem; font-weight: 700; }
+.teacher-assignments-denied { max-width: 42rem; margin: 2rem auto; padding: 1.2rem; }
+.teacher-assignments-denied h1 { color: #24334b; font-size: 1.25rem; }
+.teacher-assignments-denied p { color: #59677d; }
+@media (max-width: 650px) {
+  .teacher-assignments-header { align-items: flex-start; flex-direction: column; }
+  .teacher-assignments-grid { grid-template-columns: 1fr; }
+}

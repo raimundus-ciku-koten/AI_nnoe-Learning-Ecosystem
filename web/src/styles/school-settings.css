@@ -1,0 +1,26 @@
+.school-settings { display: grid; gap: 1rem; width: min(100%, 960px); margin: 0 auto; color: #26354c; }
+.school-settings-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: clamp(1.15rem, 3vw, 1.8rem); border: 1px solid #dce7f2; border-radius: 1rem; background: linear-gradient(125deg, #fff, #f1f8ff); }
+.school-settings-header h1 { margin: .2rem 0; color: #18233d; font-size: clamp(1.45rem, 3vw, 2rem); }
+.school-settings-header p { margin: .35rem 0 0; color: #59677d; line-height: 1.5; }
+.school-settings-header > a { flex: none; color: #176e78; font-weight: 700; }
+.school-settings-kicker, .school-settings-scope { color: #137b75; font-size: .8rem; font-weight: 700; }
+.school-settings-kicker { display: flex; align-items: center; gap: .4rem; margin: 0; text-transform: uppercase; }
+.school-settings-nav { display: flex; flex-wrap: wrap; gap: .55rem; }
+.school-settings-nav a { padding: .55rem .8rem; border: 1px solid #d7e1eb; border-radius: .65rem; background: #fff; color: #42536b; font-size: .84rem; font-weight: 700; text-decoration: none; }
+.school-settings-nav a[aria-current="page"] { border-color: #147e78; background: #147e78; color: #fff; }
+.school-settings-card { padding: clamp(1rem, 2.5vw, 1.5rem); }
+.school-settings-card::before { content: none; }
+.school-settings-scope { margin: 0 0 1rem; color: #607089; font-weight: 500; }
+.school-settings-card form { display: grid; gap: .85rem; max-width: 42rem; }
+.school-settings-card label { display: grid; gap: .35rem; color: #36455b; font-size: .84rem; font-weight: 700; }
+.school-settings-card label span, .school-settings-card small { color: #738096; font-size: .75rem; font-weight: 500; }
+.school-settings-card input, .school-settings-card select { width: 100%; min-height: 2.65rem; padding: .6rem .7rem; border: 1px solid #d8e1eb; border-radius: .6rem; background: #fff; color: #26354c; font: inherit; font-weight: 400; }
+.school-settings-card button { justify-self: start; min-height: 2.6rem; padding: .6rem .9rem; border: 1px solid #147e78; border-radius: .65rem; background: #147e78; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.school-settings-card button:disabled { opacity: .6; cursor: wait; }
+.school-settings-error, .school-settings-notice { padding: .7rem .8rem; border-radius: .6rem; font-size: .84rem; }
+.school-settings-error { background: #fff1f0; color: #9d302b; }
+.school-settings-notice { background: #effbf6; color: #16715e; }
+.school-settings-denied { max-width: 42rem; margin: 2rem auto; padding: 1.2rem; }
+.school-settings-denied h1 { color: #24334b; font-size: 1.25rem; }
+.school-settings-denied p { color: #59677d; }
+@media (max-width: 600px) { .school-settings-header { align-items: flex-start; flex-direction: column; } }

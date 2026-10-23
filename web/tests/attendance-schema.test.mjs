@@ -15,6 +15,10 @@ const cleanupPolicies = cleanupMigration.slice(
   cleanupMigration.indexOf('create policy'),
   cleanupMigration.indexOf('create or replace function'),
 );
+const reportMigration = await readFile(new URL(
+  '../../supabase/migrations/20261023000600_attendance_staff_report.sql',
+  import.meta.url,
+), 'utf8');
 
 test('defines immutable per-student-per-day scan records with snapshot fields', () => {
   assert.match(migration, /create table if not exists public\.attendance_records/);
@@ -43,4 +47,21 @@ test('does not grant attendance update/delete to authenticated users or expose r
   assert.match(migration, /revoke all on table public\.attendance_records from anon, authenticated/);
   assert.doesNotMatch(migration, /grant (?:update|delete) .*public\.attendance_records/);
   assert.doesNotMatch(migration, /for (?:update|delete)\s+to authenticated/i);
+});
+
+test('serves filtered staff attendance through an active tenant and roster-checked RPC', () => {
+  assert.match(reportMigration, /create or replace function public\.school_attendance_report/);
+  assert.match(reportMigration, /security definer\s+set search_path = ''/);
+  assert.match(reportMigration, /profile\.active = true/);
+  assert.match(reportMigration, /profile\.role = actor_role/);
+  assert.match(reportMigration, /profile\.tenant_id = active_tenant_id/);
+  assert.match(reportMigration, /tenant\.active = true/);
+  assert.match(reportMigration, /actor_role in \('admin_sekolah', 'operator'\)/);
+  assert.match(reportMigration, /student\.owner_id = auth\.uid\(\)/);
+  assert.match(reportMigration, /p_attendance_date/);
+  assert.match(reportMigration, /p_class_name/);
+  assert.match(reportMigration, /p_student_search/);
+  assert.match(reportMigration, /limit p_limit\s+offset p_offset/);
+  assert.match(reportMigration, /revoke all on function public\.school_attendance_report[\s\S]*from public, anon/);
+  assert.doesNotMatch(reportMigration, /tenant_entitlements|service_role key/i);
 });

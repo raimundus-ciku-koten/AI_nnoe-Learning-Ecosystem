@@ -341,6 +341,11 @@ from unnest(array[
   'chat_push_dispatches',
   'student_account_links',
   'student_account_link_audit',
+  'guardian_student_links',
+  'guardian_student_link_audit',
+  'school_learning_items',
+  'school_task_submissions',
+  'school_teacher_journals',
   'online_exams',
   'online_exam_items',
   'online_exam_attempts'

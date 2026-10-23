@@ -2,6 +2,11 @@ const tautan = (label, path, ikon, search = '') => ({ label, path, ikon, search 
 const perencanaan = (label, jenis, ikon) =>
   tautan(label, '/perencanaan', ikon, `?jenis=${jenis}`);
 
+export function isGuardianRole(role) {
+  const normalizedRole = String(role || '').trim().toLowerCase();
+  return normalizedRole === 'ortu' || normalizedRole === 'orang_tua';
+}
+
 export const GRUP_MENU = [
   {
     id: 'beranda', label: 'Dashboard', ikon: 'home',
@@ -14,6 +19,7 @@ export const GRUP_MENU = [
       tautan('Semua Percakapan', '/chat', 'chat'),
       tautan('Kontak', '/chat/kontak', 'users'),
       tautan('Grup', '/chat/grup', 'users'),
+      tautan('Pengumuman Sekolah', '/pengumuman/sekolah', 'file'),
       tautan('Testimoni', '/testimoni', 'chat'),
     ],
   },
@@ -143,10 +149,12 @@ const MENU_SISWA = [
   grup('siswa-belajar', 'Ruang Belajar', 'book', [
     tautan('Jadwal dan Tugas', '/siswa/jadwal', 'calendar'),
     tautan('Materi', '/siswa/materi', 'book'),
+    tautan('Kehadiran Saya', '/siswa/kehadiran', 'check'),
     tautan('Ujian Saya', '/siswa/ujian', 'check'),
     tautan('Nilai Saya', '/siswa/nilai', 'chart'),
   ]),
   grup('siswa-chat', 'Komunikasi', 'chat', [
+    tautan('Pengumuman Sekolah', '/pengumuman/sekolah', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
     tautan('Grup', '/chat/grup', 'users'),
@@ -161,6 +169,7 @@ const MENU_ORTU = [
     tautan('Nilai dan Kehadiran', '/orang-tua/nilai-kehadiran', 'chart'),
   ]),
   grup('ortu-komunikasi', 'Komunikasi', 'chat', [
+    tautan('Pengumuman Sekolah', '/pengumuman/sekolah', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
   ]),
@@ -180,6 +189,7 @@ export const MENU_OPERATOR = [
     tautan('Presensi', '/pelaksanaan/presensi', 'check'),
   ]),
   grup('operator-komunikasi', 'Komunikasi', 'chat', [
+    tautan('Pengumuman Sekolah', '/pengumuman/sekolah', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
     tautan('Grup', '/chat/grup', 'users'),
@@ -211,6 +221,7 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Siswa', '/admin/pengguna/siswa', 'users'),
     tautan('Tautkan akun siswa ke roster', '/admin/pengguna/tautkan-siswa', 'users'),
     tautan('Orang Tua', '/admin/pengguna/orang-tua', 'users'),
+    tautan('Hubungan wali dan siswa', '/admin/pengguna/hubungan-wali', 'users'),
     tautan('Admin Sekolah', '/admin/pengguna/admin', 'user'),
     tautan('Peran dan Hak Akses', '/admin/pengguna/peran', 'settings'),
   ]),
@@ -316,6 +327,11 @@ export const MENU_SUPERADMIN = [
   ]),
 ];
 
+export function isTeacherRole(role) {
+  const normalizedRole = String(role || '').trim().toLowerCase();
+  return ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(normalizedRole);
+}
+
 function cocokJenis(item, path, search) {
   if (!item.search) return true;
   const target = new URLSearchParams(item.search);
@@ -333,10 +349,10 @@ export function menuUntukPeran(role) {
   if (peran === 'admin_sekolah' || peran === 'admin') return MENU_ADMIN_SEKOLAH;
   if (peran === 'superadmin') return MENU_SUPERADMIN;
   if (peran === 'siswa') return MENU_SISWA;
-  if (peran === 'ortu' || peran === 'orang_tua') return MENU_ORTU;
+  if (isGuardianRole(peran)) return MENU_ORTU;
   if (peran === 'operator') return MENU_OPERATOR;
   if (['kepala_sekolah', 'wali_kelas'].includes(peran)) return MENU_KONTEKS_TERBATAS;
-  if (['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(peran)) return GRUP_MENU;
+  if (isTeacherRole(peran)) return GRUP_MENU;
   return MENU_TANPA_PERAN;
 }
 

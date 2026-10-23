@@ -20,6 +20,7 @@
 .attendance-header p { margin: .35rem 0 0; color: #59677d; }
 .attendance-kicker { display: flex; align-items: center; gap: .4rem; font-size: .8rem; font-weight: 700; text-transform: uppercase; }
 .attendance-kicker .ale-ikon { width: 1rem; height: 1rem; color: #168b7e; }
+.attendance-header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
 .attendance-cta, .attendance-reload {
   display: inline-flex;
   align-items: center;
@@ -51,7 +52,7 @@
 .attendance-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .attendance-panel-heading h2 { margin: 0; color: #1c2b45; font-size: 1.12rem; }
 .attendance-panel-heading p { margin: .35rem 0 0; color: #68768b; font-size: .84rem; }
-.attendance-filters { display: grid; grid-template-columns: minmax(140px, .7fr) minmax(150px, .8fr) minmax(200px, 1.2fr); gap: .75rem; margin: 1.1rem 0; }
+.attendance-filters { display: grid; grid-template-columns: minmax(140px, .7fr) minmax(150px, .8fr) minmax(200px, 1.2fr) auto; align-items: end; gap: .75rem; margin: 1.1rem 0; }
 .attendance-filters label { display: grid; gap: .35rem; color: #46556d; font-size: .8rem; font-weight: 700; }
 .attendance-filters input, .attendance-filters select { width: 100%; min-height: 2.55rem; padding: .5rem .65rem; border: 1px solid #d4deea; border-radius: .55rem; background: #fff; color: #263651; font: inherit; }
 .attendance-table-wrap { overflow-x: auto; }
@@ -69,7 +70,8 @@
 
 @media (max-width: 650px) {
   .attendance-header { align-items: stretch; flex-direction: column; }
-  .attendance-cta { align-self: flex-start; }
+  .attendance-header-actions { align-items: stretch; flex-direction: column; }
+  .attendance-header-actions .attendance-cta { align-self: flex-start; }
   .attendance-summary { grid-template-columns: 1fr; }
   .attendance-filters { grid-template-columns: 1fr; }
   .attendance-panel-heading { align-items: flex-start; flex-direction: column; }

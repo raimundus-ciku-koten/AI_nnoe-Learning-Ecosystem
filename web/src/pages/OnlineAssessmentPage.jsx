@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   buatUjianOnline,
@@ -24,6 +24,53 @@ function formatWaktu(value) {
   });
 }
 
+export function ujianBelumDimulai(exam, now = Date.now()) {
+  return exam.attempt_status === 'not_started' && now < Date.parse(exam.starts_at);
+}
+
+export function statusKetersediaanUjian(exam, now = Date.now()) {
+  if (exam.attempt_status !== 'not_started') return 'available';
+  if (now < Date.parse(exam.starts_at)) return 'upcoming';
+  if (now >= Date.parse(exam.ends_at)) return 'expired';
+  return 'available';
+}
+
+export function jadwalBerikutnyaUjian(exams, now = Date.now()) {
+  return exams
+    .filter((exam) => exam.attempt_status === 'not_started')
+    .flatMap((exam) => [Date.parse(exam.starts_at), Date.parse(exam.ends_at)])
+    .filter((scheduleTime) => Number.isFinite(scheduleTime) && scheduleTime > now)
+    .sort((first, second) => first - second)[0];
+}
+
+export function statusTampilanUjian(exam, draft) {
+  if (exam.attempt_status === 'submitted') {
+    return { label: 'Sudah dikumpulkan', canResume: false };
+  }
+  if (draft?.submissionId) {
+    return { label: 'Pengumpulan menunggu konfirmasi server', canResume: true };
+  }
+  return {
+    label: '',
+    canResume: exam.attempt_status !== 'submitted',
+  };
+}
+
+export function tandaiUjianTerkumpul(exams, examId) {
+  return exams.map((exam) => (
+    exam.exam_id === examId
+      ? { ...exam, attempt_status: 'submitted' }
+      : exam
+  ));
+}
+
+export function pesanKesalahanSinkronisasiUjian({ draftError, loadError }) {
+  return [
+    draftError && `Draft lokal tidak dapat dibaca: ${draftError}`,
+    loadError && `Daftar ujian belum dapat disinkronkan: ${loadError}`,
+  ].filter(Boolean).join(' ');
+}
+
 function StudentAssessments({ userId }) {
   const [exams, setExams] = useState([]);
   const [drafts, setDrafts] = useState([]);
@@ -33,23 +80,41 @@ function StudentAssessments({ userId }) {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [clock, setClock] = useState(Date.now());
+  const refreshRequest = useRef(0);
 
   const refresh = async () => {
+    const requestId = ++refreshRequest.current;
+    let draftErrorMessage = '';
+    let loadErrorMessage = '';
     try {
-      setDrafts(daftarDraftUjian(userId));
+      const localDrafts = daftarDraftUjian(userId);
+      if (requestId === refreshRequest.current) setDrafts(localDrafts);
     } catch (draftError) {
-      setError(`Draft lokal tidak dapat dibaca: ${draftError.message}`);
+      console.error('[online-assessments] Gagal membaca draft lokal:', draftError);
+      if (requestId === refreshRequest.current) setDrafts([]);
+      draftErrorMessage = draftError.message;
     }
     try {
-      setExams(await muatUjianSiswa());
-      setError('');
+      const latestExams = await muatUjianSiswa();
+      if (requestId === refreshRequest.current) setExams(latestExams);
     } catch (loadError) {
-      setError(`Daftar ujian belum dapat disinkronkan: ${loadError.message}`);
+      console.error('[online-assessments] Gagal memuat daftar ujian:', loadError);
+      if (requestId === refreshRequest.current) setExams([]);
+      loadErrorMessage = loadError.message;
+    }
+    if (requestId === refreshRequest.current) {
+      setError(pesanKesalahanSinkronisasiUjian({
+        draftError: draftErrorMessage,
+        loadError: loadErrorMessage,
+      }));
     }
   };
 
   useEffect(() => {
     refresh().catch((loadError) => setError(loadError.message));
+    return () => {
+      refreshRequest.current += 1;
+    };
   }, [userId]);
 
   useEffect(() => {
@@ -64,15 +129,26 @@ function StudentAssessments({ userId }) {
   }, [active, answers, userId]);
 
   useEffect(() => {
-    if (!active) return undefined;
-    const timer = globalThis.setInterval(() => setClock(Date.now()), 1000);
-    return () => globalThis.clearInterval(timer);
-  }, [active]);
+    if (active) {
+      const timer = globalThis.setInterval(() => setClock(Date.now()), 1000);
+      return () => globalThis.clearInterval(timer);
+    }
+
+    const nextScheduleBoundary = jadwalBerikutnyaUjian(exams, clock);
+    if (nextScheduleBoundary === undefined) return undefined;
+
+    const timer = globalThis.setTimeout(
+      () => setClock(Date.now()),
+      Math.min(nextScheduleBoundary - clock, 2_147_483_647),
+    );
+    return () => globalThis.clearTimeout(timer);
+  }, [active, clock, exams]);
 
   const applySubmission = async (exam, submittedAnswers, submissionId) => {
     const result = await kirimJawabanUjian(exam.attemptId, submissionId, submittedAnswers);
     hapusDraftUjian(userId, exam.examId);
     setDrafts(daftarDraftUjian(userId));
+    setExams((previous) => tandaiUjianTerkumpul(previous, exam.examId));
     setActive(null);
     setAnswers({});
     setNotice(result.gradePending
@@ -82,7 +158,11 @@ function StudentAssessments({ userId }) {
 
   useEffect(() => {
     const syncPending = async () => {
-      if (!globalThis.navigator?.onLine || !active?.submissionId) return;
+      if (!globalThis.navigator?.onLine) return;
+      if (!active?.submissionId) {
+        await refresh();
+        return;
+      }
       setBusy(true);
       try {
         await applySubmission(active, answers, active.submissionId);
@@ -263,15 +343,25 @@ function StudentAssessments({ userId }) {
       <ul className="ale-exam-list">
         {exams.map((exam) => {
           const draft = drafts.find((item) => item.exam.examId === exam.exam_id);
+          const availability = statusKetersediaanUjian(exam, clock);
+          const notStarted = availability === 'upcoming';
+          const expired = availability === 'expired';
+          const submissionStatus = statusTampilanUjian(exam, draft);
           return (
             <li key={exam.exam_id}>
               <div>
                 <strong>{exam.title}</strong>
                 <span>Kelas {exam.kelas} · {formatWaktu(exam.starts_at)} · {exam.duration_minutes} menit</span>
-                {draft?.submissionId && <span>Pengumpulan menunggu konfirmasi server</span>}
+                {notStarted && <span>Ujian dibuka {formatWaktu(exam.starts_at)}</span>}
+                {expired && <span>Waktu ujian telah berakhir</span>}
+                {submissionStatus.label && <span>{submissionStatus.label}</span>}
               </div>
-              {exam.attempt_status !== 'submitted' && (
-                <button type="button" disabled={busy} onClick={() => openExam(exam.exam_id)}>
+              {submissionStatus.canResume && (
+                <button
+                  type="button"
+                  disabled={busy || notStarted || expired}
+                  onClick={() => openExam(exam.exam_id)}
+                >
                   {draft ? 'Lanjutkan' : exam.attempt_status === 'in_progress' ? 'Lanjutkan ujian' : 'Mulai ujian'}
                 </button>
               )}
@@ -512,8 +602,26 @@ function TeacherAssessments({ tenantId, userId }) {
 export default function OnlineAssessmentPage() {
   const { role, tenantId, user } = useAuth();
 
-  if (role === 'siswa') return <StudentAssessments userId={user.uid} />;
-  if (role === 'guru') return <TeacherAssessments tenantId={tenantId} userId={user.uid} />;
+  if (!user?.uid) {
+    return (
+      <section className="ale-exam-card" role="alert">
+        <h2>Ujian Online</h2>
+        <p>Sesi akun belum siap. Muat ulang halaman atau masuk kembali.</p>
+      </section>
+    );
+  }
+  if (role === 'siswa') {
+    return <StudentAssessments key={`${role}:${user.uid}`} userId={user.uid} />;
+  }
+  if (role === 'guru') {
+    return (
+      <TeacherAssessments
+        key={`${role}:${tenantId || ''}:${user.uid}`}
+        tenantId={tenantId}
+        userId={user.uid}
+      />
+    );
+  }
   return (
     <section className="ale-exam-card">
       <h2>Ujian Online</h2>

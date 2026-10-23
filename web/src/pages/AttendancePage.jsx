@@ -1,10 +1,41 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { supabase } from '../lib/supabase.ts';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
+import { ATTENDANCE_PAGE_SIZE, muatLaporanPresensi } from '../services/attendanceReports.js';
 import '../styles/attendance.css';
 
-const PERAN_PENDIDIK = new Set(['admin_sekolah', 'operator', 'guru']);
+const PERAN_PENDIDIK = new Set([
+  'admin_sekolah', 'operator', 'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',
+]);
+
+const EMPTY_FILTERS = { date: '', className: '', search: '' };
+
+function formatDate(value) {
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
+  return Number.isNaN(date.getTime())
+    ? 'Tanggal tidak valid'
+    : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(date);
+}
+
+function csvCell(value) {
+  const text = String(value ?? '');
+  const formulaSafe = /^[\s\u0000-\u001f]*[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${formulaSafe.replaceAll('"', '""')}"`;
+}
+
+export function buatCsvPresensi(records) {
+  const rows = [
+    ['Nama siswa', 'Kelas', 'Tanggal', 'Status', 'Waktu dicatat'],
+    ...records.map((record) => [
+      record.name,
+      record.className,
+      record.date,
+      record.status,
+      record.recordedAt,
+    ]),
+  ];
+  return `\uFEFF${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`;
+}
 
 function AttendanceAccessDenied() {
   return (
@@ -16,37 +47,38 @@ function AttendanceAccessDenied() {
   );
 }
 
-export default function AttendancePage() {
-  const { user, role } = useAuth();
+export default function AttendancePage({ reportMode = false }) {
+  const { role } = useAuth();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
-  const [tanggal, setTanggal] = useState('');
-  const [kelas, setKelas] = useState('');
-  const [cari, setCari] = useState('');
+  const [filterDraft, setFilterDraft] = useState(EMPTY_FILTERS);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const pageRequestId = useRef(0);
 
   useEffect(() => {
-    if (!user?.uid || !PERAN_PENDIDIK.has(role)) {
+    pageRequestId.current += 1;
+    if (!PERAN_PENDIDIK.has(role)) {
       setRecords([]);
       setLoading(false);
+      setLoadingMore(false);
+      setHasMore(false);
       return undefined;
     }
 
+    setLoadingMore(false);
     let active = true;
     async function muat() {
       setLoading(true);
       setError('');
       try {
-        const { data, error: fetchError } = await supabase
-          .from('attendance_records')
-          .select('*')
-          .eq('owner_id', user.uid)
-          .order('tanggal', { ascending: false })
-          .limit(50);
-
+        const rows = await muatLaporanPresensi({ ...filters, limit: ATTENDANCE_PAGE_SIZE, offset: 0 });
         if (!active) return;
-        if (fetchError) throw fetchError;
-        setRecords(data || []);
+        setRecords(rows);
+        setHasMore(rows.length === ATTENDANCE_PAGE_SIZE);
       } catch (err) {
         console.error('[presensi] Gagal memuat riwayat presensi:', err);
         if (active) setError(err?.message || 'Riwayat presensi tidak dapat dimuat.');
@@ -59,23 +91,52 @@ export default function AttendancePage() {
     return () => {
       active = false;
     };
-  }, [role, user?.uid]);
+  }, [filters, refreshKey, role]);
 
-  const daftarKelas = useMemo(
-    () => [...new Set(records.map((record) => record.kelas).filter(Boolean))]
-      .sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true })),
-    [records],
-  );
+  const loadMore = useCallback(async () => {
+    const requestId = ++pageRequestId.current;
+    setLoadingMore(true);
+    setError('');
+    try {
+      const rows = await muatLaporanPresensi({
+        ...filters,
+        limit: ATTENDANCE_PAGE_SIZE,
+        offset: records.length,
+      });
+      if (requestId !== pageRequestId.current) return;
+      setRecords((current) => [...current, ...rows]);
+      setHasMore(rows.length === ATTENDANCE_PAGE_SIZE);
+    } catch (loadError) {
+      if (requestId !== pageRequestId.current) return;
+      console.error('[presensi] Gagal memuat halaman presensi berikutnya:', loadError);
+      setError(loadError?.message || 'Halaman presensi berikutnya tidak dapat dimuat.');
+    } finally {
+      if (requestId === pageRequestId.current) setLoadingMore(false);
+    }
+  }, [filters, records.length]);
 
-  const tampil = useMemo(() => {
-    const kata = cari.trim().toLocaleLowerCase('id');
-    return records.filter((record) =>
-      (!tanggal || record.tanggal === tanggal)
-      && (!kelas || record.kelas === kelas)
-      && (!kata || String(record.nama || '').toLocaleLowerCase('id').includes(kata)
-        || String(record.student_id || '').toLocaleLowerCase('id').includes(kata)),
-    );
-  }, [records, tanggal, kelas, cari]);
+  const applyFilters = (event) => {
+    event.preventDefault();
+    setRecords([]);
+    setFilters({
+      date: filterDraft.date,
+      className: filterDraft.className.trim(),
+      search: filterDraft.search.trim(),
+    });
+  };
+
+  const downloadCsv = () => {
+    if (!records.length) return;
+    const blob = new Blob([buatCsvPresensi(records)], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `laporan-kehadiran-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   if (!PERAN_PENDIDIK.has(role)) return <AttendanceAccessDenied />;
 
@@ -83,90 +144,144 @@ export default function AttendancePage() {
     <div className="attendance-page">
       <header className="attendance-header">
         <div>
-          <p className="attendance-kicker"><Ikon nama="check" /> Pelaksanaan pembelajaran</p>
-          <h1>Presensi siswa</h1>
-          <p>Riwayat kehadiran dari Supabase. Migrasi skema hosted masih diperlukan sebelum pencatatan tersedia di produksi.</p>
+          <p className="attendance-kicker"><Ikon nama="check" /> {reportMode ? 'Laporan akademik' : 'Pelaksanaan pembelajaran'}</p>
+          <h1>{reportMode ? 'Laporan Kehadiran Akademik' : 'Presensi siswa'}</h1>
+          <p>
+            {reportMode
+              ? 'Laporan ini mencakup data kehadiran yang diizinkan untuk akun dan sekolah aktif; nilai dan data akademik lain tidak termasuk.'
+              : 'Riwayat presensi dibatasi otomatis oleh akun aktif, peran, tenant, dan roster yang diizinkan.'}
+          </p>
         </div>
-        <a className="attendance-cta" href="#/datadasar/barcode">
-          <Ikon nama="qr" /> Buka kartu barcode
-        </a>
+        <div className="attendance-header-actions">
+          {reportMode && (
+            <button
+              className="attendance-reload"
+              type="button"
+              disabled={loading || records.length === 0}
+              onClick={downloadCsv}
+            >
+              Unduh CSV ({records.length} baris)
+            </button>
+          )}
+          <a className="attendance-cta" href="#/datadasar/barcode">
+            <Ikon nama="qr" /> Buka kartu barcode
+          </a>
+          <button
+            className="attendance-reload"
+            type="button"
+            disabled={loading}
+            onClick={() => setRefreshKey((current) => current + 1)}
+          >
+            Muat ulang
+          </button>
+        </div>
       </header>
 
       <section className="attendance-summary" aria-label="Ringkasan presensi">
         <article className="ale-kartu attendance-stat">
-          <span>Catatan pada tampilan</span>
-          <strong>{loading ? '…' : tampil.length}</strong>
+          <span>Catatan dimuat</span>
+          <strong>{loading ? '…' : records.length}</strong>
         </article>
         <article className="ale-kartu attendance-stat">
           <span>Siswa tercatat</span>
-          <strong>{loading ? '…' : new Set(tampil.map((record) => record.student_id).filter(Boolean)).size}</strong>
+          <strong>{loading ? '…' : new Set(records.map((record) => record.studentId)).size}</strong>
         </article>
         <article className="ale-kartu attendance-stat">
           <span>Kelas tercatat</span>
-          <strong>{loading ? '…' : new Set(tampil.map((record) => record.kelas).filter(Boolean)).size}</strong>
+          <strong>{loading ? '…' : new Set(records.map((record) => record.className)).size}</strong>
         </article>
       </section>
 
       <section className="ale-kartu attendance-panel" aria-labelledby="attendance-list-title">
         <div className="attendance-panel-heading">
           <div>
-            <h2 id="attendance-list-title">Riwayat kehadiran</h2>
-            <p>Data dibaca dari tabel Supabase `attendance_records` untuk akun aktif.</p>
+            <h2 id="attendance-list-title">{reportMode ? 'Rincian kehadiran' : 'Riwayat kehadiran'}</h2>
+            <p>
+              Admin/operator melihat tenant aktif; guru melihat siswa dalam roster miliknya.
+              {reportMode && ' CSV hanya berisi baris yang telah dimuat pada halaman ini.'}
+            </p>
           </div>
         </div>
 
-        <div className="attendance-filters">
+        <form className="attendance-filters" onSubmit={applyFilters}>
           <label>
             Tanggal
-            <input type="date" value={tanggal} onChange={(event) => setTanggal(event.target.value)} />
+            <input
+              type="date"
+              value={filterDraft.date}
+              onChange={(event) => setFilterDraft((current) => ({ ...current, date: event.target.value }))}
+            />
           </label>
           <label>
             Kelas
-            <select value={kelas} onChange={(event) => setKelas(event.target.value)}>
-              <option value="">Semua kelas</option>
-              {daftarKelas.map((namaKelas) => <option key={namaKelas} value={namaKelas}>{namaKelas}</option>)}
-            </select>
+            <input
+              type="text"
+              maxLength={30}
+              value={filterDraft.className}
+              onChange={(event) => setFilterDraft((current) => ({ ...current, className: event.target.value }))}
+              placeholder="Semua kelas, mis. 7A"
+            />
           </label>
           <label className="attendance-search">
             Cari siswa
             <input
               type="search"
-              value={cari}
-              onChange={(event) => setCari(event.target.value)}
+              maxLength={100}
+              value={filterDraft.search}
+              onChange={(event) => setFilterDraft((current) => ({ ...current, search: event.target.value }))}
               placeholder="Nama atau ID siswa"
             />
           </label>
-        </div>
+          <button className="attendance-cta" type="submit" disabled={loading}>Terapkan filter</button>
+        </form>
 
         {error && <p className="attendance-error" role="alert">{error}</p>}
         {loading && <p className="attendance-message" role="status">Memuat riwayat presensi…</p>}
-        {!loading && !error && tampil.length === 0 && (
+        {!loading && !error && records.length === 0 && (
           <div className="attendance-empty">
             <Ikon nama="calendar" />
-            <h3>{records.length ? 'Tidak ada catatan yang cocok' : 'Belum ada presensi tercatat'}</h3>
-            <p>{records.length
+            <h3>{filters.date || filters.className || filters.search
+              ? 'Tidak ada catatan yang cocok'
+              : 'Belum ada presensi tercatat'}</h3>
+            <p>{filters.date || filters.className || filters.search
               ? 'Ubah filter tanggal, kelas, atau pencarian.'
-              : 'Belum ada data absensi di Supabase untuk akun ini.'}</p>
+              : 'Belum ada catatan presensi yang dapat diakses untuk tenant atau roster ini.'}</p>
           </div>
         )}
-        {!loading && !error && tampil.length > 0 && (
-          <div className="attendance-table-wrap">
-            <table className="attendance-table">
-              <thead>
-                <tr><th scope="col">Siswa</th><th scope="col">Kelas</th><th scope="col">Tanggal</th><th scope="col">Status</th></tr>
-              </thead>
-              <tbody>
-                {tampil.map((record) => (
-                  <tr key={record.id || `${record.tanggal}-${record.student_id}`}>
-                    <td>{record.nama || record.student_id || '-'}</td>
-                    <td>{record.kelas || '-'}</td>
-                    <td>{record.tanggal || '-'}</td>
-                    <td>{record.status || 'hadir'}</td>
+        {!loading && !error && records.length > 0 && (
+          <>
+            <div className="attendance-table-wrap">
+              <table className="attendance-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Siswa</th><th scope="col">Kelas</th>
+                    <th scope="col">Tanggal</th><th scope="col">Status</th><th scope="col">Waktu dicatat</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {records.map((record) => (
+                    <tr key={record.id}>
+                      <td>{record.name}</td>
+                      <td>{record.className}</td>
+                      <td>{formatDate(record.date)}</td>
+                      <td><span className="attendance-status">{record.status}</span></td>
+                      <td>{formatDate(record.recordedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {hasMore && (
+              <button
+                className="attendance-load-more"
+                type="button"
+                disabled={loadingMore}
+                onClick={loadMore}
+              >
+                {loadingMore ? 'Memuat…' : 'Muat catatan berikutnya'}
+              </button>
+            )}
+          </>
         )}
       </section>
     </div>

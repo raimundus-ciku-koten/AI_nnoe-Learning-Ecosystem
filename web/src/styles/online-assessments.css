@@ -101,7 +101,8 @@
 
 .ale-exam-form input:not([type="checkbox"]),
 .ale-exam-form select,
-.ale-exam-question textarea {
+.ale-exam-question textarea,
+.ale-exam-form textarea {
   width: 100%;
   min-height: 42px;
   padding: .6rem .7rem;
@@ -110,6 +111,60 @@
   color: inherit;
   background: var(--surface, #fff);
   font: inherit;
+}
+
+.ale-learning-publish {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+}
+
+.ale-learning-publish input {
+  width: 1.1rem;
+  min-height: 1.1rem;
+  accent-color: #244da2;
+}
+
+.ale-learning-item {
+  align-items: flex-start !important;
+}
+
+.ale-learning-submission,
+.ale-learning-reviews {
+  display: grid;
+  gap: .75rem;
+  margin-top: 1rem;
+}
+
+.ale-learning-submission textarea,
+.ale-learning-review textarea {
+  width: 100%;
+  padding: .65rem .75rem;
+  border: 1px solid var(--border, #dce3ed);
+  border-radius: 8px;
+  color: inherit;
+  background: var(--surface, #fff);
+  font: inherit;
+}
+
+.ale-learning-submission label,
+.ale-learning-review label {
+  display: grid;
+  gap: .4rem;
+  font-weight: 600;
+}
+
+.ale-learning-feedback,
+.ale-learning-review {
+  padding: .85rem;
+  border: 1px solid var(--border, #dce3ed);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+}
+
+.ale-learning-review {
+  display: grid;
+  gap: .65rem;
 }
 
 .ale-exam-select-questions,

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { menuUntuk } from '../menu.js';
 import { canOpenRolePath } from './roleAccess.js';
 
 test('Kepala Sekolah dan Wali Kelas hanya dapat membuka dashboard sampai ada izin terukur', () => {
@@ -11,11 +12,34 @@ test('Kepala Sekolah dan Wali Kelas hanya dapat membuka dashboard sampai ada izi
   }
 });
 
-test('peran lain tetap mengikuti otorisasi rute yang sudah ada', () => {
-  for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'siswa', 'superadmin']) {
+test('setiap tautan menu dapat dibuka hanya dalam konteks peran pemiliknya', () => {
+  for (const role of [
+    'superadmin', 'admin_sekolah', 'operator', 'guru', 'guru_bk',
+    'guru_kokurikuler', 'guru_ekstrakurikuler', 'kepala_sekolah',
+    'wali_kelas', 'siswa', 'ortu', 'orang_tua',
+  ]) {
     assert.equal(canOpenRolePath(role, '/dashboard'), true);
-    assert.equal(canOpenRolePath(role, '/perencanaan'), true);
+    for (const item of menuUntuk(role).flatMap((group) => group.items)) {
+      if (item.status !== 'rute') {
+        assert.equal(item.href, undefined, `${role} placeholder ${item.judul} unexpectedly has a route`);
+        continue;
+      }
+      const target = new URL(item.href.slice(1), 'https://app.invalid');
+      assert.equal(
+        canOpenRolePath(role, target.pathname, target.search),
+        true,
+        `${role} tidak dapat membuka menu ${item.judul} (${target.pathname}${target.search})`,
+      );
+    }
   }
+});
+
+test('rute lintas peran yang tidak tercantum pada menu ditolak', () => {
+  assert.equal(canOpenRolePath('siswa', '/perencanaan'), false);
+  assert.equal(canOpenRolePath('guru', '/admin/pengguna/guru'), false);
+  assert.equal(canOpenRolePath('admin_sekolah', '/platform/keamanan/audit'), false);
+  assert.equal(canOpenRolePath('superadmin', '/siswa/nilai'), false);
+  assert.equal(canOpenRolePath('operator', '/trial'), false);
 });
 
 test('role yang tidak disediakan aplikasi tidak dapat membuka rute', () => {

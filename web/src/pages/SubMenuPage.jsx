@@ -1,8 +1,11 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { cariMenu } from '../navigasi.js';
+import { cariMenu, isGuardianRole, isTeacherRole } from '../navigasi.js';
 import Ikon from '../components/Ikon.jsx';
+import ParentPortalPage from './ParentPortalPage.jsx';
+import SchoolLearningPage from './SchoolLearningPage.jsx';
+import StudentAttendancePage from './StudentAttendancePage.jsx';
 import TeacherWorkspacePage from './TeacherWorkspacePage.jsx';
 import TeacherAccountPage from './TeacherAccountPage.jsx';
 import '../styles/submenu.css';
@@ -171,8 +174,23 @@ export default function SubMenuPage() {
   }
 
   const { grup, item } = menu;
-  if (role === 'guru' && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
-  if (role === 'guru') return <TeacherWorkspacePage grup={grup} item={item} />;
+  if ([
+    '/datadasar/jadwal',
+    '/admin/akademik/jadwal',
+    '/admin/konten/bahan-ajar',
+    '/siswa/jadwal',
+    '/siswa/materi',
+  ].includes(item.path)) {
+    return <SchoolLearningPage />;
+  }
+  if (item.path === '/siswa/kehadiran' && role === 'siswa') {
+    return <StudentAttendancePage />;
+  }
+  if (isGuardianRole(role) && item.path.startsWith('/orang-tua/')) {
+    return <ParentPortalPage />;
+  }
+  if (isTeacherRole(role) && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
+  if (isTeacherRole(role)) return <TeacherWorkspacePage grup={grup} item={item} />;
 
   const alur = ALUR[grup.id] || {
     ringkasan: 'Pilih aktivitas yang dibutuhkan dan lanjutkan ke modul terkait.',

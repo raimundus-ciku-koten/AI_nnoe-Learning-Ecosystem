@@ -25,6 +25,38 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
     assert.deepEqual(items.map((item) => item.href), ['#/dashboard']);
   });
 
+  it('menu admin sekolah menautkan alur wali dan kanal pengumuman yang aktif', () => {
+    const items = menuUntuk('admin_sekolah').flatMap((group) => group.items);
+    for (const href of [
+      '#/admin/pengguna/hubungan-wali',
+      '#/admin/komunikasi/pengumuman',
+    ]) {
+      const item = items.find((entry) => entry.href === href);
+      assert.ok(item, `menu ${href} tersedia`);
+      assert.equal(item.status, 'rute');
+    }
+  });
+
+  it('menu admin sekolah menyediakan laporan akademik', () => {
+    const report = cariMenu('/admin/laporan/akademik', '', 'admin_sekolah');
+    assert.equal(report?.item.label, 'Laporan Akademik');
+  });
+
+  it('menu laporan guru membuka ringkasan jurnal pribadi', () => {
+    const report = cariMenu('/laporan/harian-bulanan', '', 'guru');
+    assert.equal(report?.item.label, 'Laporan Harian s.d. Bulanan');
+  });
+
+  it('menu laporan penilaian guru memiliki rute aktif', () => {
+    const report = cariMenu('/laporan/penilaian', '', 'guru');
+    assert.equal(report?.item.label, 'Laporan Penilaian');
+  });
+
+  it('menu analisis hasil guru memiliki rute aktif', () => {
+    const analysis = cariMenu('/asesmen/analisis', '', 'guru');
+    assert.equal(analysis?.item.label, 'Analisis Hasil');
+  });
+
   describe('menu legacy untuk siswa dan orang tua', () => {
     for (const [role, href] of [
       ['siswa', '#/siswa/jadwal'],

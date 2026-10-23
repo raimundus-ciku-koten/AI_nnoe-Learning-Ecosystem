@@ -1,0 +1,129 @@
+.teacher-journal {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 1240px);
+  margin: 0 auto;
+  color: #26354c;
+}
+.teacher-journal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(1.15rem, 3vw, 1.8rem);
+  border: 1px solid #dce7f2;
+  border-radius: 1rem;
+  background: linear-gradient(125deg, #fff, #f1f8ff);
+}
+.teacher-journal-header h1 { margin: .2rem 0; color: #18233d; font-size: clamp(1.45rem, 3vw, 2rem); }
+.teacher-journal-header p { margin: .35rem 0 0; color: #59677d; line-height: 1.5; }
+.teacher-journal-header > a { flex: none; color: #176e78; font-weight: 700; }
+.teacher-journal-kicker, .teacher-journal-eyebrow {
+  margin: 0 0 .35rem;
+  color: #137b75;
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.teacher-journal-kicker { display: flex; align-items: center; gap: .4rem; }
+.teacher-journal-privacy, .teacher-journal-error, .teacher-journal-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  margin: 0;
+  padding: .8rem .95rem;
+  border-radius: .7rem;
+  font-size: .84rem;
+  line-height: 1.5;
+}
+.teacher-journal-privacy { border: 1px solid #f1dca6; background: #fff9e9; color: #675324; }
+.teacher-journal-privacy p { margin: 0; }
+.teacher-journal-privacy .ale-ikon { flex: none; }
+.teacher-journal-error { background: #fff1f0; color: #9d302b; }
+.teacher-journal-notice { background: #effbf6; color: #16715e; }
+.teacher-journal-grid { display: grid; grid-template-columns: minmax(280px, .85fr) minmax(0, 1.15fr); align-items: start; gap: 1rem; }
+.teacher-journal-grid > .ale-kartu { min-width: 0; padding: clamp(1rem, 2vw, 1.35rem); }
+.teacher-journal-grid > .ale-kartu::before { content: none; }
+.teacher-journal-form-card h2, .teacher-journal-list-card h2 { margin: 0 0 1rem; color: #1d2a43; font-size: 1.1rem; }
+.teacher-journal-form-card form { display: grid; gap: .8rem; }
+.teacher-journal-form-card label { display: grid; gap: .35rem; color: #36455b; font-size: .82rem; font-weight: 700; }
+.teacher-journal-form-card input, .teacher-journal-form-card select, .teacher-journal-form-card textarea {
+  width: 100%;
+  min-width: 0;
+  padding: .62rem .7rem;
+  border: 1px solid #d8e1eb;
+  border-radius: .6rem;
+  background: #fff;
+  color: #26354c;
+  font: inherit;
+  font-weight: 400;
+}
+.teacher-journal-form-card textarea { resize: vertical; line-height: 1.5; }
+.teacher-journal-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .7rem; }
+.teacher-journal-status { max-width: 14rem; }
+.teacher-journal-actions, .teacher-journal-entry-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.teacher-journal-actions button, .teacher-journal-entry-actions button {
+  min-height: 2.5rem;
+  padding: .55rem .8rem;
+  border: 1px solid #147e78;
+  border-radius: .6rem;
+  background: #147e78;
+  color: #fff;
+  font: inherit;
+  font-size: .82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.teacher-journal-actions button.secondary, .teacher-journal-entry-actions button {
+  border-color: #d6e0eb;
+  background: #fff;
+  color: #42536b;
+}
+.teacher-journal-entry-actions button.danger { color: #a13c36; }
+.teacher-journal-actions button:disabled, .teacher-journal-entry-actions button:disabled { opacity: .6; cursor: not-allowed; }
+.teacher-journal-list { display: grid; gap: .7rem; padding: 0; margin: 0; list-style: none; }
+.teacher-journal-list > li { padding: .85rem; border: 1px solid #e3e9f0; border-radius: .75rem; }
+.teacher-journal-entry-head { display: flex; justify-content: space-between; gap: .6rem; }
+.teacher-journal-entry-head h3 { margin: .4rem 0 .2rem; color: #24334b; font-size: 1rem; }
+.teacher-journal-entry-head p, .teacher-journal-list > li > p { margin: .45rem 0; color: #526178; font-size: .84rem; line-height: 1.5; }
+.teacher-journal-entry-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.teacher-journal-tag { display: inline-flex; padding: .2rem .5rem; border-radius: 999px; background: #fff7e5; color: #85651d; font-size: .7rem; font-weight: 800; }
+.teacher-journal-tag.is-selesai { background: #effbf6; color: #16715e; }
+.teacher-journal-denied { max-width: 42rem; margin: 2rem auto; padding: 1.2rem; }
+.teacher-journal-denied h1 { color: #24334b; font-size: 1.25rem; }
+.teacher-journal-denied p { color: #59677d; }
+.teacher-journal-report-card { min-width: 0; padding: clamp(1rem, 2vw, 1.35rem); }
+.teacher-journal-report-card::before { content: none; }
+.teacher-journal-report-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.teacher-journal-report-heading h2 { margin: 0; color: #1d2a43; font-size: 1.1rem; }
+.teacher-journal-report-heading button, .teacher-journal-report-filters button {
+  min-height: 2.5rem; padding: .55rem .8rem; border: 1px solid #147e78; border-radius: .6rem;
+  background: #147e78; color: #fff; font: inherit; font-size: .82rem; font-weight: 700; cursor: pointer;
+}
+.teacher-journal-report-heading button:disabled, .teacher-journal-report-filters button:disabled { opacity: .6; cursor: not-allowed; }
+.teacher-journal-report-filters {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end;
+  gap: .7rem; margin: 1rem 0;
+}
+.teacher-journal-report-filters label { display: grid; gap: .35rem; color: #36455b; font-size: .8rem; font-weight: 700; }
+.teacher-journal-report-filters input, .teacher-journal-report-filters select {
+  width: 100%; min-height: 2.5rem; padding: .5rem .6rem; border: 1px solid #d8e1eb;
+  border-radius: .55rem; background: #fff; color: #26354c; font: inherit;
+}
+.teacher-journal-report-table-wrap { overflow-x: auto; }
+.teacher-journal-report-table { width: 100%; border-collapse: collapse; text-align: left; }
+.teacher-journal-report-table th, .teacher-journal-report-table td { padding: .7rem; border-bottom: 1px solid #e8edf3; vertical-align: top; }
+.teacher-journal-report-table th { color: #66758a; font-size: .76rem; white-space: nowrap; }
+.teacher-journal-report-table td { min-width: 9rem; color: #42516a; font-size: .83rem; line-height: 1.5; white-space: pre-wrap; }
+.teacher-journal-report-table td p { margin: .25rem 0; }
+@media (max-width: 760px) {
+  .teacher-journal-header { align-items: flex-start; flex-direction: column; }
+  .teacher-journal-grid { grid-template-columns: 1fr; }
+  .teacher-journal-report-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 460px) {
+  .teacher-journal-row { grid-template-columns: 1fr; }
+  .teacher-journal-report-heading { align-items: flex-start; flex-direction: column; }
+  .teacher-journal-report-filters { grid-template-columns: 1fr; }
+}

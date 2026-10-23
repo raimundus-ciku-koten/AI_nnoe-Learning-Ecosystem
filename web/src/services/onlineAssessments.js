@@ -1,6 +1,16 @@
 import { supabase } from '../lib/supabase.ts';
 
 const DRAFT_PREFIX = 'ale-online-exam-draft-v1';
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const STUDENT_EXAM_FIELDS = new Set([
+  'exam_id',
+  'title',
+  'kelas',
+  'starts_at',
+  'ends_at',
+  'duration_minutes',
+  'attempt_status',
+]);
 
 function wajibText(value, label) {
   if (typeof value !== 'string' || !value.trim()) {
@@ -40,6 +50,28 @@ export async function muatUjianSiswa() {
   const { data, error } = await supabase.rpc('student_online_exams');
   if (error) throw error;
   if (!Array.isArray(data)) throw new Error('Daftar ujian siswa tidak valid.');
+  const invalidExam = data.some((exam) => {
+    if (!exam || typeof exam !== 'object' ||
+        Object.keys(exam).some((field) => !STUDENT_EXAM_FIELDS.has(field)) ||
+        !UUID_PATTERN.test(exam.exam_id || '') ||
+        typeof exam.title !== 'string' ||
+        !exam.title.trim() || Array.from(exam.title).length > 160 ||
+        typeof exam.kelas !== 'string' ||
+        !exam.kelas.trim() || Array.from(exam.kelas).length > 30 ||
+        typeof exam.starts_at !== 'string' ||
+        typeof exam.ends_at !== 'string' ||
+        !Number.isInteger(exam.duration_minutes) ||
+        exam.duration_minutes < 1 || exam.duration_minutes > 300 ||
+        !['submitted', 'in_progress', 'not_started'].includes(exam.attempt_status)) {
+      return true;
+    }
+    const startsAt = Date.parse(exam.starts_at);
+    const endsAt = Date.parse(exam.ends_at);
+    return !Number.isFinite(startsAt) || !Number.isFinite(endsAt) || endsAt <= startsAt;
+  });
+  if (invalidExam) {
+    throw new Error('Data ujian siswa dari server tidak valid.');
+  }
   return data;
 }
 
@@ -108,6 +140,20 @@ export async function muatHasilUjianGuru() {
   const { data, error } = await supabase.rpc('teacher_online_exam_results');
   if (error) throw error;
   if (!Array.isArray(data)) throw new Error('Daftar hasil ujian tidak valid.');
+  const validNumber = (value) => value === null || value === undefined ||
+    (typeof value === 'number' && Number.isFinite(value)) ||
+    (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)));
+  if (data.some((row) => (
+    !row || typeof row.attempt_id !== 'string' || typeof row.exam_id !== 'string' ||
+    typeof row.title !== 'string' || typeof row.kelas !== 'string' ||
+    typeof row.student_name !== 'string' || typeof row.submitted_at !== 'string' ||
+    !Number.isFinite(Date.parse(row.submitted_at)) ||
+    !Number.isInteger(row.objective_correct) || !Number.isInteger(row.objective_total) ||
+    !validNumber(row.score) || !validNumber(row.essay_score) ||
+    typeof row.grade_pending !== 'boolean'
+  ))) {
+    throw new Error('Data hasil ujian guru dari server tidak valid.');
+  }
   return data;
 }
 
@@ -115,7 +161,48 @@ export async function muatNilaiUjianSiswa() {
   const { data, error } = await supabase.rpc('student_online_exam_results');
   if (error) throw error;
   if (!Array.isArray(data)) throw new Error('Daftar nilai ujian siswa tidak valid.');
+  const validNumber = (value) => value === null || value === undefined ||
+    (typeof value === 'number' && Number.isFinite(value)) ||
+    (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)));
+  if (data.some((row) => (
+    !row || typeof row.exam_id !== 'string' || typeof row.title !== 'string' ||
+    typeof row.kelas !== 'string' || typeof row.submitted_at !== 'string' ||
+    !Number.isFinite(Date.parse(row.submitted_at)) || !validNumber(row.score) ||
+    typeof row.grade_pending !== 'boolean'
+  ))) {
+    throw new Error('Data nilai ujian siswa dari server tidak valid.');
+  }
   return data;
+}
+
+export function ringkasNilaiUjianSiswa(results) {
+  if (!Array.isArray(results)) throw new TypeError('Data ringkasan nilai siswa tidak valid.');
+  if (results.some((result) =>
+    !result || typeof result.exam_id !== 'string' ||
+    typeof result.title !== 'string' || typeof result.kelas !== 'string' ||
+    typeof result.submitted_at !== 'string' || !Number.isFinite(Date.parse(result.submitted_at)) ||
+    typeof result.grade_pending !== 'boolean' ||
+    (result.score !== null && result.score !== undefined &&
+      !(typeof result.score === 'number' && Number.isFinite(result.score)) &&
+      !(typeof result.score === 'string' && result.score.trim() !== '' &&
+        Number.isFinite(Number(result.score))))
+  )) {
+    throw new Error('Data ringkasan nilai siswa dari server tidak valid.');
+  }
+
+  const graded = results.filter((result) => !result.grade_pending && result.score !== null &&
+    result.score !== undefined);
+  const latest = [...results].sort((a, b) =>
+    Date.parse(b.submitted_at) - Date.parse(a.submitted_at))[0] || null;
+  return {
+    resultCount: results.length,
+    gradedCount: graded.length,
+    pendingCount: results.filter((result) => result.grade_pending).length,
+    averageScore: graded.length
+      ? graded.reduce((sum, result) => sum + Number(result.score), 0) / graded.length
+      : null,
+    latest,
+  };
 }
 
 export async function muatJawabanUraianGuru() {

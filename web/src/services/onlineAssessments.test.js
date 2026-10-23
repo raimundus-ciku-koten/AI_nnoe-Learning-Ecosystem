@@ -18,6 +18,7 @@ import {
   muatRosterBelumTertaut,
   muatUjianSiswa,
   muatNilaiUjianSiswa,
+  ringkasNilaiUjianSiswa,
   muatJawabanUraianGuru,
   muatRingkasanUjianGuru,
   mulaiUjianOnline,
@@ -79,6 +80,61 @@ describe('online assessment service', () => {
     await expect(mulaiUjianOnline('exam-1')).rejects.toThrow('tidak valid');
   });
 
+  it('validates student exam list fields before exposing them to the exam UI', async () => {
+    const examRow = {
+      exam_id: 'ad8ae9d1-6d1f-4a10-9cf2-7106e74f4075',
+      title: 'Matematika',
+      kelas: '7A',
+      starts_at: '2026-10-23T08:00:00.000Z',
+      ends_at: '2026-10-23T09:00:00.000Z',
+      duration_minutes: 60,
+      attempt_status: 'not_started',
+    };
+    supabase.rpc.mockResolvedValueOnce({ data: [examRow], error: null });
+    await expect(muatUjianSiswa()).resolves.toEqual([examRow]);
+
+    const unicodeExam = {
+      ...examRow,
+      title: '😀'.repeat(160),
+      kelas: '😀'.repeat(30),
+    };
+    supabase.rpc.mockResolvedValueOnce({ data: [unicodeExam], error: null });
+    await expect(muatUjianSiswa()).resolves.toEqual([unicodeExam]);
+
+    supabase.rpc.mockResolvedValueOnce({
+      data: [{ ...examRow, attempt_status: 'unknown' }],
+      error: null,
+    });
+    await expect(muatUjianSiswa()).rejects.toThrow('tidak valid');
+
+    supabase.rpc.mockResolvedValueOnce({
+      data: [{ ...examRow, title: '😀'.repeat(161) }],
+      error: null,
+    });
+    await expect(muatUjianSiswa()).rejects.toThrow('tidak valid');
+
+    supabase.rpc.mockResolvedValueOnce({
+      data: [{ ...examRow, ends_at: examRow.starts_at }],
+      error: null,
+    });
+    await expect(muatUjianSiswa()).rejects.toThrow('tidak valid');
+
+    supabase.rpc.mockResolvedValueOnce({
+      data: [{ ...examRow, exam_id: 'not-a-uuid' }],
+      error: null,
+    });
+    await expect(muatUjianSiswa()).rejects.toThrow('tidak valid');
+
+    supabase.rpc.mockResolvedValueOnce({
+      data: [{ ...examRow, correct_answer: '2' }],
+      error: null,
+    });
+    await expect(muatUjianSiswa()).rejects.toThrow('tidak valid');
+
+    supabase.rpc.mockResolvedValueOnce({ data: null, error: new Error('denied') });
+    await expect(muatUjianSiswa()).rejects.toThrow('denied');
+  });
+
   it('creates exams with bounded fields and unique question IDs', async () => {
     supabase.rpc.mockResolvedValueOnce({ data: 'exam-1', error: null });
     await expect(buatUjianOnline({
@@ -130,7 +186,19 @@ describe('online assessment service', () => {
       .mockResolvedValueOnce({ data: null, error: null })
       .mockResolvedValueOnce({ data: [], error: null })
       .mockResolvedValueOnce({ data: [], error: null })
-      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [{
+        attempt_id: 'attempt-1',
+        exam_id: 'exam-1',
+        title: 'Ujian',
+        kelas: '7A',
+        student_name: 'Siswa',
+        submitted_at: '2026-10-23T08:00:00.000Z',
+        score: 85,
+        objective_correct: 8,
+        objective_total: 10,
+        essay_score: null,
+        grade_pending: false,
+      }], error: null })
       .mockResolvedValueOnce({ data: [], error: null })
       .mockResolvedValueOnce({ data: 85, error: null });
     await expect(muatRosterBelumTertaut()).resolves.toHaveLength(1);
@@ -140,7 +208,7 @@ describe('online assessment service', () => {
     await expect(lepasTautanAkunSiswa('student-2')).resolves.toBeUndefined();
     await expect(muatRingkasanUjianGuru()).resolves.toEqual([]);
     await expect(muatJawabanUraianGuru()).resolves.toEqual([]);
-    await expect(muatHasilUjianGuru()).resolves.toEqual([]);
+    await expect(muatHasilUjianGuru()).resolves.toMatchObject([{ attempt_id: 'attempt-1' }]);
     await expect(muatNilaiUjianSiswa()).resolves.toEqual([]);
     await expect(nilaiJawabanUraian('attempt-1', 85)).resolves.toBe(85);
     expect(supabase.rpc.mock.calls.map(([name]) => name)).toEqual([
@@ -155,6 +223,78 @@ describe('online assessment service', () => {
       'student_online_exam_results',
       'review_online_exam_essays',
     ]);
+  });
+
+  it('rejects malformed teacher assessment result rows', async () => {
+    supabase.rpc.mockResolvedValueOnce({
+      data: [{
+        attempt_id: 'attempt-1',
+        exam_id: 'exam-1',
+        title: 'Ujian',
+        kelas: '7A',
+        student_name: 'Siswa',
+        submitted_at: 'invalid-date',
+        score: 85,
+        objective_correct: 8,
+        objective_total: 10,
+        essay_score: null,
+        grade_pending: false,
+      }],
+      error: null,
+    });
+
+    await expect(muatHasilUjianGuru()).rejects.toThrow('tidak valid');
+  });
+
+  it('summarizes only graded student results and identifies the newest submission', () => {
+    const summary = ringkasNilaiUjianSiswa([
+      {
+        exam_id: 'exam-a',
+        title: 'Ujian lama',
+        kelas: '7A',
+        submitted_at: '2026-10-20T08:00:00.000Z',
+        score: 80,
+        grade_pending: false,
+      },
+      {
+        exam_id: 'exam-b',
+        title: 'Ujian baru',
+        kelas: '7A',
+        submitted_at: '2026-10-22T08:00:00.000Z',
+        score: null,
+        grade_pending: true,
+      },
+      {
+        exam_id: 'exam-c',
+        title: 'Nilai belum tersedia',
+        kelas: '7A',
+        submitted_at: '2026-10-21T08:00:00.000Z',
+        score: null,
+        grade_pending: false,
+      },
+    ]);
+    expect(summary).toMatchObject({
+      resultCount: 3,
+      gradedCount: 1,
+      pendingCount: 1,
+      averageScore: 80,
+      latest: { exam_id: 'exam-b', title: 'Ujian baru' },
+    });
+    expect(ringkasNilaiUjianSiswa([])).toMatchObject({
+      resultCount: 0,
+      gradedCount: 0,
+      pendingCount: 0,
+      averageScore: null,
+      latest: null,
+    });
+    expect(() => ringkasNilaiUjianSiswa([{
+      exam_id: 'exam',
+      title: 'Ujian',
+      kelas: '7A',
+      submitted_at: 'invalid',
+      score: 80,
+      grade_pending: false,
+    }])).toThrow('tidak valid');
   });
 
   it('stores, enumerates, and removes a draft in the user-scoped browser session', () => {
@@ -188,4 +328,27 @@ describe('online assessment service', () => {
       questions: [{ ...exam.questions[0], jawaban: '2' }],
     }, {})).toThrow('tidak valid');
   });
+
+    it('validates the student results RPC shape and propagates its errors', async () => {
+      const result = {
+        exam_id: 'exam-1',
+        title: 'Ujian',
+        kelas: '7A',
+        submitted_at: '2026-10-23T08:00:00.000Z',
+        score: '85.5',
+        grade_pending: false,
+      };
+      supabase.rpc.mockResolvedValueOnce({ data: [result], error: null });
+      await expect(muatNilaiUjianSiswa()).resolves.toEqual([result]);
+      expect(supabase.rpc).toHaveBeenCalledWith('student_online_exam_results');
+
+      supabase.rpc.mockResolvedValueOnce({
+        data: [{ ...result, submitted_at: 'bukan-tanggal' }],
+        error: null,
+      });
+      await expect(muatNilaiUjianSiswa()).rejects.toThrow('tidak valid');
+
+      supabase.rpc.mockResolvedValueOnce({ data: [], error: new Error('denied') });
+      await expect(muatNilaiUjianSiswa()).rejects.toThrow('denied');
+    });
 });

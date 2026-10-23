@@ -21,6 +21,19 @@ import { LINK_PERENCANAAN } from '../config.js';
 import { menuUntukPeran } from '../navigasi.js';
 import { sesiUntukHari } from './dataDasar/jadwalUtil.js';
 import {
+  muatJadwalMateriSiswa,
+  muatPengumpulanTugasSiswa,
+  ringkasBelajarSiswa,
+} from '../services/schoolLearning.js';
+import {
+  muatRiwayatKehadiranSiswa,
+  ringkasKehadiranSiswa,
+} from '../services/studentAttendance.js';
+import {
+  muatNilaiUjianSiswa,
+  ringkasNilaiUjianSiswa,
+} from '../services/onlineAssessments.js';
+import {
   esc, ikon, inisial, namaDariUser, sapaanWaktu, formatWaktu,
   ambilProfil, linkLuarAman, LABEL_PERAN, SUBJUDUL_PERAN,
 } from '../ui.js';
@@ -57,7 +70,8 @@ function aksiCepat() {
       href: LINK_PERENCANAAN, luar: true, ikon: 'buku', warna: 'indigo',
       judul: 'Perencanaan pembelajaran', ket: 'ATP, Prota, Prosem, dan Modul Ajar',
     },
-    { segera: true, ikon: 'ujian',    judul: 'Ujian online',      ket: 'Segera hadir' },
+    { href: '#/asesmen/ujian-online', ikon: 'ujian', warna: 'indigo',
+      judul: 'Ujian online', ket: 'Buat ujian dan tinjau hasil asesmen' },
     { segera: true, ikon: 'otomatis', judul: 'Generator soal AI', ket: 'Segera hadir' },
   ].filter(Boolean);
 
@@ -304,6 +318,40 @@ function tampilanPortal({ role, nama }) {
         ? 'Akses operator dibatasi oleh peran dan tenant sekolah. Halaman panduan tidak mengubah data; gunakan hanya modul yang memang tersedia untuk akun Anda.'
         : 'Beberapa modul akademik masih menunggu integrasi data sekolah. Halaman tetap menampilkan statusnya dengan jelas dan tidak mengubah data sebelum fitur tersebut tersedia.';
   const grup = menuUntukPeran(role);
+  const ringkasanBelajar = role === 'siswa'
+    ? `<div class="ale-grid">
+         <section class="ale-kartu ale-aksen-indigo" aria-labelledby="portal-belajar-title">
+           <div class="ale-kartu-kepala">
+             <h2 class="ale-kartu-judul" id="portal-belajar-title">${ikon('kalender')}Jadwal dan tugas terdekat</h2>
+           </div>
+           <div id="portal-ringkasan-belajar" role="status">Memuat jadwal dan tugas sekolah…</div>
+           <p class="ale-kosong" role="note">
+             Ringkasan mengikuti batas feed server (maksimal 300 item belajar dan 500 riwayat pengumpulan).
+           </p>
+           <p><a class="ale-tautan" href="#/siswa/jadwal">Buka jadwal dan tugas${ikon('panah')}</a></p>
+         </section>
+         <section class="ale-kartu ale-aksen-emerald" aria-labelledby="portal-kehadiran-title">
+           <div class="ale-kartu-kepala">
+             <h2 class="ale-kartu-judul" id="portal-kehadiran-title">${ikon('check')}Kehadiran terbaru</h2>
+           </div>
+           <div id="portal-ringkasan-kehadiran" role="status">Memuat riwayat kehadiran…</div>
+           <p class="ale-kosong" role="note">
+             Riwayat dari server dibatasi maksimal 366 catatan.
+           </p>
+           <p><a class="ale-tautan" href="#/siswa/kehadiran">Buka riwayat kehadiran${ikon('panah')}</a></p>
+         </section>
+         <section class="ale-kartu ale-aksen-amber" aria-labelledby="portal-nilai-title">
+           <div class="ale-kartu-kepala">
+             <h2 class="ale-kartu-judul" id="portal-nilai-title">${ikon('progres')}Nilai ujian terbaru</h2>
+           </div>
+           <div id="portal-ringkasan-nilai" role="status">Memuat nilai ujian…</div>
+           <p class="ale-kosong" role="note">
+             Ringkasan mencakup hasil ujian yang dikembalikan layanan nilai siswa.
+           </p>
+           <p><a class="ale-tautan" href="#/siswa/nilai">Buka seluruh nilai ujian${ikon('panah')}</a></p>
+         </section>
+       </div>`
+    : '';
   const daftarMenu = grup.map((bagian) => `
     <section class="ale-kartu ale-aksen-sky" aria-labelledby="portal-${escapeAttr(bagian.id)}">
       <div class="ale-kartu-kepala">
@@ -331,7 +379,210 @@ function tampilanPortal({ role, nama }) {
     <p class="ale-kosong" role="note">
       ${esc(catatan)}
     </p>
+    ${ringkasanBelajar}
     <div class="ale-grid">${daftarMenu}</div>`;
+}
+
+function muatRingkasanBelajarPortal(wadah) {
+  const target = wadah.querySelector('#portal-ringkasan-belajar');
+  if (!target) return () => {};
+  let active = true;
+
+  const tampilkan = (summary) => {
+    if (!active) return;
+    target.replaceChildren();
+    const heading = document.createElement('p');
+    heading.textContent = `${summary.scheduleCount} jadwal mendatang · ${summary.pendingTaskCount} tugas belum dikumpulkan · ${summary.overdueTaskCount} terlambat`;
+    target.append(heading);
+
+    const list = document.createElement('ul');
+    list.className = 'ale-daftar';
+    const rows = [
+      ...summary.schedules.map((item) => ({
+        item,
+        label: 'Jadwal',
+        date: item.startsAt,
+      })),
+      ...summary.pendingTasks.map((item) => ({
+        item,
+        label: 'Tugas',
+        date: item.dueAt,
+      })),
+    ];
+    if (!rows.length) {
+      const empty = document.createElement('p');
+      empty.className = 'ale-kosong';
+      empty.textContent = 'Belum ada jadwal mendatang atau tugas yang perlu dikumpulkan.';
+      target.append(empty);
+      return;
+    }
+
+    function muatRingkasanKehadiranPortal(wadah) {
+      const target = wadah.querySelector('#portal-ringkasan-kehadiran');
+      if (!target) return () => {};
+      let active = true;
+
+      const load = async () => {
+        target.textContent = 'Memuat riwayat kehadiran…';
+        try {
+          const records = await muatRiwayatKehadiranSiswa();
+          if (!active) return;
+          const summary = ringkasKehadiranSiswa(records);
+          target.replaceChildren();
+          const count = document.createElement('p');
+          count.textContent = `${summary.recordCount} catatan dalam riwayat yang dimuat`;
+          target.append(count);
+          if (!summary.latest) {
+            const empty = document.createElement('p');
+            empty.className = 'ale-kosong';
+            empty.textContent = 'Belum ada catatan kehadiran untuk akun ini.';
+            target.append(empty);
+            return;
+          }
+          const latest = document.createElement('p');
+          const localDate = new Date(`${summary.latest.date}T12:00:00`);
+          const dateLabel = Number.isNaN(localDate.getTime())
+            ? 'Tanggal tidak valid'
+            : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(localDate);
+          latest.textContent = `Terakhir: ${dateLabel} · ${summary.latest.className} · ${summary.latest.status}`;
+          target.append(latest);
+        } catch (error) {
+          console.error('[dashboard] Gagal memuat ringkasan kehadiran siswa:', error);
+          if (!active) return;
+          target.replaceChildren();
+          const message = document.createElement('p');
+          message.setAttribute('role', 'alert');
+          message.textContent = 'Riwayat kehadiran gagal dimuat. Periksa koneksi lalu coba lagi.';
+          const retry = document.createElement('button');
+          retry.type = 'button';
+          retry.className = 'ale-ulang';
+          retry.textContent = 'Coba lagi';
+          retry.addEventListener('click', load);
+          target.append(message, retry);
+        }
+      };
+
+      load();
+      return () => { active = false; };
+    }
+    for (const { item, label, date } of rows) {
+      const entry = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = item.kind === 'material' ? '#/siswa/materi' : '#/siswa/jadwal';
+      const name = document.createElement('strong');
+      const timestamp = date ? Date.parse(date) : Number.NaN;
+      const overdue = item.kind === 'task' && item.overdue === true;
+      name.textContent = `${overdue ? 'Terlambat' : label}: ${item.title}`;
+      const detail = document.createElement('span');
+      const formattedDate = Number.isFinite(timestamp)
+        ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
+          .format(new Date(timestamp))
+        : 'Waktu tidak ditentukan';
+      detail.textContent = `${item.className} · ${formattedDate}`;
+      link.append(name, document.createElement('br'), detail);
+      entry.append(link);
+      list.append(entry);
+    }
+    target.append(list);
+  };
+
+  const gagal = (error) => {
+    console.error('[dashboard] Gagal memuat ringkasan belajar siswa:', error);
+    if (!active) return;
+    target.replaceChildren();
+    const message = document.createElement('p');
+    message.setAttribute('role', 'alert');
+    message.textContent = 'Ringkasan jadwal dan tugas gagal dimuat. Periksa koneksi lalu coba lagi.';
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'ale-ulang';
+    retry.textContent = 'Coba lagi';
+    retry.addEventListener('click', load);
+    target.append(message, retry);
+  };
+
+  async function load() {
+    target.textContent = 'Memuat jadwal dan tugas sekolah…';
+    try {
+      const [items, submissions] = await Promise.all([
+        muatJadwalMateriSiswa(),
+        muatPengumpulanTugasSiswa(),
+      ]);
+      tampilkan(ringkasBelajarSiswa(items, submissions));
+    } catch (error) {
+      gagal(error);
+    }
+  }
+
+  load();
+  return () => {
+    active = false;
+  };
+}
+
+function muatRingkasanNilaiPortal(wadah) {
+  const target = wadah.querySelector('#portal-ringkasan-nilai');
+  if (!target) return () => {};
+  let active = true;
+
+  const load = async () => {
+    target.textContent = 'Memuat nilai ujian…';
+    try {
+      const results = await muatNilaiUjianSiswa();
+      if (!active) return;
+      const summary = ringkasNilaiUjianSiswa(results);
+      target.replaceChildren();
+      const count = document.createElement('p');
+      count.textContent = `${summary.resultCount} hasil ujian · ${summary.pendingCount} menunggu penilaian`;
+      target.append(count);
+      const average = document.createElement('p');
+      average.textContent = summary.averageScore === null
+        ? 'Belum ada nilai akhir yang tersedia.'
+        : `Rata-rata nilai akhir yang tersedia: ${new Intl.NumberFormat('id-ID', {
+          maximumFractionDigits: 2,
+        }).format(summary.averageScore)}`;
+      target.append(average);
+      if (summary.latest) {
+        const latest = document.createElement('p');
+        const date = new Date(summary.latest.submitted_at);
+        const dateLabel = Number.isNaN(date.getTime())
+          ? 'Tanggal tidak valid'
+          : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(date);
+        const score = summary.latest.grade_pending
+          ? 'Menunggu penilaian'
+          : summary.latest.score ?? 'Nilai belum tersedia';
+        latest.textContent = `Terbaru: ${summary.latest.title} · ${dateLabel} · ${score}`;
+        target.append(latest);
+      }
+    } catch (error) {
+      console.error('[dashboard] Gagal memuat ringkasan nilai siswa:', error);
+      if (!active) return;
+      target.replaceChildren();
+      const message = document.createElement('p');
+      message.setAttribute('role', 'alert');
+      message.textContent = 'Ringkasan nilai gagal dimuat. Periksa koneksi lalu coba lagi.';
+      const retry = document.createElement('button');
+      retry.type = 'button';
+      retry.className = 'ale-ulang';
+      retry.textContent = 'Coba lagi';
+      retry.addEventListener('click', load);
+      target.append(message, retry);
+    }
+  };
+
+  load();
+  return () => { active = false; };
+}
+
+function muatRingkasanPortalSiswa(wadah) {
+  const hentikanBelajar = muatRingkasanBelajarPortal(wadah);
+  const hentikanKehadiran = muatRingkasanKehadiranPortal(wadah);
+  const hentikanNilai = muatRingkasanNilaiPortal(wadah);
+  return () => {
+    hentikanBelajar();
+    hentikanKehadiran();
+    hentikanNilai();
+  };
 }
 
 // ============================================================================
@@ -371,7 +622,7 @@ export async function halamanDashboard(wadah) {
       !['guru', 'operator'].includes(peran)) {
     wadah.innerHTML = tampilanPortal({ role, nama: namaAwal });
     document.title = `${LABEL_PERAN[role] || 'Ruang kerja'} · AI_nnoe Learning Ecosystem`;
-    return () => {};
+    return role === 'siswa' ? muatRingkasanPortalSiswa(wadah) : () => {};
   }
 
   wadah.innerHTML = tampilan({

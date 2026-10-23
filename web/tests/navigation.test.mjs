@@ -119,6 +119,7 @@ test('menu operator dibatasi pada dashboard, operasional sekolah, dan komunikasi
     '/datadasar/siswa',
     '/datadasar/barcode',
     '/pelaksanaan/presensi',
+    '/pengumuman/sekolah',
     '/chat',
     '/chat/kontak',
     '/chat/grup',

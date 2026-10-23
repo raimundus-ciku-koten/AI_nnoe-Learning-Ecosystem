@@ -214,7 +214,7 @@ const TAMBAHAN = {
         s('Impor Akun Guru (Excel)',  'file-earmark-spreadsheet'),
         s('Undangan Tautan',          'link-45deg'),
         s('Persetujuan Akun',         'person-check'),
-        s('Data Siswa dan Orang Tua', 'person-hearts'),
+        r('Hubungan wali dan siswa', '#/admin/pengguna/hubungan-wali', 'person-hearts'),
       ],
     },
     {
@@ -254,7 +254,7 @@ const TAMBAHAN = {
       id: 'x-komunikasi', judul: 'Komunikasi', ikon: 'chat-dots',
       items: [
         // Chat sudah ada di GRUP_UTAMA; hanya tambahkan yang belum ada.
-        s('Pengumuman', 'megaphone'),
+        r('Pengumuman', '#/admin/komunikasi/pengumuman', 'megaphone'),
       ],
     },
     {

@@ -1,0 +1,28 @@
+.admin-help { display: grid; gap: 1rem; width: min(100%, 960px); margin: 0 auto; color: #26354c; }
+.admin-help-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: clamp(1.15rem, 3vw, 1.8rem); border: 1px solid #dce7f2; border-radius: 1rem; background: linear-gradient(125deg, #fff, #f1f8ff); }
+.admin-help-header h1 { margin: .2rem 0; color: #18233d; font-size: clamp(1.45rem, 3vw, 2rem); }
+.admin-help-header p { margin: .35rem 0 0; color: #59677d; line-height: 1.5; }
+.admin-help-header > a { flex: none; color: #176e78; font-weight: 700; }
+.admin-help-kicker { display: flex; align-items: center; gap: .4rem; margin: 0; color: #137b75; font-size: .8rem; font-weight: 700; text-transform: uppercase; }
+.admin-help-nav { display: flex; flex-wrap: wrap; gap: .55rem; }
+.admin-help-nav a { padding: .55rem .8rem; border: 1px solid #d7e1eb; border-radius: .65rem; background: #fff; color: #42536b; font-size: .84rem; font-weight: 700; text-decoration: none; }
+.admin-help-nav a[aria-current="page"] { border-color: #147e78; background: #147e78; color: #fff; }
+.admin-help-card { padding: clamp(1rem, 2.5vw, 1.5rem); }
+.admin-help-card::before { content: none; }
+.admin-help-card > h2 { margin: 0 0 1rem; color: #1d2a43; font-size: 1.1rem; }
+.admin-help-faq { display: grid; gap: .65rem; }
+.admin-help-faq details { padding: .8rem .9rem; border: 1px solid #e2e9f0; border-radius: .7rem; background: #fff; }
+.admin-help-faq summary { color: #293951; font-weight: 700; cursor: pointer; }
+.admin-help-faq details p { margin: .65rem 0; color: #53627a; font-size: .87rem; line-height: 1.55; }
+.admin-help-faq details a { color: #176e78; font-size: .84rem; font-weight: 700; }
+.admin-help-guide { display: grid; gap: .85rem; padding: 0; margin: 0; list-style: none; }
+.admin-help-guide li { display: grid; grid-template-columns: 1.6rem minmax(0, 1fr); gap: .7rem; }
+.admin-help-guide li > span { display: grid; place-items: center; width: 1.55rem; height: 1.55rem; border-radius: 50%; background: #e9f8f1; color: #17734f; }
+.admin-help-guide li h3 { margin: 0 0 .2rem; color: #293951; font-size: .95rem; }
+.admin-help-guide li p { margin: 0; color: #53627a; font-size: .87rem; line-height: 1.55; }
+.admin-help-primary { display: inline-flex; align-items: center; gap: .45rem; min-height: 2.6rem; margin-top: .4rem; padding: .6rem .85rem; border-radius: .65rem; background: #147e78; color: #fff; font-size: .85rem; font-weight: 700; text-decoration: none; }
+.admin-help-note { margin: 1rem 0 0; padding: .75rem .85rem; border-radius: .65rem; background: #f1f5f9; color: #55647b; font-size: .82rem; line-height: 1.5; }
+.admin-help-denied { max-width: 42rem; margin: 2rem auto; padding: 1.2rem; }
+.admin-help-denied h1 { color: #24334b; font-size: 1.25rem; }
+.admin-help-denied p { color: #59677d; }
+@media (max-width: 600px) { .admin-help-header { align-items: flex-start; flex-direction: column; } }

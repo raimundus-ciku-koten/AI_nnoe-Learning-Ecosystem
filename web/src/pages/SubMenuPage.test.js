@@ -65,12 +65,26 @@ describe('submenu platform superadmin', () => {
     auth.role = 'superadmin';
   });
 
-  it('menjelaskan batas data untuk siswa dan orang tua', () => {
+  it('menghubungkan siswa ke feed akademik dan menjaga batas portal wali', () => {
     auth.role = 'siswa';
-    expect(renderSubmenu('/siswa/jadwal')).toContain('menautkan data akademik ke akun siswa');
+    const studentSchedule = renderSubmenu('/siswa/jadwal');
+    expect(studentSchedule).toContain('Jadwal dan Tugas');
+    expect(studentSchedule).toContain('kelas siswa yang terhubung');
+    expect(studentSchedule).not.toContain('Panduan · baca saja');
 
     auth.role = 'orang_tua';
-    expect(renderSubmenu('/orang-tua/anak')).toContain('menautkan akun orang tua secara resmi');
+    expect(renderSubmenu('/orang-tua/anak')).toContain('Data hanya mencakup siswa yang ditautkan');
+  });
+
+  it('menampilkan portal ringkasan wali untuk kedua alias peran orang tua', () => {
+    for (const role of ['ortu', 'orang_tua']) {
+      auth.role = role;
+      const html = renderSubmenu('/orang-tua/nilai-kehadiran');
+      expect(html).toContain('Nilai dan kehadiran anak');
+      expect(html).toContain('Memuat ringkasan');
+      expect(html).not.toContain('Panduan · baca saja');
+    }
+    auth.role = 'superadmin';
   });
 
   describe('submenu ruang kerja guru', () => {
@@ -98,6 +112,16 @@ describe('submenu platform superadmin', () => {
         expect(html, path).toContain('Hindari memasukkan nama');
         expect(html, path).not.toContain('Halaman informasi');
       }
+    });
+
+    it('menyediakan ruang kerja guru untuk seluruh peran spesialisasi guru', () => {
+      for (const role of ['guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+        auth.role = role;
+        const html = renderSubmenu('/pelaksanaan/jurnal');
+        expect(html, role).toContain('Buat catatan kerja');
+        expect(html, role).not.toContain('Panduan · baca saja');
+      }
+      auth.role = 'guru';
     });
 
     it('tidak membuka data pribadi bila konteks guru/tenant tidak tersedia', () => {
