@@ -27,7 +27,8 @@ Mode zero-billing tetap menjadi batas operasional: jangan mengaktifkan layanan b
 ## Guard tampilan OAuth pada Preview 24 Oktober 2026
 
 - Karena provider Google Staging terpantau nonaktif dan backend Preview belum dipastikan, source login kini mendukung `VITE_SHOW_GOOGLE_SIGN_IN=false` untuk menyembunyikan tombol Google dan pemisah login pada environment yang belum siap. Default source tetap menampilkan tombol seperti sebelumnya; flag ini hanya mengatur tampilan dan bukan kontrol autentikasi.
-- Vercel mengonfirmasi flag tersebut disimpan sebagai konfigurasi Preview khusus branch `feature/ai-nnoe-learning-workspaces`; Production tidak dipilih atau diubah. Pengaturan baru berlaku setelah deployment berikutnya. CI/build dan verifikasi tampilan deployment baru masih harus selesai sebelum perilaku Preview diklaim teruji.
+- Vercel mengonfirmasi flag tersebut disimpan sebagai konfigurasi Preview khusus branch `feature/ai-nnoe-learning-workspaces`; Production tidak dipilih atau diubah. GitHub Web CI lulus dan Vercel menandai deployment Preview commit `b1611127` Ready. Halaman login deployment terbaru dirender tanpa tombol Google maupun pemisahnya. Email/password dan reset masih tampil; tidak ada kredensial dimasukkan atau permintaan Auth dikirim. Ini hanya merapikan UX Preview dan tidak memverifikasi target Supabase, Auth, atau OAuth backend.
+- Pada deployment tersebut, request manifest tetap dialihkan melalui Vercel SSO/CORS dan browser mencatat warning integrasi Cloudflare Turnstile; hal ini belum diperbaiki atau diuji dengan tantangan yang diselesaikan. NO-GO rilis publik penuh tetap berlaku.
 
 ## Pemeriksaan kuota dan backup 24 Oktober 2026
 
