@@ -9,7 +9,7 @@ rules_version = '2';
  *      yang hanya bisa diubah server. Klien TIDAK bisa menaikkan perannya sendiri.
  *   3. Semua data sekolah ada di /tenants/{tenantId}/...; anggota sekolah lain
  *      tidak bisa membacanya.
- *   4. Tulis data kerja butuh langganan sekolah aktif (tenants/{id}.langganan).
+ *   4. Akses tulis diberikan berdasarkan role, tenant, dan validasi data.
  *   5. Setiap tulis divalidasi: kunci yang diizinkan, tipe, panjang, cap waktu server.
  */
 service cloud.firestore {
@@ -24,30 +24,13 @@ service cloud.firestore {
 
     function anggota(tid) {
       return masuk() && tenantSaya() == tid && tid != ''
-        && peran() in ['admin_sekolah', 'operator', 'guru', 'siswa', 'ortu', 'orang_tua', 'demo'];
+        && peran() in ['admin_sekolah', 'operator', 'guru', 'siswa', 'ortu', 'orang_tua'];
     }
     function adminSekolah(tid) { return anggota(tid) && peran() == 'admin_sekolah'; }
     function staf(tid)         { return anggota(tid) && peran() in ['admin_sekolah', 'operator']; }
-    function pendidik(tid)     { return anggota(tid) && peran() in ['admin_sekolah', 'operator', 'guru', 'demo']; }
+    function pendidik(tid)     { return anggota(tid) && peran() in ['admin_sekolah', 'operator', 'guru']; }
     function pemilikDataGuru(uid) {
       return masuk() && request.auth.uid == uid && pendidik(tenantSaya());
-    }
-
-    /* ---------------- Helper langganan ---------------- */
-    function langgananAktif(tid) {
-      let path = /databases/$(database)/documents/tenants/$(tid);
-      return exists(path)
-        && get(path).data.get('langganan', {}).get('aktif', false) == true
-        && get(path).data.get('langganan', {}).get('sampai', request.time) >= request.time;
-    }
-    function langgananIndividuAktif(uid) {
-      let path = /databases/$(database)/documents/userSubscriptions/$(uid);
-      return exists(path)
-        && get(path).data.get('subscription', {}).get('aktif', false) == true
-        && get(path).data.get('subscription', {}).get('sampai', request.time) >= request.time;
-    }
-    function langgananAkses(tid, uid) {
-      return langgananAktif(tid) || langgananIndividuAktif(uid);
     }
 
     /* ---------------- Helper validasi ---------------- */
@@ -119,12 +102,6 @@ service cloud.firestore {
       allow create, update, delete: if superadmin();
     }
 
-    /* Langganan paket individual ditulis webhook, pemilik hanya dapat membaca miliknya. */
-    match /userSubscriptions/{uid} {
-      allow get: if masuk() && request.auth.uid == uid;
-      allow list, create, update, delete: if false;
-    }
-
     /* ---------------- Direktori chat terbatas per sekolah ---------------- */
     match /directory/{uid} {
       function direktoriValid() {
@@ -135,7 +112,7 @@ service cloud.firestore {
           && teks(d.nama, 120)
           && d.role == peran()
           && d.tenantId == tenantSaya()
-          && d.role in ['superadmin', 'admin_sekolah', 'operator', 'guru', 'siswa', 'ortu', 'orang_tua', 'demo']
+          && d.role in ['superadmin', 'admin_sekolah', 'operator', 'guru', 'siswa', 'ortu', 'orang_tua']
           && waktuServer('updatedAt')
           && (!('photoUrl' in d) || (d.photoUrl is string && d.photoUrl.size() <= 600
               && d.photoUrl.matches('^https://.*')));
@@ -189,7 +166,7 @@ service cloud.firestore {
     }
 
     /* ============================================================
-       /tenants/{tid} — profil sekolah & langganan
+       /tenants/{tid} — profil sekolah
        ============================================================ */
     match /guru/{uid}/siswa/{siswaId} {
       allow get, list: if pemilikDataGuru(uid);
@@ -213,7 +190,6 @@ service cloud.firestore {
       }
 
       allow create: if pemilikDataGuru(uid)
-        && langgananAkses(tenantSaya(), request.auth.uid)
         && request.resource.data.keys().hasOnly([
           'nama', 'nisn', 'jk', 'kelas', 'kodeUnik', 'urlScan', 'dibuat', 'diperbarui'
         ])
@@ -224,7 +200,6 @@ service cloud.firestore {
         && siswaValid(request.resource.data);
 
       allow update: if pemilikDataGuru(uid)
-        && langgananAkses(tenantSaya(), request.auth.uid)
         && siswaValid(request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'nama', 'nisn', 'jk', 'kelas', 'kodeUnik', 'urlScan', 'diperbarui'
@@ -235,15 +210,13 @@ service cloud.firestore {
         && (!('urlScan' in resource.data)
             || request.resource.data.get('urlScan', '') == resource.data.urlScan);
 
-      allow delete: if pemilikDataGuru(uid)
-        && langgananAkses(tenantSaya(), request.auth.uid);
+      allow delete: if pemilikDataGuru(uid);
     }
 
     match /guru/{uid}/pengaturan/{id} {
       allow get, list: if pemilikDataGuru(uid);
       allow create, update: if id == 'jadwal'
         && pemilikDataGuru(uid)
-        && langgananAkses(tenantSaya(), request.auth.uid)
         && request.resource.data.keys().hasOnly(['entri', 'diperbarui'])
         && request.resource.data.keys().hasAll(['entri', 'diperbarui'])
         && request.resource.data.entri is list
@@ -255,7 +228,6 @@ service cloud.firestore {
     match /guru/{uid}/denah/{id} {
       allow get, list: if pemilikDataGuru(uid);
       allow create, update: if pemilikDataGuru(uid)
-        && langgananAkses(tenantSaya(), request.auth.uid)
         && request.resource.data.keys().hasOnly([
           'kelas', 'baris', 'kolom', 'kursi', 'kelompok', 'jumlahKelompok', 'diperbarui'
         ])
@@ -283,7 +255,6 @@ service cloud.firestore {
     match /guru/{uid}/absensi/{absensiId} {
       allow get, list: if pemilikDataGuru(uid);
       allow create: if pemilikDataGuru(uid)
-        && langgananAktif(tenantSaya())
         && request.resource.data.keys().hasOnly([
           'siswaId', 'tanggal', 'status', 'metode', 'kodeUnik', 'nama', 'kelas', 'waktu'
         ])
@@ -315,7 +286,7 @@ service cloud.firestore {
       allow list: if superadmin();
       allow create, delete: if false;
 
-      // Tenant and subscription provisioning must use trusted server credentials.
+      // Tenant provisioning must use trusted server credentials.
       // Admin sekolah may update only the validated identity and academic fields below.
       allow update: if adminSekolah(tid)
             && ubahSaja([
@@ -376,12 +347,10 @@ service cloud.firestore {
 
         allow get, list: if guruPemilik();
         allow create: if guruPemilik()
-          && langgananAkses(tid, uid)
           && catatanValid(request.resource.data)
           && waktuServer('createdAt')
           && waktuServer('updatedAt');
         allow update: if guruPemilik()
-          && langgananAkses(tid, uid)
           && catatanValid(request.resource.data)
           && request.resource.data.createdAt == resource.data.createdAt
           && ubahSaja([
@@ -389,7 +358,7 @@ service cloud.firestore {
             'mapel', 'isi', 'status', 'updatedAt'
           ])
           && waktuServer('updatedAt');
-        allow delete: if guruPemilik() && langgananAkses(tid, uid);
+        allow delete: if guruPemilik();
       }
 
       /* ---------- Bank soal: hanya staf sekolah, kunci tidak dibuka ke siswa ---------- */
@@ -429,19 +398,19 @@ service cloud.firestore {
         allow get, list: if superadmin()
           || (anggota(tid) && peran() in ['admin_sekolah', 'guru']);
 
-        allow create: if anggota(tid) && peran() == 'guru' && langgananAkses(tid, request.auth.uid)
+        allow create: if anggota(tid) && peran() == 'guru'
           && soalValid(request.resource.data)
           && request.resource.data.ownerUid == request.auth.uid
           && waktuServer('createdAt') && waktuServer('updatedAt');
 
-        allow update: if anggota(tid) && peran() == 'guru' && langgananAkses(tid, request.auth.uid)
+        allow update: if anggota(tid) && peran() == 'guru'
           && resource.data.ownerUid == request.auth.uid
           && soalValid(request.resource.data)
           && request.resource.data.ownerUid == resource.data.ownerUid
           && request.resource.data.createdAt == resource.data.createdAt
           && waktuServer('updatedAt');
 
-        allow delete: if anggota(tid) && peran() == 'guru' && langgananAkses(tid, request.auth.uid)
+        allow delete: if anggota(tid) && peran() == 'guru'
           && resource.data.ownerUid == request.auth.uid;
       }
 
@@ -462,14 +431,14 @@ service cloud.firestore {
         allow get, list: if superadmin()
           || (anggota(tid) && (resource.data.ownerUid == request.auth.uid || staf(tid)));
 
-        allow create: if pendidik(tid) && langgananAktif(tid)
+        allow create: if pendidik(tid)
           && perangkatValid()
           && request.resource.data.ownerUid == request.auth.uid
           && request.resource.data.status == 'draf'
           && waktuServer('dibuat') && waktuServer('diubah');
 
         // Dokumen "terkunci" (sudah jadi PDF resmi) tidak bisa diubah dari klien.
-        allow update: if pendidik(tid) && langgananAktif(tid)
+        allow update: if pendidik(tid)
           && resource.data.ownerUid == request.auth.uid
           && resource.data.status != 'terkunci'
           && perangkatValid()
@@ -509,7 +478,7 @@ service cloud.firestore {
 
           allow get, list: if anggota(tid) && request.auth.uid in pesertaChat();
 
-          allow create: if anggota(tid) && langgananAktif(tid)
+          allow create: if anggota(tid)
             && request.auth.uid in pesertaChat()
             && kunciSaja(['pengirim', 'teks', 'dibuat'])
             && request.resource.data.pengirim == request.auth.uid
@@ -524,14 +493,14 @@ service cloud.firestore {
       match /pengumuman/{id} {
         allow get, list: if superadmin() || anggota(tid);
 
-        allow create: if staf(tid) && langgananAktif(tid)
+        allow create: if staf(tid)
           && kunciSaja(['judul', 'isi', 'penulisUid', 'dibuat'])
           && teks(request.resource.data.judul, 200)
           && teks(request.resource.data.isi, 5000)
           && request.resource.data.penulisUid == request.auth.uid
           && waktuServer('dibuat');
 
-        allow update: if staf(tid) && langgananAktif(tid)
+        allow update: if staf(tid)
           && ubahSaja(['judul', 'isi'])
           && teks(request.resource.data.judul, 200)
           && teks(request.resource.data.isi, 5000);

@@ -354,7 +354,7 @@ function pasangPenangan() {
 // ============================================================================
 // HEADER / TOPBAR UPDATE
 // ============================================================================
-export function perbaruiHeader({ nama, sekolah, langganan, logoSekolah } = {}) {
+export function perbaruiHeader({ nama, sekolah, logoSekolah } = {}) {
   const n = document.getElementById('aleNamaTop');
   if (n && nama) n.textContent = nama;
 
@@ -363,9 +363,6 @@ export function perbaruiHeader({ nama, sekolah, langganan, logoSekolah } = {}) {
 
   const a = document.querySelector('#aleAvatarWrap .ale-avatar');
   if (a && nama && a.tagName !== 'IMG') a.textContent = inisial(nama);
-
-  const l = document.getElementById('aleLangganan');
-  if (l) l.hidden = !langganan;
 
   const g = document.getElementById('aleLogoSekolah');
   if (g && /^https:\/\//i.test(logoSekolah || '')) {
@@ -519,10 +516,6 @@ export function topbar() {
         </div>
 
         <div class="ale-topbar-aksi">
-          <span class="ale-langganan" id="aleLangganan"${profil.langganan ? '' : ' hidden'}>
-            ${ik('centang')}Berlangganan
-          </span>
-
           <img class="ale-logo-sekolah" id="aleLogoSekolah" alt="Logo sekolah"
                width="40" height="40"${logo ? ` src="${esc(logo)}"` : ' hidden'}>
 

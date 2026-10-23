@@ -88,7 +88,7 @@ export default function PlatformTenantsPage() {
       <header className="platform-tenants-heading">
         <p className="platform-tenants-kicker">Manajemen tenant · platform</p>
         <h1>Daftar sekolah</h1>
-        <p>Daftar tenant Supabase ditampilkan secara baca-saja. Status langganan dan perubahan tenant dikelola melalui alur backend berizin.</p>
+        <p>Daftar tenant Supabase ditampilkan secara baca-saja dan perubahan data tenant dilakukan melalui alur backend berizin.</p>
       </header>
 
       <section className="platform-tenants-card" aria-labelledby="platform-tenants-title">

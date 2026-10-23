@@ -137,7 +137,7 @@ export function halamanLogin(wadah) {
             <div class="hero-cta"><a class="btn btn-outline" href="#/login" data-ke="fitur">Lihat fitur</a></div>
             <ul class="trust-list">
               <li>${IKON_CEK}Akses mengikuti akun dan peran yang disahkan administrator</li>
-              <li>${IKON_CEK}Akun diberikan melalui administrator; pendaftaran publik tidak tersedia</li>
+              <li>${IKON_CEK}Akun aplikasi dikelola oleh administrator</li>
             </ul>
           </div>
         </div>

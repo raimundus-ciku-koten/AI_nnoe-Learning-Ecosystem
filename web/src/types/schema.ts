@@ -47,7 +47,6 @@ export interface SekolahDoc {
   logoUrl: string | null;
   tahunAjaranAktif: string;
   semesterAktif: 'ganjil' | 'genap';
-  paket: 'free' | 'premium';
   aktif: boolean;
   createdAt: TimestampLike | JsonValue;
   updatedAt: TimestampLike | JsonValue;

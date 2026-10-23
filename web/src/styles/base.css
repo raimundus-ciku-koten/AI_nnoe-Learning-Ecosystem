@@ -1129,9 +1129,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand-600); }
   .question-bank-editor,
   .question-bank-item,
   .question-bank-notice,
-  .ale-testimonials-card,
-  .ale-purchase-card,
-  .ale-purchase-demo
+  .ale-testimonials-card
 ) {
   border-color: var(--ale-line);
   border-radius: var(--ale-radius);

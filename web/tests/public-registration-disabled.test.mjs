@@ -17,14 +17,15 @@ test('public signup is removed while account login and recovery remain', () => {
   assert.match(login, /resetPassword/);
 });
 
-test('demo trial page and runtime route are removed while legacy demo accounts are denied access', () => {
+test('demo trial pages and routes are absent while unsupported roles stay denied', () => {
   const app = read('web/src/App.jsx');
   assert.equal(existsSync(new URL('web/src/pages/TrialDemoPage.jsx', root)), false);
   assert.equal(existsSync(new URL('web/src/styles/trial-demo.css', root)), false);
   assert.doesNotMatch(app, /TrialDemoPage|HalamanTrial/);
-  assert.match(app, /Akses akun demo dihentikan/);
-  assert.match(app, /path="\/trial" element={<Navigate to={user \? '\/dashboard' : '\/login'} replace \/>}/);
-  assert.match(read('web/src/services/roleAccess.js'), /role === 'demo'\) return false/);
+  assert.doesNotMatch(app, /path="\/trial"/);
+  const roleAccess = read('web/src/services/roleAccess.js');
+  assert.doesNotMatch(roleAccess, /role === 'demo'/);
+  assert.match(roleAccess, /return false/);
 });
 
 test('public purchase, Midtrans, and advertising integrations are absent from active source', () => {

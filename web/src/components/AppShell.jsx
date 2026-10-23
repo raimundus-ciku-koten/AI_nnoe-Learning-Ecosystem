@@ -198,11 +198,6 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
           </div>
 
           <div className="ale-topbar-aksi">
-            {profile?.langganan && (
-              <span className="ale-langganan">
-                <Ikon nama="badge" /> Langganan aktif
-              </span>
-            )}
             {!hematData && profile?.logoSekolah && (
               <img className="ale-logo-sekolah" src={profile.logoSekolah} alt="Logo sekolah"
                    referrerPolicy="no-referrer" width="40" height="40" />

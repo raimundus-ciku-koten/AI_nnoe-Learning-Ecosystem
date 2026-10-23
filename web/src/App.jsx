@@ -114,7 +114,7 @@ const HalamanPenggunaSupabase = lazy(() => import('./pages/SupabasePlatformUsers
 const HalamanPrivasi = lazy(() => import('./pages/PrivacyNoticePage.jsx'));
 const AppShell = lazy(() => import('./components/AppShell.jsx'));
 
-function RetiredDemoAccount() {
+function AccountAccessUnavailable() {
   const [error, setError] = useState('');
   const [signingOut, setSigningOut] = useState(false);
 
@@ -124,7 +124,7 @@ function RetiredDemoAccount() {
     try {
       await logout();
     } catch (logoutError) {
-      console.error('[app] Gagal mengakhiri sesi akun demo yang dihentikan:', logoutError);
+      console.error('[app] Gagal mengakhiri sesi tanpa akses:', logoutError);
       setError('Belum dapat keluar. Muat ulang halaman lalu coba kembali.');
       setSigningOut(false);
     }
@@ -133,8 +133,8 @@ function RetiredDemoAccount() {
   return (
     <main className="app-loader">
       <section className="card empty-state" role="status">
-        <h1>Akses akun demo dihentikan</h1>
-        <p>Fitur demo trial tidak lagi tersedia. Hubungi administrator untuk akun aplikasi yang diprovisikan.</p>
+        <h1>Akses akun belum tersedia</h1>
+        <p>Hubungi administrator untuk memeriksa provisioning akun Anda.</p>
         {error && <p role="alert">{error}</p>}
         <button className="btn btn-primary" type="button" onClick={keluar} disabled={signingOut}>
           {signingOut ? 'Keluar…' : 'Keluar'}
@@ -151,8 +151,10 @@ function PrivateShell({ children }) {
 
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;
-  if (selectedRole === 'demo') return <RetiredDemoAccount />;
   if (!canOpenRolePath(selectedRole, location.pathname)) {
+    if (!selectedRole || !canOpenRolePath(selectedRole, '/dashboard')) {
+      return <AccountAccessUnavailable />;
+    }
     return <Navigate to="/dashboard" replace />;
   }
   return (
@@ -179,7 +181,7 @@ function RouteWrapper() {
   }, [location]);
 
   useEffect(() => {
-    if (!userId || selectedRole === 'demo') return;
+    if (!userId || !canOpenRolePath(selectedRole, '/dashboard')) return;
     let active = true;
     Promise.all([
       import('./services/chatSync.js'),
@@ -210,7 +212,6 @@ function RouteWrapper() {
         <Route path="/platform/supabase-users" element={<HalamanPenggunaSupabase />} />
         <Route path="/scan/:kode" element={<HalamanScan />} />
         <Route path="/" element={<Navigate to={user ? (passwordRecovery ? '/login' : '/dashboard') : '/login'} replace />} />
-        <Route path="/trial" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
         
         <Route path="/dashboard" element={<PrivateShell><HalamanDashboard /></PrivateShell>} />
         <Route path="/testimoni" element={<PrivateShell><HalamanTestimoni /></PrivateShell>} />

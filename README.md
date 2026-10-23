@@ -9,11 +9,14 @@ services.
 the demo-trial simulation and application access for legacy `demo` accounts,
 Midtrans checkout/webhook integrations, the public package-purchase UI, and
 advertising assets/components have been removed from the active source tree.
-Legacy `demo` sessions receive an account-retired notice and can sign out.
+Unrecognized legacy roles cannot open application routes and receive the
+standard account-provisioning notice.
 Admin-provisioned accounts and sign-in remain available. Historical Supabase
 migrations, hosted provider settings/secrets, existing accounts/data, and Git
-history were not changed. A new deployment is required before these source
-changes affect any hosted environment.
+history were not changed. A forward migration has been drafted to remove
+billing/trial relations and demo-role records, but it has not been validated
+against a disposable restore or run in any hosted environment. A reviewed
+deployment and separately approved hosted decommission are still required.
 
 **Production login access was restored** by merging PR #7
 (`832d04d`) to `main` on 2026-10-22. The outage observed on 2026-10-21 was
@@ -69,16 +72,19 @@ and other data modules require their Supabase schema to be deployed and
 verified; the hosted inventory currently shows those feature relations are
 missing. Google features require OAuth setup and user consent. External AI
 providers are disabled. Public package purchase, checkout, payment, and ads
-are removed from active source. Internal plan/entitlement metadata remains for
-access-control compatibility and does not represent an offer or payment flow.
+are removed from active source. Billing and trial schema/data remain in
+historical migrations and any existing hosted database until the pending
+forward migration is reviewed and safely applied.
 
-### Internal plan metadata
+### Pending billing and trial schema cleanup
 
-Package and entitlement metadata may still be used for existing administrative
-access controls. The public pricing/purchase interface has been removed; no
-price in the repository is a current offer. Historical billing and price
-migrations remain append-only and were not applied, deleted, or rewritten as
-part of source cleanup.
+No active frontend or service path should read pricing, payment, trial, or
+entitlement metadata. Historical migrations remain append-only; the new
+forward migration removes the related active-schema tables and demo-role
+allowlist data. It also changes entitlement-dependent RLS policies, so it is
+not safe to run until Staging migration provenance is reconciled and a backup
+has been restored successfully to a disposable database. Hosted schema,
+accounts, and data remain unchanged until that process is completed.
 
 ## Backend migration status
 
@@ -370,8 +376,8 @@ optional module sections may remain empty. AI-assisted generation remains
 unavailable, while existing saved documents remain readable and printable.
 
 New Teacher Workspace notes now use the end-to-end encrypted Google Drive
-vault. Supabase is queried only for entitlement metadata; note contents and
-original filenames are encrypted in the browser before upload. The page
+vault. Note contents and original filenames are encrypted in the browser
+before upload. The page
 explicitly warns that legacy Firestore entries have not been imported and will
 not appear in the Drive list. `scripts/reconcileTeacherWorkspace.mjs` remains
 report-only and requires a verified encrypted Drive artifact per legacy entry;
@@ -456,16 +462,14 @@ default Firebase project alias, and the local Spark deploy helper have been
 removed. The
 Bank Soal runtime
 now reads and writes the tenant-scoped Supabase `question_bank` table with RLS:
-teachers and school admins can read within their tenant, while only an entitled
+teachers and school admins can read within their tenant, while only an active
 teacher can change their own questions. Its migration is local and existing
 question records still need a controlled import. The Firebase service console
 panel and navigation group have been removed from platform operations;
-controls and access summaries use Supabase. The planning teacher
-directory and school subscription status now read Supabase
-profiles/entitlements. External AI assistant, question generation, and planning
-document generation are disabled in no-billing mode. The personal
-entitlement and Midtrans billing schema is
-local only and still requires deployment and payment-flow verification.
+controls and access summaries use Supabase. The planning teacher directory
+uses Supabase profiles; subscription and billing status are no longer part of
+the application. External AI assistant, question generation, and planning
+document generation remain unavailable.
 Remaining backing schemas, authorization, data migration, and production
 verification must be completed before removing Firebase configuration or
 services.
@@ -1007,15 +1011,15 @@ Frontend-specific tests and builds can also be run with
 source and tests are retained for migration analysis but intentionally have no
 active npm run or deploy aliases.
 
-## Plan metadata and Google Workspace
+## Google Workspace and retired monetization
 
-The internal plan catalog and entitlements remain for existing access-control
-compatibility. Public package pricing, purchase, checkout, and payment UI and
-the Midtrans function source have been removed from this checkout. Historical
-billing migrations are retained as append-only records; do not apply or replay
-them as part of this removal. No hosted functions, provider settings, secrets,
-accounts, or data were changed. A separately approved hosted decommission and
-deployment would be required to remove previously deployed resources.
+Public package pricing, signup, checkout, payment UI, and Midtrans function
+source have been removed from active source. Historical billing/trial
+migrations remain append-only, and the forward cleanup migration is not
+applied. Existing hosted tables and records remain until the migration has
+passed provenance review and a disposable restore test, then is approved and
+applied to Staging. No hosted functions, provider settings, secrets, accounts,
+or data were changed.
 
 The active web source contains no ad component or `ads.txt` asset. The Android
 project is a Trusted Web Activity, not a native AdMob application. No AdSense
@@ -1126,7 +1130,8 @@ Workspace keep their dedicated workflows.
 Teacher submenu destinations without a dedicated data module open a private,
 tenant-scoped work-notes space at
 `tenants/{tenantId}/guruWorkspace/{uid}/entries/{entryId}`. Only that teacher
-can read those notes; writing requires an active tenant subscription. They are
+can read those notes; writing follows the active owner and tenant access rules.
+They are
 not official grades, attendance, reports, or student communications; do not
 enter student-identifying or sensitive information. Other roles continue to
 receive an informational page where their module workflow is not implemented.

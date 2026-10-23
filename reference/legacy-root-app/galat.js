@@ -28,7 +28,7 @@ const PESAN = {
   'auth/internal-error':           'Terjadi gangguan di server masuk. Coba lagi beberapa saat lagi.',
 
   // --- Firestore ---
-  'permission-denied':   'Anda tidak punya izin untuk tindakan ini, atau langganan sekolah sedang tidak aktif.',
+  'permission-denied':   'Anda tidak memiliki izin untuk tindakan ini.',
   'unauthenticated':     'Sesi Anda berakhir. Silakan masuk kembali.',
   'unavailable':         'Server tidak dapat dijangkau. Perubahan akan dikirim saat koneksi kembali.',
   'deadline-exceeded':   'Server terlalu lama merespons. Coba lagi.',

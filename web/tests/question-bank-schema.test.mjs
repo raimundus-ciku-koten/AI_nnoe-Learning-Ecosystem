@@ -7,6 +7,14 @@ const migrationPath = new URL(
   import.meta.url,
 );
 const migration = await readFile(migrationPath, 'utf8');
+const cleanupMigration = await readFile(new URL(
+  '../../supabase/migrations/20261023000100_remove_billing_signup_demo.sql',
+  import.meta.url,
+), 'utf8');
+const cleanupPolicies = cleanupMigration.slice(
+  cleanupMigration.indexOf('create policy'),
+  cleanupMigration.indexOf('create or replace function'),
+);
 
 test('constrains bank question content, answer choices, and tenant ownership', () => {
   assert.match(migration, /create table if not exists public\.question_bank/);
@@ -20,13 +28,12 @@ test('constrains bank question content, answer choices, and tenant ownership', (
   assert.match(migration, /char_length\(jawaban\) between 1 and 1000/);
 });
 
-test('preserves staff read access while limiting writes to entitled teacher owners', () => {
-  assert.match(migration, /alter table public\.question_bank enable row level security/);
-  assert.match(migration, /'admin_sekolah', 'guru'/);
-  assert.match(migration, /owner_id = \(select auth\.uid\(\)\)/);
-  assert.match(migration, /public\.current_tenant_id\(\)/);
-  assert.match(migration, /entitlement\.status in \('trial', 'active'\)/);
-  assert.match(migration, /plan\.allowed_role = 'guru'/);
-  assert.match(migration, /grant update \(\s*mapel, kelas, jenis, pertanyaan, pilihan, jawaban, pembahasan\s*\)/);
-  assert.match(migration, /revoke all on table public\.question_bank from public, anon, authenticated/);
+test('preserves tenant-scoped teacher ownership while removing subscription gates', () => {
+  assert.match(cleanupMigration, /create policy "Active teachers create their own tenant questions"/);
+  assert.match(cleanupMigration, /create policy "Active teachers update their own tenant questions"/);
+  assert.match(cleanupMigration, /create policy "Active teachers delete their own tenant questions"/);
+  assert.match(cleanupMigration, /owner_id = \(select auth\.uid\(\)\)/);
+  assert.match(cleanupMigration, /public\.current_tenant_id\(\)/);
+  assert.match(cleanupMigration, /tenant\.active = true/);
+  assert.doesNotMatch(cleanupPolicies, /tenant_entitlements|personal_entitlements|billing_plans|demo/i);
 });

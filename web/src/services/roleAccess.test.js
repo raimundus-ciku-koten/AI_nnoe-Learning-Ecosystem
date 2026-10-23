@@ -18,8 +18,9 @@ test('peran lain tetap mengikuti otorisasi rute yang sudah ada', () => {
   }
 });
 
-test('akun demo legacy tidak lagi dapat membuka rute aplikasi', () => {
+test('role yang tidak disediakan aplikasi tidak dapat membuka rute', () => {
   for (const path of ['/dashboard', '/admin/pengguna/guru', '/perencanaan', '/chat', '/trial']) {
-    assert.equal(canOpenRolePath('demo', path), false);
+    assert.equal(canOpenRolePath('unprovisioned', path), false);
+    assert.equal(canOpenRolePath('invalid-role', path), false);
   }
 });

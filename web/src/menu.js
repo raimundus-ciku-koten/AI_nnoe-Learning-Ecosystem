@@ -180,7 +180,6 @@ export const MENU_ADMIN = [
       s('Instansi',   'building'),
       s('Pengguna',   'people'),
       s('Template',   'file-earmark-text'),
-      s('Pembayaran', 'credit-card'),
     ],
   },
 ];

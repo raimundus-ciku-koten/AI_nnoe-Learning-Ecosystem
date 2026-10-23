@@ -195,8 +195,8 @@ const AKSI_ADMIN_SEKOLAH = [
 
 const AKSI_SUPERADMIN = [
   {
-    href: '#/platform/tenant/sekolah', ikon: 'gedung', judul: 'Tenant dan langganan',
-    ket: 'Sekolah, paket, dan status layanan',
+    href: '#/platform/tenant/sekolah', ikon: 'gedung', judul: 'Tenant sekolah',
+    ket: 'Daftar sekolah dan status tenant',
   },
   {
     href: '#/platform/fitur/flags', ikon: 'saklar', judul: 'Fitur platform',
@@ -213,10 +213,6 @@ const AKSI_SUPERADMIN = [
   {
     href: '#/platform/keamanan/audit', ikon: 'perisai', judul: 'Keamanan dan audit',
     ket: 'Audit log, Security Rules, dan App Check',
-  },
-  {
-    href: '#/platform/laporan/biaya', ikon: 'progres', judul: 'Analitik global',
-    ket: 'Penggunaan, performa, dan biaya platform',
   },
 ];
 
@@ -280,7 +276,7 @@ function tampilanAdmin({ role, nama, sekolah }) {
         </div>
         <div class="ale-admin-prinsip-grid">
           ${superadmin
-            ? `<p><strong>Direktori platform.</strong> Tinjau sekolah dan admin sekolah secara baca-saja; perubahan langganan dan peran harus melalui backend tepercaya.</p>
+            ? `<p><strong>Direktori platform.</strong> Tinjau sekolah dan admin sekolah secara baca-saja; perubahan data tenant dan peran harus melalui backend tepercaya.</p>
                <p><strong>Rahasia dan infrastruktur.</strong> API key AI dikelola di server. Jangan memasukkan rahasia layanan ke aplikasi browser.</p>
                <p><strong>Statistik dan audit.</strong> Gunakan laporan sesuai sumber dan rentang data; ringkasan bukan telemetry historis atau metrik biaya.</p>`
             : `<p><strong>Akun sesuai kewenangan.</strong> Kelola guru, siswa, dan orang tua dalam tenant sekolah; persetujuan serta perubahan akun mengikuti alur resmi.</p>

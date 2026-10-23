@@ -5,7 +5,7 @@
  * Pemakaian:
  *   node scripts/set-role.mjs --proyek ID --email guru@sekolah.sch.id --peran guru --tenant sman1-kupang
  *   node scripts/set-role.mjs --proyek ID --email saya@gmail.com --peran superadmin
- *   node scripts/set-role.mjs ... --tenant-nama "SMAN 1 Kupang" --sampai 2027-06-30   (buat sekolah baru + langganan aktif)
+ *   node scripts/set-role.mjs ... --tenant-nama "SMAN 1 Kupang"   (buat sekolah baru)
  *
  * Emulator (tanpa kredensial):
  *   FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
@@ -17,9 +17,9 @@
 import { parseArgs } from 'node:util';
 import { initializeApp, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 
-const PERAN = ['superadmin', 'admin_sekolah', 'operator', 'guru', 'siswa', 'ortu', 'demo'];
+const PERAN = ['superadmin', 'admin_sekolah', 'operator', 'guru', 'siswa', 'ortu'];
 
 const { values: a } = parseArgs({
   options: {
@@ -28,7 +28,6 @@ const { values: a } = parseArgs({
     peran:        { type: 'string' },
     tenant:       { type: 'string' },
     'tenant-nama': { type: 'string' },
-    sampai:       { type: 'string' },
     nama:         { type: 'string' },
   },
 });
@@ -57,11 +56,8 @@ if (a['tenant-nama']) {
   if ((await ref.get()).exists) {
     console.log(`• Sekolah ${a.tenant} sudah ada — tidak diubah.`);
   } else {
-    const sampai = a.sampai ? Timestamp.fromDate(new Date(`${a.sampai}T23:59:59+08:00`)) : null;
-    if (a.sampai && Number.isNaN(sampai.toMillis())) gagal('--sampai harus berformat YYYY-MM-DD.');
     await ref.set({
       nama: a['tenant-nama'],
-      langganan: { aktif: true, paket: 'trial', ...(sampai ? { sampai } : {}) },
       dibuat: FieldValue.serverTimestamp(),
     });
     console.log(`✓ Sekolah ${a.tenant} dibuat.`);

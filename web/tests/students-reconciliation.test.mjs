@@ -26,11 +26,6 @@ const makeInput = overrides => ({
     active: true,
   }],
   targetTenants: [{ id: 'school-target', active: true }],
-  targetEntitlements: [{
-    tenant_id: 'school-target',
-    status: 'trial',
-    valid_until: null,
-  }],
   targetStudents: [],
   reconciledAt: '2026-02-01T00:00:00Z',
   ...overrides,
@@ -126,7 +121,7 @@ test('requires valid student fields, dates and strict target-column values', () 
   );
 });
 
-test('requires active teacher, tenant and unexpired trial/active entitlement', () => {
+test('requires an active teacher and tenant without subscription metadata', () => {
   const inactiveTeacher = makeInput();
   inactiveTeacher.profiles[0].active = false;
   assert.equal(
@@ -139,19 +134,6 @@ test('requires active teacher, tenant and unexpired trial/active entitlement', (
   assert.equal(
     reconcileStudents(inactiveTenant).quarantined[0].reason,
     'active_target_tenant_not_verified',
-  );
-
-  const noEntitlement = makeInput({ targetEntitlements: [] });
-  assert.equal(
-    reconcileStudents(noEntitlement).quarantined[0].reason,
-    'active_target_tenant_entitlement_not_verified',
-  );
-
-  const expired = makeInput();
-  expired.targetEntitlements[0].valid_until = '2026-01-31T00:00:00Z';
-  assert.equal(
-    reconcileStudents(expired).quarantined[0].reason,
-    'active_target_tenant_entitlement_not_verified',
   );
 
   const adminOwner = makeInput();

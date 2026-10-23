@@ -4,10 +4,9 @@
  *
  *  - Cache-first: claims dibaca tanpa jaringan, profil dari cache Firestore,
  *    timeout guard, sinkron server di latar belakang.
- *  - Google Sign-In + auto-buat dokumen users/{uid} (role 'guru', dibatasi
- *    oleh firestore.rules agar tidak bisa eskalasi hak akses).
+ *  - Google Sign-In untuk akun yang sudah diprovisikan administrator.
  *
- * KEAMANAN: peran/tenant/langganan di UI hanya untuk tampilan. Penegakan
+ * KEAMANAN: peran/tenant di UI hanya untuk tampilan. Penegakan
  * sebenarnya WAJIB di Firestore Security Rules / Cloud Functions.
  */
 import {
@@ -36,7 +35,7 @@ googleProvider.setCustomParameters({ prompt: 'select_account' });
 // Keadaan saat tidak ada pengguna. authReady=true: sesi SUDAH diperiksa.
 const STATE_KOSONG = Object.freeze({
   user: null, profile: null, role: null, tenantId: null,
-  isDemo: false, claims: null, authReady: true,
+  claims: null, authReady: true,
 });
 
 // ---------------------------------------------------------------------------
@@ -75,7 +74,6 @@ function ringkasProfil(profil) {
   return {
     nama:        teks(profil.nama),
     sekolah:     teks(profil.sekolah),
-    langganan:   profil.langganan === true || profil.langganan === 'aktif',
     logoSekolah: teks(profil.logoSekolah),
   };
 }
@@ -95,7 +93,6 @@ function rakitState(user, claims, profil) {
     profile:  ringkas,
     role,
     tenantId: claims.tenantId || teks(profil.tenantId) || null,
-    isDemo:   role === 'demo' || claims.isDemo === true,
     claims,
     authReady: true,
   };

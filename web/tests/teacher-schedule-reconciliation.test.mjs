@@ -28,7 +28,6 @@ const makeInput = overrides => ({
     active: true,
   }],
   targetTenants: [{ id: 'school-target', active: true }],
-  targetEntitlements: [{ tenant_id: 'school-target', status: 'active', valid_until: null }],
   encryptedDriveFiles: [{
     sourceKey: 'legacy-teacher/pengaturan/jadwal',
     ownerId,
@@ -133,7 +132,7 @@ test('requires exact schedule document schema, identity and size limits', () => 
   );
 });
 
-test('requires active owner, tenant and unexpired tenant entitlement', () => {
+test('requires an active owner and tenant without subscription metadata', () => {
   const inactiveOwner = makeInput();
   inactiveOwner.profiles[0].active = false;
   assert.equal(
@@ -148,11 +147,6 @@ test('requires active owner, tenant and unexpired tenant entitlement', () => {
     'active_target_tenant_not_verified',
   );
 
-  const noEntitlement = makeInput({ targetEntitlements: [] });
-  assert.equal(
-    reconcileTeacherSchedule(noEntitlement).quarantined[0].reason,
-    'active_target_tenant_entitlement_not_verified',
-  );
 });
 
 test('requires a single owner envelope and rejects shared recipients', () => {

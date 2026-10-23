@@ -273,8 +273,6 @@ export const MENU_SUPERADMIN = [
   ]),
   grup('platform-tenant', 'Manajemen Tenant', 'database', [
     tautan('Daftar Sekolah', '/platform/tenant/sekolah', 'users'),
-    tautan('Langganan', '/platform/tenant/langganan', 'file'),
-    tautan('Paket', '/platform/tenant/paket', 'book'),
   ]),
   grup('platform-chat', 'Chat Dukungan', 'chat', [
     tautan('Percakapan', '/chat', 'chat'),
@@ -309,7 +307,6 @@ export const MENU_SUPERADMIN = [
   grup('platform-laporan', 'Laporan dan Analitik Global', 'chart', [
     tautan('Penggunaan', '/platform/laporan/penggunaan', 'chart'),
     tautan('Performa', '/platform/laporan/performa', 'chart'),
-    tautan('Biaya', '/platform/laporan/biaya', 'file'),
   ]),
   grup('platform-pengaturan', 'Pengaturan Platform', 'settings', [
     tautan('Konfigurasi', '/platform/pengaturan/konfigurasi', 'settings'),

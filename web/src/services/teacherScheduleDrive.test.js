@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { supabase, googleDrive } = vi.hoisted(() => ({
-  supabase: { from: vi.fn() },
+const { googleDrive } = vi.hoisted(() => ({
   googleDrive: {
     daftarJadwalTerenkripsiDrive: vi.fn(),
     unggahBerkasTerenkripsiDrive: vi.fn(),
   },
 }));
-vi.mock('../lib/supabase.ts', () => ({ supabase }));
 vi.mock('./googleWorkspace.js', () => googleDrive);
 
 import {
@@ -31,29 +29,15 @@ const SESSION = {
   ciphertextSha256: 'b'.repeat(64),
 };
 
-function queryResult(response) {
-  const query = {
-    select: vi.fn(() => query),
-    eq: vi.fn(() => query),
-    maybeSingle: vi.fn(() => Promise.resolve(response)),
-  };
-  return query;
-}
-
 describe('encrypted teacher schedule storage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    supabase.from.mockImplementation(() => queryResult({
-      data: { status: 'active', valid_until: null },
-      error: null,
-    }));
   });
 
   it('loads the encrypted schedule without storing schedule content in Supabase', async () => {
     googleDrive.daftarJadwalTerenkripsiDrive.mockResolvedValue(SESSION);
     await expect(muatJadwalGuruDrive('token', IDENTITY)).resolves.toEqual(SESSION);
     expect(googleDrive.daftarJadwalTerenkripsiDrive).toHaveBeenCalledWith('token', IDENTITY);
-    expect(supabase.from).not.toHaveBeenCalled();
   });
 
   it('applies domain validation and writes a new schedule only as encrypted Drive payload', async () => {
@@ -116,7 +100,7 @@ describe('encrypted teacher schedule storage', () => {
     expect(googleDrive.unggahBerkasTerenkripsiDrive).not.toHaveBeenCalled();
   });
 
-  it('rejects conflicting sessions and requires active entitlement before writing', async () => {
+  it('rejects conflicting sessions and invalid roles before writing', async () => {
     googleDrive.daftarJadwalTerenkripsiDrive.mockResolvedValue(SESSION);
     await expect(ubahJadwalGuruDrive(
       'token',
@@ -139,15 +123,14 @@ describe('encrypted teacher schedule storage', () => {
     )).rejects.toThrow('Bentrok');
     expect(googleDrive.unggahBerkasTerenkripsiDrive).not.toHaveBeenCalled();
 
-    supabase.from.mockImplementation(() => queryResult({ data: null, error: null }));
     await expect(ubahJadwalGuruDrive(
       'token',
       'school-1',
       OWNER,
-      'operator',
+      'siswa',
       IDENTITY,
       { jenis: 'hapus', id: 'lesson-1' },
       SESSION.ciphertextSha256,
-    )).rejects.toThrow('Langganan sekolah');
+    )).rejects.toThrow('Akses jadwal tidak tersedia');
   });
 });

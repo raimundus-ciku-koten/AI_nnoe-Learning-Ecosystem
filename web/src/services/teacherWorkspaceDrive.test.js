@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { supabase, googleDrive } = vi.hoisted(() => ({
-  supabase: { from: vi.fn() },
+const { googleDrive } = vi.hoisted(() => ({
   googleDrive: {
     daftarCatatanKerjaTerenkripsiDrive: vi.fn(),
     hapusCatatanKerjaTerenkripsiDrive: vi.fn(),
     unggahBerkasTerenkripsiDrive: vi.fn(),
   },
 }));
-vi.mock('../lib/supabase.ts', () => ({ supabase }));
 vi.mock('./googleWorkspace.js', () => googleDrive);
 
 import {
@@ -37,27 +35,9 @@ const NOTE = {
   status: 'draf',
 };
 
-function queryResult(response) {
-  const query = {
-    select: vi.fn(() => query),
-    eq: vi.fn(() => query),
-    maybeSingle: vi.fn(() => Promise.resolve(response)),
-  };
-  return query;
-}
-
 describe('encrypted Google Drive teacher workspace', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    supabase.from.mockImplementation((table) => {
-      if (table === 'tenant_entitlements') {
-        return queryResult({ data: { status: 'active', valid_until: null }, error: null });
-      }
-      if (table === 'personal_entitlements') {
-        return queryResult({ data: null, error: null });
-      }
-      throw new Error(`Unexpected Supabase table: ${table}`);
-    });
   });
 
   it('keeps note contents out of Supabase and uploads a new encrypted-category file', async () => {
@@ -75,8 +55,6 @@ describe('encrypted Google Drive teacher workspace', () => {
       ...NOTE,
       ciphertextSha256: CIPHERTEXT_SHA256,
     });
-    expect(supabase.from.mock.calls.map(([table]) => table).sort())
-      .toEqual(['personal_entitlements', 'tenant_entitlements']);
     const [token, owner, identity, file, options] =
       googleDrive.unggahBerkasTerenkripsiDrive.mock.calls[0];
     expect([token, owner, identity]).toEqual(['token', OWNER_ID, IDENTITY]);
@@ -85,20 +63,7 @@ describe('encrypted Google Drive teacher workspace', () => {
     expect(JSON.parse(await file.text()).isi).toBe(NOTE.isi);
   });
 
-  it('supports individual teacher entitlements, keyset paging, update, and deletion', async () => {
-    supabase.from.mockImplementation((table) => {
-      if (table === 'tenant_entitlements') return queryResult({ data: null, error: null });
-      if (table === 'personal_entitlements') {
-        return queryResult({
-          data: { plan_id: 'teacher-plan', status: 'active', valid_until: null },
-          error: null,
-        });
-      }
-      if (table === 'billing_plans') {
-        return queryResult({ data: { allowed_role: 'guru', active: true }, error: null });
-      }
-      throw new Error(`Unexpected Supabase table: ${table}`);
-    });
+  it('supports keyset paging, update, and deletion without entitlement checks', async () => {
     googleDrive.daftarCatatanKerjaTerenkripsiDrive.mockResolvedValue({
       entries: [{ id: ENTRY_ID, ...NOTE }],
       nextPageToken: 'next-page',
@@ -133,20 +98,5 @@ describe('encrypted Google Drive teacher workspace', () => {
       });
     expect(googleDrive.hapusCatatanKerjaTerenkripsiDrive)
       .toHaveBeenCalledWith('token', ENTRY_ID, IDENTITY);
-    expect(supabase.from.mock.calls.some(([table]) =>
-      !['tenant_entitlements', 'personal_entitlements', 'billing_plans'].includes(table)))
-      .toBe(false);
-  });
-
-  it('blocks writes without an active school or teacher entitlement', async () => {
-    supabase.from.mockImplementation(() => queryResult({ data: null, error: null }));
-    await expect(tambahCatatanGuruDrive(
-      'token',
-      'school-1',
-      OWNER_ID,
-      IDENTITY,
-      NOTE,
-    )).rejects.toThrow('Langganan sekolah');
-    expect(googleDrive.unggahBerkasTerenkripsiDrive).not.toHaveBeenCalled();
   });
 });

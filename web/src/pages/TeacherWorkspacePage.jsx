@@ -46,7 +46,7 @@ const formKosong = (path, label) => ({
 
 function pesanKesalahan(err, aksi) {
   if (['permission-denied', '42501'].includes(err?.code)) {
-    return `Akun ini tidak diizinkan ${aksi} catatan. Pastikan akun guru terdaftar dan langganan tenant aktif.`;
+    return `Akun ini tidak diizinkan ${aksi} catatan. Pastikan akun guru terdaftar pada tenant yang aktif.`;
   }
   return `Catatan tidak dapat ${aksi}. Periksa koneksi, lalu coba lagi.`;
 }
@@ -122,7 +122,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
       if (requestId !== loadRequest.current) return;
       console.error('[teacher-workspace] Gagal memuat catatan guru:', err);
       setError(['permission-denied', '42501'].includes(err?.code)
-        ? 'Akses catatan pribadi ditolak. Pastikan akun guru terdaftar pada tenant dengan langganan aktif.'
+        ? 'Akses catatan pribadi ditolak. Pastikan akun guru terdaftar pada tenant yang aktif.'
         : 'Catatan belum dapat dimuat. Periksa koneksi, lalu coba lagi.');
     } finally {
       if (requestId === loadRequest.current) {
@@ -289,7 +289,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
         <Ikon nama="shield" />
         <p>
           Isi catatan dienkripsi di browser sebelum disimpan ke Google Drive pribadi Anda.
-          Supabase hanya dipakai untuk memeriksa status langganan; tidak menerima isi catatan.
+          Isi catatan dienkripsi sebelum disimpan ke Google Drive; Supabase tidak menerima isi catatan.
           Catatan Firestore lama belum diimpor dan tidak akan muncul di daftar ini sampai migrasi terenkripsi selesai.
         </p>
       </aside>

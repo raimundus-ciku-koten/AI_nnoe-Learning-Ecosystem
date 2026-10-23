@@ -7,6 +7,14 @@ const migrationPath = new URL(
   import.meta.url,
 );
 const migration = await readFile(migrationPath, 'utf8');
+const cleanupMigration = await readFile(new URL(
+  '../../supabase/migrations/20261023000100_remove_billing_signup_demo.sql',
+  import.meta.url,
+), 'utf8');
+const cleanupPolicies = cleanupMigration.slice(
+  cleanupMigration.indexOf('create policy'),
+  cleanupMigration.indexOf('create or replace function'),
+);
 
 test('defines tenant- and owner-scoped student data with constrained personal fields', () => {
   assert.match(migration, /create table if not exists public\.students/);
@@ -18,14 +26,15 @@ test('defines tenant- and owner-scoped student data with constrained personal fi
   assert.match(migration, /students_owner_nisn_unique/);
 });
 
-test('enables RLS, scopes records to active owner and tenant, and gates writes by entitlement', () => {
-  assert.match(migration, /alter table public\.students enable row level security/);
-  assert.match(migration, /owner_id = \(select auth\.uid\(\)\)/);
-  assert.match(migration, /tenant_id = \(select public\.current_tenant_id\(\)\)/);
-  assert.match(migration, /public\.current_user_is_active\(\)/);
-  assert.match(migration, /entitlement\.status in \('trial', 'active'\)/);
-  assert.match(migration, /entitlement\.valid_until is null or entitlement\.valid_until > now\(\)/);
-  assert.match(migration, /revoke all on table public\.students from anon, authenticated/);
+test('keeps student writes scoped to active owner and tenant without subscriptions', () => {
+  assert.match(cleanupMigration, /create policy "Active teachers create their own students"/);
+  assert.match(cleanupMigration, /create policy "Active teachers update their own students"/);
+  assert.match(cleanupMigration, /create policy "Active teachers delete their own students"/);
+  assert.match(cleanupMigration, /owner_id = \(select auth\.uid\(\)\)/);
+  assert.match(cleanupMigration, /tenant_id = \(select public\.current_tenant_id\(\)\)/);
+  assert.match(cleanupMigration, /public\.current_user_is_active\(\)/);
+  assert.match(cleanupMigration, /tenant\.active = true/);
+  assert.doesNotMatch(cleanupPolicies, /tenant_entitlements|personal_entitlements|billing_plans|demo/i);
 });
 
 test('keeps owner and tenant immutable through column-level update grants', () => {

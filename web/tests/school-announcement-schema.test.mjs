@@ -7,6 +7,14 @@ const migrationPath = new URL(
   import.meta.url,
 );
 const migration = await readFile(migrationPath, 'utf8');
+const cleanupMigration = await readFile(new URL(
+  '../../supabase/migrations/20261023000100_remove_billing_signup_demo.sql',
+  import.meta.url,
+), 'utf8');
+const cleanupPolicies = cleanupMigration.slice(
+  cleanupMigration.indexOf('create policy'),
+  cleanupMigration.indexOf('create or replace function'),
+);
 
 test('defines tenant-scoped announcement fields with bounded title and body', () => {
   assert.match(migration, /create table if not exists public\.school_announcements/);
@@ -19,14 +27,16 @@ test('defines tenant-scoped announcement fields with bounded title and body', ()
   assert.doesNotMatch(migration, /legacy_uid|source_id|firebase/i);
 });
 
-test('enables RLS with active-member reads and tenant-staff mutations', () => {
-  assert.match(migration, /alter table public\.school_announcements enable row level security/);
-  assert.match(migration, /public\.current_user_is_active\(\)/);
-  assert.match(migration, /public\.current_app_role\(\).*'superadmin'/s);
-  assert.match(migration, /'admin_sekolah', 'operator', 'guru', 'siswa', 'ortu'/);
-  assert.match(migration, /'admin_sekolah', 'operator'/);
-  assert.match(migration, /entitlement\.status in \('trial', 'active'\)/);
-  assert.match(migration, /entitlement\.valid_until is null or entitlement\.valid_until > now\(\)/);
+test('keeps announcements scoped to active members without subscription or demo access', () => {
+  assert.match(cleanupMigration, /create policy "Active school members and superadmins read announcements"/);
+  assert.match(cleanupMigration, /create policy "Active school staff create announcements"/);
+  assert.match(cleanupMigration, /create policy "Active school staff update announcements"/);
+  assert.match(cleanupMigration, /create policy "Active school staff delete announcements"/);
+  assert.match(cleanupMigration, /public\.current_user_is_active\(\)/);
+  assert.match(cleanupMigration, /public\.current_app_role\(\).*'superadmin'/s);
+  assert.match(cleanupMigration, /'admin_sekolah', 'operator', 'guru', 'siswa', 'ortu'/);
+  assert.match(cleanupMigration, /'admin_sekolah', 'operator'/);
+  assert.doesNotMatch(cleanupPolicies, /tenant_entitlements|personal_entitlements|billing_plans|demo/i);
 });
 
 test('restricts columns so clients cannot change tenant, author or creation time', () => {

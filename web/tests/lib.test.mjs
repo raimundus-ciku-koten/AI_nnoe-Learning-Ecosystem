@@ -277,7 +277,6 @@ test('hosted schema audit script contains read-only SQL only', () => {
     'drive_file_access',
     'drive_file_key_envelopes',
     'security_audit',
-    'tenant_entitlements',
     'students',
     'attendance_records',
     'testimonials',
@@ -288,9 +287,6 @@ test('hosted schema audit script contains read-only SQL only', () => {
     'chat_inbox',
     'chat_contacts',
     'chat_presence',
-    'billing_plans',
-    'personal_entitlements',
-    'payment_orders',
     'testimonial_submissions',
     'question_bank',
     'web_push_subscriptions',
@@ -300,10 +296,18 @@ test('hosted schema audit script contains read-only SQL only', () => {
     'online_exams',
     'online_exam_items',
     'online_exam_attempts',
-    'trial_registrations',
   ];
   for (const featureRelation of featureRelations) {
     assert.match(auditSql, new RegExp(`'${featureRelation}'`));
+  }
+  for (const removedRelation of [
+    'tenant_entitlements',
+    'billing_plans',
+    'personal_entitlements',
+    'payment_orders',
+    'trial_registrations',
+  ]) {
+    assert.match(auditSql, new RegExp(`'${removedRelation}'`));
   }
 
   const migrationFiles = readdirSync(new URL('../../supabase/migrations/', import.meta.url))
@@ -329,6 +333,15 @@ test('hosted schema audit script contains read-only SQL only', () => {
     'user_allowlist',
   ]) {
     definedRelations.delete(foundationRelation);
+  }
+  for (const removedRelation of [
+    'tenant_entitlements',
+    'billing_plans',
+    'personal_entitlements',
+    'payment_orders',
+    'trial_registrations',
+  ]) {
+    definedRelations.delete(removedRelation);
   }
   assert.deepEqual([...featureRelations].sort(), [...definedRelations].sort());
 });

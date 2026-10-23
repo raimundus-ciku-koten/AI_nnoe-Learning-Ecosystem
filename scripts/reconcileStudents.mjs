@@ -167,7 +167,6 @@ const validateInput = input => {
     'studentRecords',
     'profiles',
     'targetTenants',
-    'targetEntitlements',
     'targetStudents',
   ]) {
     if (!Array.isArray(input[field])) {
@@ -197,7 +196,6 @@ export function reconcileStudents(input) {
     studentRecords,
     profiles,
     targetTenants,
-    targetEntitlements,
     targetStudents,
     reconciledAt,
   } = validateInput(input);
@@ -208,7 +206,6 @@ export function reconcileStudents(input) {
   );
   const profilesByLegacyUid = indexBy(profiles, profile => profile?.legacy_uid);
   const tenantsById = indexBy(targetTenants, tenant => tenant?.id);
-  const entitlementsByTenant = indexBy(targetEntitlements, entitlement => entitlement?.tenant_id);
   const targetById = indexBy(targetStudents, student => student?.id);
   const targetByCode = indexBy(targetStudents, student => student?.kode_unik);
   const targetByOwnerNisn = indexBy(
@@ -282,16 +279,6 @@ export function reconcileStudents(input) {
       quarantine('active_target_tenant_not_verified');
       continue;
     }
-    const entitlementMatches = entitlementsByTenant.get(owner.tenant_id) ?? [];
-    const entitled = entitlementMatches.filter(entitlement =>
-      ['trial', 'active'].includes(entitlement.status) &&
-      (!entitlement.valid_until || Date.parse(entitlement.valid_until) > Date.parse(reconciledAt)),
-    );
-    if (entitlementMatches.length !== 1 || entitled.length !== 1) {
-      quarantine('active_target_tenant_entitlement_not_verified');
-      continue;
-    }
-
     const proposal = {
       id: normalized.id,
       tenant_id: owner.tenant_id,
@@ -343,7 +330,6 @@ export function reconcileStudents(input) {
       sourceStudents: studentRecords.length,
       profiles: profiles.length,
       targetTenants: targetTenants.length,
-      targetEntitlements: targetEntitlements.length,
       targetStudents: targetStudents.length,
       proposals: proposals.length,
       alreadyPresent: alreadyPresent.length,

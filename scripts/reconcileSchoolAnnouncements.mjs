@@ -90,7 +90,6 @@ const validateInput = input => {
     'tenantCrosswalk',
     'targetTenants',
     'profiles',
-    'targetEntitlements',
     'targetAnnouncements',
   ]) {
     if (field === 'tenantCrosswalk') continue;
@@ -122,7 +121,6 @@ export function reconcileSchoolAnnouncements(input) {
     tenantCrosswalk,
     targetTenants,
     profiles,
-    targetEntitlements,
     targetAnnouncements,
     reconciledAt,
   } = validateInput(input);
@@ -133,7 +131,6 @@ export function reconcileSchoolAnnouncements(input) {
   );
   const profilesByLegacyUid = indexBy(profiles, profile => profile?.legacy_uid);
   const tenantsById = indexBy(targetTenants, tenant => tenant?.id);
-  const entitlementsByTenant = indexBy(targetEntitlements, entitlement => entitlement?.tenant_id);
   const targetsById = indexBy(targetAnnouncements, announcement => announcement?.id);
   const crosswalkTargets = indexBy(
     Object.entries(tenantCrosswalk).map(([sourceId, targetId]) => ({ sourceId, targetId })),
@@ -195,11 +192,6 @@ export function reconcileSchoolAnnouncements(input) {
       continue;
     }
 
-    const entitlementMatches = entitlementsByTenant.get(tenantId) ?? [];
-    const validEntitlements = entitlementMatches.filter(entitlement =>
-      ['trial', 'active'].includes(entitlement.status) &&
-      (!entitlement.valid_until || Date.parse(entitlement.valid_until) > Date.parse(reconciledAt)),
-    );
     const proposal = {
       id: deterministicUuid(sourceKey),
       tenant_id: tenantId,
@@ -222,10 +214,6 @@ export function reconcileSchoolAnnouncements(input) {
       }
       continue;
     }
-    if (entitlementMatches.length > 1 || validEntitlements.length !== 1) {
-      quarantine('target_tenant_entitlement_not_verified_for_writes');
-      continue;
-    }
     proposals.push(proposal);
   }
 
@@ -235,7 +223,6 @@ export function reconcileSchoolAnnouncements(input) {
       sourceAnnouncements: announcements.length,
       targetTenants: targetTenants.length,
       profiles: profiles.length,
-      targetEntitlements: targetEntitlements.length,
       targetAnnouncements: targetAnnouncements.length,
       proposals: proposals.length,
       alreadyPresent: alreadyPresent.length,

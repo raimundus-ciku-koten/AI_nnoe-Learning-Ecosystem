@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { usePlatformControls } from '../context/PlatformControlContext.jsx';
 import { GRUP_MENU, MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN, menuUntukPeran } from '../navigasi.js';
 import { setPlatformControl } from '../services/platformAdminApi.js';
-import PRICING from '../../../functions/shared/pricing.json';
 import '../styles/platform-tenants.css';
 
 const PERAN_MENU = [
@@ -35,13 +34,6 @@ const INFO_MODUL = {
     ringkasan: 'Riwayat provisioning akun platform dan perubahan kontrol yang dicatat layanan backend Supabase.',
     status: 'Audit operasi backend',
     tindakan: 'Log hanya mencakup operasi yang tercatat backend; bukan audit seluruh aktivitas pengguna.',
-  },
-  '/platform/tenant/langganan': {
-    judul: 'Langganan Tenant',
-    ringkasan: 'Status langganan sekolah tersedia pada dokumen tenant dan dapat ditinjau di direktori sekolah.',
-    status: 'Baca-saja tersedia',
-    tindakan: 'Status dihitung dari langganan. Perubahan langganan hanya boleh melalui webhook atau layanan backend tepercaya.',
-    link: { href: '#/platform/tenant/sekolah', label: 'Buka daftar sekolah' },
   },
   '/platform/pengguna/peran': {
     judul: 'Peran Global',
@@ -97,11 +89,6 @@ const INFO_MODUL = {
     status: 'Metrik tidak tersedia',
     tindakan: 'Observabilitas operasional belum tersedia pada aplikasi.',
   },
-  '/platform/laporan/biaya': {
-    judul: 'Biaya Platform',
-    ringkasan: 'Data biaya billing tidak tersedia pada aplikasi ini.',
-    status: 'Metrik tidak tersedia',
-  },
   '/platform/pengaturan/konfigurasi': {
     judul: 'Konfigurasi Platform',
     ringkasan: 'Konfigurasi publik yang dipakai aplikasi saat ini. Kunci privat tidak ditampilkan.',
@@ -122,7 +109,7 @@ const INFO_MODUL = {
   },
   '/platform/pengaturan/pemeliharaan': {
     judul: 'Mode Pemeliharaan',
-    ringkasan: 'Hentikan akses aplikasi bagi pengguna non-superadmin. Keadaan diperiksa langsung oleh UI dan endpoint AI/pembayaran.',
+    ringkasan: 'Hentikan akses aplikasi bagi pengguna non-superadmin. Keadaan diperiksa langsung oleh UI dan endpoint AI.',
     status: 'Dikelola server dan diaudit',
     tindakan: 'Mengaktifkan mode ini akan memblokir area aplikasi dan endpoint AI serta checkout; superadmin tetap dapat mengakses konsol.',
   },
@@ -146,13 +133,6 @@ const INFO_MODUL = {
   },
 };
 
-const paket = [
-  ...PRICING.school.map((item) => ({ ...item, kelompok: 'Sekolah' })),
-  ...PRICING.student.map((item) => ({ ...item, kelompok: 'Siswa' })),
-  ...PRICING.teacherSd.map((item) => ({ ...item, kelompok: 'Guru kelas SD' })),
-  ...PRICING.teacherSubject.map((item) => ({ ...item, kelompok: 'Guru mapel' })),
-];
-
 function KartuInfo({ info }) {
   return (
     <>
@@ -165,36 +145,6 @@ function KartuInfo({ info }) {
         <span className="platform-tenants-status is-unknown">{info.status}</span>
         <p>{info.tindakan}</p>
         {info.link && <a className="platform-tenants-button platform-ops-console" href={info.link.href}>{info.link.label}</a>}
-      </section>
-    </>
-  );
-}
-
-function DaftarPaket() {
-  const formatHarga = (nominal) => new Intl.NumberFormat('id-ID', {
-    style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
-  }).format(nominal);
-
-  return (
-    <>
-      <header className="platform-tenants-heading">
-        <p className="platform-tenants-kicker">Manajemen tenant · katalog</p>
-        <h1>Paket</h1>
-        <p>Katalog harga aplikasi dari konfigurasi paket. Katalog ini tidak membuat langganan atau mengubah entitlement.</p>
-      </header>
-      <section className="platform-tenants-card">
-        <div className="platform-package-grid">
-          {paket.map((item) => (
-            <article className="platform-package" key={item.id}>
-              <p>{item.kelompok}</p>
-              <h2>{item.name}</h2>
-              <strong>{formatHarga(item.annualPrice)}<small> / tahun</small></strong>
-              <span>{item.features}</span>
-              <code>{item.id}</code>
-            </article>
-          ))}
-        </div>
-        <p className="platform-ops-note">Pembayaran dan status langganan diproses backend/webhook; tidak ada aksi perubahan paket pada halaman katalog.</p>
       </section>
     </>
   );
@@ -327,7 +277,7 @@ function KontrolPlatform({ maintenance = false }) {
         <p className="platform-tenants-kicker">{maintenance ? 'Pengaturan platform · kontrol akses' : 'Manajemen fitur · kontrol server'}</p>
         <h1>{maintenance ? 'Mode Pemeliharaan' : 'Feature Flags'}</h1>
         <p>{maintenance
-          ? 'Tutup akses antarmuka bagi seluruh peran selain superadmin dan hentikan endpoint AI serta checkout.'
+          ? 'Tutup akses antarmuka bagi seluruh peran selain superadmin dan hentikan endpoint AI.'
           : 'Aktif/nonaktifkan kemampuan AI yang diperiksa kembali oleh backend Supabase. Perubahan dicatat di audit.'}</p>
       </header>
       {controls.error && <p className="platform-tenants-error" role="alert">{controls.error}</p>}
@@ -335,7 +285,7 @@ function KontrolPlatform({ maintenance = false }) {
         {maintenance ? (
           <KontrolToggle
             label="Mode pemeliharaan global"
-            description="Pengguna selain superadmin dialihkan ke halaman pemeliharaan. Endpoint AI dan checkout juga menolak permintaan baru."
+            description="Pengguna selain superadmin dialihkan ke halaman pemeliharaan. Endpoint AI juga menolak permintaan baru."
             enabled={maintenanceAktif}
             danger
             setting={(enabled) => ({ setting: 'maintenance', enabled })}
@@ -558,8 +508,7 @@ export default function PlatformOperationsPage() {
   const { pathname } = useLocation();
   const { role } = useAuth();
   const info = INFO_MODUL[pathname];
-  const mode = pathname === '/platform/tenant/paket' ? 'paket'
-    : pathname === '/platform/pengguna/peran' || pathname === '/platform/fitur/izin' ? 'peran'
+  const mode = pathname === '/platform/pengguna/peran' || pathname === '/platform/fitur/izin' ? 'peran'
       : pathname === '/platform/fitur/menu' ? 'menu' : '';
   if (role !== 'superadmin') {
     return <main className="platform-tenants"><section className="platform-tenants-card" role="alert"><h1>Akses platform dibatasi</h1><p>Modul platform hanya tersedia untuk superadmin.</p></section></main>;
@@ -578,9 +527,7 @@ export default function PlatformOperationsPage() {
             ? <KontrolPlatform maintenance />
             : pathname === '/platform/dashboard/aktivitas' || pathname === '/platform/keamanan/audit'
               ? <DaftarAudit />
-        : mode === 'paket'
-          ? <DaftarPaket />
-          : mode === 'menu' || mode === 'peran'
+            : mode === 'menu' || mode === 'peran'
             ? <DaftarPeran mode={mode} />
             : info
               ? <KartuInfo info={info} />

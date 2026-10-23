@@ -65,7 +65,7 @@ const ALUR = {
     langkah: ['Pilih ringkasan platform', 'Tinjau kesehatan dan aktivitas global', 'Tindak lanjuti anomali sesuai kewenangan'],
   },
   'platform-tenant': {
-    ringkasan: 'Kelola sekolah sebagai tenant, termasuk paket dan status langganan, pada tingkat platform.',
+    ringkasan: 'Tinjau daftar sekolah sebagai tenant pada tingkat platform.',
     langkah: ['Pilih tenant', 'Tinjau paket dan status layanan', 'Perbarui konfigurasi melalui proses berizin'],
   },
   'platform-fitur': {

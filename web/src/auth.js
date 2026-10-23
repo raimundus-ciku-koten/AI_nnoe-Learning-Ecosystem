@@ -22,7 +22,6 @@ function ringkasProfil(profil = {}) {
   return {
     nama: teks(profil.nama),
     sekolah: teks(profil.instansi || profil.sekolah),
-    langganan: profil.langganan === true || profil.langganan === 'aktif',
     logoSekolah: teks(profil.logoSekolah),
   };
 }
@@ -158,7 +157,7 @@ export async function switchRole(role) {
     throw new Error('Server belum mengesahkan peran yang dipilih. Muat ulang sesi atau hubungi administrator.');
   }
 
-  const profil = user.app_metadata?.role === 'demo' ? {} : await ambilProfil(user.id);
+  const profil = await ambilProfil(user.id);
   const claims = {
     role: user.app_metadata?.role || null,
     roles: Array.isArray(user.app_metadata?.roles) ? user.app_metadata.roles : [],
@@ -183,7 +182,7 @@ export function pantaulogin(onReady, onUbah) {
       return;
     }
 
-    const profil = user.app_metadata?.role === 'demo' ? {} : await ambilProfil(user.id);
+    const profil = await ambilProfil(user.id);
     if (saya !== versiSesi) return;
     const claims = {
       role: user.app_metadata?.role || profil.role || null,

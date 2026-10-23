@@ -215,13 +215,11 @@ describe('submenu platform superadmin', () => {
     platformControls.maintenance = false;
   });
 
-  it('menyajikan katalog harga, matriks navigasi, dan batasan akses non-superadmin', () => {
-    expect(renderOperations('/platform/tenant/paket')).toContain('Sekolah Basic');
+  it('menghapus katalog billing dan menyajikan matriks navigasi', () => {
+    expect(renderOperations('/platform/tenant/paket')).toContain('Modul platform tidak tersedia');
     expect(renderOperations('/platform/pengguna/peran')).toContain('Matriks menu dan peran');
     expect(renderOperations('/platform/fitur/menu')).toContain('Katalog menu platform');
     expect(renderOperations('/platform/dashboard/statistik')).toContain('Statistik Global');
-    expect(renderOperations('/platform/laporan/biaya'))
-      .toContain('Data biaya billing tidak tersedia pada aplikasi ini.');
 
     auth.role = 'guru';
     expect(renderOperations('/platform/tenant/paket')).toContain('Akses platform dibatasi');

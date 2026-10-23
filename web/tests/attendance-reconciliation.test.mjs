@@ -48,11 +48,6 @@ const makeInput = overrides => ({
     active: true,
   }],
   targetTenants: [{ id: 'school-target', active: true }],
-  targetEntitlements: [{
-    tenant_id: 'school-target',
-    status: 'active',
-    valid_until: null,
-  }],
   targetStudents: [{
     id: targetStudentId,
     tenant_id: 'school-target',
@@ -137,7 +132,7 @@ test('requires exact target student identity and snapshot fields', () => {
   );
 });
 
-test('requires active owner, tenant and unexpired tenant entitlement', () => {
+test('requires an active owner and tenant without subscription metadata', () => {
   const inactiveOwner = makeInput();
   inactiveOwner.profiles[0].active = false;
   assert.equal(
@@ -152,12 +147,6 @@ test('requires active owner, tenant and unexpired tenant entitlement', () => {
     'active_target_tenant_not_verified',
   );
 
-  const expired = makeInput();
-  expired.targetEntitlements[0].valid_until = '2026-01-31T00:00:00Z';
-  assert.equal(
-    reconcileAttendance(expired).quarantined[0].reason,
-    'active_target_tenant_entitlement_not_verified',
-  );
 });
 
 test('is idempotent and detects natural-key conflicts', () => {

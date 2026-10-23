@@ -24,11 +24,6 @@ const makeInput = overrides => ({
     tenant_id: 'school-target',
     active: true,
   }],
-  targetEntitlements: [{
-    tenant_id: 'school-target',
-    status: 'active',
-    valid_until: null,
-  }],
   targetAnnouncements: [],
   reconciledAt: '2026-02-01T00:00:00Z',
   ...overrides,
@@ -90,25 +85,13 @@ test('requires unique verified tenant crosswalk, active tenant and author staff 
   );
 });
 
-test('quarantines missing or ambiguous author profile and requires a valid target entitlement', () => {
+test('quarantines missing or ambiguous author profiles without requiring subscription metadata', () => {
   const missingAuthor = reconcileSchoolAnnouncements(makeInput({ profiles: [] }));
   assert.equal(
     missingAuthor.quarantined[0].reason,
     'announcement_author_legacy_uid_not_unique',
   );
 
-  const missingEntitlement = reconcileSchoolAnnouncements(makeInput({ targetEntitlements: [] }));
-  assert.equal(
-    missingEntitlement.quarantined[0].reason,
-    'target_tenant_entitlement_not_verified_for_writes',
-  );
-
-  const expired = makeInput();
-  expired.targetEntitlements[0].valid_until = '2026-01-31T00:00:00Z';
-  assert.equal(
-    reconcileSchoolAnnouncements(expired).quarantined[0].reason,
-    'target_tenant_entitlement_not_verified_for_writes',
-  );
 });
 
 test('is idempotent and quarantines deterministic ID conflicts', () => {

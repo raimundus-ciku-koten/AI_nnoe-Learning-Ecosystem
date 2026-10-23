@@ -109,7 +109,6 @@ const validateInput = input => {
     'attendanceRecords',
     'profiles',
     'targetTenants',
-    'targetEntitlements',
     'targetStudents',
     'targetAttendanceRecords',
   ]) {
@@ -141,7 +140,6 @@ export function reconcileAttendance(input) {
     attendanceRecords,
     profiles,
     targetTenants,
-    targetEntitlements,
     targetStudents,
     targetAttendanceRecords,
     reconciledAt,
@@ -153,7 +151,6 @@ export function reconcileAttendance(input) {
   );
   const profilesByLegacyUid = indexBy(profiles, profile => profile?.legacy_uid);
   const tenantsById = indexBy(targetTenants, tenant => tenant?.id);
-  const entitlementsByTenant = indexBy(targetEntitlements, entitlement => entitlement?.tenant_id);
   const studentsById = indexBy(targetStudents, student => student?.id);
   const targetAttendanceById = indexBy(
     targetAttendanceRecords,
@@ -208,16 +205,6 @@ export function reconcileAttendance(input) {
       quarantine('active_target_tenant_not_verified');
       continue;
     }
-    const entitlementMatches = entitlementsByTenant.get(owner.tenant_id) ?? [];
-    const validEntitlements = entitlementMatches.filter(entitlement =>
-      ['trial', 'active'].includes(entitlement.status) &&
-      (!entitlement.valid_until || Date.parse(entitlement.valid_until) > Date.parse(reconciledAt)),
-    );
-    if (entitlementMatches.length !== 1 || validEntitlements.length !== 1) {
-      quarantine('active_target_tenant_entitlement_not_verified');
-      continue;
-    }
-
     const sourceStudentId = entry.data.siswaId;
     const studentId = deterministicStudentId(ownerUid, sourceStudentId);
     const studentMatches = studentsById.get(studentId) ?? [];
@@ -303,7 +290,6 @@ export function reconcileAttendance(input) {
       sourceAttendanceRecords: attendanceRecords.length,
       profiles: profiles.length,
       targetTenants: targetTenants.length,
-      targetEntitlements: targetEntitlements.length,
       targetStudents: targetStudents.length,
       targetAttendanceRecords: targetAttendanceRecords.length,
       proposals: proposals.length,

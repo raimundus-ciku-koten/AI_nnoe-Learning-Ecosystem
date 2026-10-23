@@ -7,6 +7,14 @@ const migrationPath = new URL(
   import.meta.url,
 );
 const migration = await readFile(migrationPath, 'utf8');
+const cleanupMigration = await readFile(new URL(
+  '../../supabase/migrations/20261023000100_remove_billing_signup_demo.sql',
+  import.meta.url,
+), 'utf8');
+const cleanupPolicies = cleanupMigration.slice(
+  cleanupMigration.indexOf('create policy'),
+  cleanupMigration.indexOf('create or replace function'),
+);
 
 test('defines immutable per-student-per-day scan records with snapshot fields', () => {
   assert.match(migration, /create table if not exists public\.attendance_records/);
@@ -18,12 +26,14 @@ test('defines immutable per-student-per-day scan records with snapshot fields', 
   assert.match(migration, /waktu timestamptz not null default now\(\)/);
 });
 
-test('requires owner, tenant, active profile, entitlement, and an exact student snapshot match', () => {
-  assert.match(migration, /alter table public\.attendance_records enable row level security/);
-  assert.match(migration, /owner_id = \(select auth\.uid\(\)\)/);
-  assert.match(migration, /tenant_id = \(select public\.current_tenant_id\(\)\)/);
-  assert.match(migration, /public\.current_user_is_active\(\)/);
-  assert.match(migration, /entitlement\.status in \('trial', 'active'\)/);
+test('keeps attendance writes scoped without subscription or demo-role gates', () => {
+  assert.match(cleanupMigration, /drop policy if exists "Entitled teachers record matching student attendance"/);
+  assert.match(cleanupMigration, /create policy "Active teachers record matching student attendance"/);
+  assert.match(cleanupMigration, /owner_id = \(select auth\.uid\(\)\)/);
+  assert.match(cleanupMigration, /tenant_id = \(select public\.current_tenant_id\(\)\)/);
+  assert.match(cleanupMigration, /public\.current_user_is_active\(\)/);
+  assert.match(cleanupMigration, /tenant\.active = true/);
+  assert.doesNotMatch(cleanupPolicies, /tenant_entitlements|personal_entitlements|billing_plans|demo/i);
   assert.match(migration, /student\.kode_unik = attendance_records\.kode_unik/);
   assert.match(migration, /student\.nama = attendance_records\.nama/);
   assert.match(migration, /student\.kelas = attendance_records\.kelas/);

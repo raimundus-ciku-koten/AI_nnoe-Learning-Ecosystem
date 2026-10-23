@@ -3,7 +3,7 @@
  * sesi.js — Layanan sesi: Firebase Auth + peran (custom claims) + profil Firestore.
  *
  * Mengisi state.js:
- *   user, role, tenantId, isDemo, claims, profile, sesiMemuat, authReady, akses, online.
+ *   user, role, tenantId, claims, profile, sesiMemuat, authReady, akses, online.
  *
  * Model peran:
  *   - Peran & tenant dibaca dari custom claims ({ role, tenantId, kv }). Claims
@@ -25,12 +25,12 @@ import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 
 import { auth, db, bersihkanCacheLokal } from './firebase.js';
 import { getState, setState, resetSesi, tunggu } from './state.js';
-import { ambilProfil, simpanProfil, hapusProfil, namaDariUser, keMs } from './ui.js';
+import { ambilProfil, simpanProfil, hapusProfil, namaDariUser } from './ui.js';
 import { ubahGalat, galatDibatalkan, kodeGalat } from './galat.js';
 
 export { pesanGalat, galatDibatalkan } from './galat.js';
 
-const PERAN_VALID = new Set(['superadmin', 'admin_sekolah', 'operator', 'guru', 'siswa', 'ortu', 'demo']);
+const PERAN_VALID = new Set(['superadmin', 'admin_sekolah', 'operator', 'guru', 'siswa', 'ortu']);
 
 /* ============================================================
    KEADAAN INTERNAL
@@ -67,17 +67,10 @@ const infoUser = (u) => ({
   emailVerified: !!u.emailVerified,
 });
 
-// Hanya data yang aman disimpan di localStorage (tanpa Timestamp mentah).
-function ringkasLangganan(l) {
-  if (!l || typeof l !== 'object') return null;
-  return { aktif: l.aktif === true, paket: String(l.paket || ''), sampai: keMs(l.sampai) || null };
-}
-
 function perbaruiProfil(u) {
   const profil = {
     nama: dataUser?.nama || u.displayName || namaDariUser({ email: u.email }),
     sekolah: dataTenant?.nama || '',
-    langganan: dataTenant?.langganan ?? null,
     logoSekolah: dataTenant?.logoSekolah || '',
   };
   if (JSON.stringify(profil) === JSON.stringify(getState().profile)) return;
@@ -108,7 +101,7 @@ function pasangTenant(u, tenantId) {
     doc(db, 'tenants', tenantId),
     (snap) => {
       const d = snap.data() || {};
-      dataTenant = { nama: d.nama, logoSekolah: d.logoSekolah, langganan: ringkasLangganan(d.langganan) };
+      dataTenant = { nama: d.nama, logoSekolah: d.logoSekolah };
       perbaruiProfil(u);
     },
     (e) => console.warn('[sesi] pantau sekolah:', kodeGalat(e)),
@@ -152,7 +145,6 @@ function terapkan(u, claims) {
     claims,
     role: k.role,
     tenantId: k.tenantId,
-    isDemo: k.role === 'demo',
     akses: k.aktif ? 'aktif' : 'menunggu',
     profile: getState().profile ?? ambilProfil(u.uid),   // tampil cepat dari cache
   });

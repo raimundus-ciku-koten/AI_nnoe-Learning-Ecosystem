@@ -66,8 +66,6 @@ export default function DashboardPage() {
         <Statistik warna="grape" ikon="school" label="Sekolah"
                    nilai={profile?.sekolah || 'Belum diisi'}
                    ket={profile?.sekolah ? undefined : 'Dilengkapi oleh administrator'} />
-        <Statistik warna="mint" ikon="badge" label="Langganan"
-                   nilai={profile?.langganan ? 'Aktif' : 'Belum aktif'} />
       </section>
 
       <section className="ale-akses" aria-labelledby="ale-akses-judul">

@@ -325,7 +325,6 @@ from unnest(array[
   'drive_file_access',
   'drive_file_key_envelopes',
   'security_audit',
-  'tenant_entitlements',
   'students',
   'attendance_records',
   'testimonials',
@@ -336,9 +335,6 @@ from unnest(array[
   'chat_inbox',
   'chat_contacts',
   'chat_presence',
-  'billing_plans',
-  'personal_entitlements',
-  'payment_orders',
   'testimonial_submissions',
   'question_bank',
   'web_push_subscriptions',
@@ -347,7 +343,24 @@ from unnest(array[
   'student_account_link_audit',
   'online_exams',
   'online_exam_items',
-  'online_exam_attempts',
+  'online_exam_attempts'
+]) as feature(name)
+
+union all
+
+select
+  'removed_relation_presence',
+  'decommissioned_billing_and_trial_tables',
+  jsonb_object_agg(
+    feature.name,
+    to_regclass('public.' || feature.name) is not null
+    order by feature.name
+  )
+from unnest(array[
+  'tenant_entitlements',
+  'billing_plans',
+  'personal_entitlements',
+  'payment_orders',
   'trial_registrations'
 ]) as feature(name)
 
