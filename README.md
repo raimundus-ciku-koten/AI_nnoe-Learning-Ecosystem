@@ -11,7 +11,17 @@ services.
 The public landing page and product documentation identify AI_nnoe Learning
 Ecosystem as an initiative by Raimundus Ciku Koten, based on the repository
 author metadata. This attribution is not a legal-entity declaration. The
-landing-page changes currently in the local worktree are not deployed.
+landing page is deployed to the protected Vercel Preview environment; hosted
+Preview runtime access remains subject to Vercel authentication.
+
+**Preview deployment update (2026-10-24):** the professional landing page and
+documentation are deployed to Vercel Preview from
+`feature/ai-nnoe-learning-workspaces`; GitHub Web CI passed and Vercel marked
+the deployment Ready. Preview access is protected by Vercel authentication,
+so hosted runtime behavior has not yet been smoke-tested. Production remains
+unchanged. The overall release decision remains **NO-GO for public full
+release** until the backend, privacy, recovery, and feature verification gates
+below are closed.
 
 ## Release readiness snapshot (2026-10-23)
 

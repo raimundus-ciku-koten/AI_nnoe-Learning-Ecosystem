@@ -1,15 +1,19 @@
 # Laporan Kesiapan Rilis
 
-**Tanggal pemeriksaan:** 23 Oktober 2026
+**Tanggal pemeriksaan:** 24 Oktober 2026
 **Keputusan:** **NO-GO untuk rilis publik penuh.** Pertahankan aplikasi pada cakupan login-only sampai semua gate P0 di bawah ditutup.
 
 **Perubahan source 23 Oktober:** public signup/trial signup, halaman simulasi demo-trial dan akses aplikasi role `demo`, UI purchase/paket publik, implementasi Midtrans, registrasi Edge Function pembayaran, komponen iklan, dan aset `ads.txt` telah dihapus dari checkout. Role yang tidak dikenal ditolak dengan pemberitahuan provisioning umum; login dan provisioning administrator tetap ada. Migrasi maju untuk menghapus relasi billing/trial, field trial, role demo di allowlist, dan gating entitlement pada RLS telah ditambahkan, tetapi belum diuji pada backup restore disposable maupun dijalankan. Tidak ada perubahan hosted, deployment, secret/provider setting, akun, data sekolah, atau Git history.
 
 ## Ringkasan eksekutif
 
-Validasi kode lokal berhasil. Snapshot Supabase Staging yang terakhir menunjukkan switch “Allow new users to sign up” tidak tercentang dan tombol “Save changes” nonaktif; signup Staging tampak nonaktif saat snapshot itu diambil, tetapi persistensi belum dapat dikonfirmasi. Signup Production belum diperiksa. Provider Google Staging nonaktif dan permintaan otorisasi menghasilkan HTTP 400 `provider is not enabled`. File `ads.txt` masih tersaji dari Production. GitHub Actions memiliki Web CI sukses pada 22 Oktober 2026 di branch ini, tetapi commit tersebut bukan kandidat cleanup lokal. Vercel dashboard tidak menyediakan sesi terautentikasi; konfigurasi Preview/Production dan deployment belum diverifikasi.
+Validasi kode lokal berhasil. Snapshot Supabase Staging yang terakhir menunjukkan switch “Allow new users to sign up” tidak tercentang dan tombol “Save changes” nonaktif; signup Staging tampak nonaktif saat snapshot itu diambil, tetapi persistensi belum dapat dikonfirmasi. Signup Production belum diperiksa. Provider Google Staging nonaktif dan permintaan otorisasi menghasilkan HTTP 400 `provider is not enabled`. File `ads.txt` masih tersaji dari Production. Landing page kini memiliki deployment Vercel Preview yang Ready dan Web CI sukses pada branch `feature/ai-nnoe-learning-workspaces`; akses hosted Preview masih dilindungi autentikasi Vercel sehingga runtime belum diuji. Production dan backend hosted tidak diubah.
 
 Mode zero-billing tetap menjadi batas operasional: jangan mengaktifkan layanan berbayar atau memicu workflow backup sebelum pemilik memeriksa kuota, tagihan, dan persyaratan akun. Tidak ada jaminan bahwa free tier akan selalu bebas biaya atau mencukupi.
+
+## Pembaruan Preview 24 Oktober 2026
+
+- Landing page publik, brief produk, dokumentasi arsitektur, serta atribusi inisiatif Raimundus Ciku Koten telah dipush ke branch `feature/ai-nnoe-learning-workspaces`. GitHub Web CI berhasil dan Vercel menandai deployment Preview berstatus Ready. Browser VS Code berhasil memuat landing page lokal, memeriksa navigasi masuk dan informasi fitur, serta memastikan tidak ada overflow horizontal pada viewport sempit. URL hosted Preview dilindungi autentikasi Vercel sehingga runtime hosted belum dapat diuji melalui sesi yang tersedia. Production tidak dipromosikan atau diubah; tidak ada migrasi, perubahan provider, atau konfigurasi Supabase yang dilakukan. Keputusan **NO-GO untuk rilis publik penuh tetap berlaku**.
 
 ## Pembaruan eksekusi 23 Oktober 2026
 

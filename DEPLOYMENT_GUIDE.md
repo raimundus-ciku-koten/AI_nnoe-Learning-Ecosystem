@@ -6,30 +6,32 @@ This document records the release state and the remaining safe rollout steps for
 
 ## Public landing page and Preview deployment (2026-10-24)
 
-- The local source now includes a public product landing page at `/`, product
-  and architecture documentation, and attribution to Raimundus Ciku Koten.
-  It preserves administrator-provisioned sign-in and does not add public
+- The source now includes a public product landing page at `/`, product and
+  architecture documentation, and attribution to Raimundus Ciku Koten. It
+  preserves administrator-provisioned sign-in and does not add public
   registration, payment, or a claim that every product module is available.
-- The implementation is local to branch
-  `feature/ai-nnoe-learning-workspaces`; the Production URL
-  `https://ainnoe-le.vercel.app/` still serves the previously deployed build.
-  Local build and targeted UI tests passed, but no deployment of this landing
-  page has been performed or verified.
-- This checkout has no Vercel CLI/project link or Vercel deployment workflow,
-  and the available Vercel browser session is not authenticated. Do not place
-  deployment tokens or Supabase keys in chat or source control. A project owner
-  must authenticate to the connected Vercel project and review the Preview
-  deployment before sharing it.
+- On 2026-10-24, the branch
+  `feature/ai-nnoe-learning-workspaces` was deployed to the connected Vercel
+  **Preview** environment. Vercel marked the deployment Ready and the GitHub
+  Web CI workflow completed successfully. No Production promotion, hosted
+  migration, Supabase setting, or provider change was performed.
+- The Preview deployment requires Vercel authentication; an unauthenticated
+  request redirects to the Vercel login page. The landing page was rendered
+  and checked locally in the VS Code browser. The protected hosted Preview
+  itself could not be smoke-tested without access to its protected runtime.
+- Do not place deployment tokens or Supabase keys in chat or source control.
+  Keep Preview protection enabled unless the owner explicitly approves a
+  reviewed alternative access method.
 - Use **Preview**, not Production, for initial validation. In the connected
   Vercel project, verify the Git integration targets this repository and the
   feature branch, the project root is `web`, install is `npm ci`, build is
   `npm run build`, and output is `dist`. Confirm the Preview environment has
   only the intended public Supabase URL and anon/publishable key if login is
   being tested; never configure service-role or provider secrets as `VITE_*`.
-- Preview verification must cover the public landing page, its login and
-  privacy links, mobile layout, and expected browser errors. A successful
-  static build or rendered landing page does not verify Supabase Auth, RLS,
-  migrations, OAuth, or feature data.
+- Complete a smoke test from an authorized Preview session for the public
+  landing page, its login and privacy links, mobile layout, and browser errors.
+  A successful static build or local rendering does not verify Supabase Auth,
+  RLS, migrations, OAuth, or feature data.
 - Do not promote this build to Production as a full application release. The
   current release decision remains **NO-GO for full release** until the
   staging migration provenance, schema/RLS parity, backup and restore,
