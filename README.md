@@ -894,14 +894,16 @@ the release flag when needed. The app has no summary-email digest feature to
 defer.
 
 The public `#/privacy` route is a transparent interim notice, not a legally
-final policy. It calls out the current India South region, child-data
-obligations, and unverified retention behavior. Before inviting students,
-verify the owner-provided controller identity and privacy contact, document
-lawful basis/parent consent and data-subject request handling, and obtain local
-legal review under UU Pelindungan Data Pribadi (UU 27/2022). The requested Singapore
-region, hosted retention jobs, an automated independent backup copy, and a
-restore test still require owner action and validation. No hosted migration or account
-configuration was changed as part of this repository work.
+final policy. The owner approved proposed retention periods (90 days after
+account closure, school-defined learning records, 90-day security logs, and
+30-day rolling backups if activated) and a draft requiring guardian consent
+before processing primary-school student data, with school verification.
+These are not active deletion controls or a claim that consent can currently
+be recorded and verified. The current India South region, lawful basis, request
+handling, and child-data obligations still require review under UU Pelindungan
+Data Pribadi (UU 27/2022). Hosted retention jobs, an automated independent
+backup copy, and a restore test require owner action and validation. No hosted
+migration or account configuration was changed as part of this repository work.
 
 After an encrypted backup and a reviewed collection-to-table mapping exist,
 migrate one feature at a time. For each feature, import and reconcile record

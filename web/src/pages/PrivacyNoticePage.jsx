@@ -17,8 +17,9 @@ export default function PrivacyNoticePage() {
         <h1 id="privacy-title">Informasi Privasi dan Data Pribadi</h1>
         <p className="privacy-notice-warning" role="note">
           Informasi ini menjelaskan kategori data dan kontrol yang dirancang untuk aplikasi. Pemilik memberikan
-          identitas pengelola dan kontak privasi di bawah ini, tetapi dasar pemrosesan, prosedur persetujuan
-          orang tua/wali, dan jadwal retensi belum ditetapkan. Halaman ini belum menjadi kebijakan privasi final.
+          identitas pengelola dan kontak privasi di bawah ini serta menyetujui draf usulan retensi dan persetujuan
+          wali. Draf ini belum ditinjau secara hukum atau diterapkan secara teknis. Dasar pemrosesan dan ketentuan
+          final masih perlu ditetapkan; halaman ini belum menjadi kebijakan privasi final.
         </p>
         <h2>Pengelola dan kontak privasi</h2>
         <p>Identitas pengelola yang diberikan pemilik: <strong>AI_nnoe Corp</strong>.</p>
@@ -50,11 +51,23 @@ export default function PrivacyNoticePage() {
         </p>
         <h2>Data anak dan retensi</h2>
         <p>
-          Aplikasi ditujukan untuk mendukung pembelajaran, termasuk pada jenjang sekolah dasar. Sekolah dan
-          pengelola tenant harus menetapkan dasar pemrosesan, mekanisme persetujuan orang tua/wali, serta
-          prosedur akses, koreksi, dan penghapusan yang sesuai sebelum memproses data anak. Jadwal retensi
-          belum ditetapkan; penghapusan otomatis log atau arsip ujian juga belum diverifikasi pada database
-          hosted. Jangan memasukkan data pribadi siswa sebelum ketentuan tersebut disetujui.
+          Aplikasi ditujukan untuk mendukung pembelajaran, termasuk pada jenjang sekolah dasar. Draf usulan
+          mensyaratkan persetujuan orang tua/wali sebelum data pribadi siswa SD diproses dan sekolah memverifikasi
+          kewenangan pemberi persetujuan. Permintaan akses, koreksi, atau penghapusan diarahkan melalui administrator
+          sekolah dan kontak privasi di atas. Proses pencatatan/verifikasi persetujuan dan pemenuhan permintaan
+          belum diuji pada layanan hosted; dasar pemrosesan dan tata cara final perlu ditinjau sebelum penggunaan.
+        </p>
+        <p><strong>Jadwal retensi yang diusulkan (draf, belum aktif):</strong></p>
+        <ul>
+          <li>Akun dan profil: hapus atau anonimisasi paling lambat 90 hari setelah akun ditutup, jika tidak ada kewajiban hukum lain.</li>
+          <li>Data belajar, kehadiran, dan nilai: mengikuti jadwal tertulis sekolah serta permintaan penghapusan yang sah.</li>
+          <li>Log keamanan: simpan hingga 90 hari untuk keperluan keamanan.</li>
+          <li>Cadangan: masa simpan bergulir hingga 30 hari jika layanan backup diaktifkan dan diuji.</li>
+        </ul>
+        <p>
+          Jadwal tersebut adalah usulan, bukan jaminan penghapusan atau konfigurasi aktif. Otomasi penghapusan
+          log/arsip belum diverifikasi pada database hosted dan backup belum terbukti berjalan. Jangan memasukkan
+          data pribadi siswa sebelum dasar pemrosesan, kebijakan final, dan mekanisme operasional disetujui.
         </p>
         <p className="privacy-notice-updated">Terakhir diperbarui: 23 Oktober 2026 · Informasi operasional, bukan nasihat hukum.</p>
         <a href="#/login">Kembali ke halaman masuk</a>

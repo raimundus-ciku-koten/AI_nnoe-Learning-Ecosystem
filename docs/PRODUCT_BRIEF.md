@@ -93,5 +93,10 @@ inisiatif **Raimundus Ciku Koten**, sesuai metadata author repository. Pemilik
 memberikan **AI_nnoe Corp** sebagai identitas pengelola dan
 `kotenraimundus@gmail.com` sebagai kontak privasi publik. Status legal formal
 identitas tersebut belum diverifikasi secara independen. Data ini tidak
-menggantikan dasar pemrosesan, prosedur persetujuan orang tua/wali, jadwal
-retensi, atau ketentuan layanan yang perlu disetujui sebelum peluncuran publik.
+menggantikan dasar pemrosesan atau ketentuan layanan yang perlu disetujui
+sebelum peluncuran publik. Pemilik menyetujui draf usulan retensi: akun 90
+hari setelah ditutup, data belajar mengikuti jadwal tertulis sekolah, log
+keamanan 90 hari, dan backup bergulir 30 hari bila diaktifkan. Draf persetujuan
+wali meminta persetujuan sebelum data siswa SD diproses dan verifikasi sekolah.
+Usulan ini belum ditinjau secara hukum atau diterapkan secara teknis; bukan
+jaminan penghapusan dan belum menjadi kebijakan final.
