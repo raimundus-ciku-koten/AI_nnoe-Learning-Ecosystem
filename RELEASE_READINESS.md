@@ -7,9 +7,16 @@
 
 ## Ringkasan eksekutif
 
-Validasi kode lokal berhasil. Snapshot Supabase Staging yang terakhir menunjukkan switch “Allow new users to sign up” tidak tercentang dan tombol “Save changes” nonaktif; signup Staging tampak nonaktif saat snapshot itu diambil, tetapi persistensi belum dapat dikonfirmasi. Saat dibuka melalui sesi browser terintegrasi VS Code, Supabase menyatakan sesi kedaluwarsa dan meminta login ulang. Signup Production belum diperiksa. Provider Google Staging nonaktif dan permintaan otorisasi menghasilkan HTTP 400 `provider is not enabled`. File `ads.txt` masih tersaji dari Production. GitHub Actions dapat dibaca melalui browser terintegrasi, tetapi run terbaru yang terlihat adalah Web CI pada 18–19 Oktober 2026 di branch `feature/demo-trial`, bukan kandidat cleanup. Vercel dashboard menampilkan halaman login. Setelah pengguna menyatakan login selesai, pemeriksaan ulang pada tab yang sama masih menampilkan sesi Supabase kedaluwarsa dan halaman login Vercel; autentikasi belum terkonfirmasi pada sesi browser yang dikendalikan. Tidak ada pengaturan hosted, provider, kredensial, deployment, signup, atau transaksi yang diubah/dilakukan.
+Validasi kode lokal berhasil. Snapshot Supabase Staging yang terakhir menunjukkan switch “Allow new users to sign up” tidak tercentang dan tombol “Save changes” nonaktif; signup Staging tampak nonaktif saat snapshot itu diambil, tetapi persistensi belum dapat dikonfirmasi. Signup Production belum diperiksa. Provider Google Staging nonaktif dan permintaan otorisasi menghasilkan HTTP 400 `provider is not enabled`. File `ads.txt` masih tersaji dari Production. GitHub Actions memiliki Web CI sukses pada 22 Oktober 2026 di branch ini, tetapi commit tersebut bukan kandidat cleanup lokal. Vercel dashboard tidak menyediakan sesi terautentikasi; konfigurasi Preview/Production dan deployment belum diverifikasi.
 
 Mode zero-billing tetap menjadi batas operasional: jangan mengaktifkan layanan berbayar atau memicu workflow backup sebelum pemilik memeriksa kuota, tagihan, dan persyaratan akun. Tidak ada jaminan bahwa free tier akan selalu bebas biaya atau mencukupi.
+
+## Pembaruan eksekusi 23 Oktober 2026
+
+- `npm test` lulus (exit code 0); tes tambahan backup (8), economy mode (3), dan Turnstile (2) lulus. Build production, build Staging, dan build CI sesuai workflow berhasil. Pemeriksaan bundle hasil build tidak menemukan penanda fitur Midtrans, iklan, trial, atau billing yang telah dihapus. Build mengeluarkan peringatan React Router bahwa direktif `"use client"` diabaikan.
+- File service-account yang diabaikan Git tetap ada di workspace dan tidak tercatat dalam riwayat Git lokal yang diperiksa. Google Cloud Console masih menampilkan key yang cocok sebagai aktif. Identitas Google Cloud CLI tidak memiliki izin `iam.serviceAccountKeys.list`, dan halaman IAM menolak penghapusan karena izin `iam.serviceAccountKeys.delete` tidak tersedia. Belum ada key atau konfigurasi cloud yang diubah. Administrator proyek harus mencabut key langsung; setelah itu verifikasi ulang dan tangani salinan lokal melalui prosedur pengelolaan secret yang disetujui.
+- Pengguna mengizinkan push branch untuk CI dan Preview login-only, tanpa promosi Production. Push bukan bukti Preview aman untuk data nyata; pemisahan environment dan konfigurasi Preview harus diverifikasi setelah pipeline selesai. Tidak ada migrasi, perubahan Auth/provider, atau workflow backup yang dijalankan.
+- Checkout masih di branch `chore/link-ale-web-submodule`, tiga commit di depan remote, dengan tiga file konfigurasi untracked yang tidak disentuh. Jangan deploy checkout ini apa adanya; tinjau dan siapkan kandidat bersih terlebih dahulu.
 
 ## Hasil pemeriksaan dan gate
 
@@ -22,7 +29,7 @@ Mode zero-billing tetap menjadi batas operasional: jangan mengaktifkan layanan b
 | RLS, tenant, role, MFA/AAL2 | **BELUM DIVERIFIKASI DI HOSTED — P0** | Tes lokal memvalidasi sebagian logika role, MFA, dan migration policy. Tes lokal tidak membuktikan policy aktif pada database Staging. | Uji dengan akun uji per role dan tenant: akses lintas-tenant ditolak, akses role sesuai kebijakan, AAL2 wajib untuk akses istimewa, dan audit tidak membocorkan data. |
 | Signup dan demo trial | **SOURCE REMOVED; HOSTED STATE UNVERIFIED** | Source/config lokal menonaktifkan pendaftaran publik; signup publik/trial, halaman simulasi demo-trial, dan route/menu aktif dihapus. Role yang tidak dikenal ditolak secara umum. Migrasi maju menghapus role demo dari allowlist dan membersihkan role pada profil, tetapi belum dieksekusi atau diuji pada disposable restore. Hosted Auth settings dan data belum diubah. | Muat ulang Auth settings Staging dan Production, pastikan “Allow new users to sign up” mati pada keduanya. Uji deployment kandidat untuk login/provisioning admin dan penolakan akun tak terprovisi. Jangan menerapkan migrasi sebelum gate backup/restore, provenance, review SQL, dan persetujuan Staging ditutup. |
 | CAPTCHA, privasi/legal | **PARTIAL / ENVIRONMENT-DEPENDENT** | Login masih dapat memakai Turnstile jika dikonfigurasi; penghapusan signup tidak mengubah CAPTCHA/Auth settings. Proses privasi/legal tetap relevan untuk data akun yang sudah ada. | Uji CAPTCHA pada login/password recovery bila diaktifkan; lengkapi pengelolaan privasi dan penghapusan data untuk pengguna yang ada. |
-| CI, tes, dan build lokal | **PASS LOKAL; CANDIDATE CI NOT RUN** | Validasi ulang checkout ini: `npm test` lulus (**624 tes**); `npm run build` berhasil; `git diff --check` bersih. GitHub Actions kandidat belum berjalan karena perubahan masih lokal. SQL migration cleanup belum dijalankan atau diuji terhadap database. | Jalankan CI pada commit kandidat yang berisi cleanup dan arsipkan hasil job sukses. Ini bukan bukti acceptance test hosted. |
+| CI, tes, dan build lokal | **PASS LOKAL; CANDIDATE CI PENDING PUSH** | Eksekusi 23 Oktober: `npm test`, build production, build Staging, build CI, dan tes backup/economy/security lulus. GitHub Actions sukses pada commit lama branch ini, bukan pada kandidat saat ini. SQL migration cleanup belum dijalankan atau diuji terhadap database. | Push kandidat yang disetujui, pastikan CI sukses pada SHA baru, lalu arsipkan hasilnya. Ini bukan bukti acceptance test hosted. |
 | Android/PWA dan aksesibilitas | **PARTIAL — belum release-verified** | Proyek Android dan workflow Android CI ada. Tidak ada hasil uji perangkat nyata, uji signed release key, atau audit aksesibilitas lintas halaman dalam pemeriksaan ini. | Jalankan Android CI pada kandidat rilis; uji TWA di perangkat Android representatif, login/redirect, tautan eksternal, jaringan buruk, ukuran layar, dan alur pemulihan. Lakukan keyboard, screen reader, zoom/reflow, dan contrast review. |
 | Smoke test deployment dan promosi | **BLOCKED — P0** | Tidak ada deployment/promosi yang dilakukan. Smoke test hosted lengkap belum berhasil; alur Google Staging saat ini gagal. | Gunakan Preview yang dilindungi SSO atau akses uji yang disetujui; jalankan smoke test autentikasi dan fitur yang telah dimigrasikan. Promosi memerlukan persetujuan eksplisit dan rencana rollback teruji. |
 | Billing/trial schema | **MIGRATION DRAFTED; NOT VALIDATED OR APPLIED** | Forward migration menjatuhkan tabel payment, pricing, personal/tenant entitlement, trial; kolom `profiles.trial_expires_at`; dan mengganti RLS gates yang bergantung pada entitlement. Migrasi juga menghapus row allowlist role demo serta menurunkan profil demo ke `unprovisioned`. Auth identities dan tenant/data sekolah tidak dihapus. Migration provenance Staging, backup, dan restore belum terbukti; SQL ini berpotensi destruktif. | Rekonsiliasi skema/provenance; buat backup Staging dan buktikan restore di database disposable; tinjau efek pada data, constraint, Auth trigger, dan seluruh policy; minta persetujuan eksplisit untuk Staging; baru kemudian terapkan dan uji regresi. Jangan jalankan di Production. |
@@ -30,15 +37,17 @@ Mode zero-billing tetap menjadi batas operasional: jangan mengaktifkan layanan b
 
 ## Validasi yang dijalankan
 
-Semua perintah berikut dijalankan dari checkout lokal pada 23 Oktober 2026:
+Pemeriksaan lokal pada 23 Oktober 2026:
 
-- `npm test` — **539 lulus, 0 gagal**.
-- `npm run build` — berhasil setelah penghapusan demo-trial.
-- `npm --prefix web run build:staging` — berhasil setelah build Production selesai.
-- `npm --prefix web run test:backup` — **8 lulus**.
-- `npm --prefix web run test:economy` — **3 lulus**.
-- `npm --prefix web run test:security` — **2 lulus**.
-- `git diff --check` — berhasil.
+- `npm test` — lulus (exit code 0; jumlah tes tidak dicatat oleh output agregat).
+- `npm run build` — berhasil.
+- `npm --prefix web run build:staging` — berhasil.
+- `npm run build -- --mode ci` dari `web/`, sesuai workflow — berhasil.
+- `npm --prefix web run test:backup` — 8 lulus.
+- `npm --prefix web run test:economy` — 3 lulus.
+- `npm --prefix web run test:security` — 2 lulus.
+- `git diff --check` — berhasil sebelum pembaruan laporan ini.
+- Penanda Midtrans, `ads.txt`, trial, payment, dan billing yang dihapus tidak ditemukan dalam bundle JavaScript hasil build.
 
 Build mengeluarkan peringatan bundler bahwa direktif `"use client"` pada dependensi React Router diabaikan. Peringatan tidak menghentikan build, tetapi perlu ditinjau saat pembaruan dependensi berikutnya.
 
@@ -65,6 +74,6 @@ Build mengeluarkan peringatan bundler bahwa direktif `"use client"` pada depende
 
 ## Batas pemeriksaan ini
 
-Pemeriksaan ini tidak menggunakan atau mengubah secret, tidak menjalankan query tulis, tidak menjalankan workflow backup, tidak mengubah Supabase/Google Cloud/Vercel, dan tidak melakukan deployment. Browser terintegrasi VS Code dapat membaca halaman GitHub Actions tetapi hanya memperlihatkan run historis. Pada pemeriksaan ulang pasca-login, tab Supabase masih meminta login ulang/MFA dan Vercel masih pada halaman login; status autentikasi belum tercermin pada sesi yang dikendalikan. Pemilik perlu login pada tab browser terintegrasi yang sama dan memastikan dashboard tujuan terbuka; jangan mengirim password atau MFA ke chat. Worktree masih memiliki perubahan lokal dan perubahan tak terkait yang belum di-commit; jangan deploy sebelum review terisolasi pada kandidat bersih. Data hosted yang dirangkum dari audit schema dan backup mengacu pada catatan terdokumentasi dalam [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md), bukan inventaris database baru. Hasil build dan tes hanya berlaku untuk checkout lokal saat pemeriksaan; hasil itu tidak membuktikan kesiapan Production.
+Pemeriksaan ini tidak menjalankan query tulis, workflow backup, atau migrasi. Tidak ada Auth/provider setting atau resource Production yang diubah. Google Cloud Console masih menunjukkan key aktif; pencabutan tidak dapat dilakukan karena izin IAM tidak mencukupi. Browser Vercel tidak menyediakan dashboard terautentikasi, sehingga konfigurasi Preview/Production belum diverifikasi. Pengguna mengizinkan push untuk CI dan Preview saja; hasil CI dan Preview pada commit kandidat masih diperlukan. Checkout memiliki tiga file konfigurasi untracked yang tidak disentuh dan tidak akan dimasukkan ke kandidat. Data hosted yang dirangkum dari audit schema dan backup mengacu pada catatan terdokumentasi dalam [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md), bukan inventaris database baru. Hasil build dan tes lokal tidak membuktikan kesiapan backend hosted atau Production.
 
 **Keputusan akhir:** pertahankan login-only release. Jangan promosi ke rilis umum atau jalankan hosted migration sebelum gate P0 lain ditutup. Jangan aktifkan kembali signup, Midtrans, atau iklan. Deployment source cleanup dan dekomisioning provider hosted belum dilakukan.
