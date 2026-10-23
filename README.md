@@ -10,25 +10,21 @@ services.
 
 The public landing page and product documentation identify AI_nnoe Learning
 Ecosystem as an initiative by Raimundus Ciku Koten, based on the repository
-author metadata. This attribution is not a legal-entity declaration. An earlier
-landing page revision was deployed to the protected Vercel Preview environment;
-hosted Preview runtime access remains subject to Vercel authentication. The
-latest source commit's Preview deployment has not been confirmed.
+author metadata. This attribution is not a legal-entity declaration. The latest
+source and documentation revisions are deployed to the protected Vercel Preview
+environment; hosted Preview runtime access remains subject to Vercel
+authentication.
 
-**Preview verification (2026-10-24):** an earlier revision of the professional
-landing page and documentation was deployed to Vercel Preview from
-`feature/ai-nnoe-learning-workspaces`; its GitHub Web CI passed and Vercel
-marked that deployment Ready. The latest source commit (`20d4818c`, OAuth
-redirect hardening) and the follow-up documentation commit (`5e5a6df8`) passed
-GitHub Web CI, but Vercel
-Preview deployment provenance for the latest source has not been confirmed.
-The currently shared Preview URL rendered the login page without a Google
-sign-in button; a Cloudflare cross-origin `postMessage` warning was observed.
-An older documented Preview URL still showed Google sign-in and a Turnstile
-error. Neither URL could be matched to the latest source commit, so neither is
-conclusive evidence of its deployed behavior. No credentials were entered and
-no authentication request was submitted. Supabase Auth, OAuth, RLS, database
-schema, and feature data remain unvalidated. Production remains unchanged.
+**Preview verification (2026-10-24):** Vercel lists the Preview deployment for
+source commit `20d4818c` and the latest documentation commit `c62b64ee` as
+Ready on `feature/ai-nnoe-learning-workspaces`. The
+[latest Preview login](https://ainnoe-9235ojl1e-kotenraimundusc-4094.vercel.app/#/login)
+was opened anonymously: email/password login rendered without Google sign-in
+or public signup. The browser reported Cloudflare Turnstile error `110200`,
+and the manifest request was redirected through Vercel SSO and blocked by
+CORS. No credentials were entered and no authentication request was submitted.
+Supabase Auth, OAuth, RLS, database schema, and feature data remain
+unvalidated. Production remains unchanged.
 The overall release decision remains **NO-GO for public full release** until
 the backend, privacy, recovery, and feature verification gates below are closed.
 

@@ -243,7 +243,13 @@ export function halamanLogin(wadah) {
     if (captchaSetupError) throw captchaSetupError;
     if (!TURNSTILE_SITE_KEY) return undefined;
     const token = captchaWidget?.token();
-    if (!token) throw new Error('Selesaikan verifikasi Cloudflare sebelum melanjutkan.');
+    if (!token) {
+      const errorCode = captchaWidget?.error();
+      if (errorCode) {
+        throw new Error(`Verifikasi Cloudflare gagal (kode ${errorCode}). Hubungi administrator situs.`);
+      }
+      throw new Error('Selesaikan verifikasi Cloudflare sebelum melanjutkan.');
+    }
     return token;
   };
   let testimoniDiminta = false;

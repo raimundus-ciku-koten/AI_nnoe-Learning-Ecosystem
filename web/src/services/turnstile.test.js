@@ -20,13 +20,20 @@ test('Turnstile returns only verified tokens and resets or removes its widget', 
   try {
     const widget = await pasangTurnstile({ id: 'login-captcha' }, ' public-site-key ');
     assert.equal(widget.token(), '');
+    assert.equal(widget.error(), '');
+    callbacks['error-callback']('110200');
+    assert.equal(widget.token(), '');
+    assert.equal(widget.error(), '110200');
     callbacks.callback('verified-token');
     assert.equal(widget.token(), 'verified-token');
+    assert.equal(widget.error(), '');
     callbacks['expired-callback']();
     assert.equal(widget.token(), '');
+    assert.equal(widget.error(), '');
     callbacks.callback('another-token');
     widget.reset();
     assert.equal(widget.token(), '');
+    assert.equal(widget.error(), '');
     widget.remove();
     assert.deepEqual(calls, [['reset', 'widget-1'], ['remove', 'widget-1']]);
   } finally {

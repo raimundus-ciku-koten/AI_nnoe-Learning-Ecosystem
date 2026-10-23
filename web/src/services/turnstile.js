@@ -50,21 +50,34 @@ export async function pasangTurnstile(container, siteKey) {
   if (!container || !key) throw new Error('Cloudflare Turnstile belum dikonfigurasi.');
   const turnstile = await loadTurnstile();
   let token = '';
+  let errorCode = '';
   const widgetId = turnstile.render(container, {
     sitekey: key,
-    callback: (value) => { token = value; },
-    'error-callback': () => { token = ''; },
-    'expired-callback': () => { token = ''; },
+    callback: (value) => {
+      token = value;
+      errorCode = '';
+    },
+    'error-callback': (code) => {
+      token = '';
+      errorCode = typeof code === 'string' || typeof code === 'number' ? String(code) : '';
+    },
+    'expired-callback': () => {
+      token = '';
+      errorCode = '';
+    },
     appearance: 'interaction-only',
   });
   return {
     token: () => token,
+    error: () => errorCode,
     reset: () => {
       token = '';
+      errorCode = '';
       turnstile.reset(widgetId);
     },
     remove: () => {
       token = '';
+      errorCode = '';
       turnstile.remove(widgetId);
     },
   };
