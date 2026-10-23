@@ -111,6 +111,13 @@ Mode zero-billing tetap menjadi batas operasional: jangan mengaktifkan layanan b
 
 ## Validasi yang dijalankan
 
+Revalidasi lokal pada 24 Oktober 2026, setelah pembaruan laporan:
+
+- `npm test` — lulus (exit code 0; 484 tes Node serta seluruh suite Vitest yang dikonfigurasi lulus).
+- `npm run build` — berhasil; hanya mengeluarkan peringatan bundler React Router `"use client"` yang telah tercatat.
+- Smoke test anonim pada Vite preview lokal — landing page dan route login berhasil dirender; tidak ada tombol signup atau Google. Tidak ada kredensial, permintaan Auth, maupun data hosted yang digunakan. Ini tidak memvalidasi CAPTCHA, Supabase Auth, backend, atau deployment hosted.
+- `git diff --check` — bersih.
+
 Pemeriksaan lokal pada 23 Oktober 2026:
 
 - `npm test` — lulus (exit code 0; jumlah tes tidak dicatat oleh output agregat).
