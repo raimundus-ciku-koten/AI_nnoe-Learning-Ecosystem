@@ -41,13 +41,22 @@ export default function PrivacyNoticePage() {
           yang tidak diperlukan. Jangan membagikan tautan rapat, berkas, atau informasi siswa kepada pihak
           yang tidak berwenang.
         </p>
+        <h2>Dasar pemrosesan dan tanggung jawab sekolah</h2>
+        <p>
+          Dasar pemrosesan untuk tiap tujuan, pembagian tanggung jawab antara pengelola layanan dan sekolah,
+          serta ketentuan instruksi pemrosesan belum ditetapkan secara final atau ditinjau penasihat hukum.
+          Sekolah perlu memastikan tujuan dan dasar yang berlaku, kewenangan akses, dan perjanjian yang
+          diperlukan sebelum memasukkan data. Pemberitahuan ini bukan penetapan bahwa persetujuan adalah
+          satu-satunya dasar pemrosesan yang berlaku.
+        </p>
         <h2>Penyimpanan dan layanan terkait</h2>
         <p>
           Aplikasi menggunakan Supabase untuk layanan aplikasi dan autentikasi. Konfigurasi proyek saat ini
           menunjuk region India Selatan; region ini belum dipindahkan ke Singapura. Integrasi Google Drive
-          atau Sheets hanya berjalan setelah pengguna memilihnya. Cadangan terenkripsi ke R2 baru aktif setelah
-          pemilik mengisi rahasia GitHub Actions dan menguji pemulihan; halaman ini tidak menyatakan bahwa
-          backup produksi sudah berjalan.
+          atau Sheets hanya berjalan setelah pengguna memilihnya. Workflow backup Staging yang tersedia
+          membuat artifact terenkripsi di GitHub Actions dengan retensi satu hari, tetapi belum ada backup
+          berhasil atau pemulihan yang diverifikasi. Workflow itu tidak menyimpan ke R2 dan bukan backup
+          Production.
         </p>
         <h2>Data anak dan retensi</h2>
         <p>
@@ -65,11 +74,13 @@ export default function PrivacyNoticePage() {
           <li>Cadangan: masa simpan bergulir hingga 30 hari jika layanan backup diaktifkan dan diuji.</li>
         </ul>
         <p>
-          Jadwal tersebut adalah usulan, bukan jaminan penghapusan atau konfigurasi aktif. Otomasi penghapusan
+          Jadwal tersebut adalah usulan, bukan jaminan penghapusan atau konfigurasi aktif. Masa 30 hari yang
+          diusulkan untuk backup belum sesuai dengan retensi satu hari pada workflow saat ini; jadwal itu perlu
+          direkonsiliasi dengan batas biaya/penyimpanan dan diuji sebelum dinyatakan berlaku. Otomasi penghapusan
           log/arsip belum diverifikasi pada database hosted dan backup belum terbukti berjalan. Jangan memasukkan
           data pribadi siswa sebelum dasar pemrosesan, kebijakan final, dan mekanisme operasional disetujui.
         </p>
-        <p className="privacy-notice-updated">Terakhir diperbarui: 23 Oktober 2026 · Informasi operasional, bukan nasihat hukum.</p>
+        <p className="privacy-notice-updated">Terakhir diperbarui: 24 Oktober 2026 · Draf operasional, bukan nasihat hukum.</p>
         <a href="#/login">Kembali ke halaman masuk</a>
       </article>
     </main>

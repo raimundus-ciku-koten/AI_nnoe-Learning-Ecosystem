@@ -761,10 +761,9 @@ No-upgrade operating constraint:
   scripts. Legacy Firebase code remains only as uninvoked migration/recovery
   material; do not run Firebase CLI commands or deploy it.
 - Firebase Functions and large cloud exports are not part of the zero-billing
-  path. The existing R2 backup workflow cannot produce backups without R2
-  credentials, and the owner declined R2 because of potential charges. This
-  branch replaces it with a manual, encrypted Staging artifact after merge;
-  do not trigger a backup until Actions quota and billing are verified.
+  path. The owner declined R2 because of potential charges. The current
+  GitHub Actions workflow instead creates a manual, encrypted Staging artifact;
+  do not trigger it until Actions quota and billing are verified.
 - Vercel Hobby eligibility and quotas must be checked against current terms.
   Do not use that plan for a monetized/commercial deployment unless its terms
   explicitly permit the use; do not upgrade to resolve a restriction.
@@ -786,29 +785,28 @@ No-upgrade operating constraint:
 
 ### Free-tier recovery and operations
 
-The current `main` workflow still targets Cloudflare R2 until the proposed
-replacement is merged. The owner declined R2 due to potential charges. The
-replacement on `deploy/free-encrypted-backup-artifact` is Staging-only and
-manual-only; it rejects non-`main` runs, creates a custom-format PostgreSQL
-dump, validates it with `pg_restore`, encrypts it with AES-256-GCM, limits the
-artifact to 400 MiB, and retains the encrypted GitHub Actions artifact for one
-day. No backup has yet been created. This is not a guarantee of zero cost:
-check the repository's Actions storage usage and billing limits before
-triggering a run. Artifact creation and archive validation are not a restore
-test.
+The workflow on `main` is Staging-only and manual-only; it rejects non-`main`
+runs, creates a custom-format PostgreSQL dump, validates it with `pg_restore`,
+encrypts it with AES-256-GCM, limits the artifact to 400 MiB, and retains the
+encrypted GitHub Actions artifact for one day. No backup has yet been created.
+This is not a guarantee of zero cost: check the repository's Actions storage
+usage and billing limits before triggering a run. Artifact creation and
+archive validation are not a restore test.
 
 | GitHub setting | Value |
 | --- | --- |
 | Secret `SUPABASE_DB_URL` | PostgreSQL direct or session-pooler URL for Staging project `samszhfyhbjuculrcffg`; never the transaction pooler URL. The workflow validates the target. |
 | Secret `BACKUP_ENCRYPTION_KEY` | Base64 encoding of 32 cryptographically random bytes. Generate locally with `node -p "require('node:crypto').randomBytes(32).toString('base64')"` and store only as a GitHub secret. |
 
-After the replacement is merged, configure both secrets directly in GitHub
-Actions settings; never send their values through chat or commit them. Before
-the first manual run, verify current Actions storage usage and billing
-settings. Download the encrypted artifact within its one-day retention period,
-decrypt it on a trusted machine, and complete a restore into a disposable
-PostgreSQL instance before any hosted schema/data mutation. Until that drill
-passes, Staging migrations remain blocked.
+Configure both secrets directly in GitHub Actions settings; never send their
+values through chat or commit them. Before a manual run, verify current Actions
+storage usage and billing settings. Download the encrypted artifact within its
+one-day retention period, decrypt it on a trusted machine, and complete a
+restore into a disposable PostgreSQL instance before any hosted schema/data
+mutation. The separately approved 30-day backup-retention draft does not match
+the workflow's one-day artifact retention and must be reconciled without
+violating the zero-billing constraint. Until the backup/restore drill passes,
+Staging migrations remain blocked.
 
 The workflow does not run on a schedule, configure R2, or touch Production.
 GitHub Actions free quotas and billing behavior are account-dependent. Backup
@@ -904,6 +902,17 @@ handling, and child-data obligations still require review under UU Pelindungan
 Data Pribadi (UU 27/2022). Hosted retention jobs, an automated independent
 backup copy, and a restore test require owner action and validation. No hosted
 migration or account configuration was changed as part of this repository work.
+
+The 2026-10-24 Preview deployment rendered the landing page, interim privacy
+notice, and login route. The login surface still shows Google sign-in, while
+the Staging Supabase dashboard lists Google as disabled; the Preview Supabase
+target is unverified, so no OAuth attempt was made. The same dashboard's
+Database Migrations page still displays “Run your first migration.” A
+read-only metadata query could not be run because the dashboard displayed a
+technical-issue banner and the SQL editor did not accept input. No database
+query or mutation was executed. The AHU PT-name lookup for the exact
+owner-provided name returned “Pencarian Tidak Ditemukan”; this is not proof
+about other legal forms or jurisdictions.
 
 After an encrypted backup and a reviewed collection-to-table mapping exist,
 migrate one feature at a time. For each feature, import and reconcile record

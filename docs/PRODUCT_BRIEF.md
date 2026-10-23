@@ -100,3 +100,12 @@ keamanan 90 hari, dan backup bergulir 30 hari bila diaktifkan. Draf persetujuan
 wali meminta persetujuan sebelum data siswa SD diproses dan verifikasi sekolah.
 Usulan ini belum ditinjau secara hukum atau diterapkan secara teknis; bukan
 jaminan penghapusan dan belum menjadi kebijakan final.
+
+Pencarian nama persis **AI_nnoe Corp** pada portal AHU Ditjen AHU Online
+memberikan hasil “Pencarian Tidak Ditemukan”. Hasil ini hanya mencakup pencarian
+yang tersedia pada portal AHU untuk Perseroan Terbatas; hasil tersebut tidak
+membuktikan ketiadaan badan hukum dengan nama serupa, bentuk lain, atau
+yurisdiksi lain. Verifikasi memerlukan yurisdiksi pendirian dan dokumen resmi
+atau nomor registrasi yang dapat dicocokkan. Karena itu nama tersebut tetap
+dicantumkan sebagai identitas yang diberikan pemilik, bukan identitas legal
+yang telah diverifikasi.
