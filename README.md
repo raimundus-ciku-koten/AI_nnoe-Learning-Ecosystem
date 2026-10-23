@@ -798,10 +798,12 @@ No-upgrade operating constraint:
 The workflow on `main` is Staging-only and manual-only; it rejects non-`main`
 runs, creates a custom-format PostgreSQL dump, validates it with `pg_restore`,
 encrypts it with AES-256-GCM, limits the artifact to 400 MiB, and retains the
-encrypted GitHub Actions artifact for one day. No backup has yet been created.
-This is not a guarantee of zero cost: check the repository's Actions storage
-usage and billing limits before triggering a run. Artifact creation and
-archive validation are not a restore test.
+encrypted GitHub Actions artifact for one day. The latest recorded attempt
+failed because PostgreSQL rejected the configured Staging credentials; no
+successful backup artifact or restore has been verified. This is not a
+guarantee of zero cost: check the repository's Actions storage usage and
+billing limits before triggering a run. Artifact creation and archive
+validation are not a restore test.
 
 | GitHub setting | Value |
 | --- | --- |
@@ -813,10 +815,12 @@ values through chat or commit them. Before a manual run, verify current Actions
 storage usage and billing settings. Download the encrypted artifact within its
 one-day retention period, decrypt it on a trusted machine, and complete a
 restore into a disposable PostgreSQL instance before any hosted schema/data
-mutation. The separately approved 30-day backup-retention draft does not match
-the workflow's one-day artifact retention and must be reconciled without
-violating the zero-billing constraint. Until the backup/restore drill passes,
-Staging migrations remain blocked.
+mutation. The owner-approved 30-day rolling-backup retention is a policy draft,
+not an implemented backup schedule or artifact-retention guarantee; it has not
+been legally reviewed or reconciled with the one-day workflow artifact and
+zero-billing constraint. No 30-day backup service is available or promised.
+Until an operational retention policy is approved and the backup/restore drill
+passes, Staging migrations remain blocked.
 
 The workflow does not run on a schedule, configure R2, or touch Production.
 GitHub Actions free quotas and billing behavior are account-dependent. Backup
@@ -906,11 +910,14 @@ final policy. The owner approved proposed retention periods (90 days after
 account closure, school-defined learning records, 90-day security logs, and
 30-day rolling backups if activated) and a draft requiring guardian consent
 before processing primary-school student data, with school verification.
-These are not active deletion controls or a claim that consent can currently
-be recorded and verified. The current India South region, lawful basis, request
-handling, and child-data obligations still require review under UU Pelindungan
-Data Pribadi (UU 27/2022). Hosted retention jobs, an automated independent
-backup copy, and a restore test require owner action and validation. No hosted
+These are proposals only: no 30-day backup schedule or retention guarantee is
+implemented; the current manual workflow retains encrypted artifacts for one
+day, and no successful backup/restore is verified. The proposals are not
+active deletion controls or a claim that consent can currently be recorded
+and verified. The current India South region, lawful basis, request handling,
+and child-data obligations still require review under UU Pelindungan Data
+Pribadi (UU 27/2022). Hosted retention jobs, an automated independent backup
+copy, and a restore test require owner action and validation. No hosted
 migration or account configuration was changed as part of this repository work.
 
 The 2026-10-24 Preview deployment rendered the landing page, interim privacy

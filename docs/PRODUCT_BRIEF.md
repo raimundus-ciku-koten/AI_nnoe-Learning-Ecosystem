@@ -96,10 +96,14 @@ identitas tersebut belum diverifikasi secara independen. Data ini tidak
 menggantikan dasar pemrosesan atau ketentuan layanan yang perlu disetujui
 sebelum peluncuran publik. Pemilik menyetujui draf usulan retensi: akun 90
 hari setelah ditutup, data belajar mengikuti jadwal tertulis sekolah, log
-keamanan 90 hari, dan backup bergulir 30 hari bila diaktifkan. Draf persetujuan
-wali meminta persetujuan sebelum data siswa SD diproses dan verifikasi sekolah.
-Usulan ini belum ditinjau secara hukum atau diterapkan secara teknis; bukan
-jaminan penghapusan dan belum menjadi kebijakan final.
+keamanan 90 hari, dan backup bergulir 30 hari bila diaktifkan. Retensi backup
+30 hari adalah draf kebijakan, bukan layanan atau jaminan operasional: workflow
+yang tersedia hanya manual dan menyimpan artifact terenkripsi selama satu
+hari. Tidak ada backup/restore sukses yang terverifikasi. Draf persetujuan wali
+meminta persetujuan sebelum data siswa SD diproses dan verifikasi sekolah.
+Usulan ini belum ditinjau secara hukum, diselaraskan dengan batas zero-cost,
+atau diterapkan secara teknis; bukan jaminan penghapusan dan belum menjadi
+kebijakan final.
 
 Pencarian nama persis **AI_nnoe Corp** pada portal AHU Ditjen AHU Online
 memberikan hasil “Pencarian Tidak Ditemukan”. Hasil ini hanya mencakup pencarian
