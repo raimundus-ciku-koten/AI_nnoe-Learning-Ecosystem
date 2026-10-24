@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 15
     services:
       disposable-postgres:
-        image: ghcr.io/supabase/nix-postgres-17:latest
+        image: supabase/postgres:17.11.0.007@sha256:b0463b9ab930a3535478d529b915d37def49d5a8fb0cb1927929e96af992b519
         env:
           POSTGRES_USER: supabase_admin
           POSTGRES_PASSWORD: restore-validation-only
