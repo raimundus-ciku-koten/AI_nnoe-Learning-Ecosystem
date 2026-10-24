@@ -40,7 +40,19 @@ This document records the release state and the remaining safe rollout steps for
   `/site.webmanifest` request redirected to Vercel SSO. The core landing, login,
   and privacy routes still rendered. Recheck the web manifest/PWA behavior
   after an authorized Preview access method is available; do not turn off
-  deployment protection to hide this diagnostic.
+  deployment protection to hide this diagnostic. A later owner-authenticated
+  browser session returned HTTP 200 for the manifest; the earlier anonymous
+  redirect remains a protection behavior, not proof of a broken manifest.
+- Revalidation through the owner-authenticated Preview session opened the
+  login and privacy pages, and the Fitur and Testimoni navigation links changed
+  the visible page. Public signup was absent. The Testimoni page ended in an
+  explicit load-failure message, and the login page repeatedly logged
+  Cloudflare Turnstile error `300030` and cross-origin `postMessage` warnings.
+  The Google sign-in button was visible but was not clicked: the Staging Google
+  provider is disabled and Preview's Supabase target is unverified. No app
+  credentials or authentication requests were used. The tested alias could not
+  be tied to commit `49c0f8bb`; Web CI run 155 passed for that commit, but this
+  does not establish which SHA the Preview serves. Keep the release NO-GO.
 - Do not place deployment tokens or Supabase keys in chat or source control.
   Keep Preview protection enabled unless the owner explicitly approves a
   reviewed alternative access method.
