@@ -23,6 +23,13 @@ This document records the release state and the remaining safe rollout steps for
   The login page showed email/password, Google sign-in, and password recovery;
   public signup was absent. No credentials were entered and no authentication
   request was submitted.
+- After the navigation/profile-menu fix was pushed as commit
+  `8f72e30336bb7742d8a0938fd0e8c14d2fcf5689`, Web CI run 154 passed. A
+  subsequent anonymous check of the documented Preview URL and two older
+  Preview aliases returned HTTP 302 to Vercel SSO. This confirms that Preview
+  protection remains enabled, but does not verify whether a new deployment for
+  `8f72e303` was created or whether that commit is running. An authorized
+  Preview session is still required for candidate acceptance testing.
 - Vercel Preview environment-variable settings list
   `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for Preview. Their values
   were not revealed, so this inspection does not verify which Supabase project
