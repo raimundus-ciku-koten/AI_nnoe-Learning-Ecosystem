@@ -30,7 +30,8 @@ import { LINK_PERENCANAAN } from '../config.js';
 import { menuUntuk } from '../menu.js';
 import { logout } from '../auth.js';
 import { hentikanChat } from '../services/chatSync.js';
-import { jalankanAksi } from './profilaksi.js';
+import { jalankanAksi, toast } from './profilaksi.js';
+import { canOpenRolePath } from '../services/roleAccess.js';
 import {
   esc, ikon, inisial, namaDariUser, ambilProfil,
   htmlAvatar, LABEL_PERAN, linkLuarAman,
@@ -173,7 +174,7 @@ function setBuka(terbuka, kembaliFokus = false) {
   }
 }
 
-const POP = { aleMenuUlasan: 'aleKebab', aleMenuProfil: 'aleProfilBtn' };
+const POP = { aleMenuProfil: 'aleProfilBtn' };
 
 function tutupPop(kembaliFokus = false) {
   Object.entries(POP).forEach(([idMenu, idTombol]) => {
@@ -243,7 +244,7 @@ function pasangPenangan() {
       return;
     }
 
-    // Popover (ulasan / profil)
+    // Popover profil
     const picu = t.closest('[data-pop]');
     if (picu) {
       const idMenu = picu.dataset.pop;
@@ -254,10 +255,18 @@ function pasangPenangan() {
     }
 
     // Aksi dari menu profil
-    const aksi = t.closest('[data-aksi]');
+    const tautanProfil = t.closest('#aleMenuProfil a[href]');
+    if (tautanProfil) { tutupPop(); return; }
+
+    const aksi = t.closest('#aleMenuProfil [data-aksi]');
     if (aksi) {
       tutupPop(true);
-      if (aksi.dataset.aksi !== 'tutup') jalankanAksi(aksi.dataset.aksi);
+      if (aksi.dataset.aksi === 'notif') {
+        const userId = getState().user?.uid;
+        void jalankanAksi('notif', { userId }).catch((error) => {
+          toast(error?.message || 'Notifikasi gagal diaktifkan. Coba lagi.', 'error');
+        });
+      }
       return;
     }
     if (!t.closest('.ale-menu-wrap')) tutupPop();
@@ -492,6 +501,10 @@ export function topbar() {
              role="menuitem" data-aksi="${aksi}">
       ${ik(ikNama)}<span>${teks}</span>
     </button>`;
+  const tautanMenu = (path, ikNama, teks, warna) =>
+    `<a class="ale-pop-item ale-pw-${warna}" role="menuitem" href="${esc(path)}">
+      ${ik(ikNama)}<span>${teks}</span>
+    </a>`;
 
   return `
     <header class="site-header ale-topbar" id="topbar">
@@ -520,19 +533,6 @@ export function topbar() {
                width="40" height="40"${logo ? ` src="${esc(logo)}"` : ' hidden'}>
 
           <div class="ale-menu-wrap">
-            <button type="button" class="ale-ikon-btn" id="aleKebab"
-                    data-pop="aleMenuUlasan" aria-haspopup="menu"
-                    aria-expanded="false" aria-controls="aleMenuUlasan"
-                    aria-label="Opsi lainnya">
-              ${ik('titik3')}
-            </button>
-            <div class="ale-pop" id="aleMenuUlasan" role="menu"
-                 aria-label="Opsi lainnya" hidden>
-              ${item('ulasan', 'ulasan', 'Beri ulasan aplikasi', 'sky')}
-            </div>
-          </div>
-
-          <div class="ale-menu-wrap">
             <button type="button" class="ale-akun" id="aleProfilBtn"
                     data-pop="aleMenuProfil" aria-haspopup="menu"
                     aria-expanded="false" aria-controls="aleMenuProfil">
@@ -547,13 +547,14 @@ export function topbar() {
             <div class="ale-pop ale-pop-profil" id="aleMenuProfil"
                  role="menu" aria-label="Menu profil" hidden>
               <p class="ale-pop-judul" role="presentation">Profil</p>
-              ${item('foto-tambah', 'unggah',  'Ubah foto profil',           'sky')}
               ${item('notif',       'lonceng', 'Aktifkan notifikasi',        'amber')}
-              ${item('foto-hapus',  'sampah',  'Hapus foto profil',          'rose')}
               <hr class="ale-pop-sekat" role="separator">
-              ${item('kelas-mapel', 'kartuid', 'Kelas & mapel saya',         'sky')}
-              ${item('api-key',     'kunciapi','AI & Layanan',              'cyan')}
-              ${item('google',      'google',  'Hubungkan Google',           'indigo')}
+              ${canOpenRolePath(role, '/datadasar/kelas')
+                ? tautanMenu('/datadasar/kelas', 'kartuid', 'Kelas & mapel saya', 'sky') : ''}
+              ${canOpenRolePath(role, '/pengaturan/api-ai')
+                ? tautanMenu('/pengaturan/api-ai', 'kunciapi', 'AI & Layanan', 'cyan') : ''}
+              ${canOpenRolePath(role, '/pengaturan/google')
+                ? tautanMenu('/pengaturan/google', 'google', 'Google Workspace', 'indigo') : ''}
               <hr class="ale-pop-sekat" role="separator">
               ${item('tutup',       'tutup',   'Tutup',                      'sky')}
             </div>

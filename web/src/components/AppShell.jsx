@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { menuUntukPeran, cariMenu } from '../navigasi.js';
 import { NAMA_APLIKASI } from '../config.js';
 import { LABEL_PERAN, inisial, sideTutupTersimpan, terapkanSideTutup, toast } from '../ui.js';
+import { canOpenRolePath } from '../services/roleAccess.js';
 import Ikon from './Ikon.jsx';
 import { urlFotoAman } from '../services/protectedMedia.js';
 import { isEconomyMode } from '../services/economyMode.js';
@@ -147,10 +148,10 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
     setProfilBuka(false);
     try {
       const { jalankanAksi } = await import('./profilaksi.js');
-      await jalankanAksi(aksi);
+      await jalankanAksi(aksi, { userId: user?.uid });
     } catch (error) {
       console.error(`[profil] Gagal menjalankan aksi ${aksi}:`, error);
-      toast('Menu profil gagal dijalankan. Muat ulang halaman lalu coba lagi.', 'error');
+      toast(error?.message || 'Menu profil gagal dijalankan. Muat ulang halaman lalu coba lagi.', 'error');
     } finally {
       setAksiProfil('');
     }
@@ -241,31 +242,29 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
                   </label>
                 )}
                 <hr className="ale-pop-sekat" />
-                <button type="button" className="ale-pop-item ale-pw-sky"
-                        onClick={() => handleAksiProfil('foto-tambah')} disabled={!!aksiProfil}>
-                  <Ikon nama="user" /> Ubah foto profil
-                </button>
                 <button type="button" className="ale-pop-item ale-pw-amber"
                         onClick={() => handleAksiProfil('notif')} disabled={!!aksiProfil}>
                   <Ikon nama="badge" /> Aktifkan notifikasi
                 </button>
-                <button type="button" className="ale-pop-item ale-pw-rose"
-                        onClick={() => handleAksiProfil('foto-hapus')} disabled={!!aksiProfil}>
-                  <Ikon nama="user" /> Hapus foto profil
-                </button>
                 <hr className="ale-pop-sekat" />
-                <a className="ale-pop-item ale-pw-sky" href="#/datadasar/kelas"
-                   onClick={() => setProfilBuka(false)}>
-                  <Ikon nama="school" /> Kelas &amp; mapel saya
-                </a>
-                <button type="button" className="ale-pop-item ale-pw-cyan"
-                        onClick={() => handleAksiProfil('api-key')} disabled={!!aksiProfil}>
-                  <Ikon nama="settings" /> AI &amp; Layanan
-                </button>
-                <button type="button" className="ale-pop-item ale-pw-indigo"
-                        onClick={() => handleAksiProfil('google')} disabled={!!aksiProfil}>
-                  <Ikon nama="external" /> Hubungkan Google
-                </button>
+                {canOpenRolePath(role, '/datadasar/kelas') && (
+                  <a className="ale-pop-item ale-pw-sky" href="#/datadasar/kelas"
+                     onClick={() => setProfilBuka(false)}>
+                    <Ikon nama="school" /> Kelas &amp; mapel saya
+                  </a>
+                )}
+                {canOpenRolePath(role, '/pengaturan/api-ai') && (
+                  <a className="ale-pop-item ale-pw-cyan" href="#/pengaturan/api-ai"
+                     onClick={() => setProfilBuka(false)}>
+                    <Ikon nama="settings" /> AI &amp; Layanan
+                  </a>
+                )}
+                {canOpenRolePath(role, '/pengaturan/google') && (
+                  <a className="ale-pop-item ale-pw-indigo" href="#/pengaturan/google"
+                     onClick={() => setProfilBuka(false)}>
+                    <Ikon nama="external" /> Google Workspace
+                  </a>
+                )}
                 <hr className="ale-pop-sekat" />
                 <button type="button" className="ale-pop-item ale-pw-sky"
                         onClick={() => setProfilBuka(false)}>
