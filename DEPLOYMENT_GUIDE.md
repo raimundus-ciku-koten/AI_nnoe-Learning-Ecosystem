@@ -192,7 +192,7 @@ Important:
 
 - Midtrans checkout/webhook code, edge-function registrations, public purchase UI, AdSense component, and `ads.txt` asset have been removed from this checkout.
 - Historical billing/trial migrations remain unchanged. The forward cleanup migration is a separate, unverified schema change; the related database objects and data remain until it is safely approved and applied.
-- No Supabase/Vercel/Google settings, secrets, hosted accounts, database rows, existing deployments, or Git history were changed. A separately approved provider-side decommission and deployment is required to remove hosted resources or previously deployed assets. Do not reconfigure or re-enable these integrations.
+- No Supabase/Vercel/Google settings, secrets, hosted accounts, database rows, existing deployments, or Git history were changed. An anonymous HTTP check on 2026-10-24 confirmed that Production `https://ainnoe-le.vercel.app/ads.txt` still returns HTTP 200 (`text/plain`, 59 bytes). A separately approved deployment and a follow-up 404/410 check are required before claiming this asset is removed from Production. Provider-side decommission remains separate; do not reconfigure or re-enable these integrations.
 
 7) Building the Android APK / AAB
 
@@ -226,7 +226,7 @@ A signed APK candidate already exists at `android-apk/app/build/outputs/apk/rele
 - Add final legal contact and privacy-controller details to `/privacy` before inviting students or processing sensitive data.
 
 10) Remaining rollout steps
-- For the login-only web deployment, build and deploy the reviewed release branch to a Vercel Preview first. Verify password and Google OAuth sign-in, password setup redirects, role-based access, and privileged MFA with the account owner before promoting a tested build. Confirm public signup, purchase routes, Midtrans, and ad assets remain absent in the built output.
+- For a login-only web deployment, build and deploy the reviewed release branch to an authorized Vercel Preview first. Verify email/password sign-in, password setup redirects, role-based access, and privileged MFA with approved test accounts before any promotion. Google OAuth is optional for a login-only release; keep it disabled unless a clean Staging OAuth client and successful Staging sign-in have been verified. Confirm public signup, purchase routes, Midtrans, and ad assets remain absent in the built output.
 - Before deploying the active-profile/AAL2 migration, verify a recoverable Staging backup and restore drill, establish migration provenance, reconcile the complete hosted schema, and apply the migration to Staging first. Verify regular user access and admin/superadmin AAL2 enforcement there. Production database changes require a separately approved rollout and verified Production recovery plan.
 - Preserve the legacy `school_registration_requests` table and RPCs; review the non-destructive `school_registration_requests_v2` migration and versioned API, validate it in a disposable environment first, then re-audit Staging schema parity without copying Production user data. Verify a restorable Production backup before any Production migration.
 - Resolve the release PR/source-branch discrepancy before promoting the source cleanup. Public signup is removed, not awaiting CAPTCHA enablement.

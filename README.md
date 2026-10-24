@@ -86,10 +86,13 @@ This remains a limited login release, not a full public release. The hosted
 Supabase inventory still lacks feature relations and migration history. The
 Midtrans Edge Function source/config entries and web purchase UI have been
 removed locally; hosted functions/settings were not changed by this cleanup.
-The ads component and `ads.txt` source asset have been removed locally;
-previously deployed assets may remain until a reviewed deployment. AdMob was
-not integrated: the Android project is a Trusted Web Activity, not a native
-app with the AdMob SDK.
+The ads component and `ads.txt` source asset have been removed locally.
+However, an anonymous HTTP check on 2026-10-24 confirmed that Production
+`https://ainnoe-le.vercel.app/ads.txt` still returns HTTP 200
+(`text/plain`, 59 bytes). A reviewed deployment and a follow-up 404/410 check
+are required before claiming hosted ad-asset removal. AdMob was not
+integrated: the Android project is a Trusted Web Activity, not a native app
+with the AdMob SDK.
 
 ## Product description and feature status
 
