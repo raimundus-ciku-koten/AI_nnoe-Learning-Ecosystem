@@ -111,8 +111,10 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.match(validate, /validateStagingBackupTarget\.mjs/);
   assert.match(targetValidator, /samszhfyhbjuculrcffg/);
   assert.match(targetValidator, /sessionPoolerStaging/);
-  assert.match(create, /pg_dump --format=custom/);
-  assert.match(create, /pg_restore --list "\$dump" > \/dev\/null/);
+  assert.match(workflow, /Install PostgreSQL 17 client/);
+  assert.match(workflow, /postgresql-client-17/);
+  assert.match(create, /\/usr\/lib\/postgresql\/17\/bin\/pg_dump --format=custom/);
+  assert.match(create, /\/usr\/lib\/postgresql\/17\/bin\/pg_restore --list "\$dump" > \/dev\/null/);
   assert.match(create, /test -s "\$dump"/);
   assert.match(create, /test -s "\$encrypted"/);
   assert.match(create, /400 \* 1024 \* 1024/);
