@@ -127,7 +127,7 @@
   content: "";
   transform: rotate(-8deg);
 }
-.public-home__orbit { position: absolute; z-index: -1; border: 1px solid rgb(15 118 110 / 12%); border-radius: 50%; }
+.public-home__orbit { position: absolute; z-index: -1; border: 1px solid rgb(15 118 110 / 12%); border-radius: 50%; pointer-events: none; }
 .public-home__orbit--one { width: 88%; aspect-ratio: 1; }
 .public-home__orbit--two { width: 105%; aspect-ratio: 1; }
 .public-home__visual-card {
@@ -154,7 +154,7 @@
 .public-home__visual-grid i { color: var(--ph-teal); font-size: 1rem; }
 .public-home__visual-foot { display: flex; align-items: center; gap: .5rem; margin-top: 1.1rem; color: #8490a3; font-size: .66rem; }
 .public-home__visual-foot span { width: 6px; height: 6px; border-radius: 50%; background: #e6a84b; }
-.public-home__spark { position: absolute; color: #c18c3b; }
+.public-home__spark { position: absolute; color: #c18c3b; pointer-events: none; }
 .public-home__spark--one { top: 5%; left: 15%; font-size: 1.6rem; }
 .public-home__spark--two { right: 5%; bottom: 15%; font-size: 1.4rem; color: #0f766e; }
 

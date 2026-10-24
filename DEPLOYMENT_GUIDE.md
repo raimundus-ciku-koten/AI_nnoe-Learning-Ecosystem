@@ -53,6 +53,13 @@ This document records the release state and the remaining safe rollout steps for
   credentials or authentication requests were used. The tested alias could not
   be tied to commit `49c0f8bb`; Web CI run 155 passed for that commit, but this
   does not establish which SHA the Preview serves. Keep the release NO-GO.
+- A further landing-page smoke test found the “Kenali fiturnya” button was
+  covered by the decorative orbit illustration and could not be clicked.
+  Source CSS now disables pointer events on decorative orbits/sparks. The
+  focused landing-page tests (2), production build, and local browser click
+  passed; the click also worked at 390×844 with no horizontal overflow. This
+  source fix still needs verification on a newly deployed Preview before it
+  can be counted as a hosted acceptance result.
 - Do not place deployment tokens or Supabase keys in chat or source control.
   Keep Preview protection enabled unless the owner explicitly approves a
   reviewed alternative access method.
