@@ -14,6 +14,20 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      disposable-postgres:
+        image: ghcr.io/supabase/nix-postgres-17:920bb634698fef8dee6e78d738330d2dd8e489c5
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: restore-validation-only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@v4
       - name: Validate backup configuration
@@ -54,9 +68,24 @@ jobs:
           umask 077
           dump="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.dump"
           encrypted="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.aeb"
+          restore_db="backup_restore_validation"
           /usr/lib/postgresql/17/bin/pg_dump --format=custom --no-owner --no-acl --file "$dump" "$SUPABASE_DB_URL"
           test -s "$dump"
           /usr/lib/postgresql/17/bin/pg_restore --list "$dump" > /dev/null
+          PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/createdb \
+            --host 127.0.0.1 --username supabase_admin "$restore_db"
+          PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/pg_restore \
+            --exit-on-error --no-owner --no-acl \
+            --host 127.0.0.1 --username supabase_admin --dbname "$restore_db" "$dump"
+          table_count=$(PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/psql \
+            --host 127.0.0.1 --username supabase_admin --dbname "$restore_db" \
+            --tuples-only --no-align \
+            --command "SELECT count(*) FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')")
+          if (( table_count < 1 )); then
+            echo "::error::Disposable restore completed without any user tables."
+            exit 1
+          fi
+          echo "Disposable restore validated ($table_count user tables)."
           node scripts/encryptedBackup.mjs encrypt "$dump" "$encrypted"
           test -s "$encrypted"
           size=$(stat --format=%s "$encrypted")

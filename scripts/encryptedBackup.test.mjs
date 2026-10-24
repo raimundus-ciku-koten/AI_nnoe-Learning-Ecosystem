@@ -113,8 +113,28 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.match(targetValidator, /sessionPoolerStaging/);
   assert.match(workflow, /Install PostgreSQL 17 client/);
   assert.match(workflow, /postgresql-client-17/);
+  assert.match(
+    workflow,
+    /image: ghcr\.io\/supabase\/nix-postgres-17:[0-9a-f]{40}/,
+  );
+  assert.match(workflow, /POSTGRES_USER: supabase_admin/);
+  assert.match(workflow, /POSTGRES_PASSWORD: restore-validation-only/);
+  assert.match(workflow, /5432:5432/);
   assert.match(create, /\/usr\/lib\/postgresql\/17\/bin\/pg_dump --format=custom/);
   assert.match(create, /\/usr\/lib\/postgresql\/17\/bin\/pg_restore --list "\$dump" > \/dev\/null/);
+  assert.match(
+    create,
+    /createdb \\\r?\n\s+--host 127\.0\.0\.1 --username supabase_admin "\$restore_db"/,
+  );
+  assert.match(create, /--exit-on-error --no-owner --no-acl/);
+  assert.match(create, /--dbname "\$restore_db" "\$dump"/);
+  assert.match(create, /pg_catalog\.pg_tables/);
+  assert.match(create, /Disposable restore completed without any user tables/);
+  assert.ok(
+    create.indexOf('pg_restore \\\n            --exit-on-error') <
+      create.indexOf('node scripts/encryptedBackup.mjs encrypt'),
+  );
+  assert.doesNotMatch(create, /export PGPASSWORD=/);
   assert.match(create, /test -s "\$dump"/);
   assert.match(create, /test -s "\$encrypted"/);
   assert.match(create, /400 \* 1024 \* 1024/);
