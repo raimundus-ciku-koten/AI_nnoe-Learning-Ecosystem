@@ -32,10 +32,18 @@ jobs:
             exit 1
           fi
           node scripts/validateStagingBackupTarget.mjs
-      - name: Install PostgreSQL client
+      - name: Install PostgreSQL 17 client
         run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
-          sudo apt-get install --yes postgresql-client
+          sudo apt-get install --yes postgresql-client-17
+          /usr/lib/postgresql/17/bin/pg_dump --version
+          /usr/lib/postgresql/17/bin/pg_restore --version
       - name: Create and encrypt database dump
         shell: bash
         env:
@@ -46,9 +54,9 @@ jobs:
           umask 077
           dump="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.dump"
           encrypted="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.aeb"
-          pg_dump --format=custom --no-owner --no-acl --file "$dump" "$SUPABASE_DB_URL"
+          /usr/lib/postgresql/17/bin/pg_dump --format=custom --no-owner --no-acl --file "$dump" "$SUPABASE_DB_URL"
           test -s "$dump"
-          pg_restore --list "$dump" > /dev/null
+          /usr/lib/postgresql/17/bin/pg_restore --list "$dump" > /dev/null
           node scripts/encryptedBackup.mjs encrypt "$dump" "$encrypted"
           test -s "$encrypted"
           size=$(stat --format=%s "$encrypted")
