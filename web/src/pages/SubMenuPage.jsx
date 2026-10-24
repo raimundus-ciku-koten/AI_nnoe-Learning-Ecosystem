@@ -5,67 +5,68 @@ import { cariMenu } from '../navigasi.js';
 import Ikon from '../components/Ikon.jsx';
 import TeacherWorkspacePage from './TeacherWorkspacePage.jsx';
 import TeacherAccountPage from './TeacherAccountPage.jsx';
+import PrivateWorkspaceRecords from './PrivateWorkspaceRecords.jsx';
 import '../styles/submenu.css';
 
 const ALUR = {
   'admin-dashboard': {
-    ringkasan: 'Tinjau kondisi operasional sekolah melalui statistik, aktivitas, serta pemantauan ujian dan komunikasi yang dibatasi sesuai peran.',
-    langkah: ['Pilih area operasional sekolah', 'Tinjau ringkasan dan aktivitas terbaru', 'Lanjutkan ke tindak lanjut yang berwenang'],
+    ringkasan: 'Dashboard menampilkan ringkasan yang tersedia untuk akun sekolah. Monitoring aktivitas, ujian, dan chat khusus admin belum tersedia sebagai modul tersendiri.',
+    langkah: ['Tinjau ringkasan pada Dashboard', 'Pilih modul aktif dari tautan terkait', 'Gunakan halaman panduan ini hanya sebagai petunjuk'],
   },
   'admin-pengguna': {
-    ringkasan: 'Kelola akun warga sekolah dalam tenant Anda. Pembuatan dan perubahan peran harus melalui proses server yang berizin.',
-    langkah: ['Pilih jenis pengguna', 'Tinjau status atau permintaan akun', 'Proses persetujuan melalui alur resmi'],
+    ringkasan: 'Direktori pengguna dan penautan akun siswa tersedia. Persetujuan, pembuatan akun, dan pengubahan peran tidak dilakukan oleh halaman panduan ini.',
+    langkah: ['Buka direktori atau penautan akun siswa', 'Tinjau data yang tersedia untuk tenant', 'Ikuti izin server pada modul tujuan'],
   },
   'admin-instansi': {
-    ringkasan: 'Jaga profil sekolah dan kalender akademik tetap akurat sebagai dasar pengelolaan kelas dan dokumen.',
-    langkah: ['Tinjau identitas dan unit sekolah', 'Pastikan tahun ajaran serta semester aktif', 'Perbarui informasi melalui kewenangan sekolah'],
+    ringkasan: 'Profil sekolah dan data tahun ajaran tersedia melalui Data Dasar. Pengelolaan semester, unit, dan jenjang khusus admin belum menjadi modul tersendiri.',
+    langkah: ['Buka Profil Sekolah atau Tahun Ajaran', 'Tinjau data yang tersedia', 'Gunakan akses dan penyimpanan yang disediakan modul tujuan'],
   },
   'admin-chat': {
-    ringkasan: 'Gunakan chat untuk koordinasi warga sekolah dan orang tua tanpa membuka isi percakapan pribadi secara bebas.',
-    langkah: ['Pilih percakapan, kontak, atau grup', 'Gunakan kanal resmi untuk pengumuman', 'Laporkan kebutuhan moderasi melalui alur yang tersedia'],
+    ringkasan: 'Percakapan, kontak, dan grup membuka modul Chat. Kanal pengumuman, broadcast, dan monitoring komunikasi admin belum tersedia.',
+    langkah: ['Buka percakapan, kontak, atau grup', 'Gunakan fitur yang benar-benar tersedia di Chat', 'Jaga privasi percakapan pengguna'],
   },
   'admin-akademik': {
-    ringkasan: 'Kelola struktur akademik sekolah agar kelas, mata pelajaran, jadwal, dan penugasan tetap selaras.',
-    langkah: ['Pilih tahun ajaran aktif', 'Tinjau kelas, mapel, dan jadwal', 'Perbarui penugasan sesuai kewenangan'],
+    ringkasan: 'Data Dasar menyediakan beberapa halaman kelas, jadwal, dan denah. Kelompok serta pengelolaan mata pelajaran khusus admin belum tersedia sebagai modul tersendiri.',
+    langkah: ['Buka halaman kelas atau jadwal yang tersedia', 'Tinjau data dan batas penyimpanannya', 'Gunakan Ruang Kelas untuk aktivitas belajar'],
   },
   'admin-perencanaan': {
-    ringkasan: 'Pantau dokumen perangkat ajar yang diunggah guru dan tindak lanjuti template atau persetujuan pada lingkup sekolah.',
-    langkah: ['Pilih jenis perangkat atau periode', 'Tinjau status dokumen yang tersedia', 'Catat persetujuan atau tindak lanjut'],
+    ringkasan: 'Paket perencanaan dan arsip dokumen dapat dibuka. Monitoring serta persetujuan perangkat admin belum tersedia pada halaman ini.',
+    langkah: ['Buka paket perencanaan atau arsip', 'Tinjau dokumen sesuai akses yang diberikan', 'Halaman panduan ini tidak menyimpan persetujuan'],
   },
   'admin-asesmen': {
-    ringkasan: 'Pantau paket dan pelaksanaan asesmen sekolah. Akses monitoring dibatasi pada informasi yang diperlukan untuk pengelolaan.',
-    langkah: ['Pilih ujian atau periode', 'Tinjau status peserta dan hasil', 'Siapkan tindak lanjut akademik'],
+    ringkasan: 'Bank Soal tersedia untuk dibaca administrator sekolah. Paket ujian, jadwal, monitoring, dan analisis hasil admin belum tersedia.',
+    langkah: ['Buka Bank Soal untuk meninjau soal', 'Perubahan soal hanya tersedia bagi guru', 'Jangan gunakan menu panduan sebagai laporan ujian'],
   },
   'admin-komunikasi': {
-    ringkasan: 'Kelola pengumuman dan komunikasi resmi sekolah dengan tetap menjaga privasi percakapan pribadi.',
-    langkah: ['Pilih kanal atau sasaran', 'Siapkan pengumuman atau broadcast', 'Tinjau ringkasan dan laporan yang tersedia'],
+    ringkasan: 'Kanal Pengumuman menyimpan informasi resmi sekolah untuk dibaca pengguna yang berhak. Broadcast otomatis dan monitoring agregat belum tersedia.',
+    langkah: ['Buat pengumuman untuk tenant sekolah aktif', 'Tinjau dan perbarui informasi yang diterbitkan', 'Gunakan Chat untuk komunikasi individual'],
   },
   'admin-konten': {
-    ringkasan: 'Kelola bahan dan modul ajar sekolah agar dokumen pembelajaran mudah ditemukan serta sesuai akses pengguna.',
-    langkah: ['Pilih koleksi atau jenis materi', 'Tinjau kelengkapan dan akses', 'Publikasikan melalui alur yang ditetapkan'],
+    ringkasan: 'Materi pembelajaran dapat dikelola dalam Ruang Kelas dan dokumen perencanaan melalui arsip. Perpustakaan digital admin belum tersedia.',
+    langkah: ['Buka Ruang Kelas atau Arsip Perencanaan', 'Tinjau materi sesuai hak akses', 'Halaman ini tidak memublikasikan konten'],
   },
   'admin-keuangan': {
-    ringkasan: 'Tinjau pembayaran dan tagihan sekolah serta siapkan laporan keuangan sesuai periode.',
-    langkah: ['Pilih periode laporan', 'Tinjau pembayaran dan tagihan', 'Ekspor ringkasan yang diperlukan'],
+    ringkasan: 'Halaman ini menampilkan harga katalog dan kontak WhatsApp owner.',
+    langkah: ['Buka Harga Paket', 'Tinjau harga katalog dan ekuivalen bulanannya', 'Hubungi owner melalui WhatsApp untuk bertanya'],
   },
   'admin-laporan': {
-    ringkasan: 'Susun analitik akademik, keuangan, dan kinerja berdasarkan data sekolah yang tersedia.',
-    langkah: ['Pilih periode dan jenis laporan', 'Tinjau sumber data dan ringkasan', 'Ekspor hasil sesuai kebutuhan'],
+    ringkasan: 'Arsip Perencanaan dan Bank Soal tersedia. Laporan analitik akademik, keuangan, kinerja, serta ekspor admin belum tersedia.',
+    langkah: ['Buka arsip atau Bank Soal', 'Tinjau data yang tersedia di modul tujuan', 'Menu laporan lain masih berupa panduan'],
   },
   'admin-pengaturan': {
-    ringkasan: 'Kelola integrasi dan operasi sistem sekolah. Rahasia layanan tetap dikelola melalui penyimpanan tepercaya.',
-    langkah: ['Tinjau konfigurasi yang aktif', 'Pastikan cakupan perubahan', 'Catat perubahan dan tindak lanjut'],
+    ringkasan: 'Tautan integrasi membuka pengaturan akun pribadi. Konfigurasi integrasi tingkat sekolah, API, cadangan, dan log admin belum tersedia.',
+    langkah: ['Buka pengaturan akun pribadi hanya bila diperlukan', 'Perhatikan cakupan akun pada halaman tujuan', 'Jangan masukkan rahasia layanan sekolah pada halaman pribadi'],
   },
   'admin-bantuan': {
-    ringkasan: 'Temukan panduan pengelolaan sekolah dan jalur dukungan saat membutuhkan bantuan operasional.',
-    langkah: ['Pilih panduan atau FAQ', 'Tinjau langkah pemecahan masalah', 'Hubungi dukungan dengan konteks yang relevan'],
+    ringkasan: 'Chat tersedia sebagai kanal aplikasi. Panduan admin, FAQ, dan kontak dukungan khusus belum terhubung ke layanan bantuan.',
+    langkah: ['Buka Chat bila perlu berkomunikasi', 'Jangan menganggap panduan menu ini sebagai kanal support', 'Hindari membagikan kredensial melalui chat'],
   },
   'platform-dashboard': {
     ringkasan: 'Pantau kesehatan layanan dan penggunaan lintas tenant tanpa mencampur ruang lingkup data sekolah.',
     langkah: ['Pilih ringkasan platform', 'Tinjau kesehatan dan aktivitas global', 'Tindak lanjuti anomali sesuai kewenangan'],
   },
   'platform-tenant': {
-    ringkasan: 'Kelola sekolah sebagai tenant, termasuk paket dan status langganan, pada tingkat platform.',
+    ringkasan: 'Tinjau sekolah sebagai tenant dan status operasionalnya pada tingkat platform.',
     langkah: ['Pilih tenant', 'Tinjau paket dan status layanan', 'Perbarui konfigurasi melalui proses berizin'],
   },
   'platform-fitur': {
@@ -154,9 +155,102 @@ const ALUR = {
   },
 };
 
+const MODUL_ADMIN_AKTIF = {
+  'admin-dashboard': [
+    { label: 'Dashboard Sekolah', path: '/dashboard', ikon: 'chart' },
+  ],
+  'admin-ruang-kelas': [
+    { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
+  ],
+  'admin-monitoring': [
+    { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
+    { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'file' },
+    { label: 'Chat Sekolah', path: '/chat', ikon: 'chat' },
+  ],
+  'admin-instansi': [
+    { label: 'Profil Sekolah', path: '/datadasar/profil', ikon: 'user' },
+    { label: 'Tahun Ajaran', path: '/datadasar/ta', ikon: 'calendar' },
+  ],
+  'admin-chat': [
+    { label: 'Percakapan', path: '/chat', ikon: 'chat' },
+    { label: 'Kontak', path: '/chat/kontak', ikon: 'users' },
+    { label: 'Grup', path: '/chat/grup', ikon: 'users' },
+  ],
+  'admin-pengguna': [
+    { label: 'Direktori Pengguna', path: '/admin/pengguna/guru', ikon: 'users' },
+    { label: 'Tautkan Akun Siswa', path: '/admin/pengguna/tautkan-siswa', ikon: 'users' },
+  ],
+  'admin-akademik': [
+    { label: 'Kelas dan Mapel', path: '/datadasar/kelas', ikon: 'book' },
+    { label: 'Jadwal Mengajar', path: '/datadasar/jadwal', ikon: 'calendar' },
+    { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
+  ],
+  'admin-perencanaan': [
+    { label: 'Paket Perencanaan', path: '/admin/perencanaan/paket', ikon: 'file' },
+    { label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' },
+  ],
+  'admin-asesmen': [
+    { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'file' },
+  ],
+  'admin-konten': [
+    { label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' },
+    { label: 'Materi Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
+  ],
+  'admin-komunikasi': [
+    { label: 'Kanal Pengumuman', path: '/pengumuman', ikon: 'file' },
+    { label: 'Chat Sekolah', path: '/chat', ikon: 'chat' },
+    { label: 'Testimoni', path: '/testimoni', ikon: 'chat' },
+  ],
+  'admin-keuangan': [
+    { label: 'Harga Paket', path: '/purchase', ikon: 'badge' },
+  ],
+  'admin-laporan': [
+    { label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' },
+    { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'file' },
+  ],
+  'admin-pengaturan': [
+    { label: 'Google Workspace pribadi', path: '/pengaturan/google', ikon: 'settings' },
+    { label: 'AI & Layanan pribadi (provider nonaktif)', path: '/pengaturan/api-ai', ikon: 'settings' },
+  ],
+  'admin-bantuan': [
+    { label: 'Chat Sekolah', path: '/chat', ikon: 'chat' },
+  ],
+};
+
+const MODUL_GURU_AKTIF = {
+  chat: [
+    { label: 'Percakapan', path: '/chat', ikon: 'chat' },
+    { label: 'Grup Chat', path: '/chat/grup', ikon: 'users' },
+  ],
+  pelaksanaan: [
+    { label: 'Presensi Siswa', path: '/pelaksanaan/presensi', ikon: 'check' },
+    { label: 'Program BK & Kegiatan', path: '/program-kegiatan', ikon: 'file' },
+  ],
+  asesmen: [
+    { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'book' },
+    { label: 'Ujian Online', path: '/asesmen/ujian-online', ikon: 'check' },
+  ],
+  pemantauan: [
+    { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
+    { label: 'Presensi Siswa', path: '/pelaksanaan/presensi', ikon: 'check' },
+  ],
+  laporan: [
+    { label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' },
+  ],
+  kolaborasi: [
+    { label: 'Percakapan', path: '/chat', ikon: 'chat' },
+    { label: 'Grup Chat', path: '/chat/grup', ikon: 'users' },
+  ],
+  pengaturan: [
+    { label: 'Akun & Keamanan', path: '/pengaturan/akun', ikon: 'settings' },
+    { label: 'Integrasi Google', path: '/pengaturan/google', ikon: 'settings' },
+  ],
+};
+
 export default function SubMenuPage() {
   const { pathname, search } = useLocation();
-  const { role } = useAuth();
+  const { role: baseRole, activeRole } = useAuth();
+  const role = activeRole || baseRole;
   const menu = cariMenu(pathname, search, role);
 
   if (!menu) {
@@ -172,7 +266,13 @@ export default function SubMenuPage() {
 
   const { grup, item } = menu;
   if (role === 'guru' && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
-  if (role === 'guru') return <TeacherWorkspacePage grup={grup} item={item} />;
+  if (role === 'guru' && item.path === '/guru/catatan-pribadi') {
+    return <TeacherWorkspacePage grup={grup} item={item} />;
+  }
+  const modulAktifAdmin = role === 'admin_sekolah'
+    ? MODUL_ADMIN_AKTIF[grup.id] || []
+    : [];
+  const modulAktifGuru = role === 'guru' ? MODUL_GURU_AKTIF[grup.id] || [] : [];
 
   const alur = ALUR[grup.id] || {
     ringkasan: 'Pilih aktivitas yang dibutuhkan dan lanjutkan ke modul terkait.',
@@ -180,12 +280,15 @@ export default function SubMenuPage() {
   };
   const terkait = grup.item.filter((sub) => sub !== item && sub.path);
   const statusModul = role === 'siswa'
-    ? 'Data jadwal, materi, tugas, ujian, atau nilai hanya muncul setelah sekolah menautkan data akademik ke akun siswa. Halaman ini saat ini hanya panduan dan tidak mengubah data.'
+    ? 'Data jadwal, materi, tugas, ujian, atau nilai hanya muncul setelah sekolah menautkan data akademik ke akun siswa. Catatan di bawah ini bersifat pribadi dan bukan data akademik resmi.'
     : ['ortu', 'orang_tua'].includes(role)
-      ? 'Informasi anak hanya tersedia setelah sekolah menautkan akun orang tua secara resmi. Halaman ini saat ini hanya panduan dan tidak menampilkan data anak yang belum ditautkan.'
+      ? 'Informasi anak hanya tersedia setelah sekolah menautkan akun orang tua secara resmi. Catatan di bawah ini bersifat pribadi dan tidak menampilkan data anak yang belum ditautkan.'
+      : role === 'guru'
+        ? 'Menu ini belum memiliki modul akademik khusus. Ruang kerja di bawah membantu mencatat tindak lanjut pribadi, bukan pengganti data akademik resmi.'
       : role === 'operator'
-        ? 'Akses data operasional tetap dibatasi oleh peran dan tenant sekolah. Halaman ini hanya panduan dan tidak mengubah data.'
-        : `Tautan dan halaman menu tersedia. Fitur data khusus untuk modul ${item.label} belum diaktifkan, sehingga halaman ini tidak mengubah data. Gunakan modul terkait yang sudah tersedia, atau hubungi administrator untuk informasi peluncuran.`;
+        ? 'Akses data operasional tetap dibatasi oleh peran dan tenant sekolah. Ruang kerja di bawah menyimpan catatan pribadi, bukan perubahan data operasional.'
+        : `Tautan menu ${item.label} tersedia. Ruang kerja ini menyediakan catatan pribadi, bukan pengganti modul data khusus atau arsip resmi. Gunakan modul terkait untuk data operasional.`;
+  const tersediaRuangKerja = !['superadmin', 'demo'].includes(role);
 
   return (
     <div className="ale-submenu-page">
@@ -195,7 +298,7 @@ export default function SubMenuPage() {
           <h2>{item.label}</h2>
           <p>{alur.ringkasan}</p>
         </div>
-        <span className="ale-submenu-state"><span aria-hidden="true" />Panduan · baca saja</span>
+        <span className="ale-submenu-state"><span aria-hidden="true" />{tersediaRuangKerja ? 'Ruang kerja tersedia' : 'Panduan · baca saja'}</span>
       </header>
 
       <div className="ale-submenu-grid">
@@ -223,6 +326,37 @@ export default function SubMenuPage() {
         </aside>
       </div>
 
+      {tersediaRuangKerja && (
+        <PrivateWorkspaceRecords
+          route={item.path}
+          search={item.search || ''}
+          heading={`Catatan ${item.label}`}
+        />
+      )}
+
+      {(modulAktifAdmin.length > 0 || modulAktifGuru.length > 0) && (
+        <section className="ale-submenu-related" aria-labelledby="submenu-active-modules-title">
+          <div className="ale-submenu-section-heading">
+            <div>
+              <p className="ale-submenu-kicker">Tindakan tersedia</p>
+              <h3 id="submenu-active-modules-title">Buka modul terkait</h3>
+            </div>
+            <span>Kesiapan dan izin dijelaskan di setiap halaman tujuan</span>
+          </div>
+          <div className="ale-submenu-links">
+            {[...modulAktifAdmin, ...modulAktifGuru]
+              .filter((modul) => modul.path !== item.path)
+              .map((modul) => (
+              <a key={modul.path} className="ale-submenu-link" href={`#${modul.path}`}>
+                <span className="ale-submenu-link-icon"><Ikon nama={modul.ikon} /></span>
+                <span><strong>{modul.label}</strong><small>Buka modul</small></span>
+                <span className="ale-submenu-arrow" aria-hidden="true">›</span>
+              </a>
+              ))}
+          </div>
+        </section>
+      )}
+
       {terkait.length > 0 && (
         <section className="ale-submenu-related" aria-labelledby="submenu-related-title">
           <div className="ale-submenu-section-heading">
@@ -236,7 +370,7 @@ export default function SubMenuPage() {
             {terkait.map((sub) => (
               <a key={sub.label} className="ale-submenu-link" href={`#${sub.path}${sub.search || ''}`}>
                 <span className="ale-submenu-link-icon"><Ikon nama={sub.ikon} /></span>
-                <span><strong>{sub.label}</strong><small>Buka panduan</small></span>
+                <span><strong>{sub.label}</strong><small>Buka halaman</small></span>
                 <span className="ale-submenu-arrow" aria-hidden="true">›</span>
               </a>
             ))}

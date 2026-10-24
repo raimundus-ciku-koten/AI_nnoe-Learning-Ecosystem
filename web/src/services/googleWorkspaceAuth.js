@@ -5,11 +5,25 @@ const DRIVE_SCOPES = [
   'https://www.googleapis.com/auth/drive.file',
 ].join(' ');
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const SHEETS_SCOPES = ['openid', 'email', DRIVE_FILE_SCOPE].join(' ');
+const SHEETS_SCOPES = [
+  'openid',
+  'email',
+  'https://www.googleapis.com/auth/spreadsheets',
+].join(' ');
 const MEET_SCOPES = [
   'openid',
   'email',
   'https://www.googleapis.com/auth/meetings.space.created',
+].join(' ');
+const CALENDAR_SCOPES = [
+  'openid',
+  'email',
+  'https://www.googleapis.com/auth/calendar.events',
+].join(' ');
+const TASKS_SCOPES = [
+  'openid',
+  'email',
+  'https://www.googleapis.com/auth/tasks',
 ].join(' ');
 
 let gisLoading;
@@ -208,6 +222,40 @@ export async function hubungkanGoogleMeetUntukPengguna(
       clientId,
       user.email,
       MEET_SCOPES,
+      { includeGrantedScopes: false },
+    ),
+    userId,
+  };
+}
+
+export async function hubungkanGoogleCalendarUntukPengguna(
+  user,
+  clientId = import.meta.env?.VITE_GOOGLE_OAUTH_CLIENT_ID,
+) {
+  const userId = String(user?.id || user?.uid || '').trim();
+  if (!userId) throw new Error('Identitas pengguna aplikasi tidak tersedia.');
+  return {
+    ...await hubungkanGoogleWorkspaceLangsung(
+      clientId,
+      user.email,
+      CALENDAR_SCOPES,
+      { includeGrantedScopes: false },
+    ),
+    userId,
+  };
+}
+
+export async function hubungkanGoogleTasksUntukPengguna(
+  user,
+  clientId = import.meta.env?.VITE_GOOGLE_OAUTH_CLIENT_ID,
+) {
+  const userId = String(user?.id || user?.uid || '').trim();
+  if (!userId) throw new Error('Identitas pengguna aplikasi tidak tersedia.');
+  return {
+    ...await hubungkanGoogleWorkspaceLangsung(
+      clientId,
+      user.email,
+      TASKS_SCOPES,
       { includeGrantedScopes: false },
     ),
     userId,

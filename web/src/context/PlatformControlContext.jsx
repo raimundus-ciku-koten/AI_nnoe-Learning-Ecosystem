@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase.ts';
+import { isMaintenanceBlocked } from '../services/privilegedAccessPolicy.js';
 import { useAuth } from './AuthContext.jsx';
 
 const DEFAULT_STATE = Object.freeze({
   loading: false,
   maintenance: false,
-  features: Object.freeze({ aiAssistant: true, aiGeneration: true }),
+  features: Object.freeze({ aiAssistant: false, aiGeneration: false }),
   error: '',
 });
 
@@ -47,8 +48,8 @@ export function PlatformControlProvider({ children }) {
           loading: false,
           maintenance: data?.maintenance === true,
           features: {
-            aiAssistant: typeof features.aiAssistant === 'boolean' ? features.aiAssistant : true,
-            aiGeneration: typeof features.aiGeneration === 'boolean' ? features.aiGeneration : true,
+            aiAssistant: typeof features.aiAssistant === 'boolean' ? features.aiAssistant : false,
+            aiGeneration: typeof features.aiGeneration === 'boolean' ? features.aiGeneration : false,
           },
           error: '',
         });
@@ -82,10 +83,11 @@ export function usePlatformControls() {
 }
 
 export function MaintenanceGuard({ children }) {
-  const { role } = useAuth();
+  const { role, activeRole } = useAuth();
   const { maintenance, error } = usePlatformControls();
+  const effectiveRole = activeRole || role;
 
-  if (maintenance && role !== 'superadmin') {
+  if (isMaintenanceBlocked(effectiveRole, maintenance)) {
     return (
       <main className="platform-maintenance" role="status">
         <section>

@@ -6,7 +6,6 @@ const { supabase } = vi.hoisted(() => ({
 vi.mock('../lib/supabase.ts', () => ({ supabase }));
 
 import {
-  mulaiCheckoutMidtrans,
   muatLanggananPersonal,
   muatLanggananTenant,
 } from './subscriptions.js';
@@ -60,7 +59,7 @@ describe('Supabase tenant subscription status', () => {
   });
 });
 
-describe('Supabase entitlement status and disabled checkout', () => {
+describe('Supabase personal entitlement status', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('loads a personal entitlement and validates the user ID', async () => {
@@ -81,9 +80,4 @@ describe('Supabase entitlement status and disabled checkout', () => {
     await expect(muatLanggananPersonal('')).rejects.toThrow('Akun pengguna');
   });
 
-  it('blocks checkout without calling the backend', async () => {
-    await expect(mulaiCheckoutMidtrans('siswa-basic', 'bulanan'))
-      .rejects.toThrow('Checkout dinonaktifkan');
-    expect(supabase.functions.invoke).not.toHaveBeenCalled();
-  });
 });

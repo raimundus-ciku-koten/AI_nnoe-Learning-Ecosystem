@@ -1,3 +1,6 @@
+[auth]
+enable_signup = false
+
 [functions.midtrans-checkout]
 verify_jwt = true
 

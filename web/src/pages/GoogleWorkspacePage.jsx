@@ -1,14 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useUserIntegrationConsent } from '../context/UserIntegrationConsentContext.jsx';
 import { simpanKunciPublikPengguna } from '../services/encryptionKeyDirectory.js';
 import {
+  hubungkanGoogleCalendarUntukPengguna,
   hubungkanGoogleSheetsUntukPengguna,
   hubungkanGoogleMeetUntukPengguna,
+  hubungkanGoogleTasksUntukPengguna,
   hubungkanGoogleWorkspaceUntukPengguna,
 } from '../services/googleWorkspaceAuth.js';
 import {
+  buatAcaraGoogleCalendar,
   buatRuangGoogleMeet,
   buatSpreadsheetDenganData,
+  buatTugasGoogleTasks,
   buatTautanGoogleCalendar,
   daftarBerkasTerenkripsiDrive,
   daftarCadanganKunciDrive,
@@ -47,6 +52,7 @@ function ScopeCard({ ikon, judul, cakupan, children }) {
 
 export default function GoogleWorkspacePage() {
   const { user } = useAuth();
+  const { consent, openPreferences } = useUserIntegrationConsent();
   const [koneksi, setKoneksi] = useState(null);
   const [busy, setBusy] = useState('');
   const [status, setStatus] = useState('');
@@ -54,7 +60,12 @@ export default function GoogleWorkspacePage() {
   const [waktuMulai, setWaktuMulai] = useState(() => jamLokal(new Date(Date.now() + 3600000)));
   const [waktuSelesai, setWaktuSelesai] = useState(() => jamLokal(new Date(Date.now() + 7200000)));
   const [tautanCalendar, setTautanCalendar] = useState('');
+  const [tautanAcaraLangsung, setTautanAcaraLangsung] = useState('');
   const [tautanMeet, setTautanMeet] = useState('');
+  const [judulTugas, setJudulTugas] = useState('');
+  const [catatanTugas, setCatatanTugas] = useState('');
+  const [jatuhTempoTugas, setJatuhTempoTugas] = useState('');
+  const [tugasTersimpan, setTugasTersimpan] = useState(null);
   const [fileName, setFileName] = useState('');
   const [identitasVault, setIdentitasVault] = useState(null);
   const [identitasDraft, setIdentitasDraft] = useState(null);
@@ -68,6 +79,7 @@ export default function GoogleWorkspacePage() {
   const [dataSpreadsheet, setDataSpreadsheet] = useState('');
   const [tautanSpreadsheet, setTautanSpreadsheet] = useState('');
   const [koneksiSheets, setKoneksiSheets] = useState(null);
+  const calendarFormRef = useRef(null);
 
   const tokenAktif = koneksi && koneksi.expiresAt > Date.now() ? koneksi.accessToken : '';
   const ownerId = user?.id || user?.uid;
@@ -89,6 +101,10 @@ export default function GoogleWorkspacePage() {
   }
 
   async function hubungkan() {
+    if (!consent?.services.includes('drive')) {
+      setError('Persetujuan Google Drive belum diberikan. Ubah pilihan pada Persetujuan Integrasi terlebih dahulu.');
+      return;
+    }
     setBusy('connect');
     setError('');
     setStatus('');
@@ -269,7 +285,71 @@ export default function GoogleWorkspacePage() {
     }
   }
 
+  async function buatAcaraCalendar() {
+    if (!consent?.services.includes('calendar')) {
+      setError('Persetujuan Google Calendar belum diberikan. Ubah pilihan pada Persetujuan Integrasi terlebih dahulu.');
+      return;
+    }
+    const form = calendarFormRef.current;
+    if (!form) return;
+    const values = new FormData(form);
+    setBusy('calendar');
+    setError('');
+    setStatus('');
+    setTautanAcaraLangsung('');
+    try {
+      const sesi = await hubungkanGoogleCalendarUntukPengguna(user);
+      const event = await buatAcaraGoogleCalendar(sesi.accessToken, {
+        judul: String(values.get('judul') || ''),
+        deskripsi: String(values.get('deskripsi') || ''),
+        mulai: waktuMulai,
+        selesai: waktuSelesai,
+      });
+      setTautanAcaraLangsung(event.htmlLink);
+      setStatus('Acara berhasil dibuat di Google Calendar milik Anda.');
+    } catch (err) {
+      console.error('[workspace] Gagal membuat acara Google Calendar:', err);
+      setError(err?.message || 'Acara tidak dapat dibuat di Google Calendar.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function buatTugas(event) {
+    event.preventDefault();
+    if (!consent?.services.includes('tasks')) {
+      setError('Persetujuan Google Tasks belum diberikan. Ubah pilihan pada Persetujuan Integrasi terlebih dahulu.');
+      return;
+    }
+    setBusy('tasks');
+    setError('');
+    setStatus('');
+    setTugasTersimpan(null);
+    try {
+      const sesi = await hubungkanGoogleTasksUntukPengguna(user);
+      const task = await buatTugasGoogleTasks(sesi.accessToken, {
+        judul: judulTugas,
+        catatan: catatanTugas,
+        jatuhTempo: jatuhTempoTugas,
+      });
+      setTugasTersimpan(task);
+      setStatus(`Tugas "${task.title}" berhasil dibuat di Google Tasks.`);
+      setJudulTugas('');
+      setCatatanTugas('');
+      setJatuhTempoTugas('');
+    } catch (err) {
+      console.error('[workspace] Gagal membuat tugas Google Tasks:', err);
+      setError(err?.message || 'Tugas tidak dapat dibuat di Google Tasks.');
+    } finally {
+      setBusy('');
+    }
+  }
+
   async function buatMeet() {
+    if (!consent?.services.includes('meet')) {
+      setError('Persetujuan Google Meet belum diberikan. Ubah pilihan pada Persetujuan Integrasi terlebih dahulu.');
+      return;
+    }
     setBusy('meet');
     setError('');
     setStatus('');
@@ -318,6 +398,10 @@ export default function GoogleWorkspacePage() {
   }
 
   async function hubungkanSheets() {
+    if (!consent?.services.includes('sheets')) {
+      setError('Persetujuan Google Sheets belum diberikan. Ubah pilihan pada Persetujuan Integrasi terlebih dahulu.');
+      return;
+    }
     setBusy('sheets-connect');
     setError('');
     setStatus('');
@@ -338,11 +422,15 @@ export default function GoogleWorkspacePage() {
       <header className="workspace-header">
         <p className="workspace-kicker"><Ikon nama="external" /> Integrasi akun pribadi</p>
         <h1>Google Workspace</h1>
-        <p>Hubungkan akun Google milik Anda sendiri untuk Drive. Calendar tidak memerlukan izin tambahan; Meet meminta izin hanya saat Anda membuat ruang.</p>
-        <button className="workspace-connect" type="button" onClick={hubungkan} disabled={!!busy}>
+        <p>Setiap layanan meminta izin terpisah hanya setelah Anda memilihnya dan memulai tindakan terkait. Calendar dan Tasks memerlukan API Google yang diaktifkan oleh pemilik project.</p>
+        <button className="workspace-connect" type="button" onClick={hubungkan} disabled={!!busy || !consent?.services.includes('drive')}>
           <Ikon nama="external" />
           {busy === 'connect' ? 'Meminta izin Google…' : tokenAktif ? 'Perbarui izin Google' : 'Hubungkan akun Google'}
         </button>
+        <button type="button" className="workspace-connect" onClick={openPreferences} disabled={!!busy}>
+          Ubah Persetujuan Integrasi
+        </button>
+        {!consent?.services.includes('drive') && <p role="note">Pilih Google Drive pada Persetujuan Integrasi untuk mengaktifkan koneksi ini.</p>}
         {koneksi && <p className="workspace-account">Akun terhubung: <strong>{koneksi.email}</strong></p>}
       </header>
 
@@ -459,8 +547,8 @@ export default function GoogleWorkspacePage() {
           {fileName && <small className="workspace-detail">Terakhir dibuat dari aplikasi: {fileName}</small>}
         </ScopeCard>
 
-        <ScopeCard ikon="calendar" judul="Google Calendar" cakupan="Menyiapkan acara melalui tautan resmi; tanpa akses kalender">
-          <form className="workspace-form" onSubmit={siapkanAcaraCalendar} onChange={() => setTautanCalendar('')}>
+        <ScopeCard ikon="calendar" judul="Google Calendar" cakupan="Tautan template tanpa akses atau pembuatan acara langsung dengan persetujuan OAuth">
+          <form ref={calendarFormRef} className="workspace-form" onSubmit={siapkanAcaraCalendar} onChange={() => { setTautanCalendar(''); setTautanAcaraLangsung(''); }}>
             <label htmlFor="workspace-event-title">Judul acara</label>
             <input id="workspace-event-title" name="judul" type="text" maxLength="120" required disabled={!!busy} />
             <label htmlFor="workspace-event-start">Mulai</label>
@@ -470,7 +558,10 @@ export default function GoogleWorkspacePage() {
             <label htmlFor="workspace-event-description">Catatan (opsional)</label>
             <textarea id="workspace-event-description" name="deskripsi" maxLength="2000" rows="3" disabled={!!busy} />
             <button type="submit" disabled={!!busy}>
-              Siapkan acara
+              Siapkan tautan acara tanpa izin Calendar
+            </button>
+            <button type="button" onClick={buatAcaraCalendar} disabled={!!busy || !consent?.services.includes('calendar')}>
+              {busy === 'calendar' ? 'Meminta izin dan membuat acara…' : 'Buat langsung di Google Calendar'}
             </button>
           </form>
           {tautanCalendar && (
@@ -478,11 +569,53 @@ export default function GoogleWorkspacePage() {
               Tambahkan ke Google Calendar
             </a>
           )}
+          {tautanAcaraLangsung && (
+            <a className="workspace-detail" href={tautanAcaraLangsung} target="_blank" rel="noreferrer">
+              Buka acara di Google Calendar
+            </a>
+          )}
+        </ScopeCard>
+
+        <ScopeCard ikon="check" judul="Google Tasks" cakupan="Membuat tugas setelah persetujuan OAuth per akun">
+          <p className="workspace-description">Tugas disimpan di daftar “My Tasks” bila tersedia, atau daftar pertama akun Google Tasks Anda. Token hanya digunakan selama pembuatan tugas dan tidak disimpan aplikasi.</p>
+          <form className="workspace-form" onSubmit={buatTugas}>
+            <label htmlFor="workspace-task-title">Judul tugas</label>
+            <input
+              id="workspace-task-title"
+              type="text"
+              maxLength={1024}
+              required
+              value={judulTugas}
+              onChange={(event) => setJudulTugas(event.target.value)}
+              disabled={!!busy}
+            />
+            <label htmlFor="workspace-task-notes">Catatan (opsional)</label>
+            <textarea
+              id="workspace-task-notes"
+              rows="3"
+              maxLength={8192}
+              value={catatanTugas}
+              onChange={(event) => setCatatanTugas(event.target.value)}
+              disabled={!!busy}
+            />
+            <label htmlFor="workspace-task-due">Jatuh tempo (opsional)</label>
+            <input
+              id="workspace-task-due"
+              type="date"
+              value={jatuhTempoTugas}
+              onChange={(event) => setJatuhTempoTugas(event.target.value)}
+              disabled={!!busy}
+            />
+            <button type="submit" disabled={!!busy || !consent?.services.includes('tasks')}>
+              {busy === 'tasks' ? 'Meminta izin dan menyimpan…' : 'Buat tugas di Google Tasks'}
+            </button>
+          </form>
+          {tugasTersimpan && <p role="status">Tersimpan: {tugasTersimpan.title}{tugasTersimpan.due && ` · jatuh tempo ${tugasTersimpan.due.slice(0, 10)}`}</p>}
         </ScopeCard>
 
         <ScopeCard ikon="play" judul="Google Meet" cakupan="Izin meetings.space.created diminta saat tombol digunakan">
           <p className="workspace-description">Buat tautan rapat atas nama akun Google Anda. Token hanya dipakai saat permintaan ini dan tidak disimpan aplikasi.</p>
-          <button type="button" onClick={buatMeet} disabled={!!busy || !user?.email}>
+          <button type="button" onClick={buatMeet} disabled={!!busy || !user?.email || !consent?.services.includes('meet')}>
             {busy === 'meet' ? 'Meminta izin dan membuat ruang…' : 'Buat tautan Google Meet'}
           </button>
           {tautanMeet && (
@@ -495,10 +628,10 @@ export default function GoogleWorkspacePage() {
         <ScopeCard ikon="file" judul="Google Sheets" cakupan="Membuat spreadsheet baru dan menulis nilai; tidak membaca spreadsheet lain">
           <p className="workspace-description">
             Tempel tabel berformat TSV (kolom dipisahkan tab, baris dipisahkan baris baru). Data ditulis sebagai nilai mentah,
-            sehingga isi tidak dieksekusi sebagai formula. Koneksi ini hanya meminta identitas dasar dan akses file aplikasi (drive.file);
+            sehingga isi tidak dieksekusi sebagai formula.             Koneksi ini hanya meminta identitas dasar dan cakupan Sheets (`spreadsheets`);
             token hanya disimpan di memori sesi.
           </p>
-          <button type="button" onClick={hubungkanSheets} disabled={!!busy}>
+          <button type="button" onClick={hubungkanSheets} disabled={!!busy || !consent?.services.includes('sheets')}>
             {busy === 'sheets-connect' ? 'Meminta izin Sheets…' : tokenSheetsAktif ? `Sheets terhubung: ${koneksiSheets.email}` : 'Hubungkan Google Sheets'}
           </button>
           <form className="workspace-form" onSubmit={buatSpreadsheet}>

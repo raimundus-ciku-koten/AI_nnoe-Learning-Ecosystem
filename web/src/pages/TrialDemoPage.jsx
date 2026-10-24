@@ -146,7 +146,7 @@ export default function TrialDemoPage() {
         {error && <p className="trial-error" role="alert">{error}</p>}
         <ul className="trial-limits">
           <li>Tidak terhubung ke data tenant/sekolah nyata atau menu administratif.</li>
-          <li>AI eksternal, pembayaran, unggah berkas, dan integrasi Google tidak tersedia.</li>
+          <li>AI eksternal, unggah berkas, dan integrasi Google tidak tersedia.</li>
           <li>Uji coba hanya satu kali per alamat email terverifikasi dan berakhir otomatis setelah 72 jam.</li>
         </ul>
       </section>

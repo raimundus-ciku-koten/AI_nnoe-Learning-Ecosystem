@@ -31,15 +31,6 @@ const SESSION = {
   ciphertextSha256: 'b'.repeat(64),
 };
 
-function queryResult(response) {
-  const query = {
-    select: vi.fn(() => query),
-    eq: vi.fn(() => query),
-    maybeSingle: vi.fn(() => Promise.resolve(response)),
-  };
-  return query;
-}
-
 describe('encrypted teacher schedule storage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -116,7 +107,7 @@ describe('encrypted teacher schedule storage', () => {
     expect(googleDrive.unggahBerkasTerenkripsiDrive).not.toHaveBeenCalled();
   });
 
-  it('rejects conflicting sessions and requires active entitlement before writing', async () => {
+  it('rejects conflicting sessions and allows schedule writes without billing records', async () => {
     googleDrive.daftarJadwalTerenkripsiDrive.mockResolvedValue(SESSION);
     await expect(ubahJadwalGuruDrive(
       'token',
@@ -139,7 +130,10 @@ describe('encrypted teacher schedule storage', () => {
     )).rejects.toThrow('Bentrok');
     expect(googleDrive.unggahBerkasTerenkripsiDrive).not.toHaveBeenCalled();
 
-    supabase.from.mockImplementation(() => queryResult({ data: null, error: null }));
+    googleDrive.unggahBerkasTerenkripsiDrive.mockResolvedValue({
+      id: 'updated-schedule-id',
+      description: JSON.stringify({ ciphertextSha256: 'd'.repeat(64) }),
+    });
     await expect(ubahJadwalGuruDrive(
       'token',
       'school-1',
@@ -148,6 +142,11 @@ describe('encrypted teacher schedule storage', () => {
       IDENTITY,
       { jenis: 'hapus', id: 'lesson-1' },
       SESSION.ciphertextSha256,
-    )).rejects.toThrow('Langganan sekolah');
+    )).resolves.toMatchObject({
+      id: 'updated-schedule-id',
+      entries: [],
+      ciphertextSha256: 'd'.repeat(64),
+    });
+    expect(supabase.from).not.toHaveBeenCalled();
   });
 });

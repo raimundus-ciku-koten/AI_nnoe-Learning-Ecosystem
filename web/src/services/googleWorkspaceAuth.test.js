@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  hubungkanGoogleCalendarUntukPengguna,
   hubungkanGoogleDriveUntukPengguna,
   hubungkanGoogleMeetUntukPengguna,
   hubungkanGoogleSheetsUntukPengguna,
+  hubungkanGoogleTasksUntukPengguna,
   hapusSesiGoogleWorkspace,
   hubungkanGoogleWorkspaceLangsung,
   hubungkanGoogleWorkspaceUntukPengguna,
@@ -101,7 +103,7 @@ test('OAuth Google Meet meminta cakupan non-sensitif hanya ketika diperlukan', a
   }
 });
 
-test('koneksi Sheets hanya meminta identitas dasar dan akses file aplikasi', async () => {
+test('koneksi Sheets hanya meminta identitas dasar dan cakupan Sheets', async () => {
   const googleMock = mockGoogle((options) => {
     options.callback({
       access_token: 'sheets-only-token',
@@ -120,9 +122,40 @@ test('koneksi Sheets hanya meminta identitas dasar dan akses file aplikasi', asy
     assert.equal(session.accessToken, 'sheets-only-token');
     assert.equal(
       googleMock.tokenOptions.scope,
-      'openid email https://www.googleapis.com/auth/drive.file',
+      'openid email https://www.googleapis.com/auth/spreadsheets',
     );
-    assert.doesNotMatch(googleMock.tokenOptions.scope, /auth\/spreadsheets|calendar|gmail/);
+    assert.doesNotMatch(googleMock.tokenOptions.scope, /drive\.file|calendar|gmail/);
+    assert.equal(googleMock.tokenOptions.include_granted_scopes, false);
+  } finally {
+    googleMock.restore();
+  }
+});
+
+test('Calendar dan Tasks meminta cakupan terpisah tanpa mengakumulasi grant lain', async () => {
+  const googleMock = mockGoogle((options) => {
+    options.callback({
+      access_token: 'service-token',
+      expires_in: 3600,
+      scope: options.scope,
+    });
+  });
+  globalThis.fetch = async () => Response.json({ email, email_verified: true });
+
+  try {
+    const calendar = await hubungkanGoogleCalendarUntukPengguna({ id: 'app-user', email }, clientId);
+    assert.equal(calendar.userId, 'app-user');
+    assert.equal(
+      googleMock.tokenOptions.scope,
+      'openid email https://www.googleapis.com/auth/calendar.events',
+    );
+    assert.equal(googleMock.tokenOptions.include_granted_scopes, false);
+
+    const tasks = await hubungkanGoogleTasksUntukPengguna({ id: 'app-user', email }, clientId);
+    assert.equal(tasks.userId, 'app-user');
+    assert.equal(
+      googleMock.tokenOptions.scope,
+      'openid email https://www.googleapis.com/auth/tasks',
+    );
     assert.equal(googleMock.tokenOptions.include_granted_scopes, false);
   } finally {
     googleMock.restore();

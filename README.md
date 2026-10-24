@@ -13,11 +13,17 @@ anonymous check on 2026-10-22 confirmed that
 the domain returns HTTP 200. This restores the login surface only; it does not
 mean every data-backed module is ready for release.
 
-The login page has email/password and Google sign-in controls; public signup,
-trial registration, checkout, and ads remain disabled. No hosted database
-migration was applied, no credentials were entered, and no signup was
-submitted. The Staging schema, verified backup/restore, and server-side
-CAPTCHA blockers below still apply.
+The login page has email/password and Google sign-in controls. Public account
+signup and trial registration have been removed from the application UI; the
+public login page and package page display catalog prices and a WhatsApp link
+to the owner (`+6282236267895`). There is no order, checkout, or payment flow,
+and advertising assets/integrations are removed from the active web app. No
+hosted database migration was applied, no credentials were entered, and no
+signup was submitted. Staging backup run #12 successfully restored its plaintext dump to
+a disposable PostgreSQL 17.11 database before encryption and uploaded the
+encrypted artifact. The hosted schema and migration-provenance review and
+server-side CAPTCHA blockers below still apply; the uploaded ciphertext itself
+has not yet been decrypted and restored.
 
 The read-only Production check on 2026-10-20 confirmed the owner's active
 Superadmin profile and matching JWT role claim. After the owner completed TOTP
@@ -33,14 +39,13 @@ recorded sign-in. The account owner must verify those sign-ins after deployment.
 The supplied document contains plaintext password fields; keep it out of the
 repository and rotate those passwords through the account provider.
 
-This is a limited login release, not a full public release of signup, trials,
-payments, or ads. The hosted Supabase inventory still lacks the billing
-relations and migration history; both Midtrans Edge Functions remain fail-closed
-with HTTP 410. Midtrans charges transaction fees, so live checkout is
-incompatible with a strict zero-cost guarantee. AdSense script loading is
-disabled and the static `ads.txt` publisher entry has not been verified against
-an approved account. AdMob is not integrated: the current Android project is a
-Trusted Web Activity, not a native app with the AdMob SDK.
+This is a limited login release, not a full public release of signup or trials.
+Production signup was observed disabled in the historical Auth dashboard
+check; the local Supabase Auth configuration also disables signup. Hosted
+Auth/functions have not been changed or reverified by this implementation.
+Historical billing migrations and fail-closed Edge Function stubs remain for
+source/database history and were not purged from hosted systems. The active
+web application has no checkout/payment flow or ad integration.
 
 ## Product description and feature status
 
@@ -55,10 +60,162 @@ drafts stay in page memory until printed or saved as PDF. Chat, assessments,
 and other data modules require their Supabase schema to be deployed and
 verified; the hosted inventory currently shows those feature relations are
 missing. Google features require OAuth setup and user consent. External AI
-providers, checkout, and payment are disabled. The package catalog is
+providers are optional, require a user-supplied key and explicit disclosure,
+and may incur provider charges; checkout and payment are disabled. The package catalog is
 informational and does not guarantee package entitlements or feature
 availability. Public metadata and landing-page copy should preserve these
 limitations.
+
+### Ruang Kelas access foundation
+
+Ruang Kelas is now listed immediately after Dashboard for operators, school
+admins, superadmins, teachers, and students. Operators (`operator` or
+`admin_sekolah`) and superadmins can create a tenant-scoped room and assign
+active teacher and student accounts. Teachers and students can read only rooms
+to which the operator assigned their account; this is enforced by Supabase
+RLS, not only by the menu. The classroom schema and restricted account lookup
+are in `supabase/migrations/20261024000100_learning_classrooms.sql`. This
+migration has not been applied to a hosted project. Text-based classroom
+materials are implemented in the web app and use the tenant-scoped,
+teacher-write/member-read policies in
+`supabase/migrations/20261024000200_learning_classroom_materials.sql`. That
+migration also has not been applied to a hosted project. Teachers can publish
+text assignments, students can submit or revise responses before the deadline,
+and assigned teachers can grade submissions; these workflows are backed by
+`supabase/migrations/20261024000300_learning_classroom_assignments.sql`, which
+has not been applied to a hosted project. Teachers can create multiple-choice
+quizzes; students receive questions without answer keys, and answers are scored
+once by a protected database function. This workflow is in
+`supabase/migrations/20261024000400_learning_classroom_quizzes.sql` and has not
+been applied to a hosted project. Teachers can create dated attendance sessions
+and submit a complete roster with per-student status and notes; students can
+read only their own attendance history. Attendance access and writes are
+protected by RLS and server-side functions in
+`supabase/migrations/20261024000500_learning_classroom_attendance.sql`. This
+migration has not been applied to a hosted project. File attachments and
+notifications are not yet available in the classroom workflow. Do not deploy
+these migrations until the hosted schema and migration baseline have been
+reconciled and an approved, recoverable rollout plan is in place.
+The school announcement channel is wired to the existing tenant-scoped
+`school_announcements` table: admin-school and operator roles can publish,
+edit, and delete; active teachers, students, and parent accounts can read.
+This is in-app display only and does not send email, push, or chat broadcasts.
+Its active-role RLS policy update is in
+`supabase/migrations/20261025000700_school_announcement_active_roles.sql`.
+Neither that migration nor the existing announcement schema migration has
+been applied to the hosted project, so hosted announcement access is not yet
+active.
+Student menu destinations for `Jadwal dan Tugas` and `Materi` now read the
+assigned classes and published classroom work through the same RLS-protected
+services. Task and quiz links open the matching classroom activity, and the
+schedule page also shows the signed-in student's own attendance history. It
+does not claim to provide a full timetable because timetable data is not
+connected to the classroom schema.
+Teacher submenu `Jurnal Mengajar Harian` now opens a class-linked journal for
+assigned teachers, with date, topic, learning objectives, activities,
+reflection, and follow-up. Journal entries are private to their author and are
+readable/editable only while that active teacher remains assigned to the
+classroom; tenant membership, role, and author checks are enforced by RLS.
+This module does not replace official attendance, grades, or reports. Its
+schema is `supabase/migrations/20261025000800_learning_classroom_journals.sql`
+and has not been applied to the hosted project.
+
+Teacher submenu `Analisis Hasil` and `Laporan Penilaian` now combine submitted
+classroom assignments and quiz results for classes assigned to the active
+teacher. The view distinguishes ungraded submissions, calculates averages
+only from graded work, supports class/activity/student filters, and exports
+the filtered results as CSV. It is a classroom-work summary, not an official
+report-card, school-wide gradebook, or an automatic pass/fail decision. It
+uses the existing teacher-scoped result RPCs, includes up to 100 recent tasks
+and 100 recent quizzes per class, and adds no grade data model.
+
+The **Nilai & Capaian Rapor** workflow is now an actual school report-card
+record, separate from task/quiz analysis. Teachers enter a final 0–100 score
+and learning-achievement description for each student in an assigned
+classroom; the system does not calculate the final score. The active academic
+year and semester configured at **Data Dasar → Tahun Ajaran & Semester** are
+used, and the classroom year must match. Teachers save drafts, school
+administrators review and publish them, published cards are read-only until
+an administrator reopens them with a recorded reason, and students can read
+and print their own published records, including previous periods. Published
+cards from past periods are read-only; reopening is limited to the currently
+configured year/semester. Parent report access is not enabled because this
+project has no verified guardian-to-student relationship model in the
+report-card data path.
+
+The schema, audit trail, and role checks are in
+`supabase/migrations/20261025000900_school_report_cards.sql`. This migration
+has not been applied to the hosted project. Do not claim report cards are
+available in hosted production until the existing hosted schema/migration
+baseline has been reconciled, the migration is applied through an approved
+recoverable rollout, and teacher/admin/student access has been verified there.
+
+The report-card layout has also been expanded from the uploaded 2021/2022 SMA
+workbook. School profiles can select TK/PAUD, SD, SMP, or SMA using the
+existing tenant education-level field. TK uses a narrative child-development
+report based on teacher observation, with no required numeric subject score;
+SD/SMP/SMA retain per-subject final scores and achievement descriptions.
+The selected level is snapshotted on each semester portfolio so archived
+documents keep their original level label.
+
+SMA is the primary structural comparison target for the official e-Rapor SMA
+2025.1 release: school/student identity, academic period, subject outcomes,
+attendance, co-curricular activity, and homeroom feedback are represented.
+This is an independent layout and is **not** an exact copy of the official
+template, a Dapodik integration, or a claim of official approval. SD/SMP
+subject mappings, curriculum-specific columns, and TK layouts must still be
+validated against their current level-specific government requirements before
+the reports are used as statutory documents. The SMA-oriented subject results
+use learning-achievement descriptions. Legacy KI-1 through KI-4/KKM fields
+are not carried forward as mandatory fields, and the school does not infer
+passing decisions from a score threshold.
+
+The semester portfolio is a separate record per learner and period, so
+kokurikuler and shared report sections are not duplicated for every subject.
+It includes descriptive kokurikuler evidence and optional narrative feedback
+for the eight graduate-profile dimensions (faith and devotion, citizenship,
+critical reasoning, creativity, collaboration, independence, health, and
+communication), plus verified attendance counts, extracurriculars, achievements, and teacher/
+homeroom notes. These are descriptive fields, not required numeric ratings.
+NISN and gender are snapshotted only when the learner account has an explicit
+link to the school's student master record; the report does not guess identity
+by matching names.
+Attendance counts are entered from the school's official attendance register
+and may remain blank when a count has not been verified; they are not
+automatically inferred from a partial attendance feed. Teachers save both
+subject and portfolio drafts for SD/SMP/SMA; TK teachers save the development
+narrative portfolio without a numeric subject score. School administrators
+publish subject grades first for SD/SMP/SMA and can publish the portfolio only
+after every subject classroom registered for that learner and period has a
+published result. TK publication instead requires a non-empty development
+narrative. Students can view and print only their own published portfolio and
+published subject results when the selected level uses them.
+
+This is a policy-informed local report workflow, not an official e-Rapor
+client, Dapodik integration, or claim of exact template compatibility.
+Reference points checked for this design:
+
+- [Permendikdasmen No. 13 Tahun 2025](https://peraturan.bpk.go.id/Details/322506/permendikdasmen-no-13-tahun-2025), which remains in force and adjusts curriculum provisions including deep-learning approach and co-curricular learning.
+- [Kurikulum Kemendikdasmen: Pembelajaran Mendalam](https://kurikulum.kemendikdasmen.go.id/pembelajaran-mendalam), including its principles, learning experiences, and eight graduate-profile dimensions.
+- [Direktorat SMA: e-Rapor SMA](https://sma.kemendikdasmen.go.id/erapor), which identifies e-Rapor SMA version 2025.1 as its latest release on 1 May 2026.
+
+The added portfolio schema, role checks, and publication audit are in
+`supabase/migrations/20261025001000_school_report_card_portfolios.sql`. This
+migration also has not been applied to the hosted project; production
+availability remains unverified pending the approved schema reconciliation
+and rollout described above.
+
+School profile now has an optional address field for the printed report
+header, added in `supabase/migrations/20261025001100_tenant_report_card_address.sql`.
+It reuses the existing tenant-administrator update policy and remains optional
+so historic schools are not blocked from reporting.
+
+Teacher submenu **Laporan Harian s.d. Bulanan** now summarizes stored journals
+written by the signed-in teacher and attendance sessions for assigned
+classrooms. It supports class/date filters, daily or monthly grouping, and CSV
+export. The report reads existing classroom records only, is limited to the
+100 newest journals and 100 newest attendance sessions per class, and does
+not replace a school-wide or statutory report.
 
 ### Indicative Indonesia price catalog
 
@@ -71,6 +228,10 @@ prices set to ten monthly equivalents (two months' equivalent discount).
 Prices are indicative, before tax, and are not a claim of independently
 verified market benchmarks or a final offer. Checkout is disabled. Confirm
 scope, costs, applicable taxes, and entitlements before publishing an offer.
+The catalog is retained for internal reference but is no longer shown on the
+public login page or user-facing package page. Those pages state that there is
+no in-app checkout or advertising and clarify that this does not guarantee
+zero operating costs for the service owner or third-party providers.
 The append-only SQL price adjustment is
 `supabase/migrations/20261019000100_indonesia_price_catalog.sql`; it has not
 been applied to hosted Supabase. Do not apply it until the existing schema is
@@ -130,6 +291,15 @@ been reconciled against its migration and a recoverable deployment plan has
 been reviewed. Record each migration only after its exact SQL has been applied
 and its hosted effects verified.
 
+A fresh read-only Staging check on 2026-10-24 confirmed eight public base
+tables, all with RLS enabled, and nine public policies. Of the 30 feature
+relations in the current inventory query, only `trial_registrations` exists.
+The migration-history relation is still absent. The checkout also does not
+contain the documented `school_registration_requests_v2` migration or a
+privacy-consent migration; locate and review the intended source before
+planning either change. This inventory checked schema metadata only and did
+not read application rows or change the database.
+
 On 2026-10-18, a read-only Dashboard inspection confirmed that the hosted
 project still has no `supabase_migrations.schema_migrations` relation and the
 Database → Migrations page says “Run your first migration.” A read-only
@@ -167,9 +337,11 @@ absent.
 The Supabase Database → Backups dashboard was also inspected read-only on
 2026-10-18 and states that the Free Plan does not include project backups.
 Scheduled hosted backups therefore cannot be used as the recovery copy for this
-cutover without upgrading, which is not allowed. No independent backup with a
-tested restore has been verified; do not mutate hosted schema or data until the
-owner provides a no-cost recovery path and it has been validated.
+cutover without upgrading, which is not allowed. Workflow run #12 later restored
+the Staging dump to a disposable database before encryption and uploaded the
+ciphertext. That artifact itself still needs a decrypt/restore check; do not
+mutate hosted schema or data until the encrypted recovery artifact and current
+Staging schema/provenance have been verified.
 The local migration set also contains data-changing statements: the verified
 owner bootstrap upserts a privileged allowlist/profile, and platform user
 management provisions a tenant and updates allowlist/profile records for named
@@ -324,7 +496,9 @@ protected `set_platform_control` RPC, and the maintenance guard hides
 application pages from non-superadmins when maintenance is enabled. This is an
 application-level gate only; it does not replace database RLS or prevent direct
 API access. AI feature switches are also consumed by the assistant UI, but
-must not be treated as backend enforcement. The standalone
+must not be treated as backend enforcement. The client MFA gate and maintenance
+exception use the active role selected for the current session, so multi-role
+accounts do not inherit privileged behavior from an inactive role. The standalone
 `platformControlAdapter` test helper is not the active UI integration.
 
 The planning teacher directory now reads active teacher profiles from Supabase.
@@ -340,28 +514,39 @@ packages have not been imported and remain a separate reconciliation task.
 Migration `20261018000600_planning_drive_vault.sql` is local and has not been
 applied to hosted Supabase; public-key registration and admin discovery need
 that migration deployed first.
-Planning-document generation through external AI providers is disabled in
-no-billing mode. The encrypted package and local workflows remain available;
-no curriculum context is sent to an AI provider.
-For CP, a teacher explicitly selects a matching PDF with Google Picker. The
-browser extracts and checks the selected subject and phase, then stores the CP
-text and source metadata in the teacher's end-to-end encrypted Drive package;
-the source PDF is not copied. Teachers can create or edit the ATP manually
-from those canonical CP elements and the package's RPE, without an AI provider
-or paid service. Review extracted CP text before relying on it, since PDF text
-layout can affect extraction.
+The browser AI menu now defaults to local Qwen 2.5 1.5B through WebLLM, with
+Llama 3.2 3B as a larger local option. Model files are fetched on explicit
+user action and cached by the browser; WebGPU support and device memory are
+required. The optional third choice accepts a user's own Gemini, DeepSeek, or
+Groq key in tab memory only. It sends prompts to that provider only after the
+user accepts the disclosure and selects the provider, and provider fees or
+quotas are not guaranteed to be zero. The AI preference must also be enabled
+by the platform administrator. ATP, KKTP, and Modul Ajar can be drafted with
+the prepared local model or, after explicit transfer/cost confirmation, a
+configured external provider. Prompts use the encrypted package's subject,
+target grade, phase CP, schedule, and age-sensitive learning profile. Generated
+output is schema-checked and saved as an editable draft; teacher review remains
+required. When a phase covers multiple grades, official CP text is preserved
+verbatim and ATP goals for the selected class are a pedagogical proposal, not
+an official ministry-issued per-grade CP breakdown. Create one package for
+each target class. For CP, a teacher explicitly selects a matching PDF with
+Google Picker. The browser extracts and checks the selected subject and phase,
+then stores the CP text and source metadata in the teacher's end-to-end
+encrypted Drive package; the source PDF is not copied. Review extracted CP
+text and use the latest official reference before relying on it.
 RPE records the scheduled JP for each selected weekday. A holiday now removes
 only the JP assigned to that day, and Prosem uses each week's actual remaining
 capacity. Existing planning packages without per-day values remain readable;
 when edited, their weekly JP is distributed across the selected weekdays.
 Unlike the connected Apps Script project, which uses a static/cache CP registry
 and Gemini-backed generation, this web flow keeps the selected PDF as the CP
-source of record and does not call an AI provider. In no-billing mode, teachers
-can author and revise KKTP criteria per canonical ATP goal and Module Ajar
-content per unit and meeting using structured manual editors. Both documents
-are validated against the ATP and saved as end-to-end encrypted revisions;
-optional module sections may remain empty. AI-assisted generation remains
-unavailable, while existing saved documents remain readable and printable.
+source of record. Teachers can also author and revise KKTP criteria per
+canonical ATP goal and Modul Ajar content per unit and meeting using structured
+manual editors. Both documents are validated against the ATP and saved as
+end-to-end encrypted revisions; optional module sections may remain empty.
+Local AI drafting requires the platform's `aiGeneration` control and a model
+prepared by the user. Existing saved documents remain readable and printable
+whether the AI control is enabled or not.
 
 New Teacher Workspace notes now use the end-to-end encrypted Google Drive
 vault. Supabase is queried only for entitlement metadata; note contents and
@@ -423,14 +608,55 @@ deployment and VAPID configuration still need verification.
 
 The application is not yet Firebase-free. The active Data Siswa list and
 write paths now use Supabase, but its schema is local and existing roster data
-still requires reconciliation/import. The dashboard now reads recent chat
-previews from the RLS-protected Supabase `chat_inbox` view and no longer imports
-Firebase. Schedule, pending-task, semester-progress, and planning-history
-widgets do not read legacy Firebase data or present missing records as empty.
-The teacher dashboard now reads today's schedule from the encrypted Google
-Drive vault when the user's Google session and vault key are available; it
-links to Workspace settings otherwise. Pending tasks, semester progress, and
-planning history still await their target data sources.
+still requires reconciliation/import. The dashboard reads recent chat previews from the RLS-protected Supabase
+`chat_inbox` view and no longer imports Firebase. The teacher dashboard reads
+today's schedule from the encrypted Google Drive vault when the user's Google
+session and vault key are available; it links to Workspace settings otherwise.
+Pending tasks now come from assigned Ruang Kelas and link to the matching task.
+Recent teacher-workspace notes are read from the encrypted Drive vault, limited
+to five entries per dashboard load. The teacher dashboard's score tile shows
+the rounded average of quiz submissions in the five newest assigned classrooms;
+it does not claim to measure semester progress.
+
+### Kop sekolah, impor siswa, dan hasil tinjauan perencanaan
+
+Data Dasar menyediakan unggah/pratinjau kop sekolah berbentuk gambar untuk
+tenant aktif. Guru dan operator sekolah yang diizinkan dapat mengelolanya;
+superadmin memilih tenant tujuan. RPE, ATP, Prota, Prosem, KKTP, dan Modul
+memakai kop tersebut ketika dirender. Migrasi penyimpanan dan RLS ada di
+`supabase/migrations/20261025001200_school_letterheads.sql` dan belum
+diterapkan ke Supabase hosted.
+
+Data Siswa menerima `.xlsx` serta CSV/TXT yang sudah didukung. Impor Excel
+menggunakan lembar pertama, membatasi berkas hingga 1 MB, isi hasil ekstraksi
+hingga 5 MB, dan maksimal 200 baris termasuk judul; berkas `.xls` lama dan
+sel rumus ditolak. Semua berkas tetap melalui pratinjau dan validasi sebelum
+disimpan. Admin sekolah/operator memilih guru aktif dalam tenant sebagai
+pemilik roster; superadmin memilih tenant aktif lalu guru tujuan. Guru melihat
+roster miliknya, sedangkan administrator dapat mengelola roster pada tenant
+yang berwenang. Kebijakan dan RPC pengelola ada di
+`supabase/migrations/20261025001300_student_roster_assignment.sql`; migrasi
+ini belum diterapkan ke Supabase hosted.
+
+Dokumen perencanaan yang sudah dibuat dapat ditinjau dan teksnya diedit,
+sedangkan tahun ajaran serta identitas guru/kepala sekolah tetap terkunci.
+Tinjauan disimpan sebagai override terpisah di paket Drive terenkripsi dan
+tidak mengubah payload perhitungan. **Unduh PDF** membuka dialog cetak
+peramban; pengguna memilih "Simpan sebagai PDF". Hasil tidak diberi watermark
+atau DRM, dan aplikasi tidak dapat mencegah PDF dikonversi oleh perangkat
+pihak ketiga.
+
+Suara pembuka dan notifikasi menggunakan text-to-speech sistem setelah
+interaksi pengguna mengaktifkan suara. Ketersediaan, jenis kelamin, dan aksen
+suara bergantung pada suara yang dipasang di peramban/OS; aplikasi tidak
+dapat menjamin suara laki-laki atau aksen Indonesia Timur. Peramban juga
+membatasi pemutaran otomatis tanpa interaksi. Overlay proses memakai animasi
+logo, tetapi ini bukan audio latar yang dijamin berjalan saat halaman pertama
+dibuka.
+
+The school-admin dashboard shortcuts now open the available user directory,
+Ruang Kelas, planning archive, online assessment, and chat modules instead of
+presenting unimplemented monitoring destinations as active workflows.
 Teacher assignments are read from Supabase `profiles.mapel_ids` and
 `profiles.kelas_ids`; the legacy root Firestore `penugasan` collection was
 empty in the read-only console snapshot on 2026-10-17.
@@ -456,9 +682,10 @@ question records still need a controlled import. The Firebase service console
 panel and navigation group have been removed from platform operations;
 controls and access summaries use Supabase. The planning teacher
 directory and school subscription status now read Supabase
-profiles/entitlements. External AI assistant, question generation, and planning
-document generation are disabled in no-billing mode. The personal
-entitlement and Midtrans billing schema is
+profiles/entitlements. The planning generator uses local AI by default; an
+external-provider action is offered only after disclosure, with a user-owned
+key and potential provider costs. This does not enable platform checkout or
+billing. The personal entitlement and Midtrans billing schema is
 local only and still requires deployment and payment-flow verification.
 Remaining backing schemas, authorization, data migration, and production
 verification must be completed before removing Firebase configuration or
@@ -514,10 +741,14 @@ production traffic will remain free. In particular, Cloud Storage size and
 object counts, identity mappings, Google Drive quotas, and export/import
 traffic still need a read-only inventory and cost review.
 The Dashboard Backups page was checked on 2026-10-18 and confirms that the
-Free Plan does not include scheduled project backups. Before any hosted schema
-or data mutation, arrange an external backup that has been verified restorable
-or enable a suitable backup plan; do not treat the local migration files as a
-recovery backup.
+Free Plan does not include scheduled project backups. Workflow run #12
+(`40087589412`) on 2026-10-24 successfully dumped Staging and restored the
+plaintext dump to a disposable Supabase PostgreSQL 17.11 database, detecting
+47 user tables, before encrypting and uploading the artifact. This does not
+verify decryption and restore of the uploaded ciphertext itself, and the
+one-day artifact is not a durable recovery copy. Verify that artifact
+end-to-end and arrange an approved no-cost recovery path before hosted schema
+or data mutations.
 
 The selected target keeps identity, role, tenant, school/class/guardian access
 indexes, Drive file IDs and ciphertext metadata, security audit entries, and
@@ -526,8 +757,11 @@ live as end-to-end encrypted files in each user's own Google Drive. File
 owners may share a file only with school users whose access is verified by the
 server; Drive permissions and encrypted per-recipient data-key envelopes must
 be revoked together. Supabase must never receive plaintext document contents
-or private encryption keys. External AI provider keys are not accepted or sent
-in no-billing mode. Canva OAuth tokens remain unavailable until a trusted
+or private encryption keys. Optional personal AI keys are held only in tab
+memory and sent directly to a selected third-party provider only after explicit
+user acknowledgement; they are never stored in Supabase or localStorage.
+Third-party API usage may incur charges and is not covered by the app's
+zero-cost operation. Canva OAuth tokens remain unavailable until a trusted
 server-side token exchange is implemented.
 
 The operator selected an end-to-end encryption design. Recovery keys and
@@ -728,10 +962,10 @@ No-upgrade operating constraint:
   scripts. Legacy Firebase code remains only as uninvoked migration/recovery
   material; do not run Firebase CLI commands or deploy it.
 - Firebase Functions and large cloud exports are not part of the zero-billing
-  path. The existing R2 backup workflow cannot produce backups without R2
-  credentials, and the owner declined R2 because of potential charges. This
-  branch replaces it with a manual, encrypted Staging artifact after merge;
-  do not trigger a backup until Actions quota and billing are verified.
+  path. The owner declined R2 because of potential charges. The manual
+  Staging-only encrypted backup workflow is now on `main`; run #12 completed
+  successfully, but Actions storage usage and billing limits remain
+  account-dependent and must be checked before future runs.
 - Vercel Hobby eligibility and quotas must be checked against current terms.
   Do not use that plan for a monetized/commercial deployment unless its terms
   explicitly permit the use; do not upgrade to resolve a restriction.
@@ -740,9 +974,10 @@ No-upgrade operating constraint:
   zero-cost guarantees. Do not configure live payment credentials or
   billable/shared AI keys under a no-billing constraint.
 - Provider API keys are issued by their providers, not generated by this app.
-  A provider's free quota or eligibility is not guaranteed. External AI remains
-  disabled in the client; opening an official provider portal does not enable
-  the integration or authorize sending prompts or keys.
+  A provider's free quota or eligibility is not guaranteed. Local WebLLM models
+  are the default. Optional personal API keys are stored only in tab memory
+  and prompts are sent to a selected provider only after user acknowledgement;
+  opening an official provider portal does not enable an integration.
 - Checkout is disabled both in the purchase UI and in the client service; the
   app does not create orders or redirect to Midtrans. Ad display and automatic
   AdSense script loading are disabled regardless of environment variables.
@@ -752,29 +987,31 @@ No-upgrade operating constraint:
 
 ### Free-tier recovery and operations
 
-The current `main` workflow still targets Cloudflare R2 until the proposed
-replacement is merged. The owner declined R2 due to potential charges. The
-replacement on `deploy/free-encrypted-backup-artifact` is Staging-only and
-manual-only; it rejects non-`main` runs, creates a custom-format PostgreSQL
-dump, validates it with `pg_restore`, encrypts it with AES-256-GCM, limits the
-artifact to 400 MiB, and retains the encrypted GitHub Actions artifact for one
-day. No backup has yet been created. This is not a guarantee of zero cost:
-check the repository's Actions storage usage and billing limits before
-triggering a run. Artifact creation and archive validation are not a restore
-test.
+The `main` workflow is Staging-only and manual-only; it rejects non-`main`
+runs, creates a custom-format PostgreSQL dump, restores it to a disposable
+Supabase PostgreSQL 17.11 database, encrypts it with AES-256-GCM, caps the
+artifact at 400 MiB, and retains it for one day. Run #12
+(`40087589412`) completed successfully on 2026-10-24, restoring 47 user tables
+before encryption and uploading artifact
+`supabase-staging-encrypted-40087589412` (352,895 bytes; SHA-256
+`c8cb1fd888833e4c0f3a8b3f0f08c0a64488645f8698b106bf257fc333f68c5b`). The
+uploaded ciphertext itself has not yet been downloaded, decrypted, and
+restored. This short-lived artifact is not a durable recovery copy and does
+not guarantee zero cost: check Actions storage usage and billing limits before
+future runs.
 
 | GitHub setting | Value |
 | --- | --- |
 | Secret `SUPABASE_DB_URL` | PostgreSQL direct or session-pooler URL for Staging project `samszhfyhbjuculrcffg`; never the transaction pooler URL. The workflow validates the target. |
 | Secret `BACKUP_ENCRYPTION_KEY` | Base64 encoding of 32 cryptographically random bytes. Generate locally with `node -p "require('node:crypto').randomBytes(32).toString('base64')"` and store only as a GitHub secret. |
 
-After the replacement is merged, configure both secrets directly in GitHub
-Actions settings; never send their values through chat or commit them. Before
-the first manual run, verify current Actions storage usage and billing
-settings. Download the encrypted artifact within its one-day retention period,
-decrypt it on a trusted machine, and complete a restore into a disposable
-PostgreSQL instance before any hosted schema/data mutation. Until that drill
-passes, Staging migrations remain blocked.
+Configure both secrets directly in GitHub Actions settings; never send their
+values through chat or commit them. Before future manual runs, verify current
+Actions storage usage and billing settings. Run #12's artifact expires
+2026-10-25 10:53:43 UTC. Decrypt and restore the uploaded ciphertext in a
+disposable PostgreSQL instance before any hosted schema/data mutation. Staging
+migrations also remain blocked until the hosted schema and migration
+provenance are freshly reconciled.
 
 The workflow does not run on a schedule, configure R2, or touch Production.
 GitHub Actions free quotas and billing behavior are account-dependent. Backup
@@ -783,15 +1020,16 @@ they are not passed to checkout, PostgreSQL client installation, or artifact
 upload.
 
 The encryption utility is tested for round-trip integrity, wrong keys, and
-tampering (`npm --prefix web run test:backup`); this is **not** a verified
-database restore. Before any hosted schema/data mutation, download a ciphertext
-backup to a trusted machine, decrypt it only into a protected temporary
-directory, restore into a disposable local Supabase stack using the matching
-PostgreSQL major version, and verify representative schema, Auth rows, and
-application records. Repeat this restore drill quarterly. Never commit a dump,
-decryption key, database URL, or R2 credentials. The document's additional
-Google Drive copy is still a manual operational step: no refresh token or
-service-account credential is stored by this application or workflow.
+tampering (`npm --prefix web run test:backup`). Workflow run #12 separately
+restored the generated dump before encryption; it did not decrypt and restore
+the uploaded artifact itself. Before any hosted schema/data mutation, download
+the ciphertext to a trusted machine, decrypt it only into a protected
+temporary directory, restore into a disposable local Supabase stack using the
+matching PostgreSQL major version, and verify representative schema, Auth
+rows, and application records. Repeat this restore drill quarterly. Never
+commit a dump, decryption key, database URL, or R2 credentials. The document's
+additional Google Drive copy is still a manual operational step: no refresh
+token or service-account credential is stored by this application or workflow.
 
 Start a local Supabase development stack with Docker and Supabase CLI from the
 repository root using `npx supabase start`; inspect its connection values with
@@ -1011,63 +1249,65 @@ Frontend-specific tests and builds can also be run with
 source and tests are retained for migration analysis but intentionally have no
 active npm run or deploy aliases.
 
-## Purchase plans and Google Workspace
+## Package status and Google Workspace
 
-The plan catalog used to display prices is `functions/shared/pricing.json`.
-Its values are seeded into the server-only `public.billing_plans` table by
-`supabase/migrations/20261018000400_midtrans_billing.sql`; keep the two
-catalogs in sync when changing plans. Monthly prices are one tenth of annual
-prices.
+The historical package catalog in `functions/shared/pricing.json` supplies the
+public informational price list. Annual amounts are shown alongside a monthly
+equivalent calculated using the catalog divisor; the monthly amount is not a
+checkout or billing option. Each package links to the owner’s public WhatsApp
+contact with a package-specific inquiry message. The contact number is public
+application data, not a secret.
 
-The purchase page displays package information and the user's entitlement
-status only. Client checkout is hard-disabled in `web/src/services/subscriptions.js`;
-the UI does not create orders, display payment links, or redirect to Midtrans.
-The page also offers a limited manual registration/quote request. Applicants
-can print the form to PDF locally and open a generic WhatsApp message; the
-applicant must attach the saved PDF manually. Form values are not uploaded by
-the application. The public WhatsApp contact is intentionally unconfigured
-until the owner sets `VITE_OWNER_WHATSAPP` in the target Vercel environment;
-every `VITE_*` value is visible in the public web bundle. The PDF is a request
-for follow-up, not an order, invoice, payment receipt, or service activation.
-The form deliberately omits identity-document uploads, passwords, payment-card
-details, and children's NIK/KK data.
-The local `midtrans-checkout` and `midtrans-webhook` Edge Functions now return
-HTTP 410 for every non-preflight request and contain no gateway calls or
-service-role access. The SQL billing migration remains local/inactive. The
-hosted functions have not been updated or verified, so do not configure
-payment secrets or deploy payment components under the no-billing requirement.
-Entitlement reads are separate and remain subject to the hosted schema
-availability noted above.
+The purchase page and public login landing page display prices and WhatsApp
+contact only; there is no public account signup, trial registration, order
+creation, checkout, or payment flow. Supabase local Auth signup is disabled in
+`supabase/config.toml`. Historic account/trial records, billing migrations,
+and fail-closed payment stubs are retained as source/database history; they
+were not purged from hosted systems. Do not configure payment secrets, apply
+the historical billing migration to a hosted project, or deploy payment
+components. Hosted functions have not been updated or verified; no claim is
+made about hosted payment state.
 
 ## Google AdSense for web/PWA
 
-AdSense/AdMob display and AdSense script loading are disabled in the active
-application. Do not add publisher/slot IDs or enable ad serving while operating
-under the no-billing constraint. The retained static `ads.txt` file is not
-proof of publisher ownership or approval and is not an active ad integration.
+Ad display, ad scripts, publisher identifiers, and the static `ads.txt`
+publisher file have been removed from the active web application. Do not add
+ad-serving integrations under the no-billing requirement.
 
 The Android project is a Trusted Web Activity (TWA) for this same web/PWA, not
-a native AdMob app. AdSense configuration applies to its web content; a native
-Android/iOS application would require a separate AdMob SDK integration and
-app/ad-unit IDs. Creating or approving either Google publisher account,
-setting up payments, and publishing the Android app require the owner's
-Google/Play Console actions. Do not release a Play Store build until its
-payment flow and Google Play billing-policy requirements have been reviewed.
-See [functions/README.md](./functions/README.md) for checkout, webhook, and
-merchant setup.
+a native AdMob app. Advertising is not configured in the active application.
+Do not add publisher scripts, IDs, or SDK integrations under the no-ad
+requirement.
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for the current no-billing
+deployment boundary. `functions/README.md` is an archival inventory only;
+its legacy merchant setup instructions must not be followed.
 
 Google Workspace is available only to provisioned application users. Each user
 can link their own same-email Google account from **Pengaturan → Google
-Workspace**. The Drive connection asks only for basic identity and the
-non-sensitive `drive.file` scope. Google Meet requests the non-sensitive
-`meetings.space.created` scope only when a user explicitly creates a meeting;
-the short-lived token stays in page memory. Calendar events are prepared as
-Google Calendar template links and do not require Calendar API access. The app
-does not request Gmail permissions.
+Workspace**. On the first protected sign-in, a per-account consent screen lists
+the supported Drive, Sheets, and Meet connections. Saving that preference does
+not connect an account or grant an OAuth token; each connection still requires
+a separate user action and provider approval. Drive requests basic identity
+and the `drive.file` scope. Sheets requests the service-specific
+`spreadsheets` scope. Google Meet requests `meetings.space.created` only when
+the user explicitly creates a meeting. Direct Calendar event creation and
+Google Tasks creation request `calendar.events` and `tasks` respectively, only
+after separate consent; short-lived tokens stay in page memory. Calendar
+template links remain available without API access. Gmail permissions are not
+requested. AI defaults to local WebLLM models. Optional Gemini, DeepSeek, or
+Groq personal keys are held only in tab memory and are used only after the user
+accepts the provider disclosure and selects one; they are not stored in Drive.
+Menu Builder lets superadmins disable menu groups or individual
+submenus for an active account; this frontend navigation control does not
+replace backend RLS or data authorization. The application router also denies
+direct URLs that are not listed for the active role, and the Menu Builder lets
+superadmins select which assigned role's menu they are configuring for a
+multi-role account. These client-side checks are defense in depth, not a
+substitute for server-side authorization.
 
-Enable the Google Drive, Google Sheets, and Google Meet REST APIs used by the
-features you enable, configure the OAuth consent screen and authorized web
-origins, and set `VITE_GOOGLE_OAUTH_CLIENT_ID`. Google Picker also needs a
+Enable the Google Drive, Google Sheets, Google Meet, Google Calendar, and
+Google Tasks REST APIs used by the features you enable, configure the OAuth
+consent screen and authorized web origins, and set `VITE_GOOGLE_OAUTH_CLIENT_ID`. Google Picker also needs a
 public API key in `VITE_GOOGLE_API_KEY`, restricted to the allowed web origins
 and Picker/Drive APIs. External Google Cloud settings and any required OAuth
 review are owner-managed; deploying this repository alone does not enable
@@ -1075,13 +1315,14 @@ access. OAuth verification status and Workspace administrator policy can still
 affect real accounts, so test with representative `belajar.id` accounts before
 rolling out.
 
-The optional Google Sheets export asks for basic identity and the `drive.file`
-OAuth scope separately. Google recommends this non-sensitive, per-file scope
-for Sheets API access; the export creates a new sheet from user-pasted TSV data,
-uses `RAW` cell input to prevent formula execution, and keeps the access token
-only in page memory. Each Google OAuth grant requests only the scopes needed
-for that action; previously granted scopes are not automatically accumulated.
-No Google account or API key is bundled with the app.
+The optional Google Sheets export asks for basic identity and the
+`https://www.googleapis.com/auth/spreadsheets` OAuth scope separately. The
+export creates a new sheet from user-pasted TSV data, uses `RAW` cell input to
+prevent formula execution, and keeps the access token only in page memory.
+Review the current Google OAuth verification requirements for the deployed
+project. Each Google OAuth grant requests only the scopes needed for that
+action; previously granted scopes are not automatically accumulated. No
+Google account or API key is bundled with the app.
 The app does not automatically sync user records, use Sheets as an unattended
 database backup, or promise that personal Drive/Sheets quotas are unlimited.
 
@@ -1137,10 +1378,10 @@ table because it contains answer keys. AI-generated question drafts and Canva
 question-link creation are not available in no-billing mode.
 
 The profile-menu **AI & Layanan** action opens **Pengaturan → AI & Layanan**.
-External Gemini, DeepSeek, and Groq integrations are disabled in no-billing
-mode: the app does not accept provider keys or send prompts to those services.
-The assistant, AI question drafts, and AI planning generation are unavailable;
-local planning and RPE workflows remain available. The former server-side
+Local WebLLM is the default for AI workflows and must be explicitly prepared
+on the device. Planning workflows also offer an external-provider path only
+after a user configures a personal key and accepts the transfer and
+possible-cost disclosure. The former server-side
 encrypted-key and Canva OAuth endpoints remain only in the legacy Firebase
 Functions source and are not called by the active frontend. Word chat
 attachments are stored and downloaded in their original format; conversion
@@ -1157,13 +1398,18 @@ school administrators, superadmins, students, and parent-account aliases receive
 their respective menu catalogs. Unknown or missing roles receive only the
 dashboard link. Existing teacher features such as planning, attendance, the
 question bank, chat, and Google Workspace keep their dedicated workflows.
-Teacher submenu destinations without a dedicated data module open a private,
-tenant-scoped work-notes space at
-`tenants/{tenantId}/guruWorkspace/{uid}/entries/{entryId}`. Only that teacher
-can read those notes; writing requires an active tenant subscription. They are
-not official grades, attendance, reports, or student communications; do not
-enter student-identifying or sensitive information. Other roles continue to
-receive an informational page where their module workflow is not implemented.
+Submenu destinations without a dedicated data module now include a personal
+work-notes space for non-demo, non-superadmin roles. Notes are scoped in
+`private_workspace_records` to the authenticated user, active role, tenant,
+menu path, and menu query; row-level security enforces that scope. The module
+supports create, edit, delete, status, target dates, search, and filtering.
+Notes are not encrypted and are not official grades, attendance, reports, or
+student communications; do not enter student-identifying or other sensitive
+information. The schema is defined in
+`supabase/migrations/20261025000600_private_workspace_records.sql` and must be
+applied and verified before this module can store hosted data. This workspace
+is a usable personal productivity feature, not a substitute for domain-specific
+workflows that are not yet implemented.
 
 Superadmins can read the platform tenant directory at
 `/platform/tenant/sekolah` and the global school-admin directory at
@@ -1233,10 +1479,15 @@ Cloud Console; they cannot be enabled by this repository:
    SDKs or release workflows are intentionally retained. The Android package
    is a Trusted Web Activity; this web build does not initialize Firebase
    Performance Monitoring or Firebase AI Logic.
-5. The AI assistant, question drafts, and planning-document generator are
-   disabled in no-billing mode; no external AI provider is called. Canva OAuth
-   and server-side AI Firebase callables remain legacy Functions; the active
-   frontend does not call them.
+5. The AI assistant and question drafts use local WebLLM by default and remain
+   gated by superadmin feature controls. Users may optionally supply a personal
+   API key for Gemini, DeepSeek, or Groq; prompts go directly to the chosen
+   provider only after an explicit disclosure, and provider costs/quotas are
+   outside the zero-cost guarantee. Keys exist only in tab memory. ATP, KKTP,
+   and Modul Ajar prompts use the encrypted package's grade, phase CP, and
+   schedule context; official CP remains verbatim while grade-specific
+   learning goals are teacher-reviewed proposals. Canva OAuth and server-side AI Firebase
+   callables remain legacy Functions; the active frontend does not call them.
 6. Do not enable Firebase Blaze, attach billing, run Firebase CLI commands, or
    deploy legacy Firebase functions. Existing Firebase payment, platform
    administration, server-side AI, media conversion, and chat-trigger code
@@ -1256,16 +1507,20 @@ deployed. The following names are retained for migration inventory only:
   paths. Supabase `chat-push` is the local push replacement; verify the
   Supabase chat creation flow and deployed push delivery before retiring either.
 - `buatPembayaran`, `buatPembayaranPaket`, and `midtransWebhook`: legacy
-  checkout/webhook paths. The Supabase `midtrans-checkout` and
-  `midtrans-webhook` functions plus `finalize_midtrans_payment` SQL routine
-  are local replacements for the package billing flow; do not rely on them
-  until their migrations, secrets, deployment, and payment end-to-end checks
-  are complete. `buatPembayaran` explicitly rejects its retired per-seat flow.
+  checkout/webhook paths. The local Supabase `midtrans-checkout` and
+  `midtrans-webhook` functions return HTTP 410 and are deliberately not
+  replacements for an active billing flow. The
+  `finalize_midtrans_payment` routine is a historical/local schema artifact.
+  Do not configure, deploy, or rely on payment components under the no-billing
+  requirement. `buatPembayaran` explicitly rejects its retired per-seat flow.
+  See `DEPLOYMENT_GUIDE.md`; older merchant setup instructions in
+  `functions/README.md` are archival and must not be followed.
 - `getAIProviderConnections`, `savePersonalAIProviderKey`,
   `removePersonalAIProviderKey`, `setAIProviderPreference`,
-  `generateQuestionDraft`, `generatePerangkat`, and `chatAsisten`: server-side
-  AI/settings callables. Active external AI generation is disabled in
-  no-billing mode; these legacy callables are not replaced or called.
+  `generateQuestionDraft`, `generatePerangkat`, and `chatAsisten`: legacy
+  server-side AI/settings callables. The browser AI flow does not call or
+  replace them; it uses local WebLLM by default and optional personal API keys
+  directly from the browser after user acknowledgement.
 - `startCanvaOAuth`, `canvaOAuthCallback`, and `createCanvaQuestionDesign`:
   Canva server OAuth/design paths remain legacy; no Supabase Edge replacement
   is present in `supabase/functions/`.
@@ -1372,12 +1627,13 @@ online, browser storage must remain available, and the server must receive the
 submission before its deadline.
 
 The assessment migration has **not** been applied to hosted Supabase. The
-hosted schema and migration history remain unreconciled, and a restore-tested
-backup is not verified; do not apply the migration or deploy these routes to
-production until those operational gates have been completed. Static schema
-checks and frontend tests do not replace applying the migration to a disposable
-Supabase/PostgreSQL instance and testing role boundaries, RPCs, timers,
-submission retries, and essay grading end to end.
+hosted schema and migration history remain unreconciled, and the uploaded
+encrypted backup artifact has not itself been restored; do not apply the
+migration or deploy these routes to production until those operational gates
+have been completed. Static schema checks and frontend tests do not replace
+applying the migration to a disposable Supabase/PostgreSQL instance and
+testing role boundaries, RPCs, timers, submission retries, and essay grading
+end to end.
 
 ## Maintenance conventions
 

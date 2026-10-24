@@ -39,6 +39,22 @@ function plainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
+function validReviewEdits(value) {
+  if (!plainObject(value) || Object.keys(value).length > 1000) {
+    throw new TypeError('Perubahan tinjauan dokumen tidak valid.');
+  }
+  let totalLength = 0;
+  for (const [key, text] of Object.entries(value)) {
+    if (!/^(?:h1|h2|h3|p|li|td|th|caption):\d{1,4}$/.test(key) ||
+        typeof text !== 'string' || text.length > 5000) {
+      throw new TypeError('Perubahan tinjauan dokumen tidak valid.');
+    }
+    totalLength += text.length;
+  }
+  if (totalLength > 200_000) throw new TypeError('Teks tinjauan dokumen terlalu besar.');
+  return { ...value };
+}
+
 function validCpPayload(payload, context) {
   const fields = ['cp', 'fase', 'mapel', 'source'];
   if (!plainObject(payload) ||
@@ -128,6 +144,7 @@ function validBundle(bundle, file) {
         !plainObject(document.sumberRev)) {
       throw new Error('Dokumen perencanaan terenkripsi tidak valid.');
     }
+    if (document.reviewEdits !== undefined) validReviewEdits(document.reviewEdits);
     if (jenis === JENIS.CP && !validCpPayload(document.payload, bundle.konteks)) {
       throw new Error('Draf CP terenkripsi tidak sesuai dengan konteks paket.');
     }
@@ -141,6 +158,7 @@ function validBundle(bundle, file) {
         !plainObject(document.sumberRev)) {
       throw new Error('Modul perencanaan terenkripsi tidak valid.');
     }
+    if (document.reviewEdits !== undefined) validReviewEdits(document.reviewEdits);
   }
   return bundle;
 }
@@ -604,6 +622,23 @@ export async function simpanDokumen({
   return oldRevision + 1;
 }
 
+export async function simpanTinjauanDokumen({
+  uid, tenantId, paketId, jenis, reviewEdits, revDasar,
+}) {
+  if (!DOC_TYPES.has(jenis) || !Number.isInteger(revDasar) || revDasar < 1) {
+    throw new TypeError('Konteks tinjauan dokumen tidak valid.');
+  }
+  const edits = validReviewEdits(reviewEdits);
+  const context = sessionForCurrentUser();
+  const decoded = await getPackage(context, uid, paketId);
+  assertOwner(decoded.bundle, context.userId);
+  if (decoded.bundle.tenantId !== tenantId) throw new Error('Tenant paket tidak sesuai.');
+  const document = decoded.bundle.documents[jenis];
+  if (!document || document.rev !== revDasar) throw new KonflikVersiError();
+  document.reviewEdits = edits;
+  await persistPackage(context, decoded, decoded.bundle);
+}
+
 export function dengarModul(uid, tenantId, paketId, onData, onError) {
   return subscribe(getState().user?.uid, tenantId, {
     onData: (records) => {
@@ -648,6 +683,25 @@ export async function simpanModul({
   };
   await persistPackage(context, decoded, decoded.bundle);
   return oldRevision + 1;
+}
+
+export async function simpanTinjauanModul({
+  uid, tenantId, paketId, noUnit, reviewEdits, revDasar,
+}) {
+  const unit = Number(noUnit);
+  if (!Number.isInteger(unit) || unit < 1 || unit > 30 ||
+      !Number.isInteger(revDasar) || revDasar < 1) {
+    throw new TypeError('Konteks tinjauan modul tidak valid.');
+  }
+  const edits = validReviewEdits(reviewEdits);
+  const context = sessionForCurrentUser();
+  const decoded = await getPackage(context, uid, paketId);
+  assertOwner(decoded.bundle, context.userId);
+  if (decoded.bundle.tenantId !== tenantId) throw new Error('Tenant paket tidak sesuai.');
+  const document = decoded.bundle.modules[String(unit)];
+  if (!document || document.rev !== revDasar) throw new KonflikVersiError();
+  document.reviewEdits = edits;
+  await persistPackage(context, decoded, decoded.bundle);
 }
 
 export async function berikanAksesPaket({ uid, tenantId, paketId, adminId }) {

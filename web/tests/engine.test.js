@@ -8,6 +8,7 @@ import {
 } from '../src/pages/perencanaan/engine/prota.js';
 import { hitungProsem } from '../src/pages/perencanaan/engine/prosem.js';
 import { validasiKonteks, validasiAtp } from '../src/pages/perencanaan/engine/validator.js';
+import { faseUntukKelas, profilPembelajaran } from '../src/pages/perencanaan/engine/jenjangPembelajaran.js';
 
 /* ---------- Data uji: pola contoh Matematika Kelas X (5 unit, 16 TP, 114 JP) ---------- */
 const buatAtp = () => {
@@ -244,6 +245,32 @@ test('validasiKonteks: menangkap tanggal terbalik, TA salah, semester tumpang ti
 test('validasiKonteks: karakter kontrol dibuang dari teks', () => {
   const v = validasiKonteks({ ...formDasar(), mapel: 'Mat\u0000ematika\n\n  Wajib' });
   assert.equal(v.nilai.mapel, 'Mat ematika Wajib');
+});
+
+test('jenjang dan fase paket mengikuti pembagian kelas resmi tiap fase', () => {
+  assert.equal(faseUntukKelas('tk', 'Kelompok B'), 'Fondasi');
+  assert.equal(faseUntukKelas('sd', 'II'), 'A');
+  assert.equal(faseUntukKelas('sd', 'IV'), 'B');
+  assert.equal(faseUntukKelas('sd', 'VI'), 'C');
+  assert.equal(faseUntukKelas('smp', 'IX'), 'D');
+  assert.equal(faseUntukKelas('sma', 'X'), 'E');
+  assert.equal(faseUntukKelas('sma', 'XII'), 'F');
+  assert.equal(profilPembelajaran({ jenjang: 'sd', kelas: 'I' }).scaffolding.includes('konkret'), true);
+  assert.equal(profilPembelajaran({ jenjang: 'sma', kelas: 'XII' }).penalaran.includes('abstraksi'), true);
+});
+
+test('validasiKonteks menolak ketidaksesuaian jenjang, kelas, dan fase', () => {
+  const salah = validasiKonteks({ ...formDasar(), jenjang: 'sd', kelas: 'III', fase: 'A' });
+  assert.equal(salah.ok, false);
+  assert.equal(salah.galat.fase, 'KELAS_FASE_TIDAK_COCOK');
+
+  const paud = validasiKonteks({
+    ...formDasar(), jenjang: 'tk', kelas: 'Kelompok B', fase: 'fondasi',
+  });
+  assert.equal(paud.ok, true, JSON.stringify(paud.galat));
+  assert.equal(paud.nilai.fase, 'Fondasi');
+  const jenjangAsing = validasiKonteks({ ...formDasar(), jenjang: 'jenjang-tidak-ada' });
+  assert.equal(jenjangAsing.galat.jenjang, 'JENJANG_TIDAK_VALID');
 });
 
 test('validasiAtp: kode ganda, JP nol, semester salah terdeteksi', () => {

@@ -4,9 +4,13 @@ import {
   HashRouter, Routes, Route, Navigate, useLocation, useParams,
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
-import { MaintenanceGuard, PlatformControlProvider } from './context/PlatformControlContext.jsx';
+import { MaintenanceGuard, PlatformControlProvider, usePlatformControls } from './context/PlatformControlContext.jsx';
+import { UserMenuAccessProvider, useUserMenuAccess } from './context/UserMenuAccessContext.jsx';
+import { isMenuPathDisabled } from './services/menuAccessPolicy.js';
+import { UserIntegrationConsentProvider, useUserIntegrationConsent } from './context/UserIntegrationConsentContext.jsx';
 import { logout } from './auth.js';
 import PrivilegedMfaGate from './components/PrivilegedMfaGate.jsx';
+import IntegrationConsentOnboarding from './components/IntegrationConsentOnboarding.jsx';
 import { canOpenRolePath } from './services/roleAccess.js';
 
 // Legacy Alias Mapper[cite: 10]
@@ -26,7 +30,7 @@ const LEGACY_ALIAS = {
   '#hasilPerencanaan': '/laporan/arsip-perencanaan',
 }; //[cite: 10]
 
-function LegacyPage({ render }) {
+function LegacyPage({ render, aiGenerationEnabled }) {
   const wadah = useRef(null);
   const [error, setError] = useState(null);
   const location = useLocation();
@@ -44,7 +48,12 @@ function LegacyPage({ render }) {
     };
 
     try {
-      Promise.resolve(render(node, { path: location.pathname, search: location.search, params }))
+      Promise.resolve(render(node, {
+        path: location.pathname,
+        search: location.search,
+        params,
+        aiGenerationEnabled,
+      }))
         .then((dispose) => {
           if (typeof dispose !== 'function') return;
           if (active) cleanup = dispose;
@@ -60,7 +69,7 @@ function LegacyPage({ render }) {
       cleanup?.();
       node?.replaceChildren();
     };
-  }, [render, location.pathname, location.search]);
+  }, [render, aiGenerationEnabled, location.pathname, location.search]);
 
   return (
     <>
@@ -83,7 +92,10 @@ const HalamanDashboard = lazy(() => import('./pages/dashboard.js').then(({ halam
   default: function DashboardRoute() { return <LegacyPage render={halamanDashboard} />; },
 })));
 const HalamanPerencanaan = lazy(() => import('./pages/perencanaan.js').then(({ halamanPerencanaan }) => ({
-  default: function PerencanaanRoute() { return <LegacyPage render={halamanPerencanaan} />; },
+  default: function PerencanaanRoute() {
+    const { features } = usePlatformControls();
+    return <LegacyPage render={halamanPerencanaan} aiGenerationEnabled={features.aiGeneration} />;
+  },
 })));
 const HalamanChat = lazy(() => import('./pages/chat.js').then(({ halamanChat }) => ({
   default: function ChatRoute() { return <LegacyPage render={halamanChat} />; },
@@ -100,13 +112,19 @@ const HalamanSubMenu = lazy(() => import('./pages/SubMenuPage.jsx'));
 const HalamanArsipPerencanaan = lazy(() => import('./pages/PlanningArchivePage.jsx'));
 const HalamanPurchase = lazy(() => import('./pages/PurchasePage.jsx'));
 const HalamanTestimoni = lazy(() => import('./pages/TestimonialPage.jsx'));
+const HalamanRuangKelas = lazy(() => import('./pages/RuangKelasPage.jsx'));
 const HalamanAdminPengguna = lazy(() => import('./pages/AdminUsersPage.jsx'));
+const HalamanPengumumanSekolah = lazy(() => import('./pages/SchoolAnnouncementsPage.jsx'));
 const HalamanPresensi = lazy(() => import('./pages/AttendancePage.jsx'));
+const HalamanJurnalMengajar = lazy(() => import('./pages/ClassroomJournalPage.jsx'));
+const HalamanLaporanAktivitasKelas = lazy(() => import('./pages/ClassroomActivityReportPage.jsx'));
 const HalamanGoogleWorkspace = lazy(() => import('./pages/GoogleWorkspacePage.jsx'));
 const HalamanIntegrasiAI = lazy(() => import('./pages/AIIntegrationsPage.jsx'));
 const HalamanBankSoal = lazy(() => import('./pages/QuestionBankPage.jsx'));
 const HalamanUjianOnline = lazy(() => import('./pages/OnlineAssessmentPage.jsx'));
-const HalamanNilaiUjianSiswa = lazy(() => import('./pages/OnlineAssessmentResultsPage.jsx'));
+const HalamanAnalisisPenilaian = lazy(() => import('./pages/ClassroomAssessmentReportPage.jsx'));
+const HalamanRaporSekolah = lazy(() => import('./pages/SchoolReportCardPage.jsx'));
+const HalamanRuangBelajarSiswa = lazy(() => import('./pages/StudentLearningPage.jsx'));
 const HalamanTautkanAkunSiswa = lazy(() => import('./pages/StudentAccountLinkPage.jsx'));
 const HalamanTenantPlatform = lazy(() => import('./pages/PlatformTenantsPage.jsx'));
 const HalamanPenggunaPlatform = lazy(() => import('./pages/PlatformUsersPage.jsx'));
@@ -118,6 +136,8 @@ const AppShell = lazy(() => import('./components/AppShell.jsx'));
 
 function PrivateShell({ children }) {
   const { user, role, activeRole, passwordRecovery } = useAuth();
+  const menuAccess = useUserMenuAccess();
+  const integrationConsent = useUserIntegrationConsent();
   const location = useLocation();
 
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
@@ -126,8 +146,59 @@ function PrivateShell({ children }) {
   if (!canOpenRolePath(activeRole || role, location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }
+  if (menuAccess.loading || menuAccess.forUserId !== user.uid) {
+    return <main className="platform-tenants"><p role="status">Memverifikasi akses menu…</p></main>;
+  }
+  if (menuAccess.error) {
+    return (
+      <main className="platform-tenants">
+        <section className="platform-tenants-card" role="alert">
+          <h1>Akses menu belum dapat diverifikasi</h1>
+          <p>{menuAccess.error}</p>
+          <button type="button" onClick={() => void menuAccess.refresh()}>Coba lagi</button>
+        </section>
+      </main>
+    );
+  }
+  if (integrationConsent.loading || integrationConsent.forUserId !== user.uid) {
+    return <main className="platform-tenants"><p role="status">Memuat pilihan integrasi akun…</p></main>;
+  }
+  if (integrationConsent.error) {
+    return (
+      <main className="platform-tenants">
+        <section className="platform-tenants-card" role="alert">
+          <h1>Persetujuan integrasi belum dapat diverifikasi</h1>
+          <p>{integrationConsent.error}</p>
+          <button type="button" onClick={() => void integrationConsent.refresh()}>Coba lagi</button>
+        </section>
+      </main>
+    );
+  }
+  if (integrationConsent.needsOnboarding) {
+    return (
+      <IntegrationConsentOnboarding
+        initialServices={integrationConsent.consent?.services || []}
+        canCancel={Boolean(integrationConsent.consent)}
+        onCancel={integrationConsent.closePreferences}
+        onSave={integrationConsent.complete}
+      />
+    );
+  }
+  if (isMenuPathDisabled(menuAccess.disabledKeys, activeRole || role, location.pathname, location.search)) {
+    return (
+      <main className="platform-tenants">
+        <section className="platform-tenants-card" role="alert">
+          <h1>Menu ini dibatasi</h1>
+          <p>Akses ke menu ini dinonaktifkan oleh superadmin untuk akun Anda.</p>
+          {!isMenuPathDisabled(menuAccess.disabledKeys, activeRole || role, '/dashboard') && (
+            <a href="#/dashboard">Kembali ke Dashboard</a>
+          )}
+        </section>
+      </main>
+    );
+  }
   return (
-    <PrivilegedMfaGate role={role} userId={user.uid}>
+    <PrivilegedMfaGate key={activeRole || role} role={activeRole || role} userId={user.uid}>
       <MaintenanceGuard>
         <AppShell path={location.pathname} search={location.search}>{children}</AppShell>
       </MaintenanceGuard>
@@ -167,8 +238,7 @@ function RouteWrapper() {
 
   const publicRoute = location.pathname === '/login'
     || location.pathname === '/privacy'
-    || location.pathname.startsWith('/scan/')
-    || location.pathname === '/platform/supabase-users';
+    || location.pathname.startsWith('/scan/');
   if (loading && !publicRoute) {
     return <div className="app-loader">Memuat sesi...</div>;
   }
@@ -179,23 +249,35 @@ function RouteWrapper() {
         <Route path="/login" element={user && !passwordRecovery ? <Navigate to={selectedRole === 'demo' ? '/trial' : '/dashboard'} replace /> : <HalamanLogin />} />
         <Route path="/trial" element={user ? (selectedRole === 'demo' ? <HalamanTrial /> : <Navigate to="/dashboard" replace />) : <Navigate to="/login" replace />} />
         <Route path="/privacy" element={<HalamanPrivasi />} />
-        <Route path="/platform/supabase-users" element={<HalamanPenggunaSupabase />} />
+        <Route path="/platform/supabase-users" element={<PrivateShell><HalamanPenggunaSupabase /></PrivateShell>} />
         <Route path="/scan/:kode" element={<HalamanScan />} />
         <Route path="/" element={<Navigate to={user ? (passwordRecovery ? '/login' : selectedRole === 'demo' ? '/trial' : '/dashboard') : '/login'} replace />} />
         
         <Route path="/dashboard" element={<PrivateShell><HalamanDashboard /></PrivateShell>} />
         <Route path="/purchase" element={<PrivateShell><HalamanPurchase /></PrivateShell>} />
+        <Route path="/ruang-kelas" element={<PrivateShell><HalamanRuangKelas /></PrivateShell>} />
         <Route path="/testimoni" element={<PrivateShell><HalamanTestimoni /></PrivateShell>} />
         <Route path="/admin/pengguna/:sub" element={<PrivateShell><HalamanAdminPengguna /></PrivateShell>} />
         <Route path="/admin/pengguna/tautkan-siswa" element={<PrivateShell><HalamanTautkanAkunSiswa /></PrivateShell>} />
+        <Route path="/admin/komunikasi/pengumuman" element={<Navigate to="/pengumuman" replace />} />
+        <Route path="/pengumuman" element={<PrivateShell><HalamanPengumumanSekolah /></PrivateShell>} />
         <Route path="/pelaksanaan/presensi" element={<PrivateShell><HalamanPresensi /></PrivateShell>} />
+        <Route path="/pelaksanaan/jurnal" element={<PrivateShell><HalamanJurnalMengajar /></PrivateShell>} />
+        <Route path="/laporan/harian-bulanan" element={<PrivateShell><HalamanLaporanAktivitasKelas /></PrivateShell>} />
         <Route path="/program-kegiatan" element={<PrivateShell><HalamanProgramKegiatan /></PrivateShell>} />
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
         <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanIntegrasiAI /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
+        <Route path="/asesmen/analisis" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
+        <Route path="/laporan/penilaian" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
+        <Route path="/asesmen/rapor" element={<PrivateShell><HalamanRaporSekolah /></PrivateShell>} />
+        <Route path="/admin/akademik/rapor" element={<PrivateShell><HalamanRaporSekolah /></PrivateShell>} />
+        <Route path="/siswa/rapor" element={<PrivateShell><HalamanRaporSekolah /></PrivateShell>} />
         <Route path="/siswa/ujian" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
-        <Route path="/siswa/nilai" element={<PrivateShell><HalamanNilaiUjianSiswa /></PrivateShell>} />
+        <Route path="/siswa/nilai" element={<PrivateShell><HalamanRuangBelajarSiswa /></PrivateShell>} />
+        <Route path="/siswa/jadwal" element={<PrivateShell><HalamanRuangBelajarSiswa /></PrivateShell>} />
+        <Route path="/siswa/materi" element={<PrivateShell><HalamanRuangBelajarSiswa /></PrivateShell>} />
         <Route path="/admin/perencanaan/paket/:id?/:jenis?" element={<PrivateShell><HalamanPerencanaan /></PrivateShell>} />
         <Route path="/platform/tenant/sekolah" element={<PrivateShell><HalamanTenantPlatform /></PrivateShell>} />
         <Route path="/platform/pengguna/admin-sekolah" element={<PrivateShell><HalamanPenggunaPlatform /></PrivateShell>} />
@@ -300,7 +382,11 @@ function RoutedApp() {
     <AppErrorBoundary locationKey={locationKey}>
       <AuthProvider>
         <PlatformControlProvider>
-          <RouteWrapper />
+          <UserIntegrationConsentProvider>
+            <UserMenuAccessProvider>
+              <RouteWrapper />
+            </UserMenuAccessProvider>
+          </UserIntegrationConsentProvider>
         </PlatformControlProvider>
       </AuthProvider>
     </AppErrorBoundary>

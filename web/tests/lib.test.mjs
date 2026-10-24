@@ -81,6 +81,25 @@ test('konfigurasi Firebase root, project alias, dan worker FCM lama tidak tersed
   assert.equal(existsSync(new URL('../../public/firebase-messaging-sw.js', import.meta.url)), false);
 });
 
+test('kontrol AI default nonaktif dan upgrade hanya menonaktifkan konfigurasi yang belum diubah admin', () => {
+  const baseline = readFileSync(
+    new URL('../../supabase/migrations/20261016000300_platform_controls.sql', import.meta.url),
+    'utf8',
+  );
+  const upgrade = readFileSync(
+    new URL('../../supabase/migrations/20261025000100_zero_cost_ai_defaults.sql', import.meta.url),
+    'utf8',
+  );
+  const context = readFileSync(new URL('../src/context/PlatformControlContext.jsx', import.meta.url), 'utf8');
+
+  assert.equal((baseline.match(/default '\{"aiAssistant":false,"aiGeneration":false\}'::jsonb/g) || []).length, 2);
+  assert.match(upgrade, /alter column features set default '\{"aiAssistant":false,"aiGeneration":false\}'::jsonb/);
+  assert.match(upgrade, /where id = 'global'\s+and updated_by is null/);
+  assert.match(context, /features: Object\.freeze\(\{ aiAssistant: false, aiGeneration: false \}\)/);
+  assert.match(context, /features\.aiAssistant : false/);
+  assert.match(context, /features\.aiGeneration : false/);
+});
+
 test('APK tidak lagi menargetkan Firebase Hosting dan memerlukan domain pengganti', () => {
   const gradle = readFileSync(new URL('../../android-apk/app/build.gradle', import.meta.url), 'utf8');
   const manifest = JSON.parse(readFileSync(new URL('../../android-apk/twa-manifest.json', import.meta.url), 'utf8'));
@@ -283,6 +302,7 @@ test('hosted schema audit script contains read-only SQL only', () => {
   assert.match(auditSql, /pg_get_constraintdef/i);
   assert.match(auditSql, /aclexplode/i);
   assert.match(auditSql, /acldefault\('s'/i);
+  assert.match(auditSql, /default_acl\.defaclobjtype::text/i);
   assert.match(auditSql, /acldefault\('n'/i);
   assert.match(auditSql, /acldefault\('r'/i);
   assert.match(auditSql, /acldefault\('f'/i);

@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.ts';
+import { requiresPrivilegedMfa } from '../services/privilegedAccessPolicy.js';
 import '../styles/privileged-mfa.css';
-
-const ROLES_WITH_REQUIRED_MFA = new Set(['admin_sekolah', 'superadmin']);
 
 export default function PrivilegedMfaGate({ role, userId, children }) {
   const [state, setState] = useState({
@@ -11,7 +10,7 @@ export default function PrivilegedMfaGate({ role, userId, children }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const requiresMfa = ROLES_WITH_REQUIRED_MFA.has(role);
+  const requiresMfa = requiresPrivilegedMfa(role);
 
   const load = useCallback(async () => {
     if (!requiresMfa || !userId) {

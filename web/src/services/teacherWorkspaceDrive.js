@@ -1,4 +1,3 @@
-import { supabase } from '../lib/supabase.ts';
 import {
   daftarCatatanKerjaTerenkripsiDrive,
   hapusCatatanKerjaTerenkripsiDrive,
@@ -7,35 +6,12 @@ import {
 import { siapkanCatatanGuru } from './teacherWorkspace.js';
 
 const DRIVE_ID = /^[A-Za-z0-9_-]{1,256}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function entitlementActive(entitlement) {
-  return ['trial', 'active'].includes(entitlement?.status) &&
-    (!entitlement.valid_until || Date.parse(entitlement.valid_until) > Date.now());
-}
-
-async function pastikanHakTulis(tenantId, ownerId) {
-  const [tenantEntitlement, personalEntitlement] = await Promise.all([
-    supabase.from('tenant_entitlements')
-      .select('status,valid_until')
-      .eq('tenant_id', tenantId)
-      .maybeSingle(),
-    supabase.from('personal_entitlements')
-      .select('plan_id,status,valid_until')
-      .eq('user_id', ownerId)
-      .maybeSingle(),
-  ]);
-  if (tenantEntitlement.error) throw tenantEntitlement.error;
-  if (personalEntitlement.error) throw personalEntitlement.error;
-  if (entitlementActive(tenantEntitlement.data)) return;
-  if (entitlementActive(personalEntitlement.data)) {
-    const { data: plan, error } = await supabase.from('billing_plans')
-      .select('allowed_role,active')
-      .eq('id', personalEntitlement.data.plan_id)
-      .maybeSingle();
-    if (error) throw error;
-    if (plan?.active === true && plan.allowed_role === 'guru') return;
+function pastikanHakTulis(tenantId, ownerId) {
+  if (typeof tenantId !== 'string' || !tenantId.trim() || !UUID.test(ownerId || '')) {
+    throw new Error('Identitas sekolah atau akun guru tidak valid.');
   }
-  throw new Error('Langganan sekolah atau langganan pribadi guru yang aktif diperlukan untuk mengubah catatan.');
 }
 
 function buatFile(entry) {
@@ -56,8 +32,18 @@ function payloadEnkripsi(entry, createdAt, updatedAt) {
   };
 }
 
-export async function muatCatatanGuruDrive(accessToken, identity, pageToken = '') {
-  const result = await daftarCatatanKerjaTerenkripsiDrive(accessToken, identity, pageToken);
+export async function muatCatatanGuruDrive(
+  accessToken,
+  identity,
+  pageToken = '',
+  pageSize = 50,
+) {
+  const result = await daftarCatatanKerjaTerenkripsiDrive(
+    accessToken,
+    identity,
+    pageToken,
+    pageSize,
+  );
   return {
     entries: result.entries,
     hasMore: Boolean(result.nextPageToken),
@@ -72,7 +58,7 @@ export async function tambahCatatanGuruDrive(
   identity,
   input,
 ) {
-  await pastikanHakTulis(tenantId, ownerId);
+  pastikanHakTulis(tenantId, ownerId);
   const entry = siapkanCatatanGuru(input);
   const now = new Date().toISOString();
   const uploaded = await unggahBerkasTerenkripsiDrive(
@@ -111,7 +97,7 @@ export async function ubahCatatanGuruDrive(
   if (!/^[a-f0-9]{64}$/.test(expectedCiphertextSha256 || '')) {
     throw new TypeError('Revisi catatan terenkripsi tidak tersedia. Muat ulang sebelum menyimpan.');
   }
-  await pastikanHakTulis(tenantId, ownerId);
+  pastikanHakTulis(tenantId, ownerId);
   const entry = siapkanCatatanGuru(input);
   const updatedAt = new Date(Math.max(Date.now(), Date.parse(createdAt))).toISOString();
   const uploaded = await unggahBerkasTerenkripsiDrive(
@@ -146,6 +132,6 @@ export async function hapusCatatanGuruDrive(
   entryId,
 ) {
   if (!DRIVE_ID.test(entryId || '')) throw new TypeError('ID catatan kerja tidak valid.');
-  await pastikanHakTulis(tenantId, ownerId);
+  pastikanHakTulis(tenantId, ownerId);
   await hapusCatatanKerjaTerenkripsiDrive(accessToken, entryId, identity);
 }

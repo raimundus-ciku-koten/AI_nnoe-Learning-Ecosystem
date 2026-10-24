@@ -30,18 +30,27 @@ test('trial tidak dapat memperoleh role lain, akses data, atau tenant sekolah', 
   assert.match(migration, /'trial-' \|\| new\.id::text/);
 });
 
-test('signup mewajibkan token CAPTCHA dan tidak menerima klaim peran dari klien', () => {
-  assert.match(auth, /if \(!captchaToken\) throw new Error/);
-  assert.match(auth, /captchaToken,\s+emailRedirectTo,\s+data: \{ full_name: nama \}/);
-  assert.doesNotMatch(auth.match(/export async function daftarUjiCoba[\s\S]*?\n}/)?.[0] || '', /role|tenant_id|active_role/);
+test('frontend tidak menyediakan signup atau formulir uji coba publik', () => {
+  assert.doesNotMatch(auth, /supabase\.auth\.signUp|daftarUjiCoba/);
+  assert.doesNotMatch(loginPage, /formTrial|btnDaftarTrial|trialPrompt|Coba gratis 3 hari|VITE_PUBLIC_DEMO_TRIAL_ENABLED/);
+  assert.match(loginPage, /Harga paket dan kontak owner/);
 });
 
-test('trial publik tersembunyi dan diblokir sampai diaktifkan eksplisit dengan Turnstile', () => {
-  assert.match(loginPage, /VITE_PUBLIC_DEMO_TRIAL_ENABLED\?\.trim\(\)\.toLowerCase\(\) === 'true'[\s\S]*?Boolean\(TURNSTILE_SITE_KEY\)/);
-  assert.match(loginPage, /id="trialPrompt" \$\{DEMO_TRIAL_ENABLED \? '' : 'hidden'\}/);
-  assert.match(loginPage, /if \(modeBuatSandi \|\| \(aktif && !DEMO_TRIAL_ENABLED\)\) return;/);
-  assert.match(loginPage, /if \(DEMO_TRIAL_ENABLED\) \{\s+tombolTampilkanTrial\.addEventListener/);
-  assert.match(loginPage, /if \(!DEMO_TRIAL_ENABLED\) \{\s+tampilkanError/);
+test('konfigurasi Supabase lokal menolak pendaftaran Auth baru', async () => {
+  const config = await readFile(new URL('../../supabase/config.toml', import.meta.url), 'utf8');
+  assert.match(config, /\[auth\]\s+enable_signup = false/);
+});
+
+test('publisher metadata iklan tidak ikut dalam aset web publik', async () => {
+  await assert.rejects(
+    readFile(new URL('../public/ads.txt', import.meta.url)),
+    { code: 'ENOENT' },
+  );
+  await assert.rejects(
+    readFile(new URL('../src/components/AdSenseBanner.jsx', import.meta.url)),
+    { code: 'ENOENT' },
+  );
+  assert.doesNotMatch(loginPage, /adsbygoogle|googlesyndication|adsense|admob/i);
 });
 
 test('callback Google tidak menambahkan hash router ke fragmen token OAuth', () => {

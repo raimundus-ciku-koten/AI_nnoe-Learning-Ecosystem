@@ -375,6 +375,15 @@ textarea.input { resize: vertical; min-height: 96px; }
   animation: putar .8s linear infinite;
 }
 .spinner { width: 44px; height: 44px; border-width: 4px; }
+.loading-logo {
+  display: block; width: 72px; height: 72px; object-fit: contain; margin: 0 auto;
+  animation: loading-logo-rakit 1.8s cubic-bezier(.2,.7,.2,1) infinite;
+}
+@keyframes loading-logo-rakit {
+  0% { opacity: .2; transform: scale(.42) rotate(-24deg); clip-path: circle(0); filter: blur(5px); }
+  58% { opacity: 1; transform: scale(1.08) rotate(4deg); clip-path: circle(72%); filter: blur(0); }
+  100% { opacity: 1; transform: scale(1) rotate(0); clip-path: circle(72%); filter: blur(0); }
+}
 .loading-box h3 { margin: 1rem 0 .35rem; font-size: 1.0625rem; }
 .loading-box p { margin: 0 auto; font-size: .875rem; color: var(--muted); }
 @keyframes putar { to { transform: rotate(360deg); } }

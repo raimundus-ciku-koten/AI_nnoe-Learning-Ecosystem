@@ -31,6 +31,7 @@ import { menuUntuk } from '../menu.js';
 import { logout } from '../auth.js';
 import { hentikanChat } from '../services/chatSync.js';
 import { jalankanAksi } from './profilaksi.js';
+import { toast } from './toast.js';
 import {
   esc, ikon, inisial, namaDariUser, ambilProfil,
   htmlAvatar, LABEL_PERAN, linkLuarAman,
@@ -257,7 +258,11 @@ function pasangPenangan() {
     const aksi = t.closest('[data-aksi]');
     if (aksi) {
       tutupPop(true);
-      if (aksi.dataset.aksi !== 'tutup') jalankanAksi(aksi.dataset.aksi);
+      if (aksi.dataset.aksi !== 'tutup') {
+        void jalankanAksi(aksi.dataset.aksi).catch((error) => {
+          toast(error?.message || 'Tindakan profil gagal dijalankan.', 'error');
+        });
+      }
       return;
     }
     if (!t.closest('.ale-menu-wrap')) tutupPop();
@@ -354,7 +359,7 @@ function pasangPenangan() {
 // ============================================================================
 // HEADER / TOPBAR UPDATE
 // ============================================================================
-export function perbaruiHeader({ nama, sekolah, langganan, logoSekolah } = {}) {
+export function perbaruiHeader({ nama, sekolah, logoSekolah } = {}) {
   const n = document.getElementById('aleNamaTop');
   if (n && nama) n.textContent = nama;
 
@@ -363,9 +368,6 @@ export function perbaruiHeader({ nama, sekolah, langganan, logoSekolah } = {}) {
 
   const a = document.querySelector('#aleAvatarWrap .ale-avatar');
   if (a && nama && a.tagName !== 'IMG') a.textContent = inisial(nama);
-
-  const l = document.getElementById('aleLangganan');
-  if (l) l.hidden = !langganan;
 
   const g = document.getElementById('aleLogoSekolah');
   if (g && /^https:\/\//i.test(logoSekolah || '')) {
@@ -519,10 +521,6 @@ export function topbar() {
         </div>
 
         <div class="ale-topbar-aksi">
-          <span class="ale-langganan" id="aleLangganan"${profil.langganan ? '' : ' hidden'}>
-            ${ik('centang')}Berlangganan
-          </span>
-
           <img class="ale-logo-sekolah" id="aleLogoSekolah" alt="Logo sekolah"
                width="40" height="40"${logo ? ` src="${esc(logo)}"` : ' hidden'}>
 
@@ -554,9 +552,7 @@ export function topbar() {
             <div class="ale-pop ale-pop-profil" id="aleMenuProfil"
                  role="menu" aria-label="Menu profil" hidden>
               <p class="ale-pop-judul" role="presentation">Profil</p>
-              ${item('foto-tambah', 'unggah',  'Ubah foto profil',           'sky')}
               ${item('notif',       'lonceng', 'Aktifkan notifikasi',        'amber')}
-              ${item('foto-hapus',  'sampah',  'Hapus foto profil',          'rose')}
               <hr class="ale-pop-sekat" role="separator">
               ${item('kelas-mapel', 'kartuid', 'Kelas & mapel saya',         'sky')}
               ${item('api-key',     'kunciapi','AI & Layanan',              'cyan')}

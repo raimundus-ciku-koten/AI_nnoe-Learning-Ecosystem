@@ -68,6 +68,7 @@ function modulSiap() {
 export function halamanPerencanaan(wadah, arg = {}) {
   const params = arg.params || arg;
   const jenisQuery = new URLSearchParams(arg.search || '').get('jenis');
+  const canGenerateAi = arg.aiGenerationEnabled === true;
 
   if (!modulSiap()) {
     return halamanPlaceholder(wadah);
@@ -122,7 +123,7 @@ export function halamanPerencanaan(wadah, arg = {}) {
   }
 
   if (PERAN_ADMIN.has(role)) {
-    return halamanPerencanaanAdmin(wadah, arg, { role, tenantId });
+    return halamanPerencanaanAdmin(wadah, arg, { role, tenantId, canGenerateAi });
   }
 
   return halamanHub(wadah, arg, {
@@ -132,10 +133,11 @@ export function halamanPerencanaan(wadah, arg = {}) {
     guruNama: user.displayName ?? '',
     baseRoute: '#/perencanaan',
     jenisQuery,
+    canGenerateAi,
   });
 }
 
-function halamanPerencanaanAdmin(wadah, arg, { role, tenantId }) {
+function halamanPerencanaanAdmin(wadah, arg, { role, tenantId, canGenerateAi }) {
   let aktif = true;
   let cleanup = () => {};
   const params = arg.params || {};
@@ -182,6 +184,7 @@ function halamanPerencanaanAdmin(wadah, arg, { role, tenantId }) {
       guruUid,
       jenisQuery,
       params,
+      canGenerateAi,
     });
   }).catch((error) => {
     if (!aktif) return;
@@ -195,7 +198,10 @@ function halamanPerencanaanAdmin(wadah, arg, { role, tenantId }) {
   };
 }
 
-function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, guruUid = '', jenisQuery = '', params = arg.params || arg }) {
+function halamanHub(wadah, arg, {
+  uid, tenantId, admin, guruNama, baseRoute, guruUid = '', jenisQuery = '',
+  canGenerateAi = false, params = arg.params || arg,
+}) {
   const queryGuru = guruUid ? `?guru=${encodeURIComponent(guruUid)}` : '';
   const jenisPilihan = Object.values(JENIS).includes(jenisQuery) ? jenisQuery : '';
   const tautanPaket = (id = '', jenis = '') =>
@@ -211,6 +217,7 @@ function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, gur
       search: arg.search,
       canEditPackage: !admin,
       canGenerateDocuments: !admin,
+      canGenerateAi: !admin && canGenerateAi,
       routeBase: baseRoute,
       guruUid,
     });
@@ -243,7 +250,7 @@ function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, gur
   const kartu = (p) => h('li', { class: 'kartu kartu-paket' },
     h('h3', null, p.mapel),
     h('p', { class: 'meta' },
-      `${t('umum.kelas')} ${p.kelas} · ${t('umum.fase')} ${p.fase} · ${p.tahunAjaran}`),
+      `${p.jenjang ? `${p.jenjang.toUpperCase()} · ` : ''}${t('umum.kelas')} ${p.kelas} · ${t('umum.fase')} ${p.fase} · ${p.tahunAjaran}`),
     h('div', { class: 'bilah-aksi' },
       h('a', {
         class: 'tombol',

@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase.ts';
 
 const BATCH_SIZE = 200;
+const ROLE_GURU_ROSTER = new Set(['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']);
 
 function validasiKepemilikan(student) {
   if (!student.ownerId || !student.tenantId) {
@@ -24,16 +25,34 @@ function dariBaris(row) {
   };
 }
 
-export async function muatSiswa(ownerId) {
+export async function muatSiswa(ownerId, tenantId = '') {
   if (!ownerId) throw new Error('Pengguna belum masuk.');
-  const { data, error } = await supabase
+  let query = supabase
     .from('students')
     .select('id,nama,kelas,nisn,jk,kode_unik,created_at,updated_at')
-    .eq('owner_id', ownerId)
-    .order('nama');
+    .eq('owner_id', ownerId);
+  if (tenantId) query = query.eq('tenant_id', tenantId);
+  const { data, error } = await query.order('nama');
   if (error) throw error;
   if (!Array.isArray(data)) throw new Error('Supabase tidak mengembalikan daftar siswa yang valid.');
   return data.map(dariBaris);
+}
+
+export async function muatGuruPemilikRoster(tenantId) {
+  if (typeof tenantId !== 'string' || !tenantId.trim()) {
+    throw new TypeError('Sekolah tujuan roster tidak valid.');
+  }
+  const { data, error } = await supabase.rpc('student_roster_teacher_candidates', {
+    p_tenant_id: tenantId,
+  });
+  if (error) throw error;
+  if (!Array.isArray(data) || data.some((profile) =>
+    typeof profile.id !== 'string' ||
+    typeof profile.nama !== 'string' ||
+    !ROLE_GURU_ROSTER.has(profile.role))) {
+    throw new Error('Supabase mengembalikan daftar guru pemilik roster yang tidak valid.');
+  }
+  return data.map(({ id, nama, role }) => ({ id, nama, role }));
 }
 
 export async function tambahSiswa(student) {

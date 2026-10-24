@@ -89,6 +89,9 @@ legend { font-weight: 700; padding: 0 6px; }
 .dokumen h1 { font-size: 1.25rem; text-transform: uppercase; text-align: center; margin: 4px 0; color: var(--ungu); }
 .dokumen h2 { font-size: 1.05rem; color: var(--ungu); border-bottom: 2px solid var(--hijau); padding-bottom: 2px; }
 .kop { text-align: center; margin-bottom: 12px; } .kop-sekolah { font-weight: 700; margin: 0; } .kop-sub { margin: 0; color: #374151; }
+.kop-gambar { display: block; max-width: 100%; max-height: 50mm; margin: 0 auto 6mm; object-fit: contain; }
+.review-editable { outline: 1px dashed #6b46c1; outline-offset: 2px; background: #f5f3ff; cursor: text; }
+.teks-tinjauan { white-space: pre-line; }
 .rumus { font-style: italic; } .catatan { font-size: .85rem; color: #4b5563; }
 .ttd { margin-top: 28px; break-inside: avoid; } .ttd-baris { display: flex; justify-content: space-between; text-align: center; gap: 16px; }
 .ttd-kolom { flex: 1; } .ttd-ruang { height: 64px; } .ttd-nama { font-weight: 700; text-decoration: underline; margin: 0; }
@@ -127,6 +130,7 @@ legend { font-weight: 700; padding: 0 6px; }
   body, .app, .main { background: #fff !important; display: block !important; padding: 0 !important; }
   .dokumen { box-shadow: none; padding: 0; font-size: 12pt; }
   .dokumen .tbl { font-size: 10.5pt; }
+  .review-editable { outline: 0; background: transparent; }
   .tabel-bungkus { overflow: visible; }
   .tbl thead { display: table-header-group; }
   .tbl tr, .blok-tp, .blok-pertemuan { break-inside: avoid; }

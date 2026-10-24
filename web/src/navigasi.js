@@ -8,12 +8,17 @@ export const GRUP_MENU = [
     item: [tautan('Dashboard', '/dashboard', 'home')],
   },
   {
+    id: 'ruang-kelas', label: 'Ruang Kelas', ikon: 'book',
+    item: [tautan('Ruang Kelas', '/ruang-kelas', 'book')],
+  },
+  {
     id: 'chat', label: 'Asisten & Chat', ikon: 'chat',
     item: [
       tautan('Asisten AI', '/asisten', 'spark'),
       tautan('Semua Percakapan', '/chat', 'chat'),
       tautan('Kontak', '/chat/kontak', 'users'),
       tautan('Grup', '/chat/grup', 'users'),
+      tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
       tautan('Testimoni', '/testimoni', 'chat'),
     ],
   },
@@ -85,6 +90,7 @@ export const GRUP_MENU = [
   {
     id: 'refleksi', label: 'Refleksi & Pengembangan Profesional', ikon: 'spark',
     item: [
+      tautan('Catatan Kerja Pribadi', '/guru/catatan-pribadi', 'file'),
       tautan('Refleksi Pembelajaran', '/refleksi/pembelajaran', 'refresh'),
       tautan('Supervisi & Observasi', '/refleksi/supervisi', 'users'),
       tautan('Portofolio Guru', '/refleksi/portofolio', 'file'),
@@ -145,16 +151,21 @@ const MENU_SISWA = [
   grup('siswa-dashboard', 'Dashboard', 'home', [
     tautan('Dashboard', '/dashboard', 'home'),
   ]),
+  grup('siswa-ruang-kelas', 'Ruang Kelas', 'book', [
+    tautan('Ruang Kelas', '/ruang-kelas', 'book'),
+  ]),
   grup('siswa-belajar', 'Ruang Belajar', 'book', [
     tautan('Jadwal dan Tugas', '/siswa/jadwal', 'calendar'),
     tautan('Materi', '/siswa/materi', 'book'),
     tautan('Ujian Saya', '/siswa/ujian', 'check'),
     tautan('Nilai Saya', '/siswa/nilai', 'chart'),
+    tautan('Rapor Resmi', '/siswa/rapor', 'file'),
   ]),
-  grup('siswa-akun', 'Akun dan Langganan', 'settings', [
-    tautan('Paket dan Langganan', '/purchase', 'badge'),
+  grup('siswa-akun', 'Informasi Paket', 'settings', [
+    tautan('Harga Paket', '/purchase', 'badge'),
   ]),
   grup('siswa-chat', 'Komunikasi', 'chat', [
+    tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
     tautan('Grup', '/chat/grup', 'users'),
@@ -169,6 +180,7 @@ const MENU_ORTU = [
     tautan('Nilai dan Kehadiran', '/orang-tua/nilai-kehadiran', 'chart'),
   ]),
   grup('ortu-komunikasi', 'Komunikasi', 'chat', [
+    tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
   ]),
@@ -182,12 +194,16 @@ export const MENU_OPERATOR = [
   grup('operator-dashboard', 'Dashboard', 'home', [
     tautan('Dashboard', '/dashboard', 'home'),
   ]),
+  grup('operator-ruang-kelas', 'Ruang Kelas', 'book', [
+    tautan('Ruang Kelas', '/ruang-kelas', 'book'),
+  ]),
   grup('operator-sekolah', 'Operasional Sekolah', 'database', [
     tautan('Data Siswa', '/datadasar/siswa', 'users'),
     tautan('Barcode & Kartu Absensi', '/datadasar/barcode', 'qr'),
     tautan('Presensi', '/pelaksanaan/presensi', 'check'),
   ]),
   grup('operator-komunikasi', 'Komunikasi', 'chat', [
+    tautan('Kanal Pengumuman', '/pengumuman', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
     tautan('Grup', '/chat/grup', 'users'),
@@ -198,14 +214,17 @@ export const MENU_ADMIN_SEKOLAH = [
   grup('admin-dashboard', 'Dashboard Admin', 'chart', [
     tautan('Ringkasan Statistik', '/dashboard', 'chart'),
   ]),
+  grup('admin-ruang-kelas', 'Ruang Kelas', 'book', [
+    tautan('Ruang Kelas', '/ruang-kelas', 'book'),
+  ]),
   grup('admin-monitoring', 'Monitoring', 'chart', [
     tautan('Aktivitas Terbaru', '/admin/aktivitas', 'file'),
     tautan('Monitoring Ujian', '/admin/dashboard/ujian', 'check'),
     tautan('Monitoring Chat', '/admin/dashboard/chat', 'chat'),
   ]),
   grup('admin-instansi', 'Manajemen Instansi', 'database', [
-    tautan('Profil Sekolah', '/admin/instansi/profil', 'user'),
-    tautan('Tahun Ajaran', '/admin/instansi/tahun-ajaran', 'calendar'),
+    tautan('Profil Sekolah', '/datadasar/profil', 'user'),
+    tautan('Tahun Ajaran', '/datadasar/ta', 'calendar'),
     tautan('Semester', '/admin/instansi/semester', 'calendar'),
     tautan('Unit dan Jenjang', '/admin/instansi/unit', 'book'),
   ]),
@@ -223,11 +242,11 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Peran dan Hak Akses', '/admin/pengguna/peran', 'settings'),
   ]),
   grup('admin-akademik', 'Manajemen Akademik', 'book', [
-    tautan('Kelas', '/admin/akademik/kelas', 'book'),
+    tautan('Kelas', '/datadasar/kelas', 'book'),
     tautan('Mata Pelajaran', '/admin/akademik/mapel', 'book'),
-    tautan('Jadwal', '/admin/akademik/jadwal', 'calendar'),
+    tautan('Jadwal', '/datadasar/jadwal', 'calendar'),
     tautan('Kelompok', '/admin/akademik/kelompok', 'users'),
-    tautan('Denah Duduk', '/admin/akademik/denah', 'grid'),
+    tautan('Denah Duduk', '/datadasar/denah', 'grid'),
   ]),
   grup('admin-perencanaan', 'Manajemen Perencanaan', 'file', [
     tautan('Paket Guru', '/admin/perencanaan/paket', 'file'),
@@ -236,6 +255,7 @@ export const MENU_ADMIN_SEKOLAH = [
   ]),
   grup('admin-asesmen', 'Manajemen Asesmen', 'check', [
     tautan('Bank Soal', '/asesmen/bank-soal', 'book'),
+    tautan('Pengesahan Rapor', '/admin/akademik/rapor', 'file'),
     tautan('Paket Ujian', '/admin/asesmen/paket', 'file'),
     tautan('Jadwal Ujian', '/admin/asesmen/jadwal', 'calendar'),
     tautan('Monitoring Ujian', '/admin/asesmen/monitoring', 'chart'),
@@ -247,15 +267,13 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Perpustakaan Digital', '/admin/konten/perpustakaan', 'file'),
   ]),
   grup('admin-komunikasi', 'Manajemen Komunikasi', 'chat', [
-    tautan('Kanal Pengumuman', '/admin/komunikasi/pengumuman', 'file'),
+    tautan('Kanal Pengumuman', '/pengumuman', 'file'),
     tautan('Broadcast', '/admin/komunikasi/broadcast', 'users'),
     tautan('Monitoring Agregat', '/admin/komunikasi/monitoring', 'chart'),
     tautan('Moderasi Testimoni', '/testimoni', 'chat'),
   ]),
   grup('admin-keuangan', 'Manajemen Keuangan', 'chart', [
-    tautan('Purchase Lisensi', '/purchase', 'file'),
-    tautan('Pembayaran', '/admin/keuangan/pembayaran', 'file'),
-    tautan('Tagihan', '/admin/keuangan/tagihan', 'file'),
+    tautan('Harga Paket', '/purchase', 'file'),
     tautan('Laporan Keuangan', '/admin/keuangan/laporan', 'chart'),
   ]),
   grup('admin-laporan', 'Laporan dan Analitik', 'chart', [
@@ -281,13 +299,20 @@ export const MENU_SUPERADMIN = [
   grup('platform-dashboard', 'Dashboard Super Admin', 'chart', [
     tautan('Statistik Global', '/platform/dashboard/statistik', 'chart'),
   ]),
+  grup('platform-akademik', 'Data Akademik Sekolah', 'database', [
+    tautan('Profil dan Kop Sekolah', '/datadasar/profil', 'file'),
+    tautan('Impor Data Siswa', '/datadasar/siswa', 'users'),
+  ]),
+  grup('platform-ruang-kelas', 'Ruang Kelas', 'book', [
+    tautan('Ruang Kelas', '/ruang-kelas', 'book'),
+  ]),
   grup('platform-monitoring', 'Monitoring Platform', 'chart', [
     tautan('Kesehatan Sistem', '/platform/dashboard/kesehatan', 'settings'),
     tautan('Log Aktivitas', '/platform/dashboard/aktivitas', 'file'),
   ]),
   grup('platform-tenant', 'Manajemen Tenant', 'database', [
     tautan('Daftar Sekolah', '/platform/tenant/sekolah', 'users'),
-    tautan('Langganan', '/platform/tenant/langganan', 'file'),
+    tautan('Status Tenant', '/platform/tenant/status', 'file'),
     tautan('Paket', '/platform/tenant/paket', 'book'),
   ]),
   grup('platform-chat', 'Chat Dukungan', 'chat', [

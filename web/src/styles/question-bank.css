@@ -13,6 +13,31 @@
 .question-bank-editor form { display: grid; gap: 1rem; }
 .question-bank-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
 .question-bank-ai-topic { grid-column: 1 / -1; }
+.question-bank-ai-mode {
+  display: grid;
+  gap: .75rem;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid #cbd5df;
+  border-radius: .7rem;
+}
+.question-bank-ai-mode legend { padding: 0 .35rem; font-weight: 750; }
+.question-bank-page .question-bank-ai-mode-option {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+  font-weight: 400;
+}
+.question-bank-ai-mode-option input { flex: 0 0 auto; width: 1rem; min-height: 1rem; margin-top: .2rem; }
+.question-bank-ai-mode-option span { display: grid; gap: .2rem; }
+.question-bank-ai-mode-option small { color: #536272; font-size: .9rem; }
+.question-bank-ai-disclosure {
+  padding: .75rem;
+  border-radius: .6rem;
+  background: #fff7ed;
+  color: #7c3812;
+}
+.question-bank-ai-disclosure p { margin: 0 0 .6rem; }
 .question-bank-ai-button {
   align-self: end;
   min-height: 2.7rem;

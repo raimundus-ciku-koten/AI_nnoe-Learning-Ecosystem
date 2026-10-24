@@ -1,0 +1,139 @@
+.classroom-activity-report {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 1200px);
+  margin: 0 auto;
+  color: #24334b;
+}
+.classroom-activity-hero,
+.classroom-activity-panel {
+  padding: clamp(1rem, 2.4vw, 1.4rem);
+  border: 1px solid #e1e8f0;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(20 36 72 / .045);
+}
+.classroom-activity-hero {
+  display: grid;
+  gap: .6rem;
+  background:
+    radial-gradient(ellipse at 90% 8%, rgb(19 185 171 / .14), transparent 34%),
+    linear-gradient(130deg, #fff 10%, #f4f8ff 100%);
+}
+.classroom-activity-hero h1 { margin: 0; color: #18233d; }
+.classroom-activity-hero > p { margin: 0; line-height: 1.6; }
+.classroom-activity-kicker {
+  color: #0f766e;
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.classroom-activity-notice {
+  padding: .7rem .9rem;
+  border-left: 3px solid #e7b65c;
+  border-radius: .45rem;
+  background: #fffbef;
+  color: #685329;
+  font-size: .83rem;
+}
+.classroom-activity-filters {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.2fr) repeat(3, minmax(140px, .8fr));
+  gap: .7rem;
+}
+.classroom-activity-filters label {
+  display: grid;
+  gap: .35rem;
+  color: #42516a;
+  font-size: .8rem;
+  font-weight: 750;
+}
+.classroom-activity-filters select,
+.classroom-activity-filters input {
+  width: 100%;
+  min-width: 0;
+  padding: .62rem .7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .58rem;
+  background: #fff;
+  color: #24334b;
+  font: inherit;
+  font-size: .86rem;
+}
+.classroom-activity-report :focus-visible {
+  outline: 3px solid rgb(20 184 166 / .24);
+  outline-offset: 1px;
+}
+.classroom-activity-actions {
+  display: flex;
+  justify-content: end;
+  gap: .5rem;
+  margin-top: .8rem;
+}
+.classroom-activity-report button {
+  min-height: 2.35rem;
+  padding: .48rem .78rem;
+  border: 1px solid #3730a3;
+  border-radius: .58rem;
+  background: #3730a3;
+  color: #fff;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+.classroom-activity-report button.secondary {
+  border-color: #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+.classroom-activity-report button:disabled { opacity: .6; cursor: progress; }
+.classroom-activity-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .7rem;
+}
+.classroom-activity-metrics article {
+  display: grid;
+  gap: .3rem;
+  padding: .9rem;
+  border: 1px solid #e1e8f0;
+  border-radius: .8rem;
+  background: #fff;
+}
+.classroom-activity-metrics span { color: #68768b; font-size: .78rem; }
+.classroom-activity-metrics strong { color: #18233d; font-size: 1.25rem; }
+.classroom-activity-table-wrap { overflow-x: auto; }
+.classroom-activity-report table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: .83rem;
+}
+.classroom-activity-report th,
+.classroom-activity-report td {
+  padding: .72rem .6rem;
+  border-bottom: 1px solid #e8edf3;
+  vertical-align: top;
+}
+.classroom-activity-report th { color: #526177; font-size: .75rem; white-space: nowrap; }
+.classroom-activity-report td p { margin: .25rem 0 0; color: #526177; }
+.classroom-activity-report td small { display: block; margin-top: .25rem; color: #68768b; line-height: 1.5; }
+.classroom-activity-error,
+.classroom-activity-empty {
+  padding: 1rem;
+  border: 1px solid #e1e8f0;
+  border-radius: .8rem;
+  background: #fff;
+  color: #59677d;
+}
+.classroom-activity-error { border-color: #f0c8c5; color: #9d302b; }
+@media (max-width: 860px) {
+  .classroom-activity-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .classroom-activity-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .classroom-activity-filters { grid-template-columns: 1fr; }
+  .classroom-activity-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

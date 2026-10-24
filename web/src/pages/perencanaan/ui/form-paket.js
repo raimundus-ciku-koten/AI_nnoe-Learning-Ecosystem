@@ -8,10 +8,17 @@ import { h, dialog } from './dom.js';
 import { t } from '../i18n/index.js';
 import { NAMA_HARI, BATAS } from '../constants.js';
 import { validasiKonteks } from '../engine/validator.js';
+import {
+  faseUntukKelas,
+  inferJenjangDanKelas,
+  JENJANG_PEMBELAJARAN,
+  normalisasiFase,
+  jenjangUntukFase,
+} from '../engine/jenjangPembelajaran.js';
 
 /** Nilai awal. Tanggal contoh mengikuti bawaan di GAS; guru wajib memeriksanya. */
 export const KONTEKS_BAWAAN = Object.freeze({
-  mapel: '', kelas: '', fase: 'E', tahunAjaran: '2026/2027',
+  mapel: '', jenjang: 'sma', kelas: 'X', fase: 'E', tahunAjaran: '2026/2027',
   jpPerPekan: 4, totalJP: null, hariPembelajaran: [],
   ganjil: { mulai: '2026-07-13', selesai: '2026-12-19' },
   genap: { mulai: '2027-01-05', selesai: '2027-06-19' },
@@ -30,6 +37,14 @@ let hitungId = 0;
 export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
   const A = structuredClone(awal);
   A.identitas = { ...KONTEKS_BAWAAN.identitas, ...(A.identitas ?? {}) };
+  const kelasAwal = inferJenjangDanKelas({
+    jenjang: A.jenjang || jenjangUntukFase(A.fase),
+    kelas: A.kelas,
+    fase: A.fase,
+  });
+  A.jenjang = kelasAwal.jenjang;
+  A.kelas = kelasAwal.kelas;
+  A.fase = normalisasiFase(A.fase) || faseUntukKelas(A.jenjang, A.kelas);
   const uid = `fp${++hitungId}`;
   const refGalat = {};
 
@@ -51,8 +66,30 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
   const input = (nama, tipe, nilai, extra = {}) => h('input', { type: tipe, name: nama, value: nilai ?? '', autocomplete: 'off', ...extra });
 
   const mapel = input('mapel', 'text', A.mapel, { maxlength: BATAS.TEKS_PENDEK, required: true });
-  const kelas = input('kelas', 'text', A.kelas, { maxlength: 20, required: true, placeholder: 'X' });
-  const fase = h('select', { name: 'fase' }, ['A', 'B', 'C', 'D', 'E', 'F'].map((f) => h('option', { value: f, selected: f === A.fase }, f)));
+  const jenjang = h('select', { name: 'jenjang' },
+    Object.entries(JENJANG_PEMBELAJARAN).map(([value, level]) =>
+      h('option', { value, selected: value === A.jenjang }, level.label)));
+  const daftarKelas = (level, selected) => {
+    const values = [...JENJANG_PEMBELAJARAN[level].grades];
+    if (selected && !values.some((value) => value.toLocaleUpperCase('id-ID') === selected.toLocaleUpperCase('id-ID'))) {
+      values.unshift(selected);
+    }
+    return values;
+  };
+  const kelas = h('select', { name: 'kelas', required: true },
+    daftarKelas(A.jenjang, A.kelas).map((value) =>
+      h('option', { value, selected: value === A.kelas }, value)));
+  const fase = input('fase', 'text', A.fase, { readonly: true, 'aria-readonly': 'true' });
+  const perbaruiKelasDanFase = ({ gantiKelas = false } = {}) => {
+    if (gantiKelas) {
+      kelas.replaceChildren(...JENJANG_PEMBELAJARAN[jenjang.value].grades.map((value, index) =>
+        h('option', { value, selected: index === 0 }, value)));
+      kelas.value = JENJANG_PEMBELAJARAN[jenjang.value].grades[0];
+    }
+    fase.value = faseUntukKelas(jenjang.value, kelas.value) || '';
+  };
+  jenjang.addEventListener('change', () => perbaruiKelasDanFase({ gantiKelas: true }));
+  kelas.addEventListener('change', () => perbaruiKelasDanFase());
   const ta = input('tahunAjaran', 'text', A.tahunAjaran, { maxlength: 9, placeholder: '2026/2027', pattern: '\\d{4}/\\d{4}' });
   const jp = input('jpPerPekan', 'number', A.jpPerPekan, { min: BATAS.JP_PER_PEKAN_MIN, max: BATAS.JP_PER_PEKAN_MAX, step: 1, inputmode: 'numeric', required: true });
   const totalJP = input('totalJP', 'number', A.totalJP ?? '', { min: BATAS.TOTAL_JP_MIN, max: BATAS.TOTAL_JP_MAX, step: 1, inputmode: 'numeric' });
@@ -114,8 +151,10 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
     h('fieldset', null, h('legend', null, t('form.bagianMapel')),
       h('div', { class: 'grid-form' },
         kolom('mapel', t('form.mapel'), mapel, { lebar: 'lebar-2', hint: t('form.mapelHint') }),
+        kolom('jenjang', t('form.jenjang'), jenjang),
         kolom('kelas', t('form.kelas'), kelas),
-        kolom('fase', t('form.fase'), fase),
+        kolom('fase', t('form.fase'), fase, { hint: t('form.faseKelasHint') }),
+        h('p', { class: 'kotak kotak-info', role: 'note' }, t('form.cpKelasCatatan')),
         kolom('tahunAjaran', t('form.tahunAjaran'), ta),
         kolom('jpPerPekan', t('form.jpPerPekan'), jp),
         kolom('totalJP', t('form.totalJP'), totalJP, { hint: t('form.totalJPHint') }))),
@@ -144,7 +183,7 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
 
   /** Kumpulkan nilai mentah dari kontrol. */
   const kumpulkan = () => ({
-    mapel: mapel.value, kelas: kelas.value, fase: fase.value, tahunAjaran: ta.value,
+    mapel: mapel.value, jenjang: jenjang.value, kelas: kelas.value, fase: fase.value, tahunAjaran: ta.value,
     jpPerPekan: jp.value, totalJP: totalJP.value,
     hariPembelajaran: cekHari.map((l) => l.firstChild).filter((c) => c.checked).map((c) => Number(c.value)),
     ganjilMulai: gm.value, ganjilSelesai: gs.value, genapMulai: nm.value, genapSelesai: ns.value,
@@ -190,7 +229,7 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
     try {
       const { nilai } = hasil;
       await onSimpan({
-        mapel: nilai.mapel, kelas: nilai.kelas, fase: nilai.fase, tahunAjaran: nilai.tahunAjaran,
+        mapel: nilai.mapel, jenjang: nilai.jenjang, kelas: nilai.kelas, fase: nilai.fase, tahunAjaran: nilai.tahunAjaran,
         jpPerPekan: nilai.jpPerPekan, totalJP: nilai.totalJP,
         hariPembelajaran: mentah.hariPembelajaran.sort((a, b) => a - b),
         ganjil: nilai.ganjil, genap: nilai.genap, kalender: nilai.kalender, identitas: nilai.identitas

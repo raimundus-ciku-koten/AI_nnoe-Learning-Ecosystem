@@ -350,20 +350,18 @@ body.ale-kunci { overflow: hidden; }
   padding-left: 1rem;
 }
 
-.ale-langganan {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.8rem;
-  border: 1px solid #a7f3d0;
-  border-radius: 9999px;
-  background: #ecfdf5;
-  color: #065f46;
-  font-size: 0.82rem;
-  font-weight: 700;
-  white-space: nowrap;
+.ale-topbar-audio {
+  min-height: 2.35rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--ale-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ale-ink);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
 }
-.ale-langganan .ale-ikon { width: 1.05rem; height: 1.05rem; color: #047857; }
+.ale-topbar-audio[aria-pressed="false"] { color: var(--ale-muted); }
 
 .ale-logo-sekolah {
   width: 2.5rem; height: 2.5rem;
@@ -1899,8 +1897,6 @@ textarea.input {
 /* Turunkan grid dashboard 2 kolom → 1 kolom */
 @media (max-width: 1180px) {
   .ale-grid { grid-template-columns: minmax(0, 1fr); }
-  /* beri ruang lebih untuk judul halaman di topbar */
-  .ale-langganan { display: none; }
 }
 
 /* Mobile: sidebar offcanvas, app jadi 1 kolom */
@@ -1919,7 +1915,8 @@ textarea.input {
     transition: none;
   }
   .ale-topbar-judul { margin-left: 0.85rem; padding-left: 0.7rem; }
-  .ale-topbar-aksi { gap: 0.5rem; max-width: 45%; padding-left: 0.5rem; }
+  .ale-topbar-aksi { gap: 0.5rem; max-width: 55%; padding-left: 0.5rem; }
+  .ale-topbar-audio { padding-inline: 0.5rem; font-size: 0.68rem; }
 
   /* Sidebar = offcanvas */
   .ale-side {
@@ -1974,7 +1971,6 @@ textarea.input {
 
 /* Ponsel sedang: sembunyikan elemen sekunder di topbar */
 @media (max-width: 720px) {
-  .ale-langganan,
   .ale-logo-sekolah,
   .ale-akun-teks,
   .ale-akun > .ale-chev { display: none; }

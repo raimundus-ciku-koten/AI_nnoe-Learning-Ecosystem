@@ -6,12 +6,17 @@
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '../styles/dashboard.css';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useUserMenuAccess } from '../context/UserMenuAccessContext.jsx';
+import { useUserIntegrationConsent } from '../context/UserIntegrationConsentContext.jsx';
 import { menuUntukPeran, cariMenu } from '../navigasi.js';
 import { NAMA_APLIKASI } from '../config.js';
 import { LABEL_PERAN, inisial, sideTutupTersimpan, terapkanSideTutup, toast } from '../ui.js';
 import Ikon from './Ikon.jsx';
 import { urlFotoAman } from '../services/protectedMedia.js';
 import { isEconomyMode } from '../services/economyMode.js';
+import { canOpenRolePath } from '../services/roleAccess.js';
+import { isMenuPathDisabled } from '../services/menuAccessPolicy.js';
+import { aturAudioNotifikasi, audioNotifikasiAktif } from '../services/announcementAudio.js';
 import '../styles/economy-mode.css';
 
 const MQ_DESKTOP = '(min-width: 961px)';
@@ -35,15 +40,31 @@ function useDesktop() {
 
 export default function AppShell({ path, search = '', judulHalaman, children }) {
   const { user, profile, role, activeRole, roles = [], logout, switchRole } = useAuth();
+  const { disabledKeys } = useUserMenuAccess();
+  const { openPreferences: openIntegrationPreferences } = useUserIntegrationConsent();
   const hematData = isEconomyMode();
   const desktop = useDesktop();
-  const daftarMenu = menuUntukPeran(role);
-  const menu = cariMenu(path, search, role);
+  const peranAktif = activeRole || role;
+  const bolehBukaKelas = canOpenRolePath(peranAktif, '/datadasar/kelas')
+    && !isMenuPathDisabled(disabledKeys, peranAktif, '/datadasar/kelas');
+  const bolehBukaAi = canOpenRolePath(peranAktif, '/pengaturan/api-ai')
+    && !isMenuPathDisabled(disabledKeys, peranAktif, '/pengaturan/api-ai');
+  const bolehBukaGoogle = canOpenRolePath(peranAktif, '/pengaturan/google')
+    && !isMenuPathDisabled(disabledKeys, peranAktif, '/pengaturan/google');
+  const daftarMenu = menuUntukPeran(peranAktif)
+    .filter((group) => !disabledKeys.has(`group:${group.id}`))
+    .map((group) => ({
+      ...group,
+      item: group.item.filter((item) => !disabledKeys.has(`path:${item.path}`)),
+    }))
+    .filter((group) => group.item.length > 0);
+  const menu = cariMenu(path, search, peranAktif);
   const judulAktif = judulHalaman || menu?.item.label || 'Halaman';
 
   const [sideTutup, setSideTutup] = useState(sideTutupTersimpan);
   const [mobileBuka, setMobileBuka] = useState(false);
   const [profilBuka, setProfilBuka] = useState(false);
+  const [suaraAktif, setSuaraAktif] = useState(audioNotifikasiAktif);
   const [keluar, setKeluar] = useState(false);
   const [menggantiPeran, setMenggantiPeran] = useState(false);
   const [aksiProfil, setAksiProfil] = useState('');
@@ -150,14 +171,13 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
       await jalankanAksi(aksi);
     } catch (error) {
       console.error(`[profil] Gagal menjalankan aksi ${aksi}:`, error);
-      toast('Menu profil gagal dijalankan. Muat ulang halaman lalu coba lagi.', 'error');
+      toast(error?.message || 'Menu profil gagal dijalankan. Muat ulang halaman lalu coba lagi.', 'error');
     } finally {
       setAksiProfil('');
     }
   }
 
   const nama = user?.displayName || 'Pengguna';
-  const peranAktif = activeRole || role;
   const peran = LABEL_PERAN[peranAktif] || (peranAktif ? peranAktif : 'Pengguna');
   const subNama = profile?.sekolah || peran;
   const menuTerbuka = desktop ? !sideTutup : mobileBuka;
@@ -198,11 +218,18 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
           </div>
 
           <div className="ale-topbar-aksi">
-            {profile?.langganan && (
-              <span className="ale-langganan">
-                <Ikon nama="badge" /> Langganan aktif
-              </span>
-            )}
+            <button
+              type="button"
+              className="ale-topbar-audio"
+              aria-pressed={suaraAktif}
+              aria-label={suaraAktif ? 'Matikan suara pemberitahuan' : 'Aktifkan suara pemberitahuan'}
+              title={suaraAktif ? 'Suara pemberitahuan aktif' : 'Suara pemberitahuan nonaktif'}
+              onClick={() => {
+                const berikutnya = !suaraAktif;
+                aturAudioNotifikasi(berikutnya);
+                setSuaraAktif(berikutnya);
+              }}
+            >{suaraAktif ? 'Suara aktif' : 'Suara nonaktif'}</button>
             {!hematData && profile?.logoSekolah && (
               <img className="ale-logo-sekolah" src={profile.logoSekolah} alt="Logo sekolah"
                    referrerPolicy="no-referrer" width="40" height="40" />
@@ -246,30 +273,32 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
                   </label>
                 )}
                 <hr className="ale-pop-sekat" />
-                <button type="button" className="ale-pop-item ale-pw-sky"
-                        onClick={() => handleAksiProfil('foto-tambah')} disabled={!!aksiProfil}>
-                  <Ikon nama="user" /> Ubah foto profil
-                </button>
                 <button type="button" className="ale-pop-item ale-pw-amber"
                         onClick={() => handleAksiProfil('notif')} disabled={!!aksiProfil}>
                   <Ikon nama="badge" /> Aktifkan notifikasi
                 </button>
-                <button type="button" className="ale-pop-item ale-pw-rose"
-                        onClick={() => handleAksiProfil('foto-hapus')} disabled={!!aksiProfil}>
-                  <Ikon nama="user" /> Hapus foto profil
-                </button>
                 <hr className="ale-pop-sekat" />
-                <a className="ale-pop-item ale-pw-sky" href="#/datadasar/kelas"
-                   onClick={() => setProfilBuka(false)}>
-                  <Ikon nama="school" /> Kelas &amp; mapel saya
-                </a>
-                <button type="button" className="ale-pop-item ale-pw-cyan"
-                        onClick={() => handleAksiProfil('api-key')} disabled={!!aksiProfil}>
-                  <Ikon nama="settings" /> AI &amp; Layanan
-                </button>
+                {bolehBukaKelas && (
+                  <a className="ale-pop-item ale-pw-sky" href="#/datadasar/kelas"
+                     onClick={() => setProfilBuka(false)}>
+                    <Ikon nama="school" /> Kelas &amp; mapel saya
+                  </a>
+                )}
+                {bolehBukaAi && (
+                  <a className="ale-pop-item ale-pw-cyan" href="#/pengaturan/api-ai"
+                     onClick={() => setProfilBuka(false)}>
+                    <Ikon nama="settings" /> AI &amp; Layanan
+                  </a>
+                )}
+                {bolehBukaGoogle && (
+                  <a className="ale-pop-item ale-pw-indigo" href="#/pengaturan/google"
+                     onClick={() => setProfilBuka(false)}>
+                    <Ikon nama="external" /> Hubungkan Google
+                  </a>
+                )}
                 <button type="button" className="ale-pop-item ale-pw-indigo"
-                        onClick={() => handleAksiProfil('google')} disabled={!!aksiProfil}>
-                  <Ikon nama="external" /> Hubungkan Google
+                        onClick={() => { setProfilBuka(false); openIntegrationPreferences(); }}>
+                  <Ikon nama="settings" /> Persetujuan Integrasi
                 </button>
                 <hr className="ale-pop-sekat" />
                 <button type="button" className="ale-pop-item ale-pw-sky"

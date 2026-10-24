@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { usePlatformControls } from '../context/PlatformControlContext.jsx';
 import Ikon from '../components/Ikon.jsx';
 import {
   hapusSoalBank, muatBankSoal, tambahSoalBank, ubahSoalBank,
@@ -57,6 +58,7 @@ function formatTanggal(value) {
 
 export default function QuestionBankPage() {
   const { user, role, tenantId } = useAuth();
+  const { features } = usePlatformControls();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -67,6 +69,8 @@ export default function QuestionBankPage() {
   const [search, setSearch] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [topic, setTopic] = useState('');
+  const [aiMode, setAiMode] = useState('ai-nnoe');
+  const [externalAiAcknowledged, setExternalAiAcknowledged] = useState(false);
 
   const canView = ['guru', 'admin_sekolah'].includes(role);
   const canEdit = role === 'guru';
@@ -174,16 +178,24 @@ export default function QuestionBankPage() {
 
   async function generateAiDraft() {
     if (!canEdit || aiBusy) return;
+    if (!features.aiGeneration) {
+      setError('Pembuatan draf AI sedang dinonaktifkan oleh administrator.');
+      return;
+    }
     setAiBusy(true);
     setError('');
     setNotice('');
     try {
-      const result = await buatDrafSoalAI(user?.uid, {
-        mapel: form.mapel,
-        kelas: form.kelas,
-        topik: topic,
-        jenis: form.jenis,
-      });
+      const result = await buatDrafSoalAI(
+        user?.uid,
+        {
+          mapel: form.mapel,
+          kelas: form.kelas,
+          topik: topic,
+          jenis: form.jenis,
+        },
+        { mode: aiMode, externalAcknowledged: externalAiAcknowledged },
+      );
       const draft = result?.payload?.questions?.[0];
       if (!draft) throw new Error('AI tidak mengembalikan draf soal yang valid.');
       setForm((current) => ({
@@ -194,6 +206,8 @@ export default function QuestionBankPage() {
         pembahasan: draft.pembahasan,
       }));
       const provider = {
+        'local-qwen': 'Qwen 2.5 1.5B (lokal)',
+        'local-llama': 'Llama 3.2 3B (lokal)',
         gemini: 'Gemini',
         deepseek: 'DeepSeek',
         groq: 'Groq',
@@ -269,9 +283,62 @@ export default function QuestionBankPage() {
                   <option value="uraian">Uraian</option>
                 </select>
               </label>
-              <button type="button" className="question-bank-ai-button" disabled={aiBusy || !form.mapel.trim() || !form.kelas.trim() || !topic.trim()} onClick={() => void generateAiDraft()}>
-                {aiBusy ? 'Membuat draf…' : 'Buat draf dengan AI'}
-              </button>
+              {features.aiGeneration ? (
+                <fieldset className="question-bank-ai-mode question-bank-wide">
+                  <legend>Pilihan AI untuk membuat draf soal</legend>
+                  <label className="question-bank-ai-mode-option">
+                    <input
+                      type="radio"
+                      name="question-ai-mode"
+                      value="ai-nnoe"
+                      checked={aiMode === 'ai-nnoe'}
+                      onChange={() => {
+                        setAiMode('ai-nnoe');
+                        setExternalAiAcknowledged(false);
+                      }}
+                    />
+                    <span><strong>1. Gunakan AI_nnoe</strong><small>Berjalan dengan model AI lokal yang tersedia di perangkat ini.</small></span>
+                  </label>
+                  <label className="question-bank-ai-mode-option">
+                    <input
+                      type="radio"
+                      name="question-ai-mode"
+                      value="ai-eksternal"
+                      checked={aiMode === 'ai-eksternal'}
+                      onChange={() => {
+                        setAiMode('ai-eksternal');
+                        setExternalAiAcknowledged(false);
+                      }}
+                    />
+                    <span><strong>2. Gunakan AI_eksternal</strong><small>Berjalan dengan provider dan API key pribadi yang dipilih di Pengaturan → AI &amp; Layanan.</small></span>
+                  </label>
+                  {aiMode === 'ai-eksternal' && (
+                    <div className="question-bank-ai-disclosure">
+                      <p>Prompt soal akan dikirim dari perangkat ini ke provider pilihan Anda. Kuota, privasi, dan kemungkinan biaya mengikuti ketentuan provider; jangan masukkan data pribadi siswa.</p>
+                      <p>Pilih provider dan tambahkan API key di Pengaturan → AI &amp; Layanan, lalu pilih provider tersebut untuk pembuatan soal.</p>
+                      <label className="question-bank-ai-mode-option">
+                        <input
+                          type="checkbox"
+                          checked={externalAiAcknowledged}
+                          onChange={(event) => setExternalAiAcknowledged(event.target.checked)}
+                        />
+                        <span>Saya memahami prompt dikirim ke provider eksternal dan biaya/kuota provider dapat berlaku.</span>
+                      </label>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="question-bank-ai-button"
+                    disabled={aiBusy || !form.mapel.trim() || !form.kelas.trim() || !topic.trim() ||
+                      (aiMode === 'ai-eksternal' && !externalAiAcknowledged)}
+                    onClick={() => void generateAiDraft()}
+                  >
+                    {aiBusy ? 'Membuat draf…' : `Buat draf dengan ${aiMode === 'ai-nnoe' ? 'AI_nnoe' : 'AI_eksternal'}`}
+                  </button>
+                </fieldset>
+              ) : (
+                <p className="question-bank-message" role="status">Pembuatan draf AI sedang dinonaktifkan oleh administrator.</p>
+              )}
             </div>
             <label className="question-bank-wide">
               Pertanyaan

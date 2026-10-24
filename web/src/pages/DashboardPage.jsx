@@ -1,7 +1,6 @@
 // web/src/pages/DashboardPage.jsx
 import React, { useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { LINK_PERENCANAAN_AKTIF } from '../config.js';
 import { LABEL_PERAN, salam } from '../ui.js';
 import Ikon from '../components/Ikon.jsx';
 
@@ -67,18 +66,20 @@ export default function DashboardPage() {
         <Statistik warna="grape" ikon="school" label="Sekolah"
                    nilai={profile?.sekolah || 'Belum diisi'}
                    ket={profile?.sekolah ? undefined : 'Dilengkapi oleh administrator'} />
-        <Statistik warna="mint" ikon="badge" label="Langganan"
-                   nilai={profile?.langganan ? 'Aktif' : 'Belum aktif'} />
       </section>
 
       <section className="ale-akses" aria-labelledby="ale-akses-judul">
         <h2 id="ale-akses-judul" className="ale-sub-judul">Akses cepat</h2>
         <div className="ale-aksi-grid">
-          <Aksi href={LINK_PERENCANAAN_AKTIF} luar warna="teal" ikon="clipboard"
+          <Aksi href="#/perencanaan" warna="teal" ikon="clipboard"
                 judul="Perencanaan pembelajaran"
-                ket={LINK_PERENCANAAN_AKTIF ? 'Buka aplikasi perencanaan di tab baru' : 'Tautan belum diatur di config.js'} />
-          <Aksi ikon="calendar" judul="Jadwal mengajar" ket="Segera hadir" />
-          <Aksi ikon="check" judul="Asesmen" ket="Segera hadir" />
+                ket="Susun dan simpan dokumen pembelajaran" />
+          <Aksi href="#/datadasar/jadwal" warna="indigo" ikon="calendar"
+                judul="Jadwal mengajar" ket="Kelola jadwal mingguan" />
+          <Aksi href="#/asesmen/ujian-online" warna="amber" ikon="check"
+                judul="Ujian online" ket="Buat dan kelola asesmen" />
+          <Aksi href="#/asesmen/bank-soal" warna="sky" ikon="clipboard"
+                judul="Bank soal" ket="Kelola kumpulan soal" />
         </div>
       </section>
 
@@ -92,7 +93,8 @@ export default function DashboardPage() {
             </div>
             <div className="ale-kosong">
               <Ikon nama="calendar" />
-              <p>Belum ada jadwal yang terhubung. Jadwal mengajar akan tampil di sini.</p>
+              <p>Jadwal tersedia pada halaman Data Dasar. Hubungkan Google Drive untuk menyimpannya secara terenkripsi.</p>
+              <a className="ale-tautan" href="#/datadasar/jadwal">Buka jadwal mengajar</a>
             </div>
           </section>
         </div>

@@ -65,7 +65,7 @@ function ensureOverlay() {
   // Judul bergilir disembunyikan dari pembaca layar agar tidak membacakan ulang tiap 4 detik.
   _overlay.innerHTML = `
     <div class="loading-box">
-      <div class="spinner" aria-hidden="true"></div>
+      <img class="loading-logo" src="/logo-ale-mark.png" alt="" width="72" height="72" />
       <h3 id="loading-title" aria-hidden="true">Memproses…</h3>
       <p>Mohon tunggu dan jangan tutup halaman ini.</p>
       <span class="sr-only">Sedang memproses, mohon tunggu.</span>

@@ -238,7 +238,7 @@ select
   'default_grant',
   coalesce(namespace.nspname, 'ALL SCHEMAS') || '.' ||
     pg_get_userbyid(default_acl.defaclrole) || '.' ||
-    default_acl.defaclobjtype || '.' ||
+    default_acl.defaclobjtype::text || '.' ||
     case when grant_info.grantee = 0 then 'PUBLIC'
          else pg_get_userbyid(grant_info.grantee) end || '.' ||
     grant_info.privilege_type,

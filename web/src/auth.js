@@ -22,7 +22,6 @@ function ringkasProfil(profil = {}) {
   return {
     nama: teks(profil.nama),
     sekolah: teks(profil.instansi || profil.sekolah),
-    langganan: profil.langganan === true || profil.langganan === 'aktif',
     logoSekolah: teks(profil.logoSekolah),
   };
 }
@@ -80,22 +79,6 @@ export async function login(email, sandi, captchaToken) {
   const { data, error } = await supabase.auth.signInWithPassword(credentials);
   if (error) throw error;
   return data.user;
-}
-
-export async function daftarUjiCoba({ nama, email, sandi, captchaToken }) {
-  if (!captchaToken) throw new Error('Verifikasi anti-bot wajib diselesaikan untuk mendaftar uji coba.');
-  const emailRedirectTo = `${window.location.origin}${window.location.pathname}`;
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password: sandi,
-    options: {
-      captchaToken,
-      emailRedirectTo,
-      data: { full_name: nama },
-    },
-  });
-  if (error) throw error;
-  return data;
 }
 
 export async function logout() {

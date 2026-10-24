@@ -1,4 +1,5 @@
 // web/src/components/toast.js
+import { ucapkanNotifikasi } from '../services/announcementAudio.js';
 /**
  * toast.js — Notifikasi non-blocking (satu-satunya sumber toast di aplikasi).
  *
@@ -152,6 +153,7 @@ export function toast(pesan, jenis = 'info', arg3) {
 
   aktif.set(kunci, { ts: kini, tutup });
   jalan();
+  ucapkanNotifikasi();
   return tutup;
 }
 
