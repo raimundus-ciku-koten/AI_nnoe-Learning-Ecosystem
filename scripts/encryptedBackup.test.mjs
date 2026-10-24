@@ -113,10 +113,7 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.match(targetValidator, /sessionPoolerStaging/);
   assert.match(workflow, /Install PostgreSQL 17 client/);
   assert.match(workflow, /postgresql-client-17/);
-  assert.match(
-    workflow,
-    /image: ghcr\.io\/supabase\/nix-postgres-17:[0-9a-f]{40}/,
-  );
+  assert.match(workflow, /image: ghcr\.io\/supabase\/nix-postgres-17:latest/);
   assert.match(workflow, /POSTGRES_USER: supabase_admin/);
   assert.match(workflow, /POSTGRES_PASSWORD: restore-validation-only/);
   assert.match(workflow, /5432:5432/);
