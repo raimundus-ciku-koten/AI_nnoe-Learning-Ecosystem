@@ -164,6 +164,28 @@ describe('submenu platform superadmin', () => {
       }
     });
 
+    it('menghubungkan menu perencanaan dan pemantauan ke sumber modul yang tersedia untuk semua role guru', () => {
+      for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+        auth.role = role;
+        auth.activeRole = '';
+        const planning = renderSubmenu('/perencanaan', '?jenis=rpe');
+        expect(planning, role).toContain('href="#/laporan/arsip-perencanaan"');
+        expect(planning, role).toContain('href="#/perangkat/modul-siswa"');
+
+        const monitoring = renderSubmenu('/pemantauan/profil-siswa');
+        expect(monitoring, role).toContain('Profil siswa, catatan kasus, dan intervensi individual bukan bagian');
+        expect(monitoring, role).toContain('href="#/laporan/harian-bulanan"');
+        expect(monitoring, role).toContain('href="#/pelaksanaan/presensi"');
+      }
+    });
+
+    it('menggunakan peran aktif guru spesialis untuk pintasan perencanaan', () => {
+      auth.role = 'admin_sekolah';
+      auth.activeRole = 'guru_bk';
+      expect(renderSubmenu('/perencanaan', '?jenis=rpe'))
+        .toContain('href="#/laporan/arsip-perencanaan"');
+    });
+
     it('tidak membuka data pribadi bila konteks guru/tenant tidak tersedia', () => {
       auth.user = null;
       const html = renderSubmenu('/guru/catatan-pribadi');

@@ -110,8 +110,8 @@ const ALUR = {
     langkah: ['Buka Bank Soal atau Ujian Online untuk menyusun dan melaksanakan CBT', 'Tinjau hasil tugas/kuis pada Analisis atau Remedial', 'Jangan anggap halaman panduan diagnostik, formatif, sumatif, atau rubrik sebagai instrumen tersimpan'],
   },
   pemantauan: {
-    ringkasan: 'Satukan catatan siswa agar perkembangan dan kebutuhan pendampingan mudah ditinjau.',
-    langkah: ['Pilih siswa atau kelas', 'Catat perkembangan yang teramati', 'Tentukan tindak lanjut'],
+    ringkasan: 'Tinjau aktivitas kelas dari jurnal mengajar dan sesi presensi yang tersimpan. Profil siswa, catatan kasus, dan intervensi individual bukan bagian dari ringkasan ini.',
+    langkah: ['Pilih kelas yang memang Anda ampu', 'Tinjau laporan aktivitas pada rentang tanggal', 'Gunakan modul presensi atau Ruang Kelas untuk alur sumber terkait'],
   },
   refleksi: {
     ringkasan: 'Gunakan bukti pembelajaran untuk merefleksikan praktik dan merencanakan pengembangan.',
@@ -154,8 +154,8 @@ const ALUR = {
     langkah: ['Pilih percakapan atau kontak', 'Sampaikan kebutuhan secara ringkas', 'Jaga kerahasiaan informasi anak'],
   },
   perencanaan: {
-    ringkasan: 'Siapkan perangkat ajar yang konsisten dengan tujuan, urutan, dan kebutuhan belajar siswa.',
-    langkah: ['Pilih mata pelajaran dan periode', 'Susun perangkat pembelajaran', 'Tinjau dan arsipkan hasil'],
+    ringkasan: 'Susun perangkat ajar menggunakan paket perencanaan, lalu tinjau dokumen tersimpan melalui arsip akun Anda.',
+    langkah: ['Pilih jenis dokumen dan periode pada Perencanaan', 'Simpan hasil ke paket yang dituju', 'Buka Hasil Perencanaan untuk menemukan dokumen yang tersimpan'],
   },
 };
 
@@ -216,6 +216,12 @@ const MODUL_ADMIN_AKTIF = {
 };
 
 const MODUL_GURU_AKTIF = {
+  perencanaan: [
+    { label: 'Perencanaan Pembelajaran', path: '/perencanaan', ikon: 'file' },
+    { label: 'Hasil Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' },
+    { label: 'Modul Ajar untuk Siswa', path: '/perangkat/modul-siswa', ikon: 'book' },
+    { label: 'Cover Perangkat', path: '/perangkat/cover', ikon: 'file' },
+  ],
   chat: [
     { label: 'Percakapan', path: '/chat', ikon: 'chat' },
     { label: 'Grup Chat', path: '/chat/grup', ikon: 'users' },
@@ -232,9 +238,10 @@ const MODUL_GURU_AKTIF = {
     { label: 'Ujian Online', path: '/asesmen/ujian-online', ikon: 'check' },
   ],
   pemantauan: [
-    { label: 'Pemantauan Perkembangan Belajar', path: '/pemantauan/catatan', ikon: 'file' },
-    { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
+    { label: 'Laporan Aktivitas Kelas', path: '/laporan/harian-bulanan', ikon: 'file' },
     { label: 'Presensi Siswa', path: '/pelaksanaan/presensi', ikon: 'check' },
+    { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
+    { label: 'Analisis Hasil', path: '/asesmen/analisis', ikon: 'chart' },
   ],
   refleksi: [
     { label: 'Catatan Kerja Pribadi', path: '/guru/catatan-pribadi', ikon: 'file' },
