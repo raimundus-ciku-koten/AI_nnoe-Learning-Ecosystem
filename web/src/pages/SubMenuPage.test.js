@@ -507,6 +507,15 @@ describe('submenu platform superadmin', () => {
     expect(renderOperations('/platform/keamanan/audit')).toContain('Aktivitas platform terbaru');
   });
 
+  it('menghubungkan menu cadangan ke workflow manual Staging tanpa mengklaim backup Production', () => {
+    const html = renderOperations('/platform/pengaturan/cadangan');
+    expect(html).toContain('Workflow manual Staging tersedia');
+    expect(html).toContain('https://github.com/raimundus-ciku-koten/ale-web/actions/workflows/supabase-backup.yml');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).toContain('bukan jadwal backup, bukti eksekusi terbaru, atau prosedur pemulihan Production');
+  });
+
   it('menggunakan role aktif untuk halaman operasi platform', () => {
     auth.role = 'admin_sekolah';
     auth.activeRole = 'superadmin';

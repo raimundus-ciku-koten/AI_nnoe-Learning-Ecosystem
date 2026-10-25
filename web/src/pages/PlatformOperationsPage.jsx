@@ -127,9 +127,14 @@ const INFO_MODUL = {
   },
   '/platform/pengaturan/cadangan': {
     judul: 'Cadangan Platform',
-    ringkasan: 'Jadwal dan hasil backup database tidak dicatat dalam aplikasi.',
-    status: 'Pemeriksaan server diperlukan',
-    tindakan: 'Konfigurasikan dan verifikasi backup database melalui provider yang digunakan.',
+    ringkasan: 'Belum ada jadwal backup berkala atau pemulihan produksi di dalam aplikasi. Repository menyediakan workflow manual untuk backup terenkripsi Staging dan uji restore ke database disposable.',
+    status: 'Workflow manual Staging tersedia',
+    tindakan: 'Workflow hanya berjalan setelah dijalankan manual dari branch main dan secret GitHub Actions dikonfigurasi. Target database divalidasi agar hanya Staging; artefak terenkripsi disimpan satu hari dan diuji restore ke database sementara. Ini bukan jadwal backup, bukti eksekusi terbaru, atau prosedur pemulihan Production.',
+    link: {
+      href: 'https://github.com/raimundus-ciku-koten/ale-web/actions/workflows/supabase-backup.yml',
+      label: 'Buka workflow backup Staging di GitHub Actions',
+      external: true,
+    },
   },
   '/platform/pengaturan/pemeliharaan': {
     judul: 'Mode Pemeliharaan',
@@ -168,7 +173,16 @@ function KartuInfo({ info }) {
       <section className="platform-tenants-card">
         <span className="platform-tenants-status is-unknown">{info.status}</span>
         <p>{info.tindakan}</p>
-        {info.link && <a className="platform-tenants-button platform-ops-console" href={info.link.href}>{info.link.label}</a>}
+        {info.link && (
+          <a
+            className="platform-tenants-button platform-ops-console"
+            href={info.link.href}
+            target={info.link.external ? '_blank' : undefined}
+            rel={info.link.external ? 'noopener noreferrer' : undefined}
+          >
+            {info.link.label}
+          </a>
+        )}
       </section>
     </>
   );
