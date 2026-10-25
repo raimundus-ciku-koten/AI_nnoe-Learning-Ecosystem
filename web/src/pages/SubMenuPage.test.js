@@ -316,6 +316,19 @@ describe('submenu platform superadmin', () => {
     expect(renderSubmenu('/admin/pengaturan/cadangan')).toContain('cadangan, dan log admin belum tersedia');
   });
 
+  it('labels admin activity and chat monitoring as available tenant summaries', () => {
+    auth.role = 'admin_sekolah';
+    const activity = renderSubmenu('/admin/aktivitas');
+    expect(activity).toContain('Aktivitas Terbaru');
+    expect(activity).toContain('peristiwa dari modul yang tercatat');
+    expect(activity).toContain('Monitoring Chat');
+
+    const chat = renderSubmenu('/admin/dashboard/chat');
+    expect(chat).toContain('Monitoring Chat');
+    expect(chat).toContain('ringkasan agregat chat');
+    expect(chat).toContain('bukan audit log lengkap');
+  });
+
   it('menampilkan kontrol feature flags dan pemeliharaan yang benar-benar terhubung', () => {
     expect(renderOperations('/platform/fitur/flags')).toContain('Generator perangkat ajar AI');
     expect(renderOperations('/platform/pengaturan/pemeliharaan')).toContain('Mode pemeliharaan global');

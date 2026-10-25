@@ -10,12 +10,16 @@ import '../styles/submenu.css';
 
 const ALUR = {
   'admin-dashboard': {
-    ringkasan: 'Dashboard menampilkan ringkasan sekolah. Monitoring ujian berbasis data tenant telah tersedia; monitoring aktivitas dan chat khusus admin masih berupa panduan.',
+    ringkasan: 'Dashboard menampilkan ringkasan sekolah. Linimasa aktivitas tercatat, ringkasan agregat chat, dan monitoring ujian tersedia sebagai modul tenant. Ini bukan audit log lengkap atau alat moderasi chat.',
     langkah: ['Tinjau ringkasan pada Dashboard', 'Pilih modul aktif dari tautan terkait', 'Gunakan halaman panduan ini hanya sebagai petunjuk'],
   },
   'admin-pengguna': {
     ringkasan: 'Direktori pengguna dan penautan akun siswa tersedia. Persetujuan, pembuatan akun, dan pengubahan peran tidak dilakukan oleh halaman panduan ini.',
     langkah: ['Buka direktori atau penautan akun siswa', 'Tinjau data yang tersedia untuk tenant', 'Ikuti izin server pada modul tujuan'],
+  },
+  'admin-monitoring': {
+    ringkasan: 'Aktivitas Terbaru menyajikan peristiwa dari modul yang tercatat; Monitoring Ujian dan Chat menampilkan ringkasan berbatas tenant. Isi percakapan dan data siswa individual tidak ditampilkan.',
+    langkah: ['Buka Aktivitas Terbaru untuk linimasa 30 hari dari sumber terpilih', 'Buka Monitoring Ujian atau Chat untuk ringkasan terkait', 'Jangan gunakan ringkasan ini sebagai audit log lengkap atau alat moderasi'],
   },
   'admin-instansi': {
     ringkasan: 'Profil sekolah dan data tahun ajaran tersedia melalui Data Dasar. Pengelolaan semester, unit, dan jenjang khusus admin belum menjadi modul tersendiri.',
@@ -163,10 +167,11 @@ const MODUL_ADMIN_AKTIF = {
     { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
   ],
   'admin-monitoring': [
+    { label: 'Aktivitas Terbaru', path: '/admin/aktivitas', ikon: 'file' },
     { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
     { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'file' },
     { label: 'Monitoring Ujian', path: '/admin/asesmen/monitoring', ikon: 'check' },
-    { label: 'Chat Sekolah', path: '/chat', ikon: 'chat' },
+    { label: 'Monitoring Chat', path: '/admin/dashboard/chat', ikon: 'chat' },
   ],
   'admin-instansi': [
     { label: 'Profil Sekolah', path: '/datadasar/profil', ikon: 'user' },
@@ -285,6 +290,16 @@ export default function SubMenuPage() {
     ringkasan: 'Pilih aktivitas yang dibutuhkan dan lanjutkan ke modul terkait.',
     langkah: ['Pilih konteks kerja', 'Tinjau informasi yang tersedia', 'Lanjutkan ke aktivitas terkait'],
   };
+  const ringkasan = isSchoolAdminRole(role) && item.path === '/admin/dashboard/chat'
+    ? 'Monitoring Chat menampilkan ringkasan agregat chat per tenant tanpa isi percakapan atau identitas peserta; ini bukan audit log lengkap atau alat moderasi.'
+    : alur.ringkasan;
+  const langkah = isSchoolAdminRole(role) && item.path === '/admin/dashboard/chat'
+    ? [
+      'Tinjau jumlah percakapan baru 30 hari, pesan 7 hari, dan pengirim aktif.',
+      'Angka hanya merangkum percakapan dengan peserta aktif dari tenant ini.',
+      'Gunakan jalur perlindungan sekolah untuk tindak lanjut; halaman ini bukan alat moderasi.',
+    ]
+    : alur.langkah;
   const terkait = grup.item.filter((sub) => sub !== item && sub.path);
   const statusModul = role === 'siswa'
     ? 'Data jadwal, materi, tugas, ujian, atau nilai hanya muncul setelah sekolah menautkan data akademik ke akun siswa.'
@@ -293,7 +308,9 @@ export default function SubMenuPage() {
       : isTeacherRole(role)
       ? 'Menu ini belum memiliki modul akademik khusus. Catatan Kerja Pribadi tersedia terpisah dan bukan pengganti data akademik resmi.'
         : isSchoolAdminRole(role)
-          ? 'Halaman ini adalah panduan baca-saja. Modul administrasi khusus untuk menu ini belum tersedia; gunakan tautan modul terkait bila tersedia.'
+          ? modulAktifAdmin.length
+            ? 'Modul tenant untuk sebagian alur pada bagian ini tersedia melalui tautan di bawah. Halaman ini sendiri hanya panduan dan ringkasannya bukan audit log lengkap.'
+            : 'Halaman ini adalah panduan baca-saja. Modul administrasi khusus untuk menu ini belum tersedia; gunakan tautan modul terkait bila tersedia.'
           : role === 'operator'
             ? 'Halaman ini adalah panduan baca-saja. Akses operasional tetap mengikuti izin peran dan tenant sekolah.'
             : `Tautan menu ${item.label} membuka panduan baca-saja, bukan modul data atau arsip resmi. Gunakan modul terkait bila tersedia.`;
@@ -303,7 +320,7 @@ export default function SubMenuPage() {
         <div className="ale-submenu-hero-copy">
           <p className="ale-submenu-kicker"><Ikon nama={grup.ikon} />{grup.label}</p>
           <h2>{item.label}</h2>
-          <p>{alur.ringkasan}</p>
+          <p>{ringkasan}</p>
         </div>
         <span className="ale-submenu-state">
           <span aria-hidden="true" />
@@ -320,10 +337,10 @@ export default function SubMenuPage() {
             <span className="ale-submenu-label">Panduan</span>
           </div>
           <ol className="ale-submenu-steps">
-            {alur.langkah.map((langkah, index) => (
-              <li key={langkah}>
+            {langkah.map((langkahItem, index) => (
+              <li key={langkahItem}>
                 <span className="ale-submenu-step-number">{index + 1}</span>
-                <span>{langkah}</span>
+                <span>{langkahItem}</span>
               </li>
             ))}
           </ol>
