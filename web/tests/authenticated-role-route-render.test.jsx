@@ -99,6 +99,7 @@ vi.mock('../src/pages/OnlineAssessmentPage.jsx', () => ({ default: probe('UjianO
 vi.mock('../src/pages/ClassroomAssessmentReportPage.jsx', () => ({ default: probe('AnalisisPenilaian') }));
 vi.mock('../src/pages/SchoolAssessmentOverviewPage.jsx', () => ({ default: probe('AsesmenAdminSekolah') }));
 vi.mock('../src/pages/SchoolActivityOverviewPage.jsx', () => ({ default: probe('MonitoringSekolah') }));
+vi.mock('../src/pages/SchoolActivityReportOverviewPage.jsx', () => ({ default: probe('LaporanAktivitasAdminSekolah') }));
 vi.mock('../src/pages/SchoolReportCardPage.jsx', () => ({ default: probe('RaporSekolah') }));
 vi.mock('../src/pages/SchoolLeadershipPage.jsx', () => ({ default: probe('KepemimpinanSekolah') }));
 vi.mock('../src/pages/HomeroomAssignmentsPage.jsx', () => ({ default: probe('PenugasanWali') }));
@@ -220,5 +221,14 @@ describe('authenticated role × route destination rendering', () => {
       const markup = await renderAuthenticatedRoute(path, '', 'operator');
       expect(markup, `operator: ${path}`).not.toContain('data-route-page="MonitoringSekolah"');
     }
+  });
+
+  it('renders the school activity report only for school admin roles', async () => {
+    for (const role of ['admin', 'admin_sekolah']) {
+      const markup = await renderAuthenticatedRoute('/admin/laporan/aktivitas', '', role);
+      expect(markup, role).toContain('data-route-page="LaporanAktivitasAdminSekolah"');
+    }
+    const markup = await renderAuthenticatedRoute('/admin/laporan/aktivitas', '', 'operator');
+    expect(markup).not.toContain('data-route-page="LaporanAktivitasAdminSekolah"');
   });
 });

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { isTeacherRole } from '../services/roleAccess.js';
 import '../styles/guidance-program.css';
@@ -240,6 +240,28 @@ const KOSONG = {
   keberlanjutan: '',
 };
 
+const PROGRAM_SPESIALIS = {
+  guru_bk: 'bk',
+  guru_kokurikuler: 'kokurikuler',
+  guru_ekstrakurikuler: 'ekstrakurikuler',
+};
+
+function programDiperbolehkanUntukPeran(role) {
+  const programSpesialis = PROGRAM_SPESIALIS[role];
+  return programSpesialis
+    ? PILIHAN_PROGRAM.filter(({ id }) => id === programSpesialis)
+    : isTeacherRole(role) ? PILIHAN_PROGRAM : [];
+}
+
+function drafAwalUntukPeran(role) {
+  const program = PROGRAM_SPESIALIS[role] || KOSONG.program;
+  return {
+    ...KOSONG,
+    program,
+    fase: program === 'kokurikuler' || program === 'ekstrakurikuler' ? 'E' : KOSONG.fase,
+  };
+}
+
 function BarisRingkasan({ label, nilai }) {
   if (!nilai) return null;
   return (
@@ -253,14 +275,22 @@ function BarisRingkasan({ label, nilai }) {
 export default function GuidanceProgramPage() {
   const { role: baseRole, activeRole } = useAuth();
   const role = activeRole || baseRole;
-  const [draft, setDraft] = useState(KOSONG);
+  const pilihanProgram = useMemo(() => programDiperbolehkanUntukPeran(role), [role]);
+  const [draft, setDraft] = useState(() => drafAwalUntukPeran(role));
   const [hasil, setHasil] = useState(null);
   const [galatDimensi, setGalatDimensi] = useState('');
   const temaSaran = useMemo(() => saranTema(draft.program, draft.fase), [draft.fase, draft.program]);
   const strategi = draft.program === 'bk' ? STRATEGI_BK : STRATEGI_KEGIATAN;
 
+  useEffect(() => {
+    setDraft(drafAwalUntukPeran(role));
+    setHasil(null);
+    setGalatDimensi('');
+  }, [role]);
+
   function ubah(event) {
     const { name, value } = event.target;
+    if (name === 'program' && !pilihanProgram.some((program) => program.id === value)) return;
     setDraft((current) => ({
       ...current,
       [name]: event.target.type === 'checkbox'
@@ -279,6 +309,10 @@ export default function GuidanceProgramPage() {
 
   function buatRencana(event) {
     event.preventDefault();
+    if (!pilihanProgram.some((program) => program.id === draft.program)) {
+      setHasil(null);
+      return;
+    }
     if (draft.program === 'kokurikuler' && (draft.dimensi.length < 1 || draft.dimensi.length > 4)) {
       setGalatDimensi('Pilih satu sampai empat dimensi profil lulusan yang paling relevan.');
       return;
@@ -339,13 +373,27 @@ export default function GuidanceProgramPage() {
       </aside>
 
       <aside className="guidance-program__notice" role="note">
-        <strong>Draf privat, belum tersimpan ke akun.</strong>
+        <strong>
+          {role === 'guru_bk'
+            ? 'Ruang kerja BK non-sensitif · draf privat'
+            : 'Draf privat, belum tersimpan ke akun.'}
+        </strong>
         <span>
-          Isi hanya data program yang diperlukan. Jangan masukkan nama siswa, isi konseling,
-          diagnosis, atau catatan kasus. Draf hilang saat halaman ditutup; gunakan cetak atau
-          Simpan sebagai PDF untuk membuat salinan lokal.
+          {role === 'guru_bk'
+            ? 'Gunakan hanya untuk rancangan layanan dan jadwal umum. Ini bukan sistem rujukan atau catatan konseling. Jangan masukkan nama siswa, identitas, diagnosis, isi konseling, atau detail kasus. Draf hanya berada di browser dan hilang saat halaman ditutup.'
+            : 'Isi hanya data program yang diperlukan. Draf berada di browser dan hilang saat halaman ditutup; gunakan cetak atau Simpan sebagai PDF untuk membuat salinan lokal.'}
         </span>
       </aside>
+      {['guru_kokurikuler', 'guru_ekstrakurikuler'].includes(role) && (
+        <aside className="guidance-program__notice" role="note">
+          <strong>Draf rancangan · belum menjadi persetujuan kegiatan sekolah.</strong>
+          <span>
+            Tanggung jawab pembina, persetujuan sekolah dan orang tua, keselamatan,
+            penggunaan dokumentasi, serta sumber daya wajib mengikuti kebijakan sekolah
+            sebelum kegiatan dilaksanakan. Draf ini belum disimpan atau disetujui.
+          </span>
+        </aside>
+      )}
 
       <form className="guidance-program__form" onSubmit={buatRencana}>
         <section className="guidance-program__section" aria-labelledby="guidance-context-title">
@@ -354,7 +402,7 @@ export default function GuidanceProgramPage() {
             <label>
               Jenis program
               <select name="program" value={draft.program} onChange={ubah}>
-                {PILIHAN_PROGRAM.map((pilihan) => (
+                {pilihanProgram.map((pilihan) => (
                   <option key={pilihan.id} value={pilihan.id}>{pilihan.label}</option>
                 ))}
               </select>

@@ -291,6 +291,7 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Laporan Keuangan', '/admin/keuangan/laporan', 'chart'),
   ]),
   grup('admin-laporan', 'Laporan dan Analitik', 'chart', [
+    tautan('Ringkasan Aktivitas Kelas', '/admin/laporan/aktivitas', 'chart'),
     tautan('Laporan Akademik', '/admin/laporan/akademik', 'file'),
     tautan('Laporan Keuangan', '/admin/laporan/keuangan', 'file'),
     tautan('Laporan Kinerja', '/admin/laporan/kinerja', 'chart'),

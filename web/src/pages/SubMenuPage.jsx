@@ -54,8 +54,8 @@ const ALUR = {
     langkah: ['Jangan gunakan halaman ini sebagai catatan transaksi', 'Gunakan prosedur keuangan resmi sekolah', 'Tunggu modul laporan keuangan dengan sumber data yang tervalidasi'],
   },
   'admin-laporan': {
-    ringkasan: 'Rapor sekolah tersedia sebagai modul resmi. Laporan analitik akademik, keuangan, kinerja, serta ekspor admin lainnya belum tersedia.',
-    langkah: ['Buka modul Rapor Sekolah untuk alur rapor', 'Tinjau data sesuai periode dan izin sekolah', 'Menu laporan lainnya masih berupa panduan'],
+    ringkasan: 'Rapor sekolah dan ringkasan aktivitas agregat Ruang Kelas tersedia. Laporan analitik akademik, keuangan, kinerja, serta ekspor admin lainnya belum tersedia.',
+    langkah: ['Gunakan Rapor Sekolah untuk alur rapor', 'Tinjau ringkasan aktivitas hanya sebagai hitungan sumber yang tercatat', 'Menu laporan lainnya masih berupa panduan'],
   },
   'admin-pengaturan': {
     ringkasan: 'Konfigurasi integrasi tingkat sekolah, API, cadangan, dan log admin belum tersedia. Pengaturan akun pribadi tidak mengelola layanan sekolah.',
@@ -208,6 +208,7 @@ const MODUL_ADMIN_AKTIF = {
     { label: 'Testimoni', path: '/testimoni', ikon: 'chat' },
   ],
   'admin-laporan': [
+    { label: 'Ringkasan Aktivitas Kelas', path: '/admin/laporan/aktivitas', ikon: 'chart' },
     { label: 'Rapor Sekolah', path: '/admin/akademik/rapor', ikon: 'file' },
   ],
   'admin-bantuan': [
