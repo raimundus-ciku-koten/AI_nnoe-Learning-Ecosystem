@@ -81,15 +81,19 @@ test('semua tautan untuk guru, siswa, orang tua, sekolah, dan platform cocok den
   }
 });
 
-test('spesialis guru memakai menu guru; kepala sekolah dan wali kelas tidak menjadi admin', () => {
+test('spesialis guru memakai menu guru; pimpinan sekolah mendapat menu sesuai lingkup', () => {
   for (const role of ['guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
     assert.equal(menuUntukPeran(role), menuUntukPeran('guru'));
     assert.ok(menuUntukPeran(role).flatMap((group) => group.item)
       .some((item) => item.path === '/program-kegiatan'));
   }
+  const principalPaths = menuUntukPeran('kepala_sekolah')
+    .flatMap((group) => group.item.map((item) => item.path));
+  assert.deepEqual(principalPaths, ['/dashboard', '/kepala-sekolah/ringkasan']);
+  const homeroomPaths = menuUntukPeran('wali_kelas')
+    .flatMap((group) => group.item.map((item) => item.path));
+  assert.deepEqual(homeroomPaths, ['/dashboard', '/wali-kelas/pemantauan']);
   for (const role of ['kepala_sekolah', 'wali_kelas']) {
-    const paths = menuUntukPeran(role).flatMap((group) => group.item.map((item) => item.path));
-    assert.deepEqual(paths, ['/dashboard']);
     assert.equal(cariMenu('/platform/tenant/sekolah', '', role), null);
     assert.equal(cariMenu('/admin/pengguna/guru', '', role), null);
   }

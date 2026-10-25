@@ -185,9 +185,20 @@ const MENU_ORTU = [
     tautan('Kontak', '/chat/kontak', 'users'),
   ]),
 ];
-const MENU_KONTEKS_TERBATAS = [
+const MENU_KEPALA_SEKOLAH = [
   grup('beranda', 'Dashboard', 'home', [
     tautan('Dashboard', '/dashboard', 'home'),
+  ]),
+  grup('kepala-sekolah-ringkasan', 'Pemantauan Sekolah', 'chart', [
+    tautan('Ringkasan Sekolah', '/kepala-sekolah/ringkasan', 'chart'),
+  ]),
+];
+const MENU_WALI_KELAS = [
+  grup('beranda', 'Dashboard', 'home', [
+    tautan('Dashboard', '/dashboard', 'home'),
+  ]),
+  grup('wali-kelas-pemantauan', 'Pemantauan Kelas', 'users', [
+    tautan('Kelas Wali', '/wali-kelas/pemantauan', 'users'),
   ]),
 ];
 export const MENU_OPERATOR = [
@@ -243,6 +254,7 @@ export const MENU_ADMIN_SEKOLAH = [
   ]),
   grup('admin-akademik', 'Manajemen Akademik', 'book', [
     tautan('Kelas', '/datadasar/kelas', 'book'),
+    tautan('Penugasan Wali Kelas', '/admin/akademik/wali-kelas', 'users'),
     tautan('Mata Pelajaran', '/admin/akademik/mapel', 'book'),
     tautan('Jadwal', '/datadasar/jadwal', 'calendar'),
     tautan('Kelompok', '/admin/akademik/kelompok', 'users'),
@@ -378,7 +390,8 @@ export function menuUntukPeran(role) {
   if (peran === 'ortu' || peran === 'orang_tua') return MENU_ORTU;
   if (peran === 'operator') return MENU_OPERATOR;
   if (peran === 'demo') return MENU_DEMO;
-  if (['kepala_sekolah', 'wali_kelas'].includes(peran)) return MENU_KONTEKS_TERBATAS;
+  if (peran === 'kepala_sekolah') return MENU_KEPALA_SEKOLAH;
+  if (peran === 'wali_kelas') return MENU_WALI_KELAS;
   if (['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(peran)) return GRUP_MENU;
   return MENU_TANPA_PERAN;
 }

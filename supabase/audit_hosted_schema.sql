@@ -349,6 +349,7 @@ from unnest(array[
   'learning_classroom_assignments',
   'learning_classroom_attendance',
   'learning_classroom_attendance_sessions',
+  'learning_classroom_homerooms',
   'learning_classroom_journals',
   'learning_classroom_materials',
   'learning_classroom_quiz_questions',

@@ -1,0 +1,129 @@
+.leadership-page {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem);
+  color: #172033;
+}
+
+.leadership-page > header,
+.leadership-empty {
+  padding: clamp(1rem, 3vw, 1.75rem);
+  border: 1px solid #dbe3ee;
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.leadership-page h1,
+.leadership-page h2 {
+  margin: 0;
+}
+
+.leadership-page > header p:last-child,
+.leadership-empty p {
+  max-width: 70ch;
+  margin-bottom: 0;
+  color: #4b5565;
+  line-height: 1.6;
+}
+
+.leadership-eyebrow {
+  margin: 0 0 .4rem;
+  color: #3156a3;
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.leadership-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: .8rem;
+}
+
+.leadership-stat {
+  display: grid;
+  gap: .5rem;
+  min-height: 100px;
+  padding: 1rem;
+  border: 1px solid #dbe3ee;
+  border-radius: .85rem;
+  background: #fff;
+}
+
+.leadership-stat span {
+  color: #4b5565;
+  font-size: .9rem;
+}
+
+.leadership-stat strong {
+  font-size: 1.35rem;
+}
+
+.leadership-roster {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #dbe3ee;
+  border-radius: 1rem;
+  background: #fff;
+}
+
+.leadership-roster label {
+  display: grid;
+  gap: .4rem;
+  max-width: 560px;
+  font-weight: 650;
+}
+
+.leadership-roster select {
+  min-height: 2.75rem;
+  padding: .5rem .7rem;
+  border: 1px solid #aebbd0;
+  border-radius: .5rem;
+  background: #fff;
+  color: inherit;
+}
+
+.leadership-table-wrap {
+  overflow-x: auto;
+}
+
+.leadership-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.leadership-table-wrap caption {
+  padding: .5rem 0;
+  text-align: left;
+  font-weight: 650;
+}
+
+.leadership-table-wrap th,
+.leadership-table-wrap td {
+  padding: .7rem;
+  border-bottom: 1px solid #e5eaf1;
+  text-align: left;
+}
+
+.leadership-table-wrap thead th {
+  background: #f5f7fb;
+}
+
+.leadership-error {
+  padding: .8rem 1rem;
+  border: 1px solid #e8a8a8;
+  border-radius: .6rem;
+  background: #fff4f4;
+  color: #8b1e1e;
+}
+
+@media (max-width: 600px) {
+  .leadership-page {
+    padding: .75rem;
+  }
+}

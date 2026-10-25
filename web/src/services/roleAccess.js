@@ -1,8 +1,11 @@
 import { menuUntukPeran } from '../navigasi.js';
 
-const DASHBOARD_ONLY_ROLES = new Set(['kepala_sekolah', 'wali_kelas']);
+const LIMITED_SCOPE_PATHS = new Map([
+  ['kepala_sekolah', new Set(['/kepala-sekolah/ringkasan'])],
+  ['wali_kelas', new Set(['/wali-kelas/pemantauan'])],
+]);
 const KNOWN_ROLES = new Set([
-  ...DASHBOARD_ONLY_ROLES,
+  ...LIMITED_SCOPE_PATHS.keys(),
   'admin',
   'admin_sekolah',
   'guru',
@@ -30,7 +33,9 @@ export function canOpenRolePath(role, path) {
   const normalizedRole = String(role || '').trim().toLowerCase();
   if (normalizedRole === 'demo') return path === '/trial';
   if (!KNOWN_ROLES.has(normalizedRole)) return path === '/dashboard';
-  if (DASHBOARD_ONLY_ROLES.has(normalizedRole)) return path === '/dashboard';
+  if (LIMITED_SCOPE_PATHS.has(normalizedRole)) {
+    return path === '/dashboard' || LIMITED_SCOPE_PATHS.get(normalizedRole).has(path);
+  }
 
   return menuUntukPeran(normalizedRole)
     .flatMap((group) => group.item)

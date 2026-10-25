@@ -7,13 +7,20 @@ import {
 import { isMenuPathDisabled } from './menuAccessPolicy.js';
 import { isMaintenanceBlocked, requiresPrivilegedMfa } from './privilegedAccessPolicy.js';
 
-test('Kepala Sekolah dan Wali Kelas hanya dapat membuka dashboard sampai ada izin terukur', () => {
-  for (const role of ['kepala_sekolah', 'wali_kelas']) {
-    assert.equal(canOpenRolePath(role, '/dashboard'), true);
-    assert.equal(canOpenRolePath(role, '/admin/pengguna/guru'), false);
-    assert.equal(canOpenRolePath(role, '/perencanaan'), false);
-    assert.equal(canOpenRolePath(role, '/chat'), false);
-  }
+test('Kepala Sekolah dan Wali Kelas hanya dapat membuka dashboard dan modul sesuai lingkup', () => {
+  assert.equal(canOpenRolePath('kepala_sekolah', '/dashboard'), true);
+  assert.equal(canOpenRolePath('kepala_sekolah', '/kepala-sekolah/ringkasan'), true);
+  assert.equal(canOpenRolePath('kepala_sekolah', '/wali-kelas/pemantauan'), false);
+  assert.equal(canOpenRolePath('kepala_sekolah', '/admin/pengguna/guru'), false);
+  assert.equal(canOpenRolePath('kepala_sekolah', '/perencanaan'), false);
+  assert.equal(canOpenRolePath('kepala_sekolah', '/chat'), false);
+
+  assert.equal(canOpenRolePath('wali_kelas', '/dashboard'), true);
+  assert.equal(canOpenRolePath('wali_kelas', '/wali-kelas/pemantauan'), true);
+  assert.equal(canOpenRolePath('wali_kelas', '/kepala-sekolah/ringkasan'), false);
+  assert.equal(canOpenRolePath('wali_kelas', '/admin/pengguna/guru'), false);
+  assert.equal(canOpenRolePath('wali_kelas', '/perencanaan'), false);
+  assert.equal(canOpenRolePath('wali_kelas', '/chat'), false);
 });
 
 test('peran lain tetap mengikuti otorisasi rute yang sudah ada', () => {
@@ -101,6 +108,7 @@ test('modul administratif, siswa, orang tua, dan asesmen membatasi URL langsung 
     assert.equal(canOpenRolePath(role, '/admin/pengguna/guru'), true, role);
     assert.equal(canOpenRolePath(role, '/asesmen/bank-soal'), true, role);
     assert.equal(canOpenRolePath(role, '/platform/fitur/flags'), false, role);
+    assert.equal(canOpenRolePath(role, '/admin/akademik/wali-kelas'), true, role);
     assert.equal(canOpenRolePath(role, '/siswa/nilai'), false, role);
     assert.equal(canOpenRolePath(role, '/orang-tua/anak'), false, role);
   }
@@ -125,6 +133,14 @@ test('modul administratif, siswa, orang tua, dan asesmen membatasi URL langsung 
     assert.equal(canOpenRolePath(role, '/asesmen/bank-soal'), true, role);
     assert.equal(canOpenRolePath(role, '/admin/pengguna/guru'), false, role);
     assert.equal(canOpenRolePath(role, '/platform/fitur/flags'), false, role);
+  }
+});
+
+test('penetapan wali kelas hanya tersedia bagi admin sekolah, bukan operator', () => {
+  assert.equal(canOpenRolePath('admin', '/admin/akademik/wali-kelas'), true);
+  assert.equal(canOpenRolePath('admin_sekolah', '/admin/akademik/wali-kelas'), true);
+  for (const role of ['operator', 'kepala_sekolah', 'wali_kelas', 'guru', 'superadmin']) {
+    assert.equal(canOpenRolePath(role, '/admin/akademik/wali-kelas'), false, role);
   }
 });
 
