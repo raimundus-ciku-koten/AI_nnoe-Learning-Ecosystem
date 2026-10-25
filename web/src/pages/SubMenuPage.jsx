@@ -221,8 +221,10 @@ const MODUL_GURU_AKTIF = {
     { label: 'Grup Chat', path: '/chat/grup', ikon: 'users' },
   ],
   pelaksanaan: [
+    { label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' },
     { label: 'Presensi Siswa', path: '/pelaksanaan/presensi', ikon: 'check' },
     { label: 'Program BK & Kegiatan', path: '/program-kegiatan', ikon: 'file' },
+    { label: 'Laporan Harian s.d. Bulanan', path: '/laporan/harian-bulanan', ikon: 'file' },
   ],
   asesmen: [
     { label: 'Remedial & Pengayaan', path: '/asesmen/remedial', ikon: 'refresh' },

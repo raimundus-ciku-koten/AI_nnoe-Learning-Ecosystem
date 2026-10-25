@@ -154,6 +154,16 @@ describe('submenu platform superadmin', () => {
       auth.role = 'guru';
     });
 
+    it('menautkan guru reguler dan spesialis ke jurnal serta laporan kelas yang tersedia', () => {
+      for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+        auth.role = role;
+        auth.activeRole = '';
+        const html = renderSubmenu('/pelaksanaan/realisasi');
+        expect(html, role).toContain('href="#/pelaksanaan/jurnal"');
+        expect(html, role).toContain('href="#/laporan/harian-bulanan"');
+      }
+    });
+
     it('tidak membuka data pribadi bila konteks guru/tenant tidak tersedia', () => {
       auth.user = null;
       const html = renderSubmenu('/guru/catatan-pribadi');
