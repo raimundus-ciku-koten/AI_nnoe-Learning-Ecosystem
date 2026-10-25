@@ -348,7 +348,6 @@ export const MENU_SUPERADMIN = [
     tautan('Izin Peran', '/platform/fitur/izin', 'users'),
   ]),
   grup('platform-konten', 'Manajemen Konten Global', 'file', [
-    tautan('Paket Guru', '/admin/perencanaan/paket', 'users'),
     tautan('Template Perangkat', '/platform/konten/template', 'file'),
     tautan('Bank Soal Global', '/platform/konten/bank-soal', 'book'),
     tautan('Modul', '/platform/konten/modul', 'book'),

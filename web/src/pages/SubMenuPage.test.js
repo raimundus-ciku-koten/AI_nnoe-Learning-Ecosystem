@@ -170,12 +170,23 @@ describe('submenu platform superadmin', () => {
         auth.activeRole = '';
         const planning = renderSubmenu('/perencanaan', '?jenis=rpe');
         expect(planning, role).toContain('href="#/laporan/arsip-perencanaan"');
-        expect(planning, role).toContain('href="#/perangkat/modul-siswa"');
+        expect(planning, role).toContain('href="#/perencanaan?jenis=modul"');
 
         const monitoring = renderSubmenu('/pemantauan/profil-siswa');
         expect(monitoring, role).toContain('Profil siswa, catatan kasus, dan intervensi individual bukan bagian');
         expect(monitoring, role).toContain('href="#/laporan/harian-bulanan"');
         expect(monitoring, role).toContain('href="#/pelaksanaan/presensi"');
+      }
+    });
+
+    it('routes the student-facing module shortcut to planning and labels cover creation as a guide', () => {
+      for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+        auth.role = role;
+        auth.activeRole = '';
+        const cover = renderSubmenu('/perangkat/cover');
+        expect(cover).toContain('Pembuat cover perangkat terpisah belum tersedia');
+        expect(cover).toContain('Buka modul terkait');
+        expect(cover).toContain('href="#/perencanaan?jenis=modul"');
       }
     });
 

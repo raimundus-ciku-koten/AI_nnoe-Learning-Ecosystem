@@ -126,7 +126,7 @@ test('modul administratif, siswa, orang tua, dan asesmen membatasi URL langsung 
     assert.equal(canOpenRolePath(role, '/orang-tua/anak'), false, role);
   }
   assert.equal(canOpenRolePath('superadmin', '/platform/fitur/flags'), true);
-  assert.equal(canOpenRolePath('superadmin', '/admin/perencanaan/paket/abc'), true);
+  assert.equal(canOpenRolePath('superadmin', '/admin/perencanaan/paket/abc'), false);
   assert.equal(canOpenRolePath('superadmin', '/admin/pengguna/guru'), false);
 
   for (const role of ['siswa']) {

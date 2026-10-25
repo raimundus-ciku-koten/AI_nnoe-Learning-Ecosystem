@@ -37,7 +37,7 @@ export const LEGACY_ALIAS = {
   '#prosem':            '#/perencanaan/prosem',
   '#kktp':              '#/perencanaan/kktp',
   '#modulAjar':         '#/perencanaan/modul',
-  '#modulSiswa':        '#/perangkat/modul-siswa',
+  '#modulSiswa':        '#/perencanaan?jenis=modul',
   '#coverPerangkat':    '#/perangkat/cover',
   '#bankSoal':          '#/asesmen/bank-soal',
   '#profilMengajar':    '#/datadasar/profil',

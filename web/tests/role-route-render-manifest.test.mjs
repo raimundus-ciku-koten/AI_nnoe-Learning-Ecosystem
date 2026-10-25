@@ -42,3 +42,24 @@ test('guardian-verification route is explicit, not captured by the generic user-
 
   assert.ok(exact >= 0 && dynamic >= 0 && exact < dynamic);
 });
+
+test('teacher module shortcut resolves to planning and cover remains an explicit guide route', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
+  const alias = app.indexOf('path="/perangkat/modul-siswa" element={<Navigate to="/perencanaan?jenis=modul" replace />}');
+  const cover = app.indexOf('path="/perangkat/cover" element={<PrivateShell><HalamanSubMenu /></PrivateShell>}');
+
+  assert.ok(alias >= 0, 'student-facing module link must open the existing planning module');
+  assert.ok(cover >= 0, 'cover route must render the authenticated guide explicitly');
+});
+
+test('superadmin content menu does not expose a school-admin-only planning page', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const navigation = await readFile(new URL('../src/navigasi.js', import.meta.url), 'utf8');
+  const superadminStart = navigation.indexOf('export const MENU_SUPERADMIN = [');
+  const superadminEnd = navigation.indexOf('\n];', superadminStart);
+  const superadminMenu = navigation.slice(superadminStart, superadminEnd);
+
+  assert.ok(superadminStart >= 0 && superadminEnd > superadminStart);
+  assert.doesNotMatch(superadminMenu, /Paket Guru.*\/admin\/perencanaan\/paket/);
+});

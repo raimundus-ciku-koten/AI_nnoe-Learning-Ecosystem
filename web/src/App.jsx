@@ -32,7 +32,7 @@ const LEGACY_ALIAS = {
   '#prosem': '/perencanaan?jenis=prosem',
   '#kktp': '/perencanaan?jenis=kktp',
   '#modulAjar': '/perencanaan?jenis=modul',
-  '#modulSiswa': '/perangkat/modul-siswa',
+  '#modulSiswa': '/perencanaan?jenis=modul',
   '#coverPerangkat': '/perangkat/cover',
   '#profilMengajar': '/datadasar/profil',
   '#bankSoal': '/asesmen/bank-soal',
@@ -339,6 +339,8 @@ export function RouteWrapper() {
         <Route path="/program-kegiatan" element={<PrivateShell><HalamanProgramKegiatan /></PrivateShell>} />
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
         <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanIntegrasiAI /></PrivateShell>} />
+        <Route path="/perangkat/modul-siswa" element={<Navigate to="/perencanaan?jenis=modul" replace />} />
+        <Route path="/perangkat/cover" element={<PrivateShell><HalamanSubMenu /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/generator-ai" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />

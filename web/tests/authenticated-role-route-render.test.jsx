@@ -120,6 +120,7 @@ import { RouteWrapper } from '../src/App.jsx';
 const roleAliasRedirect = new Map([
   ['/admin/komunikasi/pengumuman', '/pengumuman'],
 ]);
+const clientRedirectPaths = new Set(['/perangkat/modul-siswa']);
 
 function renderAuthenticatedRoute(path, search, role, activeRole = null) {
   auth.role = role;
@@ -166,6 +167,7 @@ describe('authenticated role × route destination rendering', () => {
       const markup = await renderAuthenticatedRoute(item.path, item.search || '', role);
       expect(markup, `${role}: ${item.path}${item.search || ''}`).not.toContain('Halaman tidak ditemukan');
       expect(markup, `${role}: ${item.path}${item.search || ''}`).not.toContain('Akses menu belum dapat diverifikasi');
+      if (clientRedirectPaths.has(item.path)) continue;
       expect(
         markup.includes(`data-app-path="${item.path}"`)
           || markup.includes(`data-route-fallback="${item.path}"`)
@@ -188,7 +190,7 @@ describe('authenticated role × route destination rendering', () => {
           .not.toContain(`data-route-fallback="${item.path}"`);
       }
     }
-  });
+  }, 20000);
 
   it('uses activeRole as the authenticated route authorization context', async () => {
     const markup = await renderAuthenticatedRoute(

@@ -154,7 +154,7 @@ const ALUR = {
     langkah: ['Pilih percakapan atau kontak', 'Sampaikan kebutuhan secara ringkas', 'Jaga kerahasiaan informasi anak'],
   },
   perencanaan: {
-    ringkasan: 'Susun perangkat ajar menggunakan paket perencanaan, lalu tinjau dokumen tersimpan melalui arsip akun Anda.',
+    ringkasan: 'Susun perangkat ajar menggunakan paket perencanaan, lalu tinjau dokumen tersimpan melalui arsip akun Anda. Modul Ajar tersedia sebagai jenis dokumen; pembuat cover terpisah belum tersedia.',
     langkah: ['Pilih jenis dokumen dan periode pada Perencanaan', 'Simpan hasil ke paket yang dituju', 'Buka Hasil Perencanaan untuk menemukan dokumen yang tersimpan'],
   },
 };
@@ -222,8 +222,7 @@ const MODUL_GURU_AKTIF = {
   perencanaan: [
     { label: 'Perencanaan Pembelajaran', path: '/perencanaan', ikon: 'file' },
     { label: 'Hasil Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' },
-    { label: 'Modul Ajar untuk Siswa', path: '/perangkat/modul-siswa', ikon: 'book' },
-    { label: 'Cover Perangkat', path: '/perangkat/cover', ikon: 'file' },
+    { label: 'Paket Modul Ajar', path: '/perencanaan?jenis=modul', ikon: 'book' },
   ],
   chat: [
     { label: 'Percakapan', path: '/chat', ikon: 'chat' },
@@ -312,13 +311,16 @@ export default function SubMenuPage() {
       'Gunakan jalur perlindungan sekolah untuk tindak lanjut; halaman ini bukan alat moderasi.',
     ]
     : alur.langkah;
+  const isCoverGuide = isTeacherRole(role) && item.path === '/perangkat/cover';
   const terkait = grup.item.filter((sub) => sub !== item && sub.path);
   const statusModul = role === 'siswa'
     ? 'Data jadwal, materi, tugas, ujian, atau nilai hanya muncul setelah sekolah menautkan data akademik ke akun siswa.'
     : ['ortu', 'orang_tua'].includes(role)
       ? 'Data anak belum ditampilkan karena hubungan akun wali-siswa harus diverifikasi oleh sekolah. Pengumuman dan Chat sekolah tetap tersedia sesuai hak akses.'
       : isTeacherRole(role)
-      ? 'Menu ini belum memiliki modul akademik khusus. Catatan Kerja Pribadi tersedia terpisah dan bukan pengganti data akademik resmi.'
+      ? isCoverGuide
+        ? 'Pembuat cover perangkat belum tersedia. Gunakan Perencanaan untuk menyusun dokumen ajar; cover tidak dibuat atau disimpan oleh halaman ini.'
+        : 'Menu ini belum memiliki modul akademik khusus. Catatan Kerja Pribadi tersedia terpisah dan bukan pengganti data akademik resmi.'
         : isSchoolAdminRole(role)
           ? modulAktifAdmin.length
             ? 'Modul tenant untuk sebagian alur pada bagian ini tersedia melalui tautan di bawah. Halaman ini sendiri hanya panduan dan ringkasannya bukan audit log lengkap.'
@@ -332,7 +334,9 @@ export default function SubMenuPage() {
         <div className="ale-submenu-hero-copy">
           <p className="ale-submenu-kicker"><Ikon nama={grup.ikon} />{grup.label}</p>
           <h2>{item.label}</h2>
-          <p>{ringkasan}</p>
+          <p>{isCoverGuide
+            ? 'Pembuat cover perangkat terpisah belum tersedia. Modul Ajar dapat disusun di dalam paket Perencanaan.'
+            : ringkasan}</p>
         </div>
         <span className="ale-submenu-state">
           <span aria-hidden="true" />
