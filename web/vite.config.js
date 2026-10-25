@@ -18,6 +18,18 @@ export default defineConfig({
     cssCodeSplit: true,
     emptyOutDir: true,
     rollupOptions: {
+      onwarn(warning, warn) {
+        const message = warning.message.replaceAll('\\', '/');
+        if (
+          warning.code === 'MODULE_LEVEL_DIRECTIVE' &&
+          message.includes('Module level directives cause errors when bundled, "use client"') &&
+          message.includes('in "node_modules/react-router/dist/') &&
+          message.includes(' was ignored.')
+        ) {
+          return;
+        }
+        warn(warning);
+      },
       output: {
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',

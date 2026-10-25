@@ -12,8 +12,8 @@ const SARAN = [
 ];
 const MAKS_RIWAYAT_TAMPIL = 100;
 const NAMA_PROVIDER = {
-  'local-qwen': 'Qwen 2.5 1.5B (lokal)',
-  'local-llama': 'Llama 3.2 3B (lokal)',
+  'local-qwen': 'Qwen 2.5 7B (lokal)',
+  'local-qwen-small': 'Qwen 2.5 1.5B (lokal)',
   gemini: 'Gemini',
   deepseek: 'DeepSeek',
   groq: 'Groq',

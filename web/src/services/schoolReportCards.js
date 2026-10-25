@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase.ts';
 
 const PERAN_GURU = ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'];
+const PERAN_ADMIN_SEKOLAH = ['admin', 'admin_sekolah'];
 const SEMESTER = ['ganjil', 'genap'];
 const PORTFOLIO_TEXT_FIELDS = [
   'kokurikuler_summary',
@@ -134,7 +135,7 @@ function dariBarisPortofolio(row) {
 }
 
 export async function muatDaftarRapor(context, classroomId = null) {
-  validasiKonteks(context, [...PERAN_GURU, 'admin_sekolah', 'siswa']);
+  validasiKonteks(context, [...PERAN_GURU, ...PERAN_ADMIN_SEKOLAH, 'siswa']);
   if (classroomId !== null && (typeof classroomId !== 'string' || !classroomId.trim())) {
     throw new TypeError('Kelas rapor tidak valid.');
   }
@@ -152,7 +153,7 @@ export async function muatDaftarRapor(context, classroomId = null) {
 }
 
 export async function muatPortofolioRapor(context) {
-  validasiKonteks(context, [...PERAN_GURU, 'admin_sekolah', 'siswa']);
+  validasiKonteks(context, [...PERAN_GURU, ...PERAN_ADMIN_SEKOLAH, 'siswa']);
   const fields = [
     'id', 'tenant_id', 'student_id', 'academic_year', 'semester', 'student_name_snapshot',
     'student_nisn_snapshot', 'student_gender_snapshot',
@@ -234,7 +235,7 @@ function validateDimension(value) {
 }
 
 export async function terbitkanPortofolioRapor(context, portfolioId) {
-  validasiKonteks(context, ['admin_sekolah']);
+  validasiKonteks(context, PERAN_ADMIN_SEKOLAH);
   if (typeof portfolioId !== 'string' || !portfolioId.trim()) {
     throw new TypeError('Portofolio rapor yang akan diterbitkan tidak valid.');
   }
@@ -249,7 +250,7 @@ export async function terbitkanPortofolioRapor(context, portfolioId) {
 }
 
 export async function bukaKembaliPortofolioRapor(context, portfolioId, reason) {
-  validasiKonteks(context, ['admin_sekolah']);
+  validasiKonteks(context, PERAN_ADMIN_SEKOLAH);
   if (typeof portfolioId !== 'string' || !portfolioId.trim() ||
       typeof reason !== 'string' || reason.trim().length < 10 || reason.trim().length > 500 ||
       /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(reason)) {
@@ -292,7 +293,7 @@ export async function simpanDrafRapor(context, classroomId, studentId, score, ac
 }
 
 export async function terbitkanRapor(context, reportCardId) {
-  validasiKonteks(context, ['admin_sekolah']);
+  validasiKonteks(context, PERAN_ADMIN_SEKOLAH);
   if (typeof reportCardId !== 'string' || !reportCardId.trim()) {
     throw new TypeError('Rapor yang akan diterbitkan tidak valid.');
   }
@@ -307,7 +308,7 @@ export async function terbitkanRapor(context, reportCardId) {
 }
 
 export async function bukaKembaliRapor(context, reportCardId, reason) {
-  validasiKonteks(context, ['admin_sekolah']);
+  validasiKonteks(context, PERAN_ADMIN_SEKOLAH);
   if (typeof reportCardId !== 'string' || !reportCardId.trim() ||
       typeof reason !== 'string' || reason.trim().length < 10 || reason.trim().length > 500) {
     throw new TypeError('Rapor atau alasan pembukaan kembali tidak valid.');

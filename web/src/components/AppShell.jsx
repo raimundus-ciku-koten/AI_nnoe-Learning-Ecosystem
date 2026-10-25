@@ -16,7 +16,13 @@ import { urlFotoAman } from '../services/protectedMedia.js';
 import { isEconomyMode } from '../services/economyMode.js';
 import { canOpenRolePath } from '../services/roleAccess.js';
 import { isMenuPathDisabled } from '../services/menuAccessPolicy.js';
-import { aturAudioNotifikasi, audioNotifikasiAktif } from '../services/announcementAudio.js';
+import {
+  aturAudioNotifikasi,
+  audioNotifikasiAktif,
+  pantauSuaraIndonesia,
+  suaraIndonesiaTersedia,
+} from '../services/announcementAudio.js';
+import { fokusAwalDrawer, tahanFokusDrawer } from '../services/mobileDrawerFocus.js';
 import '../styles/economy-mode.css';
 
 const MQ_DESKTOP = '(min-width: 961px)';
@@ -63,6 +69,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
 
   const [sideTutup, setSideTutup] = useState(sideTutupTersimpan);
   const [mobileBuka, setMobileBuka] = useState(false);
+  const [suaraIdTersedia, setSuaraIdTersedia] = useState(suaraIndonesiaTersedia);
   const [profilBuka, setProfilBuka] = useState(false);
   const [suaraAktif, setSuaraAktif] = useState(audioNotifikasiAktif);
   const [keluar, setKeluar] = useState(false);
@@ -72,6 +79,12 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   const profilRef = useRef(null);
   const profilBtnRef = useRef(null);
   const avatarRef = useRef(null);
+  const menuBtnRef = useRef(null);
+  const sidebarRef = useRef(null);
+  const kontenRef = useRef(null);
+  const previousPathRef = useRef(path);
+
+  useEffect(() => pantauSuaraIndonesia(setSuaraIdTersedia), []);
 
   useEffect(() => {
     const judulSebelumnya = document.title;
@@ -90,8 +103,19 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
     return undefined;
   }, [hematData, user?.uid, user?.photoURL]);
 
-  // Tutup panel mobile & popover saat pindah halaman.
-  useEffect(() => { setMobileBuka(false); setProfilBuka(false); }, [path]);
+  // Pindah fokus ke konten setelah navigasi menutup drawer mobile.
+  useEffect(() => {
+    const pathBerubah = previousPathRef.current !== path;
+    previousPathRef.current = path;
+    setProfilBuka(false);
+    if (pathBerubah && mobileBuka) {
+      setMobileBuka(false);
+      window.requestAnimationFrame(() => kontenRef.current?.focus());
+    }
+  }, [mobileBuka, path]);
+  useEffect(() => {
+    if (!desktop && mobileBuka) fokusAwalDrawer(sidebarRef.current);
+  }, [desktop, mobileBuka]);
   useEffect(() => {
     if (menu?.grup.id) setGrupBuka((groups) => new Set(groups).add(menu.grup.id));
   }, [menu?.grup.id]);
@@ -102,9 +126,16 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   useEffect(() => {
     if (!profilBuka && !mobileBuka) return undefined;
     const onKey = (e) => {
+      if (e.key === 'Tab' && !desktop && mobileBuka) {
+        tahanFokusDrawer(e, sidebarRef.current);
+        return;
+      }
       if (e.key !== 'Escape') return;
       if (profilBuka) { setProfilBuka(false); profilBtnRef.current?.focus(); }
-      else setMobileBuka(false);
+      else {
+        setMobileBuka(false);
+        menuBtnRef.current?.focus();
+      }
     };
     const onKlik = (e) => {
       if (profilBuka && profilRef.current && !profilRef.current.contains(e.target)) setProfilBuka(false);
@@ -115,7 +146,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('mousedown', onKlik);
     };
-  }, [profilBuka, mobileBuka]);
+  }, [desktop, profilBuka, mobileBuka]);
 
   const toggleMenu = useCallback(() => {
     if (desktop) {
@@ -193,7 +224,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
       <header className="site-header ale-topbar">
         <div className="ale-topbar-inner">
           <div className="ale-topbar-kiri">
-            <button type="button" className="ale-menu-btn" onClick={toggleMenu}
+            <button type="button" ref={menuBtnRef} className="ale-menu-btn" onClick={toggleMenu}
                     aria-label={menuTerbuka ? 'Sembunyikan menu' : 'Tampilkan menu'}
                     aria-controls="ale-side" aria-expanded={menuTerbuka}>
               <svg className="ale-menu-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -203,8 +234,14 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
               </svg>
             </button>
             <a className="ale-topbar-brand" href="#/dashboard" aria-label={`${NAMA_APLIKASI} — ke dashboard`}>
-              <img className="ale-topbar-brand-logo" src="/logo-ale-mark.png"
-                   alt="" width="52" height="36" />
+              <img
+                className="ale-topbar-brand-logo"
+                src="/logo-ale-mark-1x.png"
+                srcSet="/logo-ale-mark-2x.png 2x"
+                alt=""
+                width="52"
+                height="36"
+              />
               <span className="ale-topbar-brand-teks">
                 <strong>AI_nnoe</strong>
                 <small>Learning Ecosystem</small>
@@ -222,14 +259,23 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
               type="button"
               className="ale-topbar-audio"
               aria-pressed={suaraAktif}
-              aria-label={suaraAktif ? 'Matikan suara pemberitahuan' : 'Aktifkan suara pemberitahuan'}
-              title={suaraAktif ? 'Suara pemberitahuan aktif' : 'Suara pemberitahuan nonaktif'}
+              aria-label={suaraAktif
+                ? `Matikan suara pemberitahuan Bahasa Indonesia${suaraIdTersedia ? '' : '. Suara Bahasa Indonesia belum tersedia di perangkat'}`
+                : 'Aktifkan suara pemberitahuan Bahasa Indonesia'}
+              title={suaraAktif
+                ? suaraIdTersedia
+                  ? 'Suara Bahasa Indonesia aktif'
+                  : 'Suara Bahasa Indonesia belum tersedia di perangkat ini. Pasang atau aktifkan suara Bahasa Indonesia di pengaturan sistem.'
+                : 'Suara Bahasa Indonesia nonaktif'}
               onClick={() => {
                 const berikutnya = !suaraAktif;
-                aturAudioNotifikasi(berikutnya);
+                const status = aturAudioNotifikasi(berikutnya);
+                setSuaraIdTersedia(status.hasIndonesianVoice);
                 setSuaraAktif(berikutnya);
               }}
-            >{suaraAktif ? 'Suara aktif' : 'Suara nonaktif'}</button>
+            >{suaraAktif
+              ? suaraIdTersedia ? 'Suara aktif' : 'Suara ID tidak tersedia'
+              : 'Suara nonaktif'}</button>
             {!hematData && profile?.logoSekolah && (
               <img className="ale-logo-sekolah" src={profile.logoSekolah} alt="Logo sekolah"
                    referrerPolicy="no-referrer" width="40" height="40" />
@@ -318,7 +364,13 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
 
       {/* ============ SIDEBAR + KONTEN ============ */}
       <div className="app">
-        <aside id="ale-side" className={`ale-side${mobileBuka ? ' is-open' : ''}`} aria-label="Menu utama">
+        <aside
+          ref={sidebarRef}
+          id="ale-side"
+          className={`ale-side${mobileBuka ? ' is-open' : ''}`}
+          aria-label="Menu utama"
+          tabIndex={-1}
+        >
           <nav className="ale-nav" aria-label="Navigasi">
             {daftarMenu.map((grup) => {
               const terbuka = grupBuka.has(grup.id);
@@ -388,9 +440,17 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
           </div>
         </aside>
 
-        <div className="ale-tirai" hidden={!mobileBuka} onClick={() => setMobileBuka(false)} aria-hidden="true" />
+        <div
+          className="ale-tirai"
+          hidden={!mobileBuka}
+          onClick={() => {
+            setMobileBuka(false);
+            menuBtnRef.current?.focus();
+          }}
+          aria-hidden="true"
+        />
 
-        <main id="ale-konten" className="ale-main" tabIndex={-1}>
+        <main ref={kontenRef} id="ale-konten" className="ale-main" tabIndex={-1}>
           {hematData && (
             <p className="ale-economy-notice" role="status">
               Mode hemat data aktif. Gambar profil eksternal dimatikan dan aktivitas online diperbarui lebih jarang.

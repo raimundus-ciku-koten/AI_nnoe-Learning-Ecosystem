@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { completeLocalAi } = vi.hoisted(() => ({
   completeLocalAi: vi.fn(),
@@ -6,9 +6,12 @@ const { completeLocalAi } = vi.hoisted(() => ({
 
 vi.mock('./localAi.js', () => ({
   completeLocalAi,
+  getRecommendedLocalAiModel: (deviceMemory = globalThis.navigator?.deviceMemory) => (
+    Number.isFinite(deviceMemory) && deviceMemory <= 4 ? 'local-qwen-small' : 'local-qwen'
+  ),
   LOCAL_AI_MODELS: {
     'local-qwen': { name: 'Qwen lokal' },
-    'local-llama': { name: 'Llama lokal' },
+    'local-qwen-small': { name: 'Qwen ringan lokal' },
   },
 }));
 
@@ -42,6 +45,10 @@ describe('browser AI routing and key handling', () => {
     });
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('uses local Qwen by default for every workflow', () => {
     expect(EXTERNAL_AI_PROVIDERS_ENABLED).toBe(true);
     expect(getBrowserAiConnections('teacher-1')).toMatchObject({
@@ -54,6 +61,17 @@ describe('browser AI routing and key handling', () => {
     });
     expect(Object.values(getBrowserAiConnections('teacher-1').providers)
       .every((provider) => !provider.available)).toBe(true);
+  });
+
+  it('recommends Qwen 1.5B for low-memory devices without overriding explicit preferences', () => {
+    vi.stubGlobal('navigator', { deviceMemory: 4 });
+    expect(getBrowserAiConnections('teacher-low-memory').preferences).toEqual({
+      planning: 'local-qwen-small',
+      assistant: 'local-qwen-small',
+      questions: 'local-qwen-small',
+    });
+    setBrowserAiPreference('teacher-low-memory', 'assistant', 'local-qwen');
+    expect(getBrowserAiConnections('teacher-low-memory').preferences.assistant).toBe('local-qwen');
   });
 
   it('routes assistant prompts to the selected local model without network access', async () => {

@@ -1,4 +1,6 @@
 // web/src/components/loading.js
+import { ucapkanNotifikasi } from '../services/announcementAudio.js';
+
 /**
  * loading.js — Overlay loading global.
  * Menggantikan: showAiLoading() + #aiLoadingOverlay.
@@ -65,7 +67,7 @@ function ensureOverlay() {
   // Judul bergilir disembunyikan dari pembaca layar agar tidak membacakan ulang tiap 4 detik.
   _overlay.innerHTML = `
     <div class="loading-box">
-      <img class="loading-logo" src="/logo-ale-mark.png" alt="" width="72" height="72" />
+      <img class="loading-logo" src="/logo-ale-mark-1x.png" srcset="/logo-ale-mark-2x.png 2x" alt="" width="72" height="72" />
       <h3 id="loading-title" aria-hidden="true">Memproses…</h3>
       <p>Mohon tunggu dan jangan tutup halaman ini.</p>
       <span class="sr-only">Sedang memproses, mohon tunggu.</span>
@@ -131,6 +133,7 @@ export function showLoading(customMsg, menuName, opsi = {}) {
 
   const awal = customMsg || (menuName ? `Menyusun ${menuName}…` : MESSAGES[0]);
   _judul.textContent = awal;
+  ucapkanNotifikasi(awal);
 
   if (!_tampil) {
     const f = document.activeElement;

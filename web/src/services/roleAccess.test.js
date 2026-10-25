@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { menuUntukPeran } from '../navigasi.js';
-import { canOpenRolePath } from './roleAccess.js';
+import {
+  canOpenRolePath, isSchoolAdminRole, isTeacherRole,
+} from './roleAccess.js';
 import { isMenuPathDisabled } from './menuAccessPolicy.js';
 import { isMaintenanceBlocked, requiresPrivilegedMfa } from './privilegedAccessPolicy.js';
 
@@ -23,6 +25,18 @@ test('peran lain tetap mengikuti otorisasi rute yang sudah ada', () => {
   assert.equal(canOpenRolePath('siswa', '/perencanaan'), false);
   assert.equal(canOpenRolePath('superadmin', '/platform/fitur/flags'), true);
   assert.equal(canOpenRolePath('superadmin', '/perencanaan'), false);
+});
+
+test('alias admin sekolah dan peran guru spesialis menggunakan kebijakan role yang sama', () => {
+  assert.equal(isSchoolAdminRole('admin'), true);
+  assert.equal(isSchoolAdminRole('admin_sekolah'), true);
+  assert.equal(isSchoolAdminRole('operator'), false);
+  for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+    assert.equal(isTeacherRole(role), true, role);
+  }
+  for (const role of ['admin', 'admin_sekolah', 'operator', 'siswa']) {
+    assert.equal(isTeacherRole(role), false, role);
+  }
 });
 
 test('peran demo hanya dapat membuka simulasi uji coba', () => {

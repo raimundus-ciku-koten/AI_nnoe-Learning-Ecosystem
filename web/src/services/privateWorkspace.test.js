@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFile } from 'node:fs/promises';
 
 const mocks = vi.hoisted(() => {
   const state = {
@@ -37,6 +38,7 @@ import {
   buatCatatanRuangKerja,
   daftarCatatanRuangKerja,
   hapusCatatanRuangKerja,
+  PrivateWorkspaceSchemaUnavailableError,
   perbaruiCatatanRuangKerja,
 } from './privateWorkspace.js';
 
@@ -60,6 +62,16 @@ describe('privateWorkspace', () => {
       created_at: '2026-10-25T10:00:00Z',
       updated_at: '2026-10-25T10:00:00Z',
     };
+  });
+
+  describe('tampilan catatan pribadi saat skema belum tersedia', () => {
+    it('menyembunyikan formulir dan daftar sampai tabel catatan tersedia', async () => {
+      const page = await readFile(
+        new URL('../pages/PrivateWorkspaceRecords.jsx', import.meta.url),
+        'utf8',
+      );
+      expect(page).toMatch(/\{!isDemo && !schemaUnavailable && \(/);
+    });
   });
 
   it('memuat catatan per akun, peran, dan submenu aktif', async () => {
@@ -102,6 +114,15 @@ describe('privateWorkspace', () => {
     await expect(daftarCatatanRuangKerja(context, route))
       .rejects.toThrow('Supabase belum dikonfigurasi');
     expect(mocks.from).not.toHaveBeenCalled();
+  });
+
+  it('membedakan skema catatan yang belum diterapkan dari kegagalan permintaan umum', async () => {
+    mocks.state.result = {
+      data: null,
+      error: { code: 'PGRST205', message: 'Could not find the table in the schema cache' },
+    };
+    await expect(daftarCatatanRuangKerja(context, route))
+      .rejects.toBeInstanceOf(PrivateWorkspaceSchemaUnavailableError);
   });
 
   it('menolak masukan tidak valid sebelum memanggil Supabase', async () => {

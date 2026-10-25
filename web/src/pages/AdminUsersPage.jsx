@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isSchoolAdminRole } from '../services/roleAccess.js';
 import { supabase } from '../lib/supabase.ts';
 import '../styles/admin-users.css';
 
 const UKURAN_HALAMAN = 50;
 const LABEL_PERAN = {
+  admin: 'Admin sekolah',
   admin_sekolah: 'Admin sekolah',
   operator: 'Operator',
   guru: 'Guru',
@@ -18,7 +20,7 @@ const KATEGORI = {
   guru: { judul: 'Guru', roles: ['guru', 'operator', 'demo'] },
   siswa: { judul: 'Siswa', roles: ['siswa'] },
   'orang-tua': { judul: 'Orang tua', roles: ['ortu', 'orang_tua'] },
-  admin: { judul: 'Admin sekolah', roles: ['admin_sekolah'] },
+  admin: { judul: 'Admin sekolah', roles: ['admin', 'admin_sekolah'] },
 };
 
 function namaPengguna(data) {
@@ -33,10 +35,11 @@ function statusPengguna(data) {
 
 export default function AdminUsersPage() {
   const { pathname } = useLocation();
-  const { role, tenantId } = useAuth();
+  const { role, activeRole, tenantId } = useAuth();
+  const currentRole = activeRole || role;
   const sub = pathname.split('/').filter(Boolean).at(-1);
   const kategori = KATEGORI[sub];
-  const pengelola = role === 'admin_sekolah';
+  const pengelola = isSchoolAdminRole(currentRole);
   const [users, setUsers] = useState([]);
   const [lastId, setLastId] = useState(null);
   const [search, setSearch] = useState('');

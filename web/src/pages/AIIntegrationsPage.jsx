@@ -8,6 +8,8 @@ import {
   simpanPreferensiAI,
 } from '../services/aiIntegrations.js';
 import {
+  cancelLocalAiPreparation,
+  getRecommendedLocalAiModel,
   getLocalAiStatus,
   LOCAL_AI_MODELS,
   prepareLocalAiModel,
@@ -46,12 +48,17 @@ export default function AIIntegrationsPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [keys, setKeys] = useState({ gemini: '', deepseek: '', groq: '' });
-  const [preferences, setPreferences] = useState({
-    planning: 'local-qwen',
-    assistant: 'local-qwen',
-    questions: 'local-qwen',
+  const [preferences, setPreferences] = useState(() => {
+    const recommendedModel = getRecommendedLocalAiModel();
+    return {
+      planning: recommendedModel,
+      assistant: recommendedModel,
+      questions: recommendedModel,
+    };
   });
-  const [modelToPrepare, setModelToPrepare] = useState('local-qwen');
+  const [modelToPrepare, setModelToPrepare] = useState(() => getRecommendedLocalAiModel());
+  const [confirmModel, setConfirmModel] = useState('');
+  const [failedModel, setFailedModel] = useState('');
   const [localStatus, setLocalStatus] = useState(getLocalAiStatus);
   const [progress, setProgress] = useState(null);
   const [apiDisclosureAccepted, setApiDisclosureAccepted] = useState(false);
@@ -112,6 +119,8 @@ export default function AIIntegrationsPage() {
 
   async function prepareModel(model) {
     setBusy('model');
+    setConfirmModel('');
+    setFailedModel('');
     setError('');
     setNotice('');
     setLocalStatus({ ready: false, model: '', loading: true });
@@ -120,12 +129,31 @@ export default function AIIntegrationsPage() {
       setLocalStatus(getLocalAiStatus());
       setNotice(`${LOCAL_AI_MODELS[model].name} siap. Model ini dijalankan di perangkat dan respons prompt tidak dikirim ke penyedia AI.`);
     } catch (cause) {
+      if (cause?.name === 'AbortError') {
+        setNotice('Persiapan model dibatalkan. Model tidak diunduh lagi sampai Anda memilih untuk menyiapkannya.');
+        setLocalStatus(getLocalAiStatus());
+        setBusy('');
+        return;
+      }
       console.error('[ai-integrations] Gagal menyiapkan model lokal:', cause);
       setError(cause?.message || 'Model lokal tidak dapat disiapkan pada perangkat ini.');
+      setFailedModel(model);
       setLocalStatus(getLocalAiStatus());
     } finally {
       setBusy('');
     }
+  }
+
+  function requestModelPreparation(model) {
+    setError('');
+    setNotice('');
+    setConfirmModel(model);
+    setModelToPrepare(model);
+  }
+
+  function cancelModelPreparation() {
+    if (!cancelLocalAiPreparation()) return;
+    setLocalStatus(getLocalAiStatus());
   }
 
   async function simpanKunci(provider) {
@@ -165,8 +193,9 @@ export default function AIIntegrationsPage() {
     if (!saved) setPreferences((current) => ({ ...current, [workflow]: previous }));
   }
 
-  const lowMemory = typeof navigator !== 'undefined' &&
-    Number.isFinite(navigator.deviceMemory) && navigator.deviceMemory <= 4;
+  const recommendedLocalModel = getRecommendedLocalAiModel();
+  const lowMemory = recommendedLocalModel === 'local-qwen-small';
+  const reportedMemory = typeof navigator !== 'undefined' ? navigator.deviceMemory : undefined;
 
   return (
     <main className="ai-integrations" aria-labelledby="ai-integrations-title">
@@ -183,29 +212,49 @@ export default function AIIntegrationsPage() {
         <h2 id="ai-local-title">1. Utama — AI lokal di perangkat</h2>
         <p>WebLLM memakai WebGPU. Prompt diproses di browser tanpa API key dan tanpa mengirim isi prompt ke server model. File model diunduh dari distribusi model saat pertama kali disiapkan, lalu cache browser dapat menggunakannya kembali.</p>
         <div className="ai-integrations__provider">
-          <h3>Qwen 2.5 1.5B Instruct · kuantisasi 4-bit</h3>
-          <p>Model default untuk asisten, draf soal, dan perencanaan; tak perlu API key.</p>
-          <p>Perkiraan kebutuhan WebGPU sekitar 1,6 GB VRAM untuk konfigurasi model ini, bukan ukuran RAM sistem atau ukuran unduhan yang dijamin.</p>
+          <h3>Qwen 2.5 7B Instruct · kuantisasi 4-bit</h3>
+          <p>Model kualitas tinggi untuk asisten, draf soal, dan perencanaan; tidak memerlukan API key.</p>
+          <p>Unduhan pertama sekitar 4,5 GB. Katalog WebLLM memperkirakan kebutuhan GPU sekitar 5,1 GB VRAM; kebutuhan aktual dapat lebih tinggi bergantung pada browser, panjang konteks, dan perangkat.</p>
           <button
             type="button"
+            className={recommendedLocalModel === 'local-qwen' ? undefined : 'is-secondary'}
             disabled={Boolean(busy)}
-            onClick={() => { setModelToPrepare('local-qwen'); void prepareModel('local-qwen'); }}
+            onClick={() => requestModelPreparation('local-qwen')}
           >
-            {busy === 'model' && modelToPrepare === 'local-qwen' ? 'Menyiapkan model…' : 'Siapkan model utama Qwen'}
+            {busy === 'model' && modelToPrepare === 'local-qwen' ? 'Mengunduh/menyiapkan Qwen 7B…' : 'Pilih Qwen 7B · ±4,5 GB'}
           </button>
         </div>
         <div className="ai-integrations__provider">
-          <h3>2. Alternatif — Llama 3.2 3B Instruct · kuantisasi 4-bit</h3>
-          <p>Model lebih besar untuk dicoba pada perangkat dengan GPU memadai; estimasi WebLLM sekitar 2,3 GB VRAM. Tidak direkomendasikan untuk perangkat 2 GB dan bisa berat pada perangkat 4 GB.</p>
+          <h3>Alternatif — Qwen 2.5 1.5B Instruct · kuantisasi 4-bit</h3>
+          <p>Gunakan jika GPU tidak menyediakan memori yang cukup untuk model 7B. Unduhan pertama sekitar 1 GB dengan estimasi kebutuhan WebGPU sekitar 1,6 GB VRAM.</p>
           <button
             type="button"
-            className="is-secondary"
+            className={recommendedLocalModel === 'local-qwen-small' ? undefined : 'is-secondary'}
             disabled={Boolean(busy)}
-            onClick={() => { setModelToPrepare('local-llama'); void prepareModel('local-llama'); }}
+            onClick={() => requestModelPreparation('local-qwen-small')}
           >
-            {busy === 'model' && modelToPrepare === 'local-llama' ? 'Menyiapkan model…' : 'Siapkan model Llama 3B'}
+            {busy === 'model' && modelToPrepare === 'local-qwen-small' ? 'Menyiapkan model…' : 'Pilih Qwen 1.5B · ±1 GB'}
           </button>
         </div>
+        {confirmModel && (
+          <section className="ai-integrations__message is-warning" aria-labelledby="local-model-confirm-title">
+            <h3 id="local-model-confirm-title">Konfirmasi persiapan model</h3>
+            <p>
+              {LOCAL_AI_MODELS[confirmModel].name} memerlukan unduhan pertama
+              {' '}{LOCAL_AI_MODELS[confirmModel].downloadSize}. Pastikan koneksi dan ruang penyimpanan browser mencukupi.
+              File model dapat tetap tersimpan di cache browser dan diunduh ulang jika cache dibersihkan.
+              Persiapan hanya berjalan di perangkat ini; kapasitas GPU belum dapat dipastikan aplikasi.
+            </p>
+            <div className="ai-integrations__actions">
+              <button type="button" onClick={() => void prepareModel(confirmModel)}>
+                Konfirmasi dan siapkan {confirmModel === 'local-qwen' ? 'Qwen 7B' : 'Qwen 1.5B'}
+              </button>
+              <button type="button" className="is-secondary" onClick={() => setConfirmModel('')}>
+                Batal
+              </button>
+            </div>
+          </section>
+        )}
         {progress && (
           <p role="status" aria-live="polite">
             {formatProgress(progress)}
@@ -214,12 +263,32 @@ export default function AIIntegrationsPage() {
             )}
           </p>
         )}
+        {busy === 'model' && (
+          <button type="button" className="is-secondary" onClick={cancelModelPreparation}>
+            Batalkan persiapan model
+          </button>
+        )}
+        {failedModel === 'local-qwen' && !busy && (
+          <p className="ai-integrations__message is-warning" role="status">
+            Qwen 7B tidak berhasil disiapkan. Anda dapat mencoba Qwen 1.5B sebagai alternatif yang lebih ringan.
+            {' '}
+            <button type="button" className="is-secondary" onClick={() => requestModelPreparation('local-qwen-small')}>
+              Pilih Qwen 1.5B
+            </button>
+          </p>
+        )}
         <p className="ai-integrations__message" role="note">
-          Rekomendasi praktis: Chrome/Edge terbaru, WebGPU dan akselerasi grafis aktif, serta RAM 8 GB atau lebih untuk pengalaman lebih stabil. RAM 2–4 GB tetap boleh mencoba Qwen, tetapi performa, waktu muat, atau keberhasilan tidak dapat dijamin; tutup tab/aplikasi lain dan gunakan model utama yang lebih kecil. Model 3B memerlukan GPU yang lebih besar. Aplikasi tidak dapat mengukur VRAM secara andal.
+          Rekomendasi perangkat saat ini: <strong>{LOCAL_AI_MODELS[recommendedLocalModel].name}</strong>
+          {Number.isFinite(reportedMemory)
+            ? ` berdasarkan sinyal RAM perangkat sekitar ${reportedMemory} GB.`
+            : ' karena browser tidak memberikan sinyal RAM perangkat.'}
+          {' '}Sinyal ini bukan pengukuran VRAM dan tidak menjamin model dapat dimuat.
+          Untuk Qwen 7B, gunakan Chrome/Edge terbaru, WebGPU aktif, GPU dengan sekitar 6 GB VRAM tersedia, dan RAM sistem 16 GB atau lebih sebagai rekomendasi.
+          Unduhan hanya dimulai setelah tombol model ditekan dan memakai ruang cache browser.
         </p>
         {lowMemory && (
           <p className="ai-integrations__message is-warning" role="note">
-            Browser melaporkan perangkat dengan RAM sekitar 4 GB atau kurang. Mulai dari Qwen 1.5B; Llama 3B kemungkinan kehabisan memori.
+            Browser melaporkan perangkat dengan RAM sekitar 4 GB atau kurang. Qwen 1.5B disarankan sebagai pilihan awal; Qwen 7B tetap tersedia, tetapi kemungkinan gagal dimuat pada perangkat ini.
           </p>
         )}
         <p className="ai-integrations__message" role="status">
@@ -229,7 +298,7 @@ export default function AIIntegrationsPage() {
 
       <section className="ai-integrations__card" aria-labelledby="ai-preferences-title">
         <h2 id="ai-preferences-title">Pilih model untuk tiap fitur</h2>
-        <p>Awali dengan Qwen. Unduhan dimulai hanya setelah Anda menekan tombol siapkan model. Chat selalu memakai AI_nnoe lokal; pilihan provider eksternal hanya berlaku untuk generator yang menyediakan pilihan AI_eksternal. Jangan aktifkan API key kecuali Anda memahami pemindahan prompt dan potensi tagihan provider.</p>
+        <p>Model lokal awal mengikuti rekomendasi perangkat; Anda dapat mengubah pilihan kapan saja. Preferensi yang sudah tersimpan tetap dihormati. Unduhan hanya dimulai setelah Anda menekan tombol model. Chat selalu memakai AI_nnoe lokal; pilihan provider eksternal hanya berlaku untuk generator yang menyediakan pilihan AI_eksternal. Jangan aktifkan API key kecuali Anda memahami pemindahan prompt dan potensi tagihan provider.</p>
         {!connections && !error && <p role="status">Memuat pilihan akun…</p>}
         {connections && (
           <div className="ai-integrations__preferences">
@@ -242,7 +311,9 @@ export default function AIIntegrationsPage() {
                   onChange={(event) => void ubahPreferensi(workflow, event.target.value)}
                 >
                   {MODEL_OPTIONS.map(([id, model]) => (
-                    <option key={id} value={id}>{model.name} · lokal</option>
+                    <option key={id} value={id}>
+                      {model.name} · lokal{id === recommendedLocalModel ? ' · rekomendasi perangkat' : ''}
+                    </option>
                   ))}
                   {(workflow === 'assistant' ? [] : PROVIDERS).filter((provider) => connections.providers[provider.id]?.available)
                     .map((provider) => (

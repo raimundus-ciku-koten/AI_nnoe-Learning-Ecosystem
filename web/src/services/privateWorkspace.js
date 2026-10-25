@@ -9,6 +9,13 @@ const TABEL = 'private_workspace_records';
 const STATUS = new Set(['planned', 'in_progress', 'done']);
 const KOLOM = 'id, role, route, search, title, details, status, due_date, created_at, updated_at';
 
+export class PrivateWorkspaceSchemaUnavailableError extends Error {
+  constructor() {
+    super('Modul catatan pribadi belum tersedia pada layanan sekolah. Catatan tidak disimpan.');
+    this.name = 'PrivateWorkspaceSchemaUnavailableError';
+  }
+}
+
 function validasiKonteks(context, route, search) {
   if (!isSupabaseConfigured) {
     throw new Error(
@@ -82,6 +89,9 @@ function dariBaris(row) {
 }
 
 function pastikanBerhasil({ data, error }, tindakan) {
+  if (error?.code === 'PGRST205' || error?.code === '42P01') {
+    throw new PrivateWorkspaceSchemaUnavailableError();
+  }
   if (error) throw new Error(`Gagal ${tindakan}: ${error.message}`);
   return data;
 }

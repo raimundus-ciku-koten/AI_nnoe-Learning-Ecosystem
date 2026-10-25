@@ -3,6 +3,49 @@
 Monorepo for the AI_nnoe Learning Ecosystem web application and its backend
 services.
 
+## Local verification snapshot (2026-10-25)
+
+The repository-level `npm test` suite and `npm run build` completed successfully.
+The local anonymous login page returned HTTP 200 and had no browser console
+errors or warnings. A mobile Lighthouse audit of that page scored 100 for
+Accessibility, Best Practices, SEO, and Agentic Browsing after adding
+`web/public/llms.txt`. This automated result covers only the anonymous login
+page, not the full application or WCAG conformance. The built local preview
+also had no horizontal overflow at 320 px; a 1x CPU/Fast 4G trace recorded
+LCP 929 ms and CLS 0.00. These are local lab measurements, not field data or
+performance guarantees.
+
+Responsive 1x/2x PNG variants now serve the application logos instead of
+downloading the full-resolution source art for small UI placements. The
+high-resolution originals remain in place for social sharing metadata.
+
+These checks cover the build, automated tests, and one public page only. They
+do not verify authenticated menus, tenant data, hosted schema or migrations,
+cross-tenant RLS, encrypted-backup decryption and restore, CBT load, full WCAG
+conformance, Android/WebView behavior, or incident readiness. No hosted
+database or production settings were changed. Do not interpret this snapshot
+as confirmation that every feature is active or release-ready.
+
+The read-only query in `supabase/audit_hosted_schema.sql` now checks presence
+for every public table and view declared by the checked-in migrations and
+reports the migration-history table's column metadata when present. Its
+automated consistency check is `npm run test:schema-audit`. This inventory
+does not read applied migration versions, establish migration provenance, or
+prove hosted parity; review actual hosted definitions and migration records
+separately before any change.
+
+The web app also provides spoken Indonesian (`id-ID`) feedback for the initial
+welcome, loading states, and in-app notifications. Browsers commonly block
+autoplay, so speech begins after the user's first click, tap, or keyboard
+interaction. The authenticated app provides a control to turn spoken
+notifications off or on.
+
+The mobile navigation drawer moves keyboard focus into the menu when opened,
+keeps Tab and Shift+Tab navigation within the open drawer, returns focus to its
+trigger when dismissed with Escape, and moves focus to the page content after
+navigation. This interaction has focused unit tests; it does not replace
+keyboard and screen-reader testing across the full application.
+
 ## Release readiness snapshot (2026-10-22)
 
 **Production login access was restored** by merging PR #7
@@ -24,6 +67,21 @@ a disposable PostgreSQL 17.11 database before encryption and uploaded the
 encrypted artifact. The hosted schema and migration-provenance review and
 server-side CAPTCHA blockers below still apply; the uploaded ciphertext itself
 has not yet been decrypted and restored.
+
+The Staging backup workflow source now uploads the encrypted artifact, downloads
+that artifact within the same run, decrypts it, compares the restored dump with
+the source dump, and restores it into a disposable PostgreSQL database. This
+end-to-end validation has not yet been run; a successful future workflow run is
+required before treating encrypted-backup recovery as proven.
+
+A read-only GitHub Actions check on 2026-10-25 confirmed that run #12
+([40087589412](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/40087589412))
+completed successfully and its encrypted artifact was still available. The run
+restored the plaintext dump before encryption, then encrypted and uploaded it;
+its recorded job steps did not download, decrypt, or restore the uploaded
+ciphertext. The artifact is scheduled to expire at 2026-10-25 10:53:43 UTC
+(18:53:43 UTC+8). The workflow update that validates the uploaded ciphertext is
+present only in this local worktree and has not been run on `main`.
 
 The read-only Production check on 2026-10-20 confirmed the owner's active
 Superadmin profile and matching JWT role claim. After the owner completed TOTP
@@ -293,7 +351,8 @@ and its hosted effects verified.
 
 A fresh read-only Staging check on 2026-10-24 confirmed eight public base
 tables, all with RLS enabled, and nine public policies. Of the 30 feature
-relations in the current inventory query, only `trial_registrations` exists.
+relations listed in the inventory query used for that dated check, only
+`trial_registrations` existed.
 The migration-history relation is still absent. The checkout also does not
 contain the documented `school_registration_requests_v2` migration or a
 privacy-consent migration; locate and review the intended source before
@@ -514,10 +573,23 @@ packages have not been imported and remain a separate reconciliation task.
 Migration `20261018000600_planning_drive_vault.sql` is local and has not been
 applied to hosted Supabase; public-key registration and admin discovery need
 that migration deployed first.
-The browser AI menu now defaults to local Qwen 2.5 1.5B through WebLLM, with
-Llama 3.2 3B as a larger local option. Model files are fetched on explicit
-user action and cached by the browser; WebGPU support and device memory are
-required. The optional third choice accepts a user's own Gemini, DeepSeek, or
+The browser AI menu now defaults to local Qwen 2.5 7B Instruct (q4f16) through
+WebLLM. Its first download is approximately 4.5 GB and WebLLM estimates about
+5.1 GB of GPU memory; actual requirements depend on browser and device. Qwen
+2.5 1.5B remains available as a smaller local alternative. On browsers reporting
+4 GB system memory or less, new local preferences recommend 1.5B; otherwise they
+recommend 7B. This coarse system-memory signal is not a VRAM measurement or a
+guarantee of compatibility, and saved user preferences are preserved. Model
+files are fetched only after explicit user action and cached by the browser;
+WebGPU support and sufficient device memory are required. WebLLM now runs in a
+dedicated web worker so model loading and inference do not execute on the UI
+thread; this does not reduce the model/runtime download size. The model setup
+flow confirms the expected download and browser storage use before starting,
+reports WebGPU availability and download progress, and lets the user cancel.
+If 7B initialization fails, the UI offers the smaller model without switching
+automatically. Browser-reported system memory is only a coarse recommendation;
+the app cannot verify free VRAM or guarantee a model will load. The optional
+third choice accepts a user's own Gemini, DeepSeek, or
 Groq key in tab memory only. It sends prompts to that provider only after the
 user accepts the disclosure and selects the provider, and provider fees or
 quotas are not guaranteed to be zero. The AI preference must also be enabled
@@ -646,13 +718,16 @@ peramban; pengguna memilih "Simpan sebagai PDF". Hasil tidak diberi watermark
 atau DRM, dan aplikasi tidak dapat mencegah PDF dikonversi oleh perangkat
 pihak ketiga.
 
-Suara pembuka dan notifikasi menggunakan text-to-speech sistem setelah
-interaksi pengguna mengaktifkan suara. Ketersediaan, jenis kelamin, dan aksen
-suara bergantung pada suara yang dipasang di peramban/OS; aplikasi tidak
-dapat menjamin suara laki-laki atau aksen Indonesia Timur. Peramban juga
-membatasi pemutaran otomatis tanpa interaksi. Overlay proses memakai animasi
-logo, tetapi ini bukan audio latar yang dijamin berjalan saat halaman pertama
-dibuka.
+Suara pembuka dan notifikasi menggunakan text-to-speech sistem dengan suara
+berlokal tepat `id-ID`, setelah interaksi pengguna mengaktifkan suara. Aplikasi
+menggunakan pelafalan nama merek “Ainnoe” agar lebih alami. Suara berlokal
+lain, termasuk `id-MY`, tidak digunakan sebagai pengganti. Jika suara `id-ID`
+belum tersedia, notifikasi menunggu daftar suara perangkat diperbarui dan
+kontrol memberi tahu pengguna; aksen dan intonasi tetap bergantung pada suara
+`id-ID` yang dipasang di peramban atau sistem operasi, sehingga tidak dapat
+dijamin sama di semua perangkat. Peramban juga membatasi pemutaran otomatis
+tanpa interaksi. Overlay proses memakai animasi logo, tetapi ini bukan audio
+latar yang dijamin berjalan saat halaman pertama dibuka.
 
 The school-admin dashboard shortcuts now open the available user directory,
 Ruang Kelas, planning archive, online assessment, and chat modules instead of

@@ -511,7 +511,7 @@ export function topbar() {
 
           <a class="ale-topbar-brand" href="#/dashboard"
              aria-label="AI-nnoe Learning Ecosystem — Beranda">
-            <img src="/logo-ale-mark.png" alt="" width="52" height="36"
+            <img src="/logo-ale-mark-1x.png" srcset="/logo-ale-mark-2x.png 2x" alt="" width="52" height="36"
                  class="ale-topbar-brand-logo">
             <span class="ale-topbar-brand-teks">
               <strong>AI-nnoe</strong>

@@ -17,6 +17,15 @@ const KNOWN_ROLES = new Set([
   'demo',
 ]);
 
+export function isSchoolAdminRole(role) {
+  return ['admin', 'admin_sekolah'].includes(String(role || '').trim().toLowerCase());
+}
+
+export function isTeacherRole(role) {
+  return ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']
+    .includes(String(role || '').trim().toLowerCase());
+}
+
 export function canOpenRolePath(role, path) {
   const normalizedRole = String(role || '').trim().toLowerCase();
   if (normalizedRole === 'demo') return path === '/trial';

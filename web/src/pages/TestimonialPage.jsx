@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isSchoolAdminRole } from '../services/roleAccess.js';
 import { supabase } from '../lib/supabase.ts';
 import '../styles/testimonial.css';
 
@@ -11,7 +12,8 @@ const pesanGalat = (error) => ({
 }[error?.code] || error?.message || 'Permintaan testimoni gagal.');
 
 export default function TestimonialPage() {
-  const { user, role, tenantId, profile } = useAuth();
+  const { user, role, activeRole, tenantId, profile } = useAuth();
+  const currentRole = activeRole || role;
   const [punya, setPunya] = useState(null);
   const [menunggu, setMenunggu] = useState([]);
   const [kutipan, setKutipan] = useState('');
@@ -20,7 +22,7 @@ export default function TestimonialPage() {
   const [anonim, setAnonim] = useState(false);
   const [status, setStatus] = useState('');
   const [sibuk, setSibuk] = useState(false);
-  const admin = role === 'admin_sekolah';
+  const admin = isSchoolAdminRole(currentRole);
 
   useEffect(() => {
     if (!user?.uid || !tenantId) return undefined;

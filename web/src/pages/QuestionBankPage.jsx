@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isSchoolAdminRole, isTeacherRole } from '../services/roleAccess.js';
 import { usePlatformControls } from '../context/PlatformControlContext.jsx';
 import Ikon from '../components/Ikon.jsx';
 import {
@@ -57,7 +58,8 @@ function formatTanggal(value) {
 }
 
 export default function QuestionBankPage() {
-  const { user, role, tenantId } = useAuth();
+  const { user, role, activeRole, tenantId } = useAuth();
+  const currentRole = activeRole || role;
   const { features } = usePlatformControls();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -72,8 +74,8 @@ export default function QuestionBankPage() {
   const [aiMode, setAiMode] = useState('ai-nnoe');
   const [externalAiAcknowledged, setExternalAiAcknowledged] = useState(false);
 
-  const canView = ['guru', 'admin_sekolah'].includes(role);
-  const canEdit = role === 'guru';
+  const canView = isTeacherRole(currentRole) || isSchoolAdminRole(currentRole);
+  const canEdit = isTeacherRole(currentRole);
 
   useEffect(() => {
     let active = true;
@@ -206,8 +208,8 @@ export default function QuestionBankPage() {
         pembahasan: draft.pembahasan,
       }));
       const provider = {
-        'local-qwen': 'Qwen 2.5 1.5B (lokal)',
-        'local-llama': 'Llama 3.2 3B (lokal)',
+        'local-qwen': 'Qwen 2.5 7B (lokal)',
+        'local-qwen-small': 'Qwen 2.5 1.5B (lokal)',
         gemini: 'Gemini',
         deepseek: 'DeepSeek',
         groq: 'Groq',

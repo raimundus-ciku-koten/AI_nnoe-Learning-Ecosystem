@@ -484,47 +484,62 @@ describe('encrypted planning package repository', () => {
     );
   });
 
-  it('makes an admin open only explicitly shared packages selected in Google Picker', async () => {
+  it.each(['admin', 'admin_sekolah'])(
+    'makes %s open only explicitly shared packages selected in Google Picker',
+    async (role) => {
+      authState.getState.mockReturnValue({
+        user: { uid: ADMIN.userId },
+        tenantId: TENANT,
+        role,
+      });
+      driveIdentity.identitasEnkripsiDriveDalamSesi.mockReturnValue({
+        ...IDENTITY,
+        fingerprint: ADMIN.fingerprint,
+      });
+      const sharedBundle = {
+        ...BUNDLE,
+        grants: [{
+          userId: ADMIN.userId,
+          email: ADMIN.email,
+          fingerprint: ADMIN.fingerprint,
+          keyVersion: ADMIN.keyVersion,
+        }],
+      };
+      const sharedFile = {
+        ...FILE,
+        manifest: {
+          ...FILE.manifest,
+          keyEnvelopes: [
+            ...FILE.manifest.keyEnvelopes,
+            {
+              recipientKeyFingerprint: ADMIN.fingerprint,
+              keyVersion: ADMIN.keyVersion,
+            },
+          ],
+        },
+      };
+      googleDrive.bukaPemilihPaketDrive.mockResolvedValue([FILE.id]);
+      googleDrive.daftarPaketPerencanaanTerenkripsiDrive.mockResolvedValue([sharedFile]);
+      googleDrive.unduhBerkasTerenkripsiDrive.mockResolvedValue({
+        bytes: new TextEncoder().encode(JSON.stringify(sharedBundle)),
+      });
+
+      await expect(pilihPaketAdminDrive(OWNER)).resolves.toBe(1);
+      expect(googleDrive.bukaPemilihPaketDrive).toHaveBeenCalledWith('google-token');
+      expect(googleDrive.daftarPaketPerencanaanTerenkripsiDrive)
+        .toHaveBeenCalledWith('google-token', [FILE.id], { includeCreatedFiles: false });
+    },
+  );
+
+  it('denies admin-only package selection when the active role is operator', async () => {
     authState.getState.mockReturnValue({
       user: { uid: ADMIN.userId },
       tenantId: TENANT,
-      role: 'admin_sekolah',
+      role: 'admin',
+      activeRole: 'operator',
     });
-    driveIdentity.identitasEnkripsiDriveDalamSesi.mockReturnValue({
-      ...IDENTITY,
-      fingerprint: ADMIN.fingerprint,
-    });
-    const sharedBundle = {
-      ...BUNDLE,
-      grants: [{
-        userId: ADMIN.userId,
-        email: ADMIN.email,
-        fingerprint: ADMIN.fingerprint,
-        keyVersion: ADMIN.keyVersion,
-      }],
-    };
-    const sharedFile = {
-      ...FILE,
-      manifest: {
-        ...FILE.manifest,
-        keyEnvelopes: [
-          ...FILE.manifest.keyEnvelopes,
-          {
-            recipientKeyFingerprint: ADMIN.fingerprint,
-            keyVersion: ADMIN.keyVersion,
-          },
-        ],
-      },
-    };
-    googleDrive.bukaPemilihPaketDrive.mockResolvedValue([FILE.id]);
-    googleDrive.daftarPaketPerencanaanTerenkripsiDrive.mockResolvedValue([sharedFile]);
-    googleDrive.unduhBerkasTerenkripsiDrive.mockResolvedValue({
-      bytes: new TextEncoder().encode(JSON.stringify(sharedBundle)),
-    });
-
-    await expect(pilihPaketAdminDrive(OWNER)).resolves.toBe(1);
-    expect(googleDrive.bukaPemilihPaketDrive).toHaveBeenCalledWith('google-token');
-    expect(googleDrive.daftarPaketPerencanaanTerenkripsiDrive)
-      .toHaveBeenCalledWith('google-token', [FILE.id], { includeCreatedFiles: false });
+    await expect(pilihPaketAdminDrive(OWNER))
+      .rejects.toThrow('Hanya admin sekolah');
+    expect(googleDrive.bukaPemilihPaketDrive).not.toHaveBeenCalled();
   });
 });

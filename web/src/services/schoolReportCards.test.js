@@ -152,6 +152,8 @@ describe('schoolReportCards', () => {
     });
     await expect(terbitkanRapor(teacher, 'report-1'))
       .rejects.toThrow('Akun atau peran aktif');
+    await expect(terbitkanRapor({ ...admin, activeRole: 'admin' }, 'report-1'))
+      .resolves.toBe('report-1');
     await expect(bukaKembaliRapor(admin, 'report-1', 'singkat'))
       .rejects.toThrow('Rapor atau alasan pembukaan kembali tidak valid');
   });

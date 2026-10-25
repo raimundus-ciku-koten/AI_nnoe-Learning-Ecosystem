@@ -4,6 +4,7 @@ import {
   buatCatatanRuangKerja,
   daftarCatatanRuangKerja,
   hapusCatatanRuangKerja,
+  PrivateWorkspaceSchemaUnavailableError,
   perbaruiCatatanRuangKerja,
 } from '../services/privateWorkspace.js';
 import '../styles/private-workspace.css';
@@ -37,6 +38,7 @@ export default function PrivateWorkspaceRecords({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [schemaUnavailable, setSchemaUnavailable] = useState(false);
   const [editingId, setEditingId] = useState('');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -50,10 +52,16 @@ export default function PrivateWorkspaceRecords({
   const loadRecords = useCallback(async () => {
     setLoading(true);
     setError('');
+    setSchemaUnavailable(false);
+    setRecords([]);
     try {
       const rows = await daftarCatatanRuangKerja(context, route, search);
       setRecords(rows);
     } catch (cause) {
+      setRecords([]);
+      if (cause instanceof PrivateWorkspaceSchemaUnavailableError) {
+        setSchemaUnavailable(true);
+      }
       setError(cause instanceof Error ? cause.message : 'Catatan gagal dimuat.');
     } finally {
       setLoading(false);
@@ -89,6 +97,9 @@ export default function PrivateWorkspaceRecords({
       resetForm();
       await loadRecords();
     } catch (cause) {
+      if (cause instanceof PrivateWorkspaceSchemaUnavailableError) {
+        setSchemaUnavailable(true);
+      }
       setError(cause instanceof Error ? cause.message : 'Catatan gagal disimpan.');
     } finally {
       setSubmitting(false);
@@ -114,6 +125,9 @@ export default function PrivateWorkspaceRecords({
       setRecords((current) => current.filter((entry) => entry.id !== record.id));
       if (editingId === record.id) resetForm();
     } catch (cause) {
+      if (cause instanceof PrivateWorkspaceSchemaUnavailableError) {
+        setSchemaUnavailable(true);
+      }
       setError(cause instanceof Error ? cause.message : 'Catatan gagal dihapus.');
     }
   }
@@ -132,7 +146,9 @@ export default function PrivateWorkspaceRecords({
           <h3 id="private-workspace-heading">{heading}</h3>
           <p>Catatan hanya dapat dikelola oleh akun dan peran aktif Anda.</p>
         </div>
-        <span className="ale-private-workspace-count">{records.length} catatan</span>
+        <span className="ale-private-workspace-count">
+          {schemaUnavailable ? 'Belum tersedia' : `${records.length} catatan`}
+        </span>
       </div>
 
       <p className="ale-private-workspace-privacy">
@@ -144,7 +160,13 @@ export default function PrivateWorkspaceRecords({
       {error && (
         <div className="ale-private-workspace-error" role="alert">
           <span>{error}</span>
-          {!isDemo && (
+          {schemaUnavailable && (
+            <p className="ale-private-workspace-empty" role="status">
+              Minta administrator sekolah menyelesaikan aktivasi skema sebelum menggunakan catatan pribadi.
+            </p>
+          )}
+
+          {!isDemo && !schemaUnavailable && (
             <button type="button" className="ale-private-workspace-button secondary" onClick={loadRecords}>
               Coba lagi
             </button>
@@ -152,7 +174,7 @@ export default function PrivateWorkspaceRecords({
         </div>
       )}
 
-      {!isDemo && (
+      {!isDemo && !schemaUnavailable && (
         <div className="ale-private-workspace-grid">
           <form className="ale-private-workspace-form" onSubmit={submit}>
             <h4>{editingId ? 'Ubah catatan' : 'Catatan baru'}</h4>
@@ -230,7 +252,7 @@ export default function PrivateWorkspaceRecords({
 
             {loading ? (
               <p className="ale-private-workspace-empty" role="status">Memuat catatan...</p>
-            ) : filteredRecords.length === 0 ? (
+            ) : schemaUnavailable ? null : filteredRecords.length === 0 ? (
               <p className="ale-private-workspace-empty">
                 {records.length ? 'Tidak ada catatan yang cocok dengan filter.' : 'Belum ada catatan. Mulai dengan menambahkan catatan pertama.'}
               </p>

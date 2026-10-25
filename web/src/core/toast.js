@@ -3,6 +3,8 @@
  * toast.js — Notifikasi kecil di layar (bottom center).
  * Dipakai oleh chatPage.js dan chatRoom.js.
  */
+import { ucapkanNotifikasi } from '../services/announcementAudio.js';
+
 export function toast(pesan, jenis = 'info', durasi = 4000) {
   let host = document.getElementById('ale-toast-host');
   if (!host) {
@@ -18,6 +20,7 @@ export function toast(pesan, jenis = 'info', durasi = 4000) {
   item.dataset.jenis = jenis === 'success' ? 'ok' : jenis === 'error' ? 'galat' : 'info';
   item.textContent = String(pesan ?? '');
   host.appendChild(item);
+  ucapkanNotifikasi(item.textContent);
 
   requestAnimationFrame(() => item.classList.add('tampil'));
 

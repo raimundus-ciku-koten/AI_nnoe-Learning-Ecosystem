@@ -117,8 +117,8 @@ export function halamanLogin(wadah) {
     <a class="skip-link" href="#/login" data-ke="masuk">Lewati ke formulir masuk</a>
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="#/login" data-ke="top" aria-label="AI_nnoe Learning Ecosystem">
-          <img src="/logo-ale-mark.png" alt="" width="52" height="36">
+        <a class="brand" href="#/login" data-ke="top">
+          <img src="/logo-ale-mark-1x.png" srcset="/logo-ale-mark-2x.png 2x" alt="" width="52" height="36">
           <span class="brand-text"><strong>AI_nnoe</strong><small>Learning Ecosystem</small></span>
         </a>
         <nav class="nav" aria-label="Navigasi utama">

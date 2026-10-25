@@ -3,7 +3,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { auth, controls } = vi.hoisted(() => ({
-  auth: { user: { uid: 'teacher-test' }, role: 'guru', tenantId: 'school-test' },
+  auth: {
+    user: { uid: 'teacher-test' }, role: 'guru', activeRole: null,
+    tenantId: 'school-test',
+  },
   controls: { features: { aiGeneration: true } },
 }));
 
@@ -36,6 +39,7 @@ describe('Question Bank AI mode choices', () => {
   beforeEach(() => {
     controls.features.aiGeneration = true;
     auth.role = 'guru';
+    auth.activeRole = null;
   });
 
   it('offers local AI_nnoe and external AI choices when enabled by the administrator', () => {
@@ -55,5 +59,38 @@ describe('Question Bank AI mode choices', () => {
     expect(html).not.toContain('Gunakan AI_nnoe');
     expect(html).not.toContain('Gunakan AI_eksternal');
     expect(html).toContain('Pembuatan draf AI sedang dinonaktifkan oleh administrator.');
+  });
+
+  it.each(['guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'])(
+    'renders the teacher destination for the specialist role %s',
+    (role) => {
+      auth.role = role;
+      const html = renderPage();
+      expect(html).toContain('Bank Soal');
+      expect(html).toContain('Tambah soal');
+    },
+  );
+
+  it.each(['admin', 'admin_sekolah'])('allows %s to view but not edit the question bank', (role) => {
+    auth.role = role;
+    const html = renderPage();
+    expect(html).toContain('Bank Soal');
+    expect(html).toContain('Simpan soal');
+    expect(html).not.toContain('<h2>Tambah soal</h2>');
+  });
+
+  it('does not grant operator access through the school-admin alias', () => {
+    auth.role = 'operator';
+    const html = renderPage();
+    expect(html).toContain('hanya tersedia untuk guru serta administrator sekolah');
+    expect(html).not.toContain('Tambah soal');
+  });
+
+  it('uses the selected role when the account has multiple roles', () => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = 'operator';
+    const html = renderPage();
+    expect(html).toContain('hanya tersedia untuk guru serta administrator sekolah');
+    expect(html).not.toContain('Tambah soal');
   });
 });

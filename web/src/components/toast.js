@@ -153,7 +153,7 @@ export function toast(pesan, jenis = 'info', arg3) {
 
   aktif.set(kunci, { ts: kini, tutup });
   jalan();
-  ucapkanNotifikasi();
+  ucapkanNotifikasi(teks);
   return tutup;
 }
 

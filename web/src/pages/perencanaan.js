@@ -15,6 +15,7 @@ import './perencanaan/perencanaan.css';
  *     topbar; sekarang keduanya sudah di shell.
  */
 import { getState } from '../state.js';
+import { isSchoolAdminRole, isTeacherRole } from '../services/roleAccess.js';
 import {
   hubungkanGoogleDriveUntukPengguna,
   sesiGoogleWorkspacePerPengguna,
@@ -29,9 +30,6 @@ import {
 } from './perencanaan/services/repository.js';
 import { daftarGuruPerencanaan } from './perencanaan/services/directory.js';
 import { BATAS, JENIS } from './perencanaan/constants.js';
-
-const PERAN_BOLEH = new Set(['guru', 'admin_sekolah']);
-const PERAN_ADMIN = new Set(['admin_sekolah']);
 
 // ============================================================================
 // FALLBACK — bila modul perencanaan belum siap
@@ -74,10 +72,12 @@ export function halamanPerencanaan(wadah, arg = {}) {
     return halamanPlaceholder(wadah);
   }
 
-  const { user, role, tenantId } = getState();
+  const { user, role, activeRole, tenantId } = getState();
+  const currentRole = activeRole || role;
 
   // Guard peran/tenant
-  if (!PERAN_BOLEH.has(role) || (role !== 'superadmin' && !tenantId) || !user?.uid) {
+  if ((!isTeacherRole(currentRole) && !isSchoolAdminRole(currentRole))
+    || !tenantId || !user?.uid) {
     wadah.append(
       h('p', { class: 'kotak kotak-galat', role: 'alert' }, t('hub.peranTidakBoleh'))
     );
@@ -122,8 +122,8 @@ export function halamanPerencanaan(wadah, arg = {}) {
     return () => {};
   }
 
-  if (PERAN_ADMIN.has(role)) {
-    return halamanPerencanaanAdmin(wadah, arg, { role, tenantId, canGenerateAi });
+  if (isSchoolAdminRole(currentRole)) {
+    return halamanPerencanaanAdmin(wadah, arg, { role: currentRole, tenantId, canGenerateAi });
   }
 
   return halamanHub(wadah, arg, {
@@ -145,7 +145,7 @@ function halamanPerencanaanAdmin(wadah, arg, { role, tenantId, canGenerateAi }) 
   const baseRoute = '#/admin/perencanaan/paket';
   wadah.append(h('p', { class: 'memuat', role: 'status' }, t('umum.memuat')));
 
-  daftarGuruPerencanaan(role === 'admin_sekolah' ? tenantId : '').then((guru) => {
+  daftarGuruPerencanaan(isSchoolAdminRole(role) ? tenantId : '').then((guru) => {
     if (!aktif) return;
     if (!guruUid) {
       const daftar = h('ul', { class: 'grid daftar-paket', role: 'list' },

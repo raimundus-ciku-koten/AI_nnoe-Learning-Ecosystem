@@ -1,4 +1,8 @@
-import { completeLocalAi, LOCAL_AI_MODELS } from './localAi.js';
+import {
+  completeLocalAi,
+  getRecommendedLocalAiModel,
+  LOCAL_AI_MODELS,
+} from './localAi.js';
 
 export const EXTERNAL_AI_PROVIDERS_ENABLED = true;
 
@@ -20,13 +24,13 @@ const PROVIDERS = Object.freeze({
   },
 });
 const WORKFLOWS = Object.freeze(['planning', 'assistant', 'questions']);
-const DEFAULT_PREFERENCES = Object.freeze({
-  planning: 'local-qwen',
-  assistant: 'local-qwen',
-  questions: 'local-qwen',
-});
 const KEY_PATTERN = /^[A-Za-z0-9._\-]{12,4096}$/;
 const PERSONAL_KEYS = new Map();
+
+function defaultPreferences() {
+  const model = getRecommendedLocalAiModel();
+  return { planning: model, assistant: model, questions: model };
+}
 
 function validateUser(uid) {
   if (typeof uid !== 'string' || !uid.trim()) {
@@ -40,18 +44,21 @@ function preferenceStorageKey(uid) {
 }
 
 function readPreferences(uid) {
+  const defaults = defaultPreferences();
   try {
     const value = JSON.parse(globalThis.localStorage?.getItem(preferenceStorageKey(uid)) || 'null');
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return { ...DEFAULT_PREFERENCES };
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return defaults;
     return Object.fromEntries(WORKFLOWS.map((workflow) => [
       workflow,
-      workflow === 'assistant'
-        ? value[workflow] in LOCAL_AI_MODELS ? value[workflow] : DEFAULT_PREFERENCES[workflow]
-        : isSupportedProvider(value[workflow]) ? value[workflow] : DEFAULT_PREFERENCES[workflow],
+      workflow === 'assistant' && !(value[workflow] in LOCAL_AI_MODELS)
+        ? defaults[workflow]
+        : workflow !== 'assistant' && !isSupportedProvider(value[workflow])
+          ? defaults[workflow]
+          : value[workflow],
     ]));
   } catch (error) {
     console.error('[browser-ai] Preferensi provider tidak dapat dibaca:', error);
-    return { ...DEFAULT_PREFERENCES };
+    return defaults;
   }
 }
 
@@ -75,7 +82,7 @@ function resolveProvider(uid, workflow, mode = 'ai-nnoe') {
   validateWorkflow(workflow);
   const preference = readPreferences(uid)[workflow];
   if (workflow === 'assistant' || mode === 'ai-nnoe') {
-    return preference in LOCAL_AI_MODELS ? preference : DEFAULT_PREFERENCES[workflow];
+    return preference in LOCAL_AI_MODELS ? preference : defaultPreferences()[workflow];
   }
   if (mode !== 'ai-eksternal') throw new TypeError('Pilihan mode AI tidak dikenal.');
   if (workflow === 'assistant') throw new Error('Chat hanya menggunakan AI_nnoe lokal.');
@@ -228,8 +235,9 @@ export function removeBrowserKey(uid, provider) {
   if (!(provider in PROVIDERS)) throw new TypeError('Provider API key tidak didukung.');
   PERSONAL_KEYS.get(userId)?.delete(provider);
   const preferences = readPreferences(userId);
+  const defaults = defaultPreferences();
   for (const workflow of WORKFLOWS) {
-    if (preferences[workflow] === provider) preferences[workflow] = 'local-qwen';
+    if (preferences[workflow] === provider) preferences[workflow] = defaults[workflow];
   }
   writePreferences(userId, preferences);
 }

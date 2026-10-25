@@ -99,6 +99,12 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   const upload = workflow.match(
     /      - name: Upload encrypted backup artifact([\s\S]*?)(?=      - name:|$)/,
   )?.[1];
+  const download = workflow.match(
+    /      - name: Download encrypted backup artifact([\s\S]*?)(?=      - name:|$)/,
+  )?.[1];
+  const restore = workflow.match(
+    /      - name: Decrypt and restore uploaded artifact to disposable database([\s\S]*?)(?=      - name:|$)/,
+  )?.[1];
 
   assert.doesNotMatch(workflow, /^    env:/m);
   assert.doesNotMatch(workflow, /^  schedule:/m);
@@ -106,6 +112,8 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.ok(validate);
   assert.ok(create);
   assert.ok(upload);
+  assert.ok(download);
+  assert.ok(restore);
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /Run this workflow from main only/);
   assert.match(validate, /validateStagingBackupTarget\.mjs/);
@@ -122,18 +130,8 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.match(workflow, /5432:5432/);
   assert.match(create, /\/usr\/lib\/postgresql\/17\/bin\/pg_dump --format=custom/);
   assert.match(create, /\/usr\/lib\/postgresql\/17\/bin\/pg_restore --list "\$dump" > \/dev\/null/);
-  assert.match(
-    create,
-    /createdb \\\r?\n\s+--host 127\.0\.0\.1 --username supabase_admin "\$restore_db"/,
-  );
-  assert.match(create, /--exit-on-error --no-owner --no-acl/);
-  assert.match(create, /--dbname "\$restore_db" "\$dump"/);
-  assert.match(create, /pg_catalog\.pg_tables/);
-  assert.match(create, /Disposable restore completed without any user tables/);
-  assert.ok(
-    create.indexOf('pg_restore \\\n            --exit-on-error') <
-      create.indexOf('node scripts/encryptedBackup.mjs encrypt'),
-  );
+  assert.match(create, /node scripts\/encryptedBackup\.mjs encrypt "\$dump" "\$encrypted"/);
+  assert.doesNotMatch(create, /createdb|pg_restore \\\r?\n\s+--exit-on-error/);
   assert.doesNotMatch(create, /export PGPASSWORD=/);
   assert.match(create, /test -s "\$dump"/);
   assert.match(create, /test -s "\$encrypted"/);
@@ -143,9 +141,27 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.match(create, /SUPABASE_DB_URL:/);
   assert.match(create, /BACKUP_ENCRYPTION_KEY:/);
   assert.match(upload, /actions\/upload-artifact@v4/);
+  assert.match(download, /actions\/download-artifact@v4/);
+  assert.match(download, /supabase-staging-encrypted-\$\{\{ github\.run_id \}\}/);
   assert.match(upload, /retention-days: 1/);
   assert.match(upload, /compression-level: 0/);
   assert.match(upload, /if-no-files-found: error/);
   assert.doesNotMatch(upload, /SUPABASE_DB_URL:/);
   assert.doesNotMatch(upload, /BACKUP_ENCRYPTION_KEY:/);
+  assert.ok(
+    workflow.indexOf('- name: Upload encrypted backup artifact') <
+      workflow.indexOf('- name: Download encrypted backup artifact'),
+  );
+  assert.ok(
+    workflow.indexOf('- name: Download encrypted backup artifact') <
+      workflow.indexOf('- name: Decrypt and restore uploaded artifact to disposable database'),
+  );
+  assert.match(restore, /node scripts\/encryptedBackup\.mjs decrypt "\$artifact" "\$restored_dump"/);
+  assert.match(restore, /cmp --silent "\$dump" "\$restored_dump"/);
+  assert.match(restore, /--exit-on-error --no-owner --no-acl/);
+  assert.match(restore, /--dbname "\$restore_db" "\$restored_dump"/);
+  assert.match(restore, /pg_catalog\.pg_tables/);
+  assert.match(restore, /Encrypted artifact restore completed without any user tables/);
+  assert.match(restore, /BACKUP_ENCRYPTION_KEY:/);
+  assert.doesNotMatch(restore, /SUPABASE_DB_URL:/);
 });

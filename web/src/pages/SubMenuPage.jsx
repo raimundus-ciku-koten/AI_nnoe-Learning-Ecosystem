@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isSchoolAdminRole, isTeacherRole } from '../services/roleAccess.js';
 import { cariMenu } from '../navigasi.js';
 import Ikon from '../components/Ikon.jsx';
 import TeacherWorkspacePage from './TeacherWorkspacePage.jsx';
@@ -143,7 +144,7 @@ const ALUR = {
   },
   'ortu-anak': {
     ringkasan: 'Tinjau ringkasan perkembangan anak yang telah ditautkan secara resmi ke akun orang tua.',
-    langkah: ['Pilih anak yang terhubung', 'Tinjau nilai dan kehadiran yang tersedia', 'Hubungi sekolah jika hubungan akun perlu diperbaiki'],
+    langkah: ['Pastikan sekolah telah menautkan akun wali dan siswa secara resmi', 'Gunakan Pengumuman Sekolah atau Chat untuk menghubungi sekolah', 'Tinjau perkembangan anak setelah hubungan akun diverifikasi'],
   },
   'ortu-komunikasi': {
     ringkasan: 'Gunakan kanal komunikasi sekolah untuk berkoordinasi mengenai perkembangan anak.',
@@ -247,6 +248,12 @@ const MODUL_GURU_AKTIF = {
   ],
 };
 
+const MODUL_ORTU_AKTIF = [
+  { label: 'Pengumuman Sekolah', path: '/pengumuman', ikon: 'file' },
+  { label: 'Percakapan dengan Sekolah', path: '/chat', ikon: 'chat' },
+  { label: 'Kontak Sekolah', path: '/chat/kontak', ikon: 'users' },
+];
+
 export default function SubMenuPage() {
   const { pathname, search } = useLocation();
   const { role: baseRole, activeRole } = useAuth();
@@ -265,14 +272,17 @@ export default function SubMenuPage() {
   }
 
   const { grup, item } = menu;
-  if (role === 'guru' && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
-  if (role === 'guru' && item.path === '/guru/catatan-pribadi') {
+  if (isTeacherRole(role) && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
+  if (isTeacherRole(role) && item.path === '/guru/catatan-pribadi') {
     return <TeacherWorkspacePage grup={grup} item={item} />;
   }
-  const modulAktifAdmin = role === 'admin_sekolah'
+  const modulAktifAdmin = isSchoolAdminRole(role)
     ? MODUL_ADMIN_AKTIF[grup.id] || []
     : [];
-  const modulAktifGuru = role === 'guru' ? MODUL_GURU_AKTIF[grup.id] || [] : [];
+  const modulAktifGuru = isTeacherRole(role) ? MODUL_GURU_AKTIF[grup.id] || [] : [];
+  const modulAktifOrtu = ['ortu', 'orang_tua'].includes(role)
+    ? MODUL_ORTU_AKTIF
+    : [];
 
   const alur = ALUR[grup.id] || {
     ringkasan: 'Pilih aktivitas yang dibutuhkan dan lanjutkan ke modul terkait.',
@@ -280,15 +290,17 @@ export default function SubMenuPage() {
   };
   const terkait = grup.item.filter((sub) => sub !== item && sub.path);
   const statusModul = role === 'siswa'
-    ? 'Data jadwal, materi, tugas, ujian, atau nilai hanya muncul setelah sekolah menautkan data akademik ke akun siswa. Catatan di bawah ini bersifat pribadi dan bukan data akademik resmi.'
+    ? 'Data jadwal, materi, tugas, ujian, atau nilai hanya muncul setelah sekolah menautkan data akademik ke akun siswa.'
     : ['ortu', 'orang_tua'].includes(role)
-      ? 'Informasi anak hanya tersedia setelah sekolah menautkan akun orang tua secara resmi. Catatan di bawah ini bersifat pribadi dan tidak menampilkan data anak yang belum ditautkan.'
-      : role === 'guru'
+      ? 'Data anak belum ditampilkan karena hubungan akun wali-siswa harus diverifikasi oleh sekolah. Pengumuman dan Chat sekolah tetap tersedia sesuai hak akses.'
+      : isTeacherRole(role)
         ? 'Menu ini belum memiliki modul akademik khusus. Ruang kerja di bawah membantu mencatat tindak lanjut pribadi, bukan pengganti data akademik resmi.'
-      : role === 'operator'
-        ? 'Akses data operasional tetap dibatasi oleh peran dan tenant sekolah. Ruang kerja di bawah menyimpan catatan pribadi, bukan perubahan data operasional.'
-        : `Tautan menu ${item.label} tersedia. Ruang kerja ini menyediakan catatan pribadi, bukan pengganti modul data khusus atau arsip resmi. Gunakan modul terkait untuk data operasional.`;
-  const tersediaRuangKerja = !['superadmin', 'demo'].includes(role);
+        : isSchoolAdminRole(role)
+          ? 'Halaman ini adalah panduan baca-saja. Modul administrasi khusus untuk menu ini belum tersedia; gunakan tautan modul terkait bila tersedia.'
+          : role === 'operator'
+            ? 'Halaman ini adalah panduan baca-saja. Akses operasional tetap mengikuti izin peran dan tenant sekolah.'
+            : `Tautan menu ${item.label} membuka panduan baca-saja, bukan modul data atau arsip resmi. Gunakan modul terkait bila tersedia.`;
+  const tersediaRuangKerja = isTeacherRole(role);
 
   return (
     <div className="ale-submenu-page">
@@ -298,7 +310,10 @@ export default function SubMenuPage() {
           <h2>{item.label}</h2>
           <p>{alur.ringkasan}</p>
         </div>
-        <span className="ale-submenu-state"><span aria-hidden="true" />{tersediaRuangKerja ? 'Ruang kerja tersedia' : 'Panduan · baca saja'}</span>
+        <span className="ale-submenu-state">
+          <span aria-hidden="true" />
+          Panduan · baca saja
+        </span>
       </header>
 
       <div className="ale-submenu-grid">
@@ -327,14 +342,19 @@ export default function SubMenuPage() {
       </div>
 
       {tersediaRuangKerja && (
-        <PrivateWorkspaceRecords
-          route={item.path}
-          search={item.search || ''}
-          heading={`Catatan ${item.label}`}
-        />
+        <section aria-label="Catatan pribadi opsional">
+          <p className="ale-submenu-label">
+            Catatan pribadi opsional untuk guru; bukan modul akademik resmi.
+          </p>
+          <PrivateWorkspaceRecords
+            route={item.path}
+            search={item.search || ''}
+            heading={`Catatan ${item.label}`}
+          />
+        </section>
       )}
 
-      {(modulAktifAdmin.length > 0 || modulAktifGuru.length > 0) && (
+      {(modulAktifAdmin.length > 0 || modulAktifGuru.length > 0 || modulAktifOrtu.length > 0) && (
         <section className="ale-submenu-related" aria-labelledby="submenu-active-modules-title">
           <div className="ale-submenu-section-heading">
             <div>
@@ -344,7 +364,7 @@ export default function SubMenuPage() {
             <span>Kesiapan dan izin dijelaskan di setiap halaman tujuan</span>
           </div>
           <div className="ale-submenu-links">
-            {[...modulAktifAdmin, ...modulAktifGuru]
+            {[...modulAktifAdmin, ...modulAktifGuru, ...modulAktifOrtu]
               .filter((modul) => modul.path !== item.path)
               .map((modul) => (
               <a key={modul.path} className="ale-submenu-link" href={`#${modul.path}`}>

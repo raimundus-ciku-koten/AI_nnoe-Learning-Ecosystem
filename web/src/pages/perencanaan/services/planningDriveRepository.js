@@ -1,4 +1,5 @@
 import { getState } from '../../../state.js';
+import { isSchoolAdminRole } from '../../../services/roleAccess.js';
 import { identitasEnkripsiDriveDalamSesi } from '../../../services/driveEncryption.js';
 import { ambilKunciPublikPengguna } from '../../../services/encryptionKeyDirectory.js';
 import {
@@ -97,7 +98,13 @@ function sessionForCurrentUser() {
   if (!session || !identity) {
     throw new Error('Hubungkan Google Drive dan buka kunci vault untuk mengakses Perencanaan.');
   }
-  return { userId, tenantId, role: state.role, token: session.accessToken, identity };
+  return {
+    userId,
+    tenantId,
+    role: state.activeRole || state.role,
+    token: session.accessToken,
+    identity,
+  };
 }
 
 function validBundle(bundle, file) {
@@ -207,7 +214,7 @@ async function loadAllPackages({ userId, tenantId, role, token, identity }) {
   let files;
   try {
     files = await daftarPaketPerencanaanTerenkripsiDrive(token, selectedFileIds, {
-      includeCreatedFiles: role !== 'admin_sekolah',
+      includeCreatedFiles: !isSchoolAdminRole(role),
     });
   } catch (error) {
     if (selectedFileIds.length && [403, 404].includes(error?.status)) {
@@ -488,7 +495,7 @@ export function dengarDaftarPaket(uid, tenantId, onData, onError) {
 
 export async function pilihPaketAdminDrive(ownerUid) {
   const context = sessionForCurrentUser();
-  if (getState().role !== 'admin_sekolah') {
+  if (!isSchoolAdminRole(context.role)) {
     throw new Error('Hanya admin sekolah yang dapat memilih paket guru yang dibagikan.');
   }
   if (typeof ownerUid !== 'string' || !ownerUid) {

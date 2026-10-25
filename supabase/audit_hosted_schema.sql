@@ -305,7 +305,21 @@ select
   'supabase_migrations.schema_migrations',
   jsonb_build_object(
     'exists',
-    to_regclass('supabase_migrations.schema_migrations') is not null
+    to_regclass('supabase_migrations.schema_migrations') is not null,
+    'columns',
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'name', column_info.column_name,
+          'type', column_info.data_type,
+          'nullable', column_info.is_nullable = 'YES'
+        )
+        order by column_info.ordinal_position
+      )
+      from information_schema.columns as column_info
+      where column_info.table_schema = 'supabase_migrations'
+        and column_info.table_name = 'schema_migrations'
+    ), '[]'::jsonb)
   )
 
 union all
@@ -319,36 +333,61 @@ select
     order by feature.name
   )
 from unnest(array[
-  'school_access_index',
-  'user_encryption_keys',
-  'drive_file_index',
-  'drive_file_access',
-  'drive_file_key_envelopes',
-  'security_audit',
-  'tenant_entitlements',
-  'students',
   'attendance_records',
-  'testimonials',
-  'school_announcements',
-  'chat_conversations',
-  'chat_messages',
-  'chat_read_receipts',
-  'chat_inbox',
-  'chat_contacts',
-  'chat_presence',
   'billing_plans',
-  'personal_entitlements',
-  'payment_orders',
-  'testimonial_submissions',
-  'question_bank',
-  'web_push_subscriptions',
+  'chat_contacts',
+  'chat_conversations',
+  'chat_inbox',
+  'chat_messages',
+  'chat_presence',
   'chat_push_dispatches',
-  'student_account_links',
-  'student_account_link_audit',
-  'online_exams',
-  'online_exam_items',
+  'chat_read_receipts',
+  'classroom_members',
+  'drive_file_access',
+  'drive_file_index',
+  'drive_file_key_envelopes',
+  'learning_classroom_assignments',
+  'learning_classroom_attendance',
+  'learning_classroom_attendance_sessions',
+  'learning_classroom_journals',
+  'learning_classroom_materials',
+  'learning_classroom_quiz_questions',
+  'learning_classroom_quiz_submissions',
+  'learning_classroom_quizzes',
+  'learning_classroom_report_card_audit',
+  'learning_classroom_report_cards',
+  'learning_classroom_submissions',
+  'learning_classrooms',
+  'learning_school_report_card_portfolio_audit',
+  'learning_school_report_card_portfolios',
   'online_exam_attempts',
-  'trial_registrations'
+  'online_exam_items',
+  'online_exams',
+  'payment_orders',
+  'personal_entitlements',
+  'platform_audit',
+  'platform_control',
+  'platform_public_config',
+  'private_workspace_records',
+  'profiles',
+  'question_bank',
+  'school_access_index',
+  'school_announcements',
+  'school_letterheads',
+  'security_audit',
+  'student_account_link_audit',
+  'student_account_links',
+  'students',
+  'tenant_entitlements',
+  'tenants',
+  'testimonial_submissions',
+  'testimonials',
+  'trial_registrations',
+  'user_allowlist',
+  'user_encryption_keys',
+  'user_integration_consents',
+  'user_menu_access',
+  'web_push_subscriptions'
 ]) as feature(name)
 
 order by object_type, object_name;

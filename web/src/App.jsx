@@ -12,6 +12,16 @@ import { logout } from './auth.js';
 import PrivilegedMfaGate from './components/PrivilegedMfaGate.jsx';
 import IntegrationConsentOnboarding from './components/IntegrationConsentOnboarding.jsx';
 import { canOpenRolePath } from './services/roleAccess.js';
+import { ucapkanNotifikasi } from './services/announcementAudio.js';
+
+function SpokenStatus({ as: Element = 'div', className, children }) {
+  const message = typeof children === 'string' ? children : '';
+  useEffect(() => {
+    if (message) ucapkanNotifikasi(message);
+  }, [message]);
+
+  return <Element className={className} role="status" aria-live="polite">{children}</Element>;
+}
 
 // Legacy Alias Mapper[cite: 10]
 const LEGACY_ALIAS = {
@@ -139,6 +149,20 @@ function PrivateShell({ children }) {
   const menuAccess = useUserMenuAccess();
   const integrationConsent = useUserIntegrationConsent();
   const location = useLocation();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
+
+  async function keluarDariAkun() {
+    setLoggingOut(true);
+    setLogoutError('');
+    try {
+      await logout();
+    } catch (error) {
+      console.error('[app] Gagal keluar dari akun:', error);
+      setLogoutError(error instanceof Error ? error.message : 'Akun belum berhasil dikeluarkan.');
+      setLoggingOut(false);
+    }
+  }
 
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;
@@ -147,7 +171,11 @@ function PrivateShell({ children }) {
     return <Navigate to="/dashboard" replace />;
   }
   if (menuAccess.loading || menuAccess.forUserId !== user.uid) {
-    return <main className="platform-tenants"><p role="status">Memverifikasi akses menu…</p></main>;
+    return (
+      <SpokenStatus as="main" className="platform-tenants">
+        Memverifikasi akses menu. Mohon tunggu.
+      </SpokenStatus>
+    );
   }
   if (menuAccess.error) {
     return (
@@ -155,13 +183,34 @@ function PrivateShell({ children }) {
         <section className="platform-tenants-card" role="alert">
           <h1>Akses menu belum dapat diverifikasi</h1>
           <p>{menuAccess.error}</p>
-          <button type="button" onClick={() => void menuAccess.refresh()}>Coba lagi</button>
+          <div className="platform-tenants-toolbar">
+            <button
+              className="platform-tenants-button"
+              type="button"
+              onClick={() => void menuAccess.refresh()}
+            >
+              Coba lagi
+            </button>
+            <button
+              className="platform-tenants-button secondary"
+              type="button"
+              onClick={() => void keluarDariAkun()}
+              disabled={loggingOut}
+            >
+              {loggingOut ? 'Sedang keluar...' : 'Keluar dari akun'}
+            </button>
+          </div>
+          {logoutError && <p className="platform-tenants-error">{logoutError}</p>}
         </section>
       </main>
     );
   }
   if (integrationConsent.loading || integrationConsent.forUserId !== user.uid) {
-    return <main className="platform-tenants"><p role="status">Memuat pilihan integrasi akun…</p></main>;
+    return (
+      <SpokenStatus as="main" className="platform-tenants">
+        Memuat pilihan integrasi akun. Mohon tunggu.
+      </SpokenStatus>
+    );
   }
   if (integrationConsent.error) {
     return (
@@ -240,11 +289,19 @@ function RouteWrapper() {
     || location.pathname === '/privacy'
     || location.pathname.startsWith('/scan/');
   if (loading && !publicRoute) {
-    return <div className="app-loader">Memuat sesi...</div>;
+    return (
+      <SpokenStatus className="app-loader">
+        Sedang memeriksa sesi Anda. Mohon tunggu.
+      </SpokenStatus>
+    );
   }
 
   return (
-    <Suspense fallback={<div className="loading-spinner">Memuat...</div>}>
+    <Suspense fallback={(
+      <SpokenStatus className="loading-spinner">
+        Aplikasi sedang dimuat. Mohon tunggu sebentar.
+      </SpokenStatus>
+    )}>
       <Routes>
         <Route path="/login" element={user && !passwordRecovery ? <Navigate to={selectedRole === 'demo' ? '/trial' : '/dashboard'} replace /> : <HalamanLogin />} />
         <Route path="/trial" element={user ? (selectedRole === 'demo' ? <HalamanTrial /> : <Navigate to="/dashboard" replace />) : <Navigate to="/login" replace />} />

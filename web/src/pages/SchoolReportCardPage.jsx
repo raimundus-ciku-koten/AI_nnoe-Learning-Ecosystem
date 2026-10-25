@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isSchoolAdminRole } from '../services/roleAccess.js';
 import { buatCsv, csvEscape, unduhBerkas } from '../lib/berkas.js';
 import { muatPengaturanTenant } from '../services/tenantSettings.js';
 import {
@@ -55,7 +56,7 @@ export default function SchoolReportCardPage() {
   const { pathname } = useLocation();
   const currentRole = activeRole || role;
   const isTeacher = PERAN_GURU_KELAS.includes(currentRole);
-  const isSchoolAdmin = currentRole === 'admin_sekolah';
+  const isSchoolAdmin = isSchoolAdminRole(currentRole);
   const isStudent = currentRole === 'siswa';
   const mode = isSchoolAdmin ? 'review' : isStudent ? 'student' : 'teacher';
   const [school, setSchool] = useState(null);
