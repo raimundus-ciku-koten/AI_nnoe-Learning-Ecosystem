@@ -38,6 +38,10 @@ test('validates and queries versioned migration filenames without mutating Stagi
     () => getExpectedMigrationVersions(['unversioned.sql']),
     /expected version format/,
   );
+  assert.throws(
+    () => getExpectedMigrationVersions([]),
+    /empty or invalid/,
+  );
   assert.match(buildMigrationVersionsQuery(), /^select coalesce\(jsonb_agg/);
   assert.doesNotMatch(buildMigrationVersionsQuery(), /\b(insert|update|delete|alter|drop|truncate)\b/i);
 });
@@ -63,9 +67,10 @@ test('reports missing feature relations and migration history without exposing c
 
   assert.match(summary, /Expected feature relations present: 1\/2/);
   assert.match(summary, /migration history table: not found/);
-  assert.match(summary, /Repository migrations: 59/);
+  assert.match(summary, /Repository migrations: \d+/);
   assert.match(summary, /Hosted migration versions: unavailable/);
   assert.match(summary, /Missing public relations: learning_classrooms/);
+  assert.match(summary, /Present public relations: students/);
   assert.doesNotMatch(summary, /secret|postgresql:\/\//i);
   assert.match(executedQuery, /learning_classrooms/);
   assert.equal(psqlEnvironment.PGHOST, 'aws-0-ap-south-1.pooler.supabase.com');

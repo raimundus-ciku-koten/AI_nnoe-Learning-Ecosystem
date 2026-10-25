@@ -20,6 +20,9 @@ export function getExpectedRelationNames(auditSql) {
 }
 
 export function getExpectedMigrationVersions(migrationFiles) {
+  if (!Array.isArray(migrationFiles) || migrationFiles.length === 0) {
+    throw new Error('Migration version inventory is empty or invalid.');
+  }
   const versions = migrationFiles.map((file) => {
     const match = /^(\d{14})_[a-z0-9_]+\.sql$/i.exec(file);
     if (!match) {
@@ -101,6 +104,10 @@ export function renderSchemaAuditSummary(report, expectedMigrationVersions, appl
     .filter(([, exists]) => exists !== true)
     .map(([name]) => name)
     .sort();
+  const present = Object.entries(relations)
+    .filter(([, exists]) => exists === true)
+    .map(([name]) => name)
+    .sort();
   const presentCount = Object.keys(relations).length - missing.length;
   const expectedVersions = new Set(expectedMigrationVersions);
   const appliedVersions = new Set(appliedMigrationVersions);
@@ -133,6 +140,9 @@ export function renderSchemaAuditSummary(report, expectedMigrationVersions, appl
   }
   if (missing.length > 0) {
     lines.push('', `- Missing public relations: ${missing.join(', ')}`);
+  }
+  if (present.length > 0) {
+    lines.push('', `- Present public relations: ${present.join(', ')}`);
   }
   return `${lines.join('\n')}\n`;
 }
@@ -206,7 +216,8 @@ async function main() {
     new URL('../supabase/audit_hosted_schema.sql', import.meta.url),
     'utf8',
   );
-  const migrationFiles = await readdir(new URL('../supabase/migrations/', import.meta.url));
+  const migrationFiles = (await readdir(new URL('../supabase/migrations/', import.meta.url)))
+    .filter((file) => file.endsWith('.sql'));
   process.stdout.write(await auditStagingSchema({ connectionString, auditSql, migrationFiles }));
 }
 
