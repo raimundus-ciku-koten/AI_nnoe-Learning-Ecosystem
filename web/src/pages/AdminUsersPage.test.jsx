@@ -63,8 +63,18 @@ describe('AdminUsersPage role and route integration', () => {
     const html = render('/admin/pengguna/guru');
     expect(html).toContain('<h2>Guru</h2>');
     expect(peranKategoriPengguna('guru')).toEqual([
-      'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'operator', 'demo',
+      'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',
     ]);
     expect(peranKategoriPengguna('tidak-dikenal')).toEqual([]);
+  });
+
+  it.each([
+    ['/admin/pengguna/guru', '<h2>Guru</h2>'],
+    ['/admin/pengguna/siswa', '<h2>Siswa</h2>'],
+    ['/admin/pengguna/orang-tua', '<h2>Orang tua</h2>'],
+    ['/admin/pengguna/admin', '<h2>Admin sekolah</h2>'],
+    ['/admin/pengguna/peran', '<h2>Peran dan hak akses</h2>'],
+  ])('renders the admin user destination %s', (path, heading) => {
+    expect(render(path)).toContain(heading);
   });
 });

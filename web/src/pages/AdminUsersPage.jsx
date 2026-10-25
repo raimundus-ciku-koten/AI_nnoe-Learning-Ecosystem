@@ -20,7 +20,7 @@ const LABEL_PERAN = {
   demo: 'Akun demo',
 };
 const KATEGORI = {
-  guru: { judul: 'Guru', roles: ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'operator', 'demo'] },
+  guru: { judul: 'Guru', roles: ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'] },
   siswa: { judul: 'Siswa', roles: ['siswa'] },
   'orang-tua': { judul: 'Orang tua', roles: ['ortu', 'orang_tua'] },
   admin: { judul: 'Admin sekolah', roles: ['admin', 'admin_sekolah'] },

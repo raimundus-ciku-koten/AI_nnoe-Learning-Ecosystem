@@ -298,6 +298,7 @@ describe('submenu platform superadmin', () => {
       path === '/trial' ||
       path === '/pengaturan/akun' ||
       path === '/orang-tua/anak' ||
+      path === '/orang-tua/nilai-kehadiran' ||
       path === '/guru/catatan-pribadi' ||
       path === '/admin/komunikasi/pengumuman' ||
       path.startsWith('/datadasar/') ||
@@ -311,6 +312,7 @@ describe('submenu platform superadmin', () => {
         '/asesmen/bank-soal', '/asesmen/ujian-online', '/asesmen/analisis', '/asesmen/remedial',
         '/pemantauan/catatan',
         '/laporan/penilaian', '/asesmen/rapor', '/admin/akademik/rapor',
+        '/admin/akademik/wali-kelas', '/kepala-sekolah/ringkasan', '/wali-kelas/pemantauan',
         '/siswa/rapor', '/siswa/ujian', '/siswa/nilai', '/siswa/jadwal',
         '/siswa/materi', '/hasil/perencanaan', '/laporan/arsip-perencanaan',
         '/asisten'].includes(path)
