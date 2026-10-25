@@ -8,6 +8,7 @@ import {
 
 const auth = vi.hoisted(() => ({
   role: 'superadmin',
+  activeRole: null,
   user: { uid: 'guru-test' },
   tenantId: 'sekolah-test',
   profile: { nama: 'Guru Tes' },
@@ -65,6 +66,7 @@ function renderOperations(path) {
 describe('submenu platform superadmin', () => {
   beforeEach(() => {
     auth.role = 'superadmin';
+    auth.activeRole = null;
   });
 
   it('menjelaskan batas data untuk siswa dan orang tua', () => {
@@ -221,6 +223,14 @@ describe('submenu platform superadmin', () => {
     expect(render()).toContain('Data tenant lintas sekolah hanya tersedia bagi superadmin.');
   });
 
+  it('menggunakan role aktif untuk akses data tenant platform', () => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = 'superadmin';
+
+    const render = () => renderToStaticMarkup(React.createElement(PlatformTenantsPage));
+    expect(render()).toContain('Tenant sekolah');
+  });
+
   it('menampilkan manajemen pengguna berbasis Supabase', () => {
     auth.role = 'superadmin';
     const render = () => renderToStaticMarkup(React.createElement(PlatformUsersPage));
@@ -335,6 +345,13 @@ describe('submenu platform superadmin', () => {
     expect(renderOperations('/platform/fitur/flags')).toContain('Generator perangkat ajar AI');
     expect(renderOperations('/platform/pengaturan/pemeliharaan')).toContain('Mode pemeliharaan global');
     expect(renderOperations('/platform/keamanan/audit')).toContain('Aktivitas platform terbaru');
+  });
+
+  it('menggunakan role aktif untuk halaman operasi platform', () => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = 'superadmin';
+
+    expect(renderOperations('/platform/fitur/flags')).toContain('Generator perangkat ajar AI');
   });
 
   it('merangkum peristiwa pembuatan akun pada audit platform', () => {

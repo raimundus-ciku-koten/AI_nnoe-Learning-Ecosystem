@@ -129,7 +129,8 @@ export function StudentGrades({ tasks, quizzes, quizResults, examResults }) {
 }
 
 export default function StudentLearningPage() {
-  const { user, role, tenantId } = useAuth();
+  const { user, role: baseRole, activeRole, tenantId } = useAuth();
+  const role = activeRole || baseRole;
   const { pathname } = useLocation();
   const materiMode = pathname === MODE_MATERI;
   const nilaiMode = pathname === MODE_NILAI;

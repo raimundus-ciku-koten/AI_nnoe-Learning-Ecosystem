@@ -71,7 +71,8 @@ function tanggalHariIni() {
 }
 
 export default function RuangKelasPage() {
-  const { user, role, tenantId } = useAuth();
+  const { user, role: baseRole, activeRole, tenantId } = useAuth();
+  const role = activeRole || baseRole;
   const location = useLocation();
   const canManage = PERAN_PENGELOLA.has(role);
   const isSuperadmin = role === 'superadmin';

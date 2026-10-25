@@ -12,7 +12,8 @@ function statusTenant(active) {
 }
 
 export default function PlatformTenantsPage() {
-  const { role } = useAuth();
+  const { role: baseRole, activeRole } = useAuth();
+  const role = activeRole || baseRole;
   const [tenants, setTenants] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);

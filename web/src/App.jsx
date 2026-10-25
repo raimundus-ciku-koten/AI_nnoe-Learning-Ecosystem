@@ -137,6 +137,7 @@ const HalamanRaporSekolah = lazy(() => import('./pages/SchoolReportCardPage.jsx'
 const HalamanKepemimpinanSekolah = lazy(() => import('./pages/SchoolLeadershipPage.jsx'));
 const HalamanPenugasanWaliKelas = lazy(() => import('./pages/HomeroomAssignmentsPage.jsx'));
 const HalamanRuangBelajarSiswa = lazy(() => import('./pages/StudentLearningPage.jsx'));
+const HalamanAksesAkademikOrangTua = lazy(() => import('./pages/ParentAcademicAccessPage.jsx'));
 const HalamanTautkanAkunSiswa = lazy(() => import('./pages/StudentAccountLinkPage.jsx'));
 const HalamanTenantPlatform = lazy(() => import('./pages/PlatformTenantsPage.jsx'));
 const HalamanPenggunaPlatform = lazy(() => import('./pages/PlatformUsersPage.jsx'));
@@ -342,6 +343,8 @@ function RouteWrapper() {
         <Route path="/siswa/nilai" element={<PrivateShell><HalamanRuangBelajarSiswa /></PrivateShell>} />
         <Route path="/siswa/jadwal" element={<PrivateShell><HalamanRuangBelajarSiswa /></PrivateShell>} />
         <Route path="/siswa/materi" element={<PrivateShell><HalamanRuangBelajarSiswa /></PrivateShell>} />
+        <Route path="/orang-tua/anak" element={<PrivateShell><HalamanAksesAkademikOrangTua /></PrivateShell>} />
+        <Route path="/orang-tua/nilai-kehadiran" element={<PrivateShell><HalamanAksesAkademikOrangTua /></PrivateShell>} />
         <Route path="/admin/perencanaan/paket/:id?/:jenis?" element={<PrivateShell><HalamanPerencanaan /></PrivateShell>} />
         <Route path="/platform/tenant/sekolah" element={<PrivateShell><HalamanTenantPlatform /></PrivateShell>} />
         <Route path="/platform/pengguna/admin-sekolah" element={<PrivateShell><HalamanPenggunaPlatform /></PrivateShell>} />

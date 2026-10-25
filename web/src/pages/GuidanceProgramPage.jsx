@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isTeacherRole } from '../services/roleAccess.js';
 import '../styles/guidance-program.css';
 
 const PILIHAN_PROGRAM = [
@@ -250,7 +251,8 @@ function BarisRingkasan({ label, nilai }) {
 }
 
 export default function GuidanceProgramPage() {
-  const { role } = useAuth();
+  const { role: baseRole, activeRole } = useAuth();
+  const role = activeRole || baseRole;
   const [draft, setDraft] = useState(KOSONG);
   const [hasil, setHasil] = useState(null);
   const [galatDimensi, setGalatDimensi] = useState('');
@@ -285,7 +287,7 @@ export default function GuidanceProgramPage() {
     setHasil({ ...draft, dibuatPada: new Date().toLocaleDateString('id-ID', { dateStyle: 'long' }) });
   }
 
-  if (!['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(role)) {
+  if (!isTeacherRole(role)) {
     return (
       <main className="guidance-program">
         <section className="guidance-program__notice" role="alert">

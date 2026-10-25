@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { menuUntukPeran } from '../navigasi.js';
 import {
-  canOpenRolePath, isSchoolAdminRole, isTeacherRole,
+  canOpenRolePath, isParentRole, isSchoolAdminRole, isTeacherRole,
 } from './roleAccess.js';
 import { isMenuPathDisabled } from './menuAccessPolicy.js';
 import { isMaintenanceBlocked, requiresPrivilegedMfa } from './privilegedAccessPolicy.js';
@@ -43,6 +43,19 @@ test('alias admin sekolah dan peran guru spesialis menggunakan kebijakan role ya
   }
   for (const role of ['admin', 'admin_sekolah', 'operator', 'siswa']) {
     assert.equal(isTeacherRole(role), false, role);
+  }
+});
+
+test('alias orang tua dikenali bersama untuk halaman akademik yang gagal-tertutup', () => {
+  assert.equal(isParentRole('ortu'), true);
+  assert.equal(isParentRole('orang_tua'), true);
+  assert.equal(isParentRole('guru'), false);
+  for (const role of ['ortu', 'orang_tua']) {
+    assert.equal(canOpenRolePath(role, '/orang-tua/anak'), true, role);
+    assert.equal(canOpenRolePath(role, '/orang-tua/nilai-kehadiran'), true, role);
+  }
+  for (const role of ['guru', 'siswa', 'operator']) {
+    assert.equal(canOpenRolePath(role, '/orang-tua/nilai-kehadiran'), false, role);
   }
 });
 

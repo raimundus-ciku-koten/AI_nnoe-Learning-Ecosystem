@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { auth } = vi.hoisted(() => ({
   auth: {
     role: 'siswa',
+    activeRole: null,
     user: { uid: 'student-1' },
     tenantId: 'school-1',
   },
@@ -47,6 +48,7 @@ function render(path) {
 describe('StudentLearningPage', () => {
   beforeEach(() => {
     auth.role = 'siswa';
+    auth.activeRole = null;
     auth.user = { uid: 'student-1' };
     auth.tenantId = 'school-1';
   });
@@ -178,6 +180,15 @@ describe('StudentLearningPage', () => {
     expect(grades).toContain('Nilai: 86');
     expect(grades).toContain('href="#/ruang-kelas?kelas=room-1&amp;tugas=task-1"');
     expect(grades).toContain('href="#/ruang-kelas?kelas=room-1&amp;kuis=quiz-1"');
+  });
+
+  it('uses the selected student role when the account has multiple roles', () => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = 'siswa';
+
+    const html = render('/siswa/jadwal');
+    expect(html).toContain('<h2>Jadwal dan Tugas</h2>');
+    expect(html).not.toContain('Halaman ini hanya tersedia untuk akun siswa.');
   });
 
   it('does not render student learning data for another role', () => {

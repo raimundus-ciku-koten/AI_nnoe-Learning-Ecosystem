@@ -11,17 +11,24 @@ const LABEL_PERAN = {
   admin_sekolah: 'Admin sekolah',
   operator: 'Operator',
   guru: 'Guru',
+  guru_bk: 'Guru BK',
+  guru_kokurikuler: 'Guru Kokurikuler',
+  guru_ekstrakurikuler: 'Guru Ekstrakurikuler',
   siswa: 'Siswa',
   ortu: 'Orang tua',
   orang_tua: 'Orang tua',
   demo: 'Akun demo',
 };
 const KATEGORI = {
-  guru: { judul: 'Guru', roles: ['guru', 'operator', 'demo'] },
+  guru: { judul: 'Guru', roles: ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'operator', 'demo'] },
   siswa: { judul: 'Siswa', roles: ['siswa'] },
   'orang-tua': { judul: 'Orang tua', roles: ['ortu', 'orang_tua'] },
   admin: { judul: 'Admin sekolah', roles: ['admin', 'admin_sekolah'] },
 };
+
+export function peranKategoriPengguna(sub) {
+  return KATEGORI[sub]?.roles || [];
+}
 
 function namaPengguna(data) {
   return String(data.nama || data.displayName || data.email || 'Nama belum tersedia').trim();

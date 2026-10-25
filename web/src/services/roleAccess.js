@@ -29,6 +29,10 @@ export function isTeacherRole(role) {
     .includes(String(role || '').trim().toLowerCase());
 }
 
+export function isParentRole(role) {
+  return ['ortu', 'orang_tua'].includes(String(role || '').trim().toLowerCase());
+}
+
 export function canOpenRolePath(role, path) {
   const normalizedRole = String(role || '').trim().toLowerCase();
   if (normalizedRole === 'demo') return path === '/trial';

@@ -732,7 +732,8 @@ function RingkasanPenggunaan({ role, judul = 'Penggunaan Platform' }) {
 
 export default function PlatformOperationsPage() {
   const { pathname } = useLocation();
-  const { role } = useAuth();
+  const { role: baseRole, activeRole } = useAuth();
+  const role = activeRole || baseRole;
   const info = INFO_MODUL[pathname];
   const mode = pathname === '/platform/tenant/paket' ? 'paket'
     : pathname === '/platform/pengguna/peran' || pathname === '/platform/fitur/izin' ? 'peran'

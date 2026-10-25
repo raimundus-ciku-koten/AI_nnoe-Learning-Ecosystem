@@ -42,6 +42,14 @@ describe('GuidanceProgramPage', () => {
     expect(html).not.toContain('<form');
   });
 
+  it('uses the active specialist teacher role for program planning', () => {
+    useAuthMock.mockReturnValue({ role: 'admin_sekolah', activeRole: 'guru_kokurikuler' });
+    const html = renderPage();
+
+    expect(html).toContain('name="tema"');
+    expect(html).not.toContain('Hak akses mengikuti peran yang diberikan server.');
+  });
+
   it('identifies imported subject CP as intrakurikuler and distinguishes the three activity types', () => {
     useAuthMock.mockReturnValue({ role: 'guru' });
     const html = renderPage();

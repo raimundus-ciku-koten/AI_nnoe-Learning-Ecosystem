@@ -14,7 +14,7 @@ vi.mock('../context/AuthContext.jsx', () => ({
 }));
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }));
 
-import AdminUsersPage from './AdminUsersPage.jsx';
+import AdminUsersPage, { peranKategoriPengguna } from './AdminUsersPage.jsx';
 
 function render(path = '/admin/pengguna/admin') {
   return renderToStaticMarkup(
@@ -57,5 +57,14 @@ describe('AdminUsersPage role and route integration', () => {
     const html = render();
     expect(html).toContain('Daftar ini hanya tersedia bagi admin sekolah');
     expect(html).not.toContain('Manajemen pengguna · tenant sekolah');
+  });
+
+  it('renders the teacher directory with all specialist teacher roles included', () => {
+    const html = render('/admin/pengguna/guru');
+    expect(html).toContain('<h2>Guru</h2>');
+    expect(peranKategoriPengguna('guru')).toEqual([
+      'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'operator', 'demo',
+    ]);
+    expect(peranKategoriPengguna('tidak-dikenal')).toEqual([]);
   });
 });

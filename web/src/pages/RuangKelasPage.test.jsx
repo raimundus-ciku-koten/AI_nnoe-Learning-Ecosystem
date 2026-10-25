@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const auth = vi.hoisted(() => ({
   user: { uid: 'user-test' },
   role: 'guru',
+  activeRole: null,
   tenantId: 'sekolah-test',
 }));
 
@@ -54,6 +55,7 @@ function renderPage(path = '/ruang-kelas') {
 describe('Ruang Kelas access and operator workflow', () => {
   beforeEach(() => {
     auth.role = 'guru';
+    auth.activeRole = null;
   });
 
   it('shows the classroom list to teachers without exposing creation controls', () => {
@@ -100,6 +102,15 @@ describe('Ruang Kelas access and operator workflow', () => {
       expect(bolehKelolaAktivitasKelas(role)).toBe(true);
     }
     expect(renderPage()).toContain('kuis pilihan ganda');
+  });
+
+  it('uses the selected specialist teacher role for classroom activities', () => {
+    auth.role = 'siswa';
+    auth.activeRole = 'guru_bk';
+
+    const html = renderPage();
+    expect(html).toContain('kuis pilihan ganda');
+    expect(html).not.toContain('Buat ruang kelas</h3>');
   });
 
   it('provides a teacher-only quiz workflow and hides the answer key by design', () => {

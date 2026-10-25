@@ -15,6 +15,7 @@ import {
   nilaiJawabanUraian,
   simpanDraftUjian,
 } from '../services/onlineAssessments.js';
+import { isTeacherRole } from '../services/roleAccess.js';
 import '../styles/online-assessments.css';
 
 function formatWaktu(value) {
@@ -510,14 +511,17 @@ function TeacherAssessments({ tenantId, userId }) {
 }
 
 export default function OnlineAssessmentPage() {
-  const { role, tenantId, user } = useAuth();
+  const { role: baseRole, activeRole, tenantId, user } = useAuth();
+  const role = activeRole || baseRole;
 
-  if (role === 'siswa') return <StudentAssessments userId={user.uid} />;
-  if (role === 'guru') return <TeacherAssessments tenantId={tenantId} userId={user.uid} />;
+  if (role === 'siswa' && user?.uid) return <StudentAssessments userId={user.uid} />;
+  if (isTeacherRole(role) && user?.uid && tenantId) {
+    return <TeacherAssessments tenantId={tenantId} userId={user.uid} />;
+  }
   return (
     <section className="ale-exam-card">
       <h2>Ujian Online</h2>
-      <p>Modul ini tersedia untuk akun guru dan siswa aktif. Akun siswa harus ditautkan terlebih dahulu oleh admin sekolah.</p>
+      <p>Modul ini tersedia untuk akun guru atau siswa aktif pada sekolah yang terhubung. Akun siswa harus ditautkan terlebih dahulu oleh admin sekolah.</p>
     </section>
   );
 }
