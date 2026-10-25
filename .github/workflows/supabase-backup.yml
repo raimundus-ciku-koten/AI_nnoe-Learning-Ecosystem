@@ -37,10 +37,14 @@ jobs:
           BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
-            echo "::error::Run this workflow from main only."
-            exit 1
-          fi
+          case "$GITHUB_REF" in
+            refs/heads/main|refs/heads/fix/staging-pinned-supabase-image)
+              ;;
+            *)
+              echo "::error::Run this workflow from main or the approved Staging validation branch only."
+              exit 1
+              ;;
+          esac
           if [[ -z "$SUPABASE_DB_URL" || -z "$BACKUP_ENCRYPTION_KEY" ]]; then
             echo "::error::Add SUPABASE_DB_URL and BACKUP_ENCRYPTION_KEY in GitHub Actions secrets."
             exit 1

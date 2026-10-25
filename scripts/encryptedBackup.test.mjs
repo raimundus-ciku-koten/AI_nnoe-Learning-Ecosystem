@@ -115,7 +115,12 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.ok(download);
   assert.ok(restore);
   assert.match(workflow, /workflow_dispatch:/);
-  assert.match(workflow, /Run this workflow from main only/);
+  assert.match(
+    validate,
+    /case "\$GITHUB_REF" in\s+refs\/heads\/main\|refs\/heads\/fix\/staging-pinned-supabase-image\)/,
+  );
+  assert.match(validate, /Run this workflow from main or the approved Staging validation branch only/);
+  assert.doesNotMatch(validate, /refs\/heads\/\*/);
   assert.match(validate, /validateStagingBackupTarget\.mjs/);
   assert.match(targetValidator, /samszhfyhbjuculrcffg/);
   assert.match(targetValidator, /sessionPoolerStaging/);
