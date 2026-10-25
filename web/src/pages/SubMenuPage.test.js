@@ -173,9 +173,33 @@ describe('submenu platform superadmin', () => {
         expect(planning, role).toContain('href="#/perencanaan?jenis=modul"');
 
         const monitoring = renderSubmenu('/pemantauan/profil-siswa');
-        expect(monitoring, role).toContain('Profil siswa, catatan kasus, dan intervensi individual bukan bagian');
+        expect(monitoring, role).toContain('Belum ada profil siswa satu halaman');
+        expect(monitoring, role).toContain('catatan kasus atau intervensi individual tidak ditampilkan');
         expect(monitoring, role).toContain('href="#/laporan/harian-bulanan"');
         expect(monitoring, role).toContain('href="#/pelaksanaan/presensi"');
+      }
+    });
+
+    it('labels character and follow-up monitoring honestly and avoids sensitive student records', () => {
+      for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+        auth.role = role;
+        auth.activeRole = '';
+
+        const character = renderSubmenu('/pemantauan/karakter');
+        expect(character).toContain('Belum ada arsip perkembangan karakter per siswa');
+        expect(character).toContain('href="#/program-kegiatan"');
+        expect(character).toContain('bukan bukti observasi');
+        expect(character).toContain('Buka rancangan');
+        expect(character).toContain('tersimpan lokal di browser');
+
+        const followUp = renderSubmenu('/pemantauan/pendampingan');
+        expect(followUp).toContain('Belum ada modul tindak lanjut atau catatan pendampingan individual');
+        expect(followUp).toContain('href="#/chat"');
+        expect(followUp).toContain('bukan arsip pendampingan');
+
+        const communication = renderSubmenu('/pemantauan/komunikasi');
+        expect(communication).toContain('tidak membuka data akademik anak');
+        expect(communication).toContain('relasi wali–siswa dan akses akademik tetap harus diverifikasi');
       }
     });
 

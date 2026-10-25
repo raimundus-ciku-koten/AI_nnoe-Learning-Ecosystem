@@ -244,6 +244,8 @@ const MODUL_GURU_AKTIF = {
     { label: 'Presensi Siswa', path: '/pelaksanaan/presensi', ikon: 'check' },
     { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
     { label: 'Analisis Hasil', path: '/asesmen/analisis', ikon: 'chart' },
+    { label: 'Program BK & Kegiatan', path: '/program-kegiatan', ikon: 'file', actionLabel: 'Buka rancangan' },
+    { label: 'Percakapan', path: '/chat', ikon: 'chat' },
   ],
   refleksi: [
     { label: 'Catatan Kerja Pribadi', path: '/guru/catatan-pribadi', ikon: 'file' },
@@ -266,6 +268,29 @@ const MODUL_ORTU_AKTIF = [
   { label: 'Percakapan dengan Sekolah', path: '/chat', ikon: 'chat' },
   { label: 'Kontak Sekolah', path: '/chat/kontak', ikon: 'users' },
 ];
+
+const PANDUAN_PEMANTAUAN_GURU = {
+  '/pemantauan/profil-siswa': {
+    ringkasan: 'Belum ada profil siswa satu halaman. Pemantauan yang tersedia terbatas pada aktivitas kelas, jurnal, dan presensi; catatan kasus atau intervensi individual tidak ditampilkan.',
+    langkah: ['Pilih kelas yang memang Anda ampu', 'Tinjau jurnal, laporan aktivitas, atau presensi pada modul sumber', 'Jangan menyimpan diagnosis atau detail kasus siswa pada panduan ini'],
+    status: 'Profil individual, catatan kasus, dan intervensi siswa belum tersedia. Modul kelas hanya menampilkan data sesuai penugasan dan izin yang berlaku.',
+  },
+  '/pemantauan/karakter': {
+    ringkasan: 'Belum ada arsip perkembangan karakter per siswa. Guru dapat menyusun rancangan kegiatan non-sensitif; rancangan bukan bukti observasi, penilaian karakter, atau persetujuan sekolah.',
+    langkah: ['Susun tema kegiatan pada Program BK & Kegiatan bila relevan', 'Simpan rancangan tanpa nama atau detail pribadi siswa', 'Gunakan prosedur sekolah untuk observasi dan dokumentasi resmi'],
+    status: 'Rancangan kegiatan hanya tersimpan lokal di browser; rekam perkembangan siswa dan arsip resmi belum tersedia.',
+  },
+  '/pemantauan/pendampingan': {
+    ringkasan: 'Belum ada modul tindak lanjut atau catatan pendampingan individual. Hindari menyimpan informasi konseling, diagnosis, atau kasus siswa pada halaman panduan.',
+    langkah: ['Gunakan prosedur pendampingan resmi sekolah', 'Untuk koordinasi umum, gunakan kanal komunikasi yang telah diizinkan', 'Jangan anggap jurnal kelas atau analisis hasil sebagai catatan konseling'],
+    status: 'Pencatatan kasus individual tidak tersedia. Chat hanya menyediakan percakapan sesuai akses dan bukan arsip pendampingan.',
+  },
+  '/pemantauan/komunikasi': {
+    ringkasan: 'Belum ada modul khusus komunikasi guru-orang tua yang memverifikasi relasi wali–siswa. Chat tersedia sesuai hak akses, tetapi tidak membuka data akademik anak.',
+    langkah: ['Pastikan penerima dan tujuan komunikasi sesuai prosedur sekolah', 'Gunakan Chat hanya untuk percakapan yang diizinkan', 'Jangan membagikan nilai, presensi, atau informasi sensitif jika relasi belum diverifikasi'],
+    status: 'Chat tersedia sebagai kanal umum; relasi wali–siswa dan akses akademik tetap harus diverifikasi oleh sekolah.',
+  },
+};
 
 export default function SubMenuPage() {
   const { pathname, search } = useLocation();
@@ -301,17 +326,22 @@ export default function SubMenuPage() {
     ringkasan: 'Pilih aktivitas yang dibutuhkan dan lanjutkan ke modul terkait.',
     langkah: ['Pilih konteks kerja', 'Tinjau informasi yang tersedia', 'Lanjutkan ke aktivitas terkait'],
   };
-  const ringkasan = isSchoolAdminRole(role) && item.path === '/admin/dashboard/chat'
-    ? 'Monitoring Chat menampilkan ringkasan agregat chat per tenant tanpa isi percakapan atau identitas peserta; ini bukan audit log lengkap atau alat moderasi.'
-    : alur.ringkasan;
-  const langkah = isSchoolAdminRole(role) && item.path === '/admin/dashboard/chat'
+  const isCoverGuide = isTeacherRole(role) && item.path === '/perangkat/cover';
+  const teacherMonitoringGuide = isTeacherRole(role)
+    ? PANDUAN_PEMANTAUAN_GURU[item.path]
+    : null;
+  const ringkasan = teacherMonitoringGuide?.ringkasan
+    || (isSchoolAdminRole(role) && item.path === '/admin/dashboard/chat'
+      ? 'Monitoring Chat menampilkan ringkasan agregat chat per tenant tanpa isi percakapan atau identitas peserta; ini bukan audit log lengkap atau alat moderasi.'
+      : alur.ringkasan);
+  const langkah = teacherMonitoringGuide?.langkah
+    || (isSchoolAdminRole(role) && item.path === '/admin/dashboard/chat'
     ? [
       'Tinjau jumlah percakapan baru 30 hari, pesan 7 hari, dan pengirim aktif.',
       'Angka hanya merangkum percakapan dengan peserta aktif dari tenant ini.',
       'Gunakan jalur perlindungan sekolah untuk tindak lanjut; halaman ini bukan alat moderasi.',
     ]
-    : alur.langkah;
-  const isCoverGuide = isTeacherRole(role) && item.path === '/perangkat/cover';
+      : alur.langkah);
   const terkait = grup.item.filter((sub) => sub !== item && sub.path);
   const statusModul = role === 'siswa'
     ? 'Data jadwal, materi, tugas, ujian, atau nilai hanya muncul setelah sekolah menautkan data akademik ke akun siswa.'
@@ -320,7 +350,7 @@ export default function SubMenuPage() {
       : isTeacherRole(role)
       ? isCoverGuide
         ? 'Pembuat cover perangkat belum tersedia. Gunakan Perencanaan untuk menyusun dokumen ajar; cover tidak dibuat atau disimpan oleh halaman ini.'
-        : 'Menu ini belum memiliki modul akademik khusus. Catatan Kerja Pribadi tersedia terpisah dan bukan pengganti data akademik resmi.'
+        : teacherMonitoringGuide?.status || 'Menu ini belum memiliki modul akademik khusus. Catatan Kerja Pribadi tersedia terpisah dan bukan pengganti data akademik resmi.'
         : isSchoolAdminRole(role)
           ? modulAktifAdmin.length
             ? 'Modul tenant untuk sebagian alur pada bagian ini tersedia melalui tautan di bawah. Halaman ini sendiri hanya panduan dan ringkasannya bukan audit log lengkap.'
@@ -384,7 +414,7 @@ export default function SubMenuPage() {
               .map((modul) => (
               <a key={modul.path} className="ale-submenu-link" href={`#${modul.path}`}>
                 <span className="ale-submenu-link-icon"><Ikon nama={modul.ikon} /></span>
-                <span><strong>{modul.label}</strong><small>Buka modul</small></span>
+                <span><strong>{modul.label}</strong><small>{modul.actionLabel || 'Buka modul'}</small></span>
                 <span className="ale-submenu-arrow" aria-hidden="true">›</span>
               </a>
               ))}
