@@ -54,6 +54,17 @@
   border-radius: 12px;
 }
 
+.ale-exam-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.ale-exam-actions button:last-child {
+  color: #7d2525;
+  background: #fff0f0;
+}
+
 .ale-exam-list li div,
 .ale-exam-form > label {
   display: grid;

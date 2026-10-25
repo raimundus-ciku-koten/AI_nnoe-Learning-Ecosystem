@@ -33,3 +33,12 @@ test('every menu destination for every role resolves to an App route and is role
     );
   }
 });
+
+test('guardian-verification route is explicit, not captured by the generic user-category route', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
+  const exact = app.indexOf('path="/admin/pengguna/verifikasi-wali"');
+  const dynamic = app.indexOf('path="/admin/pengguna/:sub"');
+
+  assert.ok(exact >= 0 && dynamic >= 0 && exact < dynamic);
+});

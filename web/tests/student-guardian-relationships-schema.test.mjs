@@ -28,6 +28,10 @@ test('guardians cannot write links and can read only school-verified links in th
   assert.match(migration, /guardian_user_id = \(select auth\.uid\(\)\)/);
   assert.match(migration, /tenant_id = \(select public\.current_tenant_id\(\)\)/);
   assert.doesNotMatch(migration, /grant (?:insert|update|delete|all).*student_guardian_links.*to authenticated/i);
+  assert.match(migration, /create table if not exists public\.student_guardian_link_audit/);
+  assert.match(migration, /revoke all on table public\.student_guardian_link_audit\s+from public, anon, authenticated/);
+  assert.match(migration, /School admins read same-tenant guardian link audit/);
+  assert.doesNotMatch(migration, /create policy[^;]+on public\.student_guardian_link_audit[^;]+for\s+(?:insert|update|delete|all)/is);
 });
 
 test('only active same-tenant school admins can verify pending links or revoke verified links', () => {
@@ -36,11 +40,13 @@ test('only active same-tenant school admins can verify pending links or revoke v
   const functionSql = migration.slice(start);
   assert.match(functionSql, /security definer\s+set search_path = ''/);
   assert.match(functionSql, /not public\.current_user_is_active\(\)/);
-  assert.match(functionSql, /public\.current_app_role\(\) <> 'admin_sekolah'/);
+  assert.match(functionSql, /public\.current_app_role\(\) not in \('admin', 'admin_sekolah'\)/);
+  assert.match(migration, /current_app_role\(\)\) in \('admin', 'admin_sekolah'\)/);
   assert.match(functionSql, /actor_tenant text := public\.current_tenant_id\(\)/);
   assert.match(functionSql, /p_action = 'verify' and current_link\.status = 'pending'/);
   assert.match(functionSql, /p_action = 'revoke' and current_link\.status = 'verified'/);
   assert.match(functionSql, /verified_by = auth\.uid\(\)/);
+  assert.match(functionSql, /insert into public\.student_guardian_link_audit/);
   assert.match(migration, /revoke all on function public\.manage_student_guardian_link\(uuid, uuid, text\)\s+from public, anon, authenticated/);
   assert.match(migration, /grant execute on function public\.manage_student_guardian_link\(uuid, uuid, text\)\s+to authenticated/);
 });
