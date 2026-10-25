@@ -54,18 +54,19 @@ The current worktree adds migrations
 `20261026000200_teacher_learning_workflows.sql`, and
 `20261026000300_teacher_rubric_workflows.sql`, adding three expected feature
 relations to the 58-relation baseline. These additions were not part of run
-#25. Their application-level tests and production build pass locally; replay
-of the expanded 62-migration chain still needs a CI run against the disposable
-Supabase database. Production restore
+#25. Commit `cf6a54b` has since replayed the expanded 62-migration chain
+against the pinned disposable Supabase database in Web CI; Web CI and Vercel
+Preview both passed for that commit. The Preview is Vercel-protected, so an
+anonymous browser acceptance check could not be completed. Production restore
 evidence, exact Staging/Production definition comparison, migration-specific
 approval, and authenticated release acceptance tests remain required before
 hosted schema changes. Keep public signup and billing disabled.
 
-PR #15 remains open against `main`. Its Web CI and Vercel Preview checks
-passed for the remote PR commit, not the newer uncommitted changes in this
-worktree. A disposable Supabase migration replay is now part of Web CI so
-future PR updates validate the actual migration chain and audited feature
-relations before they can be considered release candidates.
+PR #15 remains open against `main` and includes the validated feature-code
+commit `cf6a54b`. Its Web CI, including the disposable migration replay, and
+its Vercel Preview deployment passed. Future PR updates continue to validate
+the actual migration chain and audited feature relations before they can be
+considered release candidates.
 The approved rollout scope is the active, data-backed features for the
 superadmin, guru, and siswa roles; billing/payment and public signup/trial
 remain excluded. Scope approval does not authorize hosted DDL before the
