@@ -9,7 +9,7 @@ const environment = {
   PGHOST: '127.0.0.1',
   PGPORT: '5432',
   PGUSER: 'supabase_admin',
-  PGDATABASE: 'backup_restore_validation',
+  PGDATABASE: 'postgres',
   PGPASSWORD: 'local-only',
   SUPABASE_DB_URL: 'must-not-be-inherited',
   BACKUP_ENCRYPTION_KEY: 'must-not-be-inherited',
@@ -37,7 +37,7 @@ test('orders versioned SQL files and rejects duplicate or malformed versions', (
   );
 });
 
-test('executes each migration in its own transaction against the restored disposable clone', async () => {
+test('executes each migration in its own transaction against the clean disposable Supabase database', async () => {
   const calls = [];
   const result = await validateMigrationChain({
     migrationDirectory: 'C:\\migrations',
@@ -57,7 +57,7 @@ test('executes each migration in its own transaction against the restored dispos
   assert.ok(calls.every((call) => call.command === 'psql'));
   assert.ok(calls[0].args.includes('--single-transaction'));
   assert.match(calls[0].args.at(-1), /20261016000100_identity_foundation\.sql$/);
-  assert.equal(calls[0].options.env.PGDATABASE, 'backup_restore_validation');
+  assert.equal(calls[0].options.env.PGDATABASE, 'postgres');
   assert.equal('SUPABASE_DB_URL' in calls[0].options.env, false);
   assert.equal('BACKUP_ENCRYPTION_KEY' in calls[0].options.env, false);
 });
@@ -94,7 +94,24 @@ test('rejects non-local database targets before running commands', async () => {
         return { status: 0 };
       },
     }),
-    /restricted to the disposable restored Staging clone/,
+    /restricted to the clean disposable Supabase database/,
+  );
+  assert.equal(commandCalled, false);
+});
+
+test('rejects the restored Staging clone as a migration replay target', async () => {
+  let commandCalled = false;
+  await assert.rejects(
+    validateMigrationChain({
+      migrationDirectory: 'C:\\migrations',
+      migrationFiles: ['20261016000100_identity_foundation.sql'],
+      environment: { ...environment, PGDATABASE: 'backup_restore_validation' },
+      runCommand: () => {
+        commandCalled = true;
+        return { status: 0 };
+      },
+    }),
+    /restricted to the clean disposable Supabase database/,
   );
   assert.equal(commandCalled, false);
 });

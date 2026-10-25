@@ -22,9 +22,9 @@ function buildLocalDatabaseEnvironment(environment) {
   const allowed = environment.PGHOST === '127.0.0.1'
     && environment.PGPORT === '5432'
     && environment.PGUSER === 'supabase_admin'
-    && environment.PGDATABASE === 'backup_restore_validation';
+    && environment.PGDATABASE === 'postgres';
   if (!allowed) {
-    throw new Error('Migration-chain validation is restricted to the disposable restored Staging clone.');
+    throw new Error('Migration-chain validation is restricted to the clean disposable Supabase database.');
   }
 
   const psqlEnvironment = { ...environment, PGAPPNAME: 'migration-chain-validation' };
@@ -60,7 +60,7 @@ export async function validateMigrationChain({
     }
   }
 
-  return `Validated ${orderedMigrationFiles.length} migrations in version order on the restored disposable Staging clone.`;
+  return `Validated ${orderedMigrationFiles.length} migrations in version order on the clean disposable Supabase database.`;
 }
 
 async function main() {
