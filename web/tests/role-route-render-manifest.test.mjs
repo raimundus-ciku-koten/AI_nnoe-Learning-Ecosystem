@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { canOpenRolePath } from '../src/services/roleAccess.js';
 import {
   buildRoleRouteRenderManifest,
   extractAppRoutePatterns,
+  hasRenderedDestination,
   matchesRoutePattern,
 } from './role-route-render-manifest.mjs';
 
@@ -51,6 +53,20 @@ test('teacher module shortcut resolves to planning and cover remains an explicit
 
   assert.ok(alias >= 0, 'student-facing module link must open the existing planning module');
   assert.ok(cover >= 0, 'cover route must render the authenticated guide explicitly');
+});
+
+test('teacher personal reflection, portfolio, and competency routes render private workspaces', () => {
+  for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+    for (const path of [
+      '/refleksi/pembelajaran',
+      '/refleksi/portofolio',
+      '/refleksi/kompetensi',
+      '/refleksi/perbaikan',
+    ]) {
+      assert.equal(hasRenderedDestination(path), true, `${role}: ${path}`);
+      assert.equal(canOpenRolePath(role, path), true, `${role}: ${path}`);
+    }
+  }
 });
 
 test('superadmin content menu does not expose a school-admin-only planning page', async () => {

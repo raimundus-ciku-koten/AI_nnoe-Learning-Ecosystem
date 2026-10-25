@@ -10,6 +10,12 @@ const appSource = readFileSync(
 const SUBMENU_RENDERED_PATHS = new Set([
   '/guru/catatan-pribadi',
   '/pengaturan/akun',
+  '/pengaturan/notifikasi',
+  '/pengaturan/preferensi',
+  '/refleksi/pembelajaran',
+  '/refleksi/portofolio',
+  '/refleksi/kompetensi',
+  '/refleksi/perbaikan',
 ]);
 
 function extractAppRoutePatterns(source = appSource) {

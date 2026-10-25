@@ -14,8 +14,12 @@ import { LABEL_PERAN, inisial, sideTutupTersimpan, terapkanSideTutup, toast } fr
 import Ikon from './Ikon.jsx';
 import { urlFotoAman } from '../services/protectedMedia.js';
 import { isEconomyMode } from '../services/economyMode.js';
-import { canOpenRolePath } from '../services/roleAccess.js';
+import { canOpenRolePath, isTeacherRole } from '../services/roleAccess.js';
 import { isMenuPathDisabled } from '../services/menuAccessPolicy.js';
+import {
+  bacaPreferensiGuru,
+  dengarkanPreferensiGuru,
+} from '../services/teacherPreferences.js';
 import {
   aturAudioNotifikasi,
   audioNotifikasiAktif,
@@ -85,6 +89,37 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   const previousPathRef = useRef(path);
 
   useEffect(() => pantauSuaraIndonesia(setSuaraIdTersedia), []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const terapkan = (preferences) => {
+      root.dataset.aleTextSize = preferences.textSize;
+      root.dataset.aleMotion = preferences.motion;
+    };
+    const bersihkan = () => {
+      delete root.dataset.aleTextSize;
+      delete root.dataset.aleMotion;
+    };
+    if (!user?.uid || !isTeacherRole(peranAktif)) {
+      bersihkan();
+      return undefined;
+    }
+    try {
+      terapkan(bacaPreferensiGuru(user.uid, peranAktif));
+    } catch (error) {
+      console.error('[app-shell] Gagal menerapkan preferensi tampilan guru:', error);
+      terapkan({ textSize: 'normal', motion: 'system' });
+    }
+    const stopListening = dengarkanPreferensiGuru((change) => {
+      if (change?.userId === user.uid && change?.role === peranAktif) {
+        terapkan(change.preferences);
+      }
+    });
+    return () => {
+      stopListening();
+      bersihkan();
+    };
+  }, [peranAktif, user?.uid]);
 
   useEffect(() => {
     const judulSebelumnya = document.title;

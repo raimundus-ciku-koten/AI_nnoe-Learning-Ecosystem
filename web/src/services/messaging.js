@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase.ts';
 import { WEB_PUSH_PUBLIC_KEY } from '../config.js';
 
 export const statusNotifikasi = () =>
-  typeof Notification === 'undefined' ? 'denied' : Notification.permission;
+  typeof Notification === 'undefined' ? 'unsupported' : Notification.permission;
 
 function kunciAplikasiServer(encodedKey) {
   const padding = '='.repeat((4 - encodedKey.length % 4) % 4);
@@ -15,6 +15,47 @@ async function daftarkanSW() {
     throw new Error('Peramban ini belum mendukung notifikasi Web Push.');
   }
   return navigator.serviceWorker.register('/push-service-worker.js');
+}
+
+export async function muatStatusNotifikasi(uid) {
+  if (typeof Notification === 'undefined' ||
+      typeof navigator === 'undefined' ||
+      typeof window === 'undefined' ||
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window)) {
+    return {
+      supported: false,
+      configured: Boolean(WEB_PUSH_PUBLIC_KEY),
+      permission: 'unsupported',
+      subscribed: false,
+    };
+  }
+
+  const permission = Notification.permission;
+  const registration = await navigator.serviceWorker.getRegistration('/push-service-worker.js');
+  const subscription = await registration?.pushManager.getSubscription();
+  if (!uid || !subscription?.endpoint) {
+    return {
+      supported: true,
+      configured: Boolean(WEB_PUSH_PUBLIC_KEY),
+      permission,
+      subscribed: false,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from('web_push_subscriptions')
+    .select('endpoint')
+    .eq('user_id', uid)
+    .eq('endpoint', subscription.endpoint)
+    .maybeSingle();
+  if (error) throw error;
+  return {
+    supported: true,
+    configured: Boolean(WEB_PUSH_PUBLIC_KEY),
+    permission,
+    subscribed: Boolean(data),
+  };
 }
 
 async function simpanLangganan(uid, subscription) {
@@ -36,6 +77,9 @@ async function simpanLangganan(uid, subscription) {
 }
 
 export async function aktifkanNotifikasi(uid) {
+  if (typeof uid !== 'string' || !uid.trim()) {
+    throw new Error('Sesi pengguna tidak tersedia untuk mengaktifkan notifikasi.');
+  }
   if (typeof Notification === 'undefined') {
     throw new Error('Peramban ini belum mendukung notifikasi.');
   }
@@ -63,6 +107,9 @@ export async function dengarkanForeground(callback) {
 }
 
 export async function lepaskanPerangkat(uid) {
+  if (typeof uid !== 'string' || !uid.trim()) {
+    throw new Error('Sesi pengguna tidak tersedia untuk menonaktifkan notifikasi.');
+  }
   if (!('serviceWorker' in navigator)) return;
   const registration = await navigator.serviceWorker.getRegistration('/push-service-worker.js');
   if (!registration) return;

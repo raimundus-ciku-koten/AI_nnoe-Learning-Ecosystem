@@ -153,6 +153,16 @@ body {
   overflow-x: hidden;
 }
 
+html[data-ale-text-size="large"] body { font-size: 18px; }
+html[data-ale-motion="reduced"] *,
+html[data-ale-motion="reduced"] *::before,
+html[data-ale-motion="reduced"] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: .01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .01ms !important;
+}
+
 /* Cegah gulir latar saat dialog / modal terbuka */
 body:has(.modal-backdrop) { overflow: hidden; }
 body.ale-kunci { overflow: hidden; }

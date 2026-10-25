@@ -549,15 +549,19 @@ function labelKontrol(target) {
   return target || 'Kontrol platform';
 }
 
-function nilaiAudit(value) {
-  if (typeof value === 'boolean') return value ? 'Aktif' : 'Nonaktif';
-  return String(value ?? '—');
-}
-
 export function aktivitasAudit(data) {
   if (data.action === 'platform.user.created') return 'Akun pengguna dibuat';
   if (data.action === 'platform.user.provisioned') return 'Akses pengguna diprovisikan';
+  if (data.action === 'platform.user_menu_access.updated') return 'Pembatasan menu akun diperbarui';
+  if (data.action === 'user.integration_consent.saved') return 'Persetujuan integrasi diperbarui';
   return labelKontrol(data.target);
+}
+
+function nilaiAudit(value) {
+  if (typeof value === 'boolean') return value ? 'Aktif' : 'Nonaktif';
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  return JSON.stringify(value) ?? '—';
 }
 
 export function rincianAudit(data) {
@@ -570,6 +574,16 @@ export function rincianAudit(data) {
     const role = PERAN_MENU.find(([, id]) => id === (data.role || profile.role))?.[0]
       || data.role || profile.role || 'Peran tidak diketahui';
     return `${role} · tenant ${data.tenantId || profile.tenant_id || '—'} · ${data.target || profile.email || '—'}`;
+  }
+  if (data.action === 'platform.user_menu_access.updated') {
+    const disabledKeys = Array.isArray(data.after_value) ? data.after_value : [];
+    return `UID ${data.target || '—'} · ${disabledKeys.length
+      ? `menu dibatasi: ${disabledKeys.join(', ')}`
+      : 'seluruh pembatasan menu dihapus'}`;
+  }
+  if (data.action === 'user.integration_consent.saved') {
+    const value = data.after_value || {};
+    return `UID ${data.target || '—'} · versi persetujuan ${value.version || '—'}`;
   }
   return `${nilaiAudit(data.before_value ?? data.before)} → ${nilaiAudit(data.after_value ?? data.after)}`;
 }

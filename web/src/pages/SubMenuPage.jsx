@@ -6,6 +6,9 @@ import { cariMenu } from '../navigasi.js';
 import Ikon from '../components/Ikon.jsx';
 import TeacherWorkspacePage from './TeacherWorkspacePage.jsx';
 import TeacherAccountPage from './TeacherAccountPage.jsx';
+import PrivateWorkspaceRecords from './PrivateWorkspaceRecords.jsx';
+import NotificationPreferencesPage from './NotificationPreferencesPage.jsx';
+import TeacherPreferencesPage from './TeacherPreferencesPage.jsx';
 import '../styles/submenu.css';
 
 const ALUR = {
@@ -261,6 +264,75 @@ const MODUL_ORTU_AKTIF = [
 ];
 
 const PANDUAN_GURU = {
+  '/pelaksanaan/realisasi': {
+    ringkasan: 'Aplikasi belum mencocokkan dokumen perencanaan dengan bukti pelaksanaan secara otomatis. Jurnal mengajar adalah catatan kegiatan kelas yang tersedia untuk ditinjau.',
+    langkah: ['Buka dokumen perencanaan milik akun Anda', 'Tinjau jurnal mengajar pada kelas yang Anda ampu', 'Bandingkan secara manual; halaman ini tidak menyimpan validasi realisasi'],
+    status: 'Pelacakan rencana-ke-realisasi belum tersedia. Jurnal dan dokumen perencanaan tetap menjadi sumber terpisah.',
+    actions: [
+      { label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' },
+      { label: 'Laporan Aktivitas Kelas', path: '/laporan/harian-bulanan', ikon: 'chart' },
+      { label: 'Perencanaan Pembelajaran', path: '/perencanaan', ikon: 'book' },
+    ],
+  },
+  '/pelaksanaan/berdiferensiasi': {
+    ringkasan: 'Belum ada alur khusus untuk merancang dan melacak pembelajaran berdiferensiasi. Perencanaan umum dan jurnal kelas tersedia sebagai sumber terpisah.',
+    langkah: ['Susun perangkat ajar pada Perencanaan', 'Catat kegiatan kelas pada Jurnal Mengajar', 'Jangan mencatat profil atau kebutuhan sensitif siswa pada panduan ini'],
+    status: 'Modul diferensiasi dan pemantauan kebutuhan individual belum tersedia.',
+    actions: [
+      { label: 'Perencanaan Pembelajaran', path: '/perencanaan', ikon: 'book' },
+      { label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' },
+    ],
+  },
+  '/pelaksanaan/kelas-khusus': {
+    ringkasan: 'Modul untuk kelas atau program khusus belum tersedia. Program BK & Kegiatan dapat menyimpan rancangan lokal, sedangkan kegiatan kelas tercatat melalui jurnal.',
+    langkah: ['Gunakan rancangan lokal hanya untuk perencanaan non-sensitif', 'Catat kegiatan yang benar-benar berlangsung pada Jurnal Mengajar', 'Ikuti persetujuan serta prosedur sekolah untuk program resmi'],
+    status: 'Rancangan lokal tidak membuktikan persetujuan, penugasan, atau arsip program sekolah.',
+    actions: [
+      { label: 'Program BK & Kegiatan', path: '/program-kegiatan', ikon: 'file', actionLabel: 'Buka rancangan lokal' },
+      { label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' },
+    ],
+  },
+  '/pelaksanaan/catatan-cepat': {
+    ringkasan: 'Formulir catatan kelas cepat belum tersedia. Gunakan Jurnal Mengajar untuk pencatatan kegiatan resmi yang tersedia; catatan kerja pribadi bukan penggantinya.',
+    langkah: ['Buka Jurnal Mengajar pada kelas yang Anda ampu', 'Simpan informasi yang relevan melalui formulir jurnal', 'Hindari menaruh data siswa pada catatan pribadi'],
+    status: 'Menu catatan cepat belum menjadi modul. Jurnal Mengajar adalah sumber pencatatan kelas yang tersedia.',
+    actions: [{ label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' }],
+  },
+  '/asesmen/diagnostik': {
+    ringkasan: 'Alur diagnostik khusus dan penyimpanan hasilnya belum tersedia. Bank Soal dan Ujian Online membantu menyiapkan soal serta pelaksanaan asesmen umum.',
+    langkah: ['Siapkan soal pada Bank Soal', 'Gunakan Ujian Online bila sesuai tujuan dan kebijakan sekolah', 'Tinjau hasil hanya pada modul sumber; jangan anggap halaman ini sebagai profil diagnostik siswa'],
+    status: 'Klasifikasi, instrumen, dan tindak lanjut diagnostik khusus belum tersedia.',
+    actions: [
+      { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'book' },
+      { label: 'Ujian Online', path: '/asesmen/ujian-online', ikon: 'check' },
+    ],
+  },
+  '/asesmen/formatif': {
+    ringkasan: 'Alur asesmen formatif khusus belum tersedia. Soal dapat dikelola di Bank Soal dan tugas atau kuis kelas dapat ditinjau pada modul Ruang Kelas.',
+    langkah: ['Gunakan Bank Soal untuk mengelola butir yang tersedia', 'Buka Ujian Online atau Ruang Kelas sesuai jenis aktivitas', 'Gunakan Analisis Hasil hanya untuk data tugas dan kuis yang tercatat'],
+    status: 'Pelacakan siklus formatif dan umpan balik khusus belum tersedia.',
+    actions: [
+      { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'book' },
+      { label: 'Ujian Online', path: '/asesmen/ujian-online', ikon: 'check' },
+      { label: 'Analisis Hasil', path: '/asesmen/analisis', ikon: 'chart' },
+    ],
+  },
+  '/asesmen/sumatif': {
+    ringkasan: 'Alur sumatif khusus dan rekap lintas sumber belum tersedia. Ujian Online dan analisis nilai hanya mencakup data yang tersimpan pada modul masing-masing.',
+    langkah: ['Buat asesmen pada modul yang sesuai', 'Pastikan kriteria dan jadwal mengikuti ketentuan sekolah', 'Gunakan Rapor resmi untuk alur rapor; jangan menyamakan laporan kelas dengan rapor'],
+    status: 'Rekap sumatif lintas asesmen dan pengesahan hasil belum tersedia pada menu ini.',
+    actions: [
+      { label: 'Ujian Online', path: '/asesmen/ujian-online', ikon: 'check' },
+      { label: 'Analisis Hasil', path: '/asesmen/analisis', ikon: 'chart' },
+      { label: 'Nilai & Capaian Rapor', path: '/asesmen/rapor', ikon: 'file' },
+    ],
+  },
+  '/asesmen/rubrik': {
+    ringkasan: 'Pustaka rubrik dan instrumen penilaian yang terversi belum tersedia. Bank Soal dan Ujian Online tidak menggantikan pengelolaan rubrik.',
+    langkah: ['Gunakan instrumen yang telah disetujui sekolah', 'Kelola butir soal melalui Bank Soal bila relevan', 'Jangan menganggap nilai otomatis sebagai penilaian berbasis rubrik'],
+    status: 'Editor, katalog, dan arsip rubrik belum tersedia.',
+    actions: [{ label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'book' }],
+  },
   '/pemantauan/profil-siswa': {
     ringkasan: 'Belum ada profil siswa satu halaman. Pemantauan yang tersedia terbatas pada aktivitas kelas, jurnal, dan presensi; catatan kasus atau intervensi individual tidak ditampilkan.',
     langkah: ['Pilih kelas yang memang Anda ampu', 'Tinjau jurnal, laporan aktivitas, atau presensi pada modul sumber', 'Jangan menyimpan diagnosis atau detail kasus siswa pada panduan ini'],
@@ -298,12 +370,6 @@ const PANDUAN_GURU = {
     status: 'Grup Chat tersedia; penyimpanan berkas, penugasan, dan arsip praktik bersama belum tersedia.',
     actions: [{ label: 'Grup Chat', path: '/chat/grup', ikon: 'users' }],
   },
-  '/refleksi/pembelajaran': {
-    ringkasan: 'Belum ada formulir refleksi pembelajaran yang tersimpan. Jurnal mengajar menyediakan bukti kegiatan kelas, tetapi bukan refleksi atau evaluasi resmi.',
-    langkah: ['Tinjau jurnal kelas pada modul sumber', 'Gunakan prosedur sekolah untuk refleksi atau supervisi resmi', 'Catatan pribadi guru bukan arsip bersama dan bukan pengganti dokumen resmi'],
-    status: 'Refleksi terstruktur belum tersedia; jurnal mengajar adalah sumber kegiatan, bukan modul refleksi.',
-    actions: [{ label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' }],
-  },
   '/refleksi/supervisi': {
     ringkasan: 'Belum ada penjadwalan, instrumen, persetujuan, atau arsip supervisi dan observasi pada aplikasi.',
     langkah: ['Koordinasikan supervisi melalui prosedur sekolah', 'Jangan masukkan hasil observasi ke catatan pribadi seolah-olah arsip resmi', 'Gunakan jurnal kelas hanya sebagai sumber kegiatan bila diperlukan'],
@@ -320,12 +386,6 @@ const PANDUAN_GURU = {
     ringkasan: 'Aplikasi belum memiliki profil kompetensi, riwayat pelatihan, atau rekam pengembangan profesional guru.',
     langkah: ['Gunakan sistem atau dokumen resmi yang ditetapkan sekolah', 'Jangan menganggap catatan pribadi sebagai rekam kompetensi', 'Kembali ke menu ini setelah sumber data dan kebijakan disepakati'],
     status: 'Modul kompetensi dan pengembangan profesional belum tersedia.',
-  },
-  '/refleksi/perbaikan': {
-    ringkasan: 'Rencana perbaikan terstruktur belum tersedia. Dokumen perencanaan dan jurnal dapat ditinjau, tetapi tidak membuktikan tindak lanjut atau persetujuan.',
-    langkah: ['Tinjau dokumen perencanaan milik akun bila relevan', 'Catat tindak lanjut pada prosedur sekolah yang berlaku', 'Jangan menganggap arsip atau catatan pribadi sebagai persetujuan'],
-    status: 'Modul rencana perbaikan dan pelacakan tindak lanjut belum tersedia.',
-    actions: [{ label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' }],
   },
   '/laporan/ketercapaian': {
     ringkasan: 'Laporan ketercapaian kurikulum yang resmi belum tersedia. Analisis tugas dan kuis hanya menunjukkan hasil asesmen Ruang Kelas, bukan ketercapaian CP/TP menyeluruh.',
@@ -394,9 +454,9 @@ const PANDUAN_GURU = {
     status: 'Pengubahan peran tidak tersedia bagi guru.',
   },
   '/pengaturan/preferensi': {
-    ringkasan: 'Pengaturan preferensi aplikasi yang tersimpan belum tersedia pada menu ini.',
-    langkah: ['Gunakan kontrol yang memang tersedia pada halaman terkait', 'Pengaturan akun tidak menyimpan preferensi aplikasi umum', 'Jangan menganggap perubahan tampilan sementara sebagai pengaturan tersimpan'],
-    status: 'Modul preferensi pengguna belum tersedia.',
+    ringkasan: 'Preferensi ukuran teks dan pengurangan gerakan tersimpan lokal pada browser, terpisah untuk akun serta peran aktif.',
+    langkah: ['Pilih ukuran teks yang nyaman', 'Atur pengurangan animasi bila diperlukan', 'Simpan perubahan pada perangkat ini'],
+    status: 'Preferensi tampilan lokal; tidak disinkronkan lintas perangkat.',
   },
   '/pengaturan/cadangan': {
     ringkasan: 'Cadangan dan pemulihan sistem tidak tersedia untuk dikelola guru. Sinkronisasi dokumen pribadi bukan backup database sekolah.',
@@ -407,11 +467,6 @@ const PANDUAN_GURU = {
     ringkasan: 'Pusat bantuan dan tiket dukungan resmi belum terhubung. Chat aplikasi bukan jaminan kanal support atau tanggap insiden.',
     langkah: ['Gunakan kontak dukungan resmi sekolah yang telah disediakan', 'Jangan kirim kata sandi, token, atau data anak melalui chat', 'Aplikasi belum menyimpan tiket dukungan untuk menu ini'],
     status: 'Pusat bantuan dan sistem tiket belum tersedia.',
-  },
-  '/pengaturan/notifikasi': {
-    ringkasan: 'Preferensi notifikasi per pengguna belum tersedia pada menu ini.',
-    langkah: ['Tinjau notifikasi yang ditampilkan oleh fitur terkait', 'Perubahan preferensi tidak disimpan melalui halaman panduan', 'Jangan menganggap pemberitahuan visual sebagai bukti pengiriman atau penerimaan'],
-    status: 'Modul pengaturan notifikasi belum tersedia.',
   },
 };
 
@@ -431,11 +486,73 @@ export default function SubMenuPage() {
       </section>
     );
   }
-
   const { grup, item } = menu;
+  if (isTeacherRole(role) && ['/refleksi/portofolio', '/refleksi/kompetensi'].includes(item.path)) {
+    const isPortfolio = item.path === '/refleksi/portofolio';
+    return (
+      <section className="ale-submenu-page" aria-labelledby="teacher-private-record-heading">
+        <header className="ale-submenu-hero">
+          <div className="ale-submenu-hero-copy">
+            <p className="ale-submenu-kicker"><Ikon nama={grup.ikon} />{grup.label}</p>
+            <h2 id="teacher-private-record-heading">{item.label}</h2>
+            <p>
+              {isPortfolio
+                ? 'Simpan daftar karya dan tautan yang ingin Anda tinjau kembali secara pribadi.'
+                : 'Catat topik belajar, pelatihan, atau keterampilan yang ingin Anda kembangkan.'}
+            </p>
+          </div>
+          <span className="ale-submenu-state"><span aria-hidden="true" />Ruang kerja pribadi</span>
+        </header>
+        <p className="ale-private-workspace-privacy">
+          Catatan ini hanya untuk akun dan peran aktif Anda. Ini bukan portofolio resmi, arsip sekolah,
+          bukti kompetensi, sertifikat, penilaian kinerja, atau dokumen supervisi. Jangan mencantumkan
+          identitas maupun informasi sensitif siswa.
+        </p>
+        <PrivateWorkspaceRecords
+          route={item.path}
+          heading={isPortfolio ? 'Karya pribadi' : 'Rencana pengembangan pribadi'}
+        />
+      </section>
+    );
+  }
+
   if (isTeacherRole(role) && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
   if (isTeacherRole(role) && item.path === '/guru/catatan-pribadi') {
     return <TeacherWorkspacePage grup={grup} item={item} />;
+  }
+  if (isTeacherRole(role) && item.path === '/pengaturan/notifikasi') {
+    return <NotificationPreferencesPage />;
+  }
+  if (isTeacherRole(role) && item.path === '/pengaturan/preferensi') {
+    return <TeacherPreferencesPage />;
+  }
+  if (isTeacherRole(role) && ['/refleksi/pembelajaran', '/refleksi/perbaikan'].includes(item.path)) {
+    const isImprovementPlan = item.path === '/refleksi/perbaikan';
+    return (
+      <section className="ale-submenu-page" aria-labelledby="teacher-reflection-heading">
+        <header className="ale-submenu-hero">
+          <div className="ale-submenu-hero-copy">
+            <p className="ale-submenu-kicker"><Ikon nama={grup.ikon} />{grup.label}</p>
+            <h2 id="teacher-reflection-heading">{item.label}</h2>
+            <p>
+              {isImprovementPlan
+                ? 'Susun pengingat dan langkah perbaikan untuk diri sendiri berdasarkan praktik mengajar.'
+                : 'Catat refleksi pribadi atas proses pembelajaran dan hal yang ingin Anda tinjau kembali.'}
+            </p>
+          </div>
+          <span className="ale-submenu-state"><span aria-hidden="true" />Ruang kerja pribadi</span>
+        </header>
+        <p className="ale-private-workspace-privacy">
+          Catatan ini hanya untuk akun dan peran aktif Anda. Ini bukan arsip sekolah, penilaian kinerja,
+          dokumen supervisi, atau bukti persetujuan. Jangan mencantumkan identitas maupun informasi
+          sensitif siswa.
+        </p>
+        <PrivateWorkspaceRecords
+          route={item.path}
+          heading={isImprovementPlan ? 'Rencana perbaikan pribadi' : 'Refleksi pembelajaran pribadi'}
+        />
+      </section>
+    );
   }
   const modulAktifAdmin = isSchoolAdminRole(role)
     ? MODUL_ADMIN_AKTIF[grup.id] || []

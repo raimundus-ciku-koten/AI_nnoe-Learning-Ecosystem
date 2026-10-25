@@ -5,7 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   GRUP_MENU, MENU_SUPERADMIN, menuUntukPeran,
 } from '../navigasi.js';
-import { hasRenderedDestination } from '../../tests/role-route-render-manifest.mjs';
+import {
+  hasRenderedDestination,
+} from '../../tests/role-route-render-manifest.mjs';
+import { canOpenRolePath } from '../services/roleAccess.js';
 
 const auth = vi.hoisted(() => ({
   role: 'superadmin',
@@ -105,12 +108,10 @@ describe('submenu platform superadmin', () => {
 
     it('menjelaskan fallback guru dan menautkan catatan pribadi secara terpisah', () => {
       const targetPaths = [
-        '/refleksi/pembelajaran',
         '/laporan/kinerja-guru',
         '/kolaborasi/praktik-baik',
       ];
       const expectedGuidance = new Map([
-        ['/refleksi/pembelajaran', 'Refleksi terstruktur belum tersedia'],
         ['/laporan/kinerja-guru', 'Modul kinerja guru dan evaluasi resmi belum tersedia'],
         ['/kolaborasi/praktik-baik', 'Repositori praktik baik belum tersedia'],
       ]);
@@ -130,6 +131,24 @@ describe('submenu platform superadmin', () => {
 
       expect(renderSubmenu('/asesmen/remedial')).toContain('href="#/asesmen/ujian-online"');
       expect(renderSubmenu('/laporan/kinerja-guru')).toContain('href="#/laporan/arsip-perencanaan"');
+    });
+
+    it('menyediakan ruang kerja refleksi pribadi tanpa menyebutnya arsip atau evaluasi resmi', () => {
+      for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+        auth.role = role;
+        auth.activeRole = '';
+
+        const reflection = renderSubmenu('/refleksi/pembelajaran');
+        expect(reflection, role).toContain('Refleksi pembelajaran pribadi');
+        expect(reflection, role).toContain('Ruang kerja pribadi');
+        expect(reflection, role).toContain('bukan arsip sekolah, penilaian kinerja');
+        expect(reflection, role).toContain('Jangan mencantumkan identitas maupun informasi sensitif siswa');
+        expect(reflection, role).toContain('private-workspace-form');
+
+        const improvementPlan = renderSubmenu('/refleksi/perbaikan');
+        expect(improvementPlan, role).toContain('Rencana perbaikan pribadi');
+        expect(improvementPlan, role).toContain('bukan arsip sekolah, penilaian kinerja');
+      }
     });
 
     it('membuka ruang kerja pribadi hanya dari menu catatan kerja pribadi', () => {
@@ -165,6 +184,30 @@ describe('submenu platform superadmin', () => {
         const html = renderSubmenu('/pelaksanaan/realisasi');
         expect(html, role).toContain('href="#/pelaksanaan/jurnal"');
         expect(html, role).toContain('href="#/laporan/harian-bulanan"');
+      }
+    });
+
+    it('memberi panduan dan tautan sumber spesifik untuk pelaksanaan dan asesmen yang belum memiliki modul khusus', () => {
+      const cases = [
+        ['/pelaksanaan/realisasi', 'Pelacakan rencana-ke-realisasi belum tersedia', '/pelaksanaan/jurnal'],
+        ['/pelaksanaan/berdiferensiasi', 'Modul diferensiasi dan pemantauan kebutuhan individual belum tersedia', '/perencanaan'],
+        ['/pelaksanaan/kelas-khusus', 'Rancangan lokal tidak membuktikan persetujuan', '/program-kegiatan'],
+        ['/pelaksanaan/catatan-cepat', 'Jurnal Mengajar adalah sumber pencatatan kelas yang tersedia', '/pelaksanaan/jurnal'],
+        ['/asesmen/diagnostik', 'Klasifikasi, instrumen, dan tindak lanjut diagnostik khusus belum tersedia', '/asesmen/bank-soal'],
+        ['/asesmen/formatif', 'Pelacakan siklus formatif dan umpan balik khusus belum tersedia', '/asesmen/analisis'],
+        ['/asesmen/sumatif', 'Rekap sumatif lintas asesmen dan pengesahan hasil belum tersedia', '/asesmen/rapor'],
+        ['/asesmen/rubrik', 'Editor, katalog, dan arsip rubrik belum tersedia', '/asesmen/bank-soal'],
+      ];
+
+      for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+        auth.role = role;
+        auth.activeRole = '';
+        for (const [path, status, sourcePath] of cases) {
+          const html = renderSubmenu(path);
+          expect(html, `${role}: ${path}`).toContain(status);
+          expect(html, `${role}: ${path}`).toContain(`href="#${sourcePath}"`);
+          expect(html, `${role}: ${path}`).toContain('Panduan · baca saja');
+        }
       }
     });
 
@@ -216,10 +259,14 @@ describe('submenu platform superadmin', () => {
         expect(reflection).toContain('Modul supervisi dan arsip observasi belum tersedia');
         expect(reflection).toContain('href="#/pelaksanaan/jurnal"');
         expect(reflection).not.toContain('href="#/guru/catatan-pribadi"');
-
         const portfolio = renderSubmenu('/refleksi/portofolio');
-        expect(portfolio).toContain('bukan portofolio kompetensi atau bukti kinerja');
-        expect(portfolio).toContain('href="#/laporan/arsip-perencanaan"');
+        expect(portfolio).toContain('Catatan ini hanya untuk akun dan peran aktif Anda');
+        expect(portfolio).toContain('bukan portofolio resmi');
+        expect(portfolio).toContain('Karya pribadi');
+
+        const competence = renderSubmenu('/refleksi/kompetensi');
+        expect(competence).toContain('Rencana pengembangan pribadi');
+        expect(competence).toContain('bukan portofolio resmi');
 
         const achievement = renderSubmenu('/laporan/ketercapaian');
         expect(achievement).toContain('bukan ketercapaian CP/TP menyeluruh');
@@ -240,6 +287,16 @@ describe('submenu platform superadmin', () => {
         const backup = renderSubmenu('/pengaturan/cadangan');
         expect(backup).toContain('Sinkronisasi dokumen pribadi bukan backup database sekolah');
         expect(backup).not.toContain('Buka modul terkait');
+
+        const preferences = renderSubmenu('/pengaturan/preferensi');
+        expect(preferences).toContain('Preferensi tampilan');
+        expect(preferences).toContain('Simpan preferensi');
+        expect(preferences).toContain('browser pada perangkat ini');
+
+        const notifications = renderSubmenu('/pengaturan/notifikasi');
+        expect(notifications).toContain('Notifikasi Web Push');
+        expect(notifications).toContain('Aktifkan di perangkat ini');
+        expect(notifications).toContain('bukan preferensi lintas perangkat');
       }
     });
 
@@ -457,6 +514,48 @@ describe('submenu platform superadmin', () => {
     expect(renderOperations('/platform/fitur/flags')).toContain('Generator perangkat ajar AI');
   });
 
+  it('memastikan semua tautan internal dari submenu guru tersedia bagi role tersebut', () => {
+    const roles = ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'];
+    for (const role of roles) {
+      auth.role = role;
+      auth.activeRole = null;
+      const menuItems = menuUntukPeran(role).flatMap((group) => group.item);
+      const menuPaths = new Set(menuItems.map((menuItem) => menuItem.path));
+      for (const item of menuItems) {
+        const html = renderSubmenu(item.path, item.search || '');
+        const hrefs = [...html.matchAll(/href="#([^"]+)"/g)].map((match) => match[1]);
+        for (const href of hrefs) {
+          const [path] = href.split('?');
+          expect(canOpenRolePath(role, path), `${role}: ${item.path} links to ${path}`).toBe(true);
+          expect(
+            hasRenderedDestination(path) || menuPaths.has(path),
+            `${role}: ${item.path} links to unrouted ${path}`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('memastikan tautan internal panduan superadmin tidak keluar dari izin role', () => {
+    auth.role = 'superadmin';
+    auth.activeRole = null;
+    const menuPaths = new Set(MENU_SUPERADMIN.flatMap((group) => group.item.map((item) => item.path)));
+    for (const group of MENU_SUPERADMIN) {
+      for (const item of group.item) {
+        const html = renderSubmenu(item.path, item.search || '');
+        const hrefs = [...html.matchAll(/href="#([^"]+)"/g)].map((match) => match[1]);
+        for (const href of hrefs) {
+          const [path] = href.split('?');
+          expect(canOpenRolePath('superadmin', path), `${item.path} links to ${path}`).toBe(true);
+          expect(
+            hasRenderedDestination(path) || menuPaths.has(path),
+            `${item.path} links to unrouted ${path}`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
   it('merangkum peristiwa pembuatan akun pada audit platform', () => {
     const activity = {
       action: 'platform.user.created',
@@ -466,6 +565,36 @@ describe('submenu platform superadmin', () => {
     };
     expect(aktivitasAudit(activity)).toBe('Akun pengguna dibuat');
     expect(rincianAudit(activity)).toBe('Guru · tenant sekolah-a · UID uid-baru');
+  });
+
+  it('menjelaskan audit pembatasan menu dan persetujuan tanpa menampilkan nilai JSON mentah', () => {
+    const menuRestriction = {
+      action: 'platform.user_menu_access.updated',
+      target: 'user-2',
+      before_value: [],
+      after_value: ['path:/pengaturan/akun', 'group:platform-ai'],
+    };
+    expect(aktivitasAudit(menuRestriction)).toBe('Pembatasan menu akun diperbarui');
+    expect(rincianAudit(menuRestriction))
+      .toBe('UID user-2 · menu dibatasi: path:/pengaturan/akun, group:platform-ai');
+
+    const consent = {
+      action: 'user.integration_consent.saved',
+      target: 'user-3',
+      before_value: null,
+      after_value: { version: '2026-01', services: ['google_drive'] },
+    };
+    expect(aktivitasAudit(consent)).toBe('Persetujuan integrasi diperbarui');
+    expect(rincianAudit(consent)).toBe('UID user-3 · versi persetujuan 2026-01');
+  });
+
+  it('memformat nilai JSON kontrol audit secara terbaca', () => {
+    expect(rincianAudit({
+      action: 'platform.control.updated',
+      target: 'features.aiAssistant',
+      before_value: { enabled: false },
+      after_value: { enabled: true },
+    })).toBe('{"enabled":false} → {"enabled":true}');
   });
 
   it('menerapkan mode pemeliharaan bagi peran biasa dan memberi akses superadmin', () => {
