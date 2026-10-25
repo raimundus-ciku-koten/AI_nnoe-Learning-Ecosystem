@@ -62,6 +62,11 @@ jobs:
           sudo apt-get install --yes postgresql-client-17
           /usr/lib/postgresql/17/bin/pg_dump --version
           /usr/lib/postgresql/17/bin/pg_restore --version
+      - name: Audit Staging schema metadata (read-only)
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: node scripts/auditStagingSchema.mjs >> "$GITHUB_STEP_SUMMARY"
       - name: Create and encrypt database dump
         shell: bash
         env:

@@ -1,0 +1,102 @@
+import { spawnSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { validateStagingBackupTarget } from './validateStagingBackupTarget.mjs';
+
+export function getExpectedRelationNames(auditSql) {
+  const list = auditSql.match(
+    /from unnest\(array\[([\s\S]*?)\]\) as feature\(name\)/i,
+  )?.[1];
+  if (!list) {
+    throw new Error('Hosted schema audit does not declare expected feature relations.');
+  }
+
+  const names = [...list.matchAll(/'([a-z0-9_]+)'/gi)].map((match) => match[1]);
+  if (names.length === 0 || new Set(names).size !== names.length) {
+    throw new Error('Hosted schema audit relation inventory is empty or contains duplicates.');
+  }
+  return names;
+}
+
+export function buildSchemaAuditQuery(relationNames) {
+  if (!relationNames.length || relationNames.some((name) => !/^[a-z0-9_]+$/.test(name))) {
+    throw new Error('Schema audit relation names are invalid.');
+  }
+
+  const relations = relationNames.map((name) => `'${name}'`).join(', ');
+  return `select jsonb_build_object(
+  'relations', (
+    select jsonb_object_agg(relation.name, to_regclass('public.' || relation.name) is not null)
+    from unnest(array[${relations}]) as relation(name)
+  ),
+  'migration_history_exists', to_regclass('supabase_migrations.schema_migrations') is not null
+);`;
+}
+
+export function renderSchemaAuditSummary(report) {
+  const relations = report?.relations;
+  if (!relations || typeof relations !== 'object' || Array.isArray(relations)) {
+    throw new Error('Staging schema audit returned an invalid relations report.');
+  }
+
+  const missing = Object.entries(relations)
+    .filter(([, exists]) => exists !== true)
+    .map(([name]) => name)
+    .sort();
+  const presentCount = Object.keys(relations).length - missing.length;
+  const lines = [
+    '## Staging schema inventory (read-only)',
+    '',
+    `- Expected feature relations present: ${presentCount}/${Object.keys(relations).length}`,
+    `- Supabase migration history table: ${report.migration_history_exists === true ? 'found' : 'not found'}`,
+  ];
+  if (missing.length > 0) {
+    lines.push('', `- Missing public relations: ${missing.join(', ')}`);
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+export async function auditStagingSchema({
+  connectionString,
+  auditSql,
+  runPsql = spawnSync,
+}) {
+  validateStagingBackupTarget(connectionString);
+  const query = buildSchemaAuditQuery(getExpectedRelationNames(auditSql));
+  const result = runPsql(
+    'psql',
+    ['--no-psqlrc', '--set=ON_ERROR_STOP=1', '--tuples-only', '--no-align', '--command', query],
+    {
+      encoding: 'utf8',
+      env: { ...process.env, PGDATABASE: connectionString },
+    },
+  );
+  if (result.error || result.status !== 0) {
+    throw new Error(`Staging schema audit failed to execute (psql exit ${result.status ?? 'unknown'}).`);
+  }
+
+  let report;
+  try {
+    report = JSON.parse(result.stdout.trim());
+  } catch {
+    throw new Error('Staging schema audit returned invalid JSON.');
+  }
+  return renderSchemaAuditSummary(report);
+}
+
+async function main() {
+  const connectionString = process.env.SUPABASE_DB_URL || '';
+  const auditSql = await readFile(
+    new URL('../supabase/audit_hosted_schema.sql', import.meta.url),
+    'utf8',
+  );
+  process.stdout.write(await auditStagingSchema({ connectionString, auditSql }));
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  main().catch((error) => {
+    console.error(`[staging-schema-audit] ${error.message}`);
+    process.exitCode = 1;
+  });
+}

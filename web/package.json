@@ -14,7 +14,7 @@
     "test": "npm run test:unit && npm run test:report-card && npm run test:planning-source && npm run test:assessment && npm run test:assessment-role-scope && npm run test:school-monitoring-schema && npm run test:school-activity-report-schema && npm run test:school-content-overview-schema && npm run test:school-admin-material-catalog-schema && npm run test:zero-cost && npm run test:role-route-manifest && npm run test:guardian-links && npm run test:vitest && npm run test:role-route-render && npm run test:assessment-ui && npm run test:role-access && npm run test:dashboard && npm run test:audio && npm run test:schema-audit && npm run test:brand-assets",
     "test:report-card": "node --test tests/school-report-card-portfolios.test.mjs tests/tenant-report-card-address.test.mjs",
     "test:planning-source": "node --test tests/capaian-pembelajaran.test.mjs tests/planning-ai-schema.test.mjs tests/planning-ai-prompts.test.mjs",
-    "test:backup": "node --test ../scripts/encryptedBackup.test.mjs ../scripts/validateStagingBackupTarget.test.mjs",
+    "test:backup": "node --test ../scripts/encryptedBackup.test.mjs ../scripts/validateStagingBackupTarget.test.mjs ../scripts/auditStagingSchema.test.mjs",
     "test:assessment": "node --test tests/online-assessments-schema.test.mjs tests/classroom-assessment-report.test.mjs",
     "test:assessment-role-scope": "node --test tests/assessment-role-access-schema.test.mjs",
     "test:school-monitoring-schema": "node --test tests/school-activity-overview-schema.test.mjs",

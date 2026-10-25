@@ -125,6 +125,8 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.match(targetValidator, /samszhfyhbjuculrcffg/);
   assert.match(targetValidator, /sessionPoolerStaging/);
   assert.match(workflow, /Install PostgreSQL 17 client/);
+  assert.match(workflow, /Audit Staging schema metadata \(read-only\)/);
+  assert.match(workflow, /node scripts\/auditStagingSchema\.mjs >> "\$GITHUB_STEP_SUMMARY"/);
   assert.match(workflow, /postgresql-client-17/);
   assert.match(
     workflow,
