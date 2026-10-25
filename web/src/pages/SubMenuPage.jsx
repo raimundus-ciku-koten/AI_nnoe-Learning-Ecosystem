@@ -247,19 +247,10 @@ const MODUL_GURU_AKTIF = {
     { label: 'Program BK & Kegiatan', path: '/program-kegiatan', ikon: 'file', actionLabel: 'Buka rancangan' },
     { label: 'Percakapan', path: '/chat', ikon: 'chat' },
   ],
-  refleksi: [
-    { label: 'Catatan Kerja Pribadi', path: '/guru/catatan-pribadi', ikon: 'file' },
-  ],
-  laporan: [
-    { label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' },
-  ],
+  laporan: [],
   kolaborasi: [
     { label: 'Percakapan', path: '/chat', ikon: 'chat' },
     { label: 'Grup Chat', path: '/chat/grup', ikon: 'users' },
-  ],
-  pengaturan: [
-    { label: 'Akun & Keamanan', path: '/pengaturan/akun', ikon: 'settings' },
-    { label: 'Integrasi Google', path: '/pengaturan/google', ikon: 'settings' },
   ],
 };
 
@@ -269,16 +260,26 @@ const MODUL_ORTU_AKTIF = [
   { label: 'Kontak Sekolah', path: '/chat/kontak', ikon: 'users' },
 ];
 
-const PANDUAN_PEMANTAUAN_GURU = {
+const PANDUAN_GURU = {
   '/pemantauan/profil-siswa': {
     ringkasan: 'Belum ada profil siswa satu halaman. Pemantauan yang tersedia terbatas pada aktivitas kelas, jurnal, dan presensi; catatan kasus atau intervensi individual tidak ditampilkan.',
     langkah: ['Pilih kelas yang memang Anda ampu', 'Tinjau jurnal, laporan aktivitas, atau presensi pada modul sumber', 'Jangan menyimpan diagnosis atau detail kasus siswa pada panduan ini'],
     status: 'Profil individual, catatan kasus, dan intervensi siswa belum tersedia. Modul kelas hanya menampilkan data sesuai penugasan dan izin yang berlaku.',
+    actions: [
+      { label: 'Laporan Aktivitas Kelas', path: '/laporan/harian-bulanan', ikon: 'file' },
+      { label: 'Presensi Siswa', path: '/pelaksanaan/presensi', ikon: 'check' },
+    ],
   },
   '/pemantauan/karakter': {
     ringkasan: 'Belum ada arsip perkembangan karakter per siswa. Guru dapat menyusun rancangan kegiatan non-sensitif; rancangan bukan bukti observasi, penilaian karakter, atau persetujuan sekolah.',
     langkah: ['Susun tema kegiatan pada Program BK & Kegiatan bila relevan', 'Simpan rancangan tanpa nama atau detail pribadi siswa', 'Gunakan prosedur sekolah untuk observasi dan dokumentasi resmi'],
     status: 'Rancangan kegiatan hanya tersimpan lokal di browser; rekam perkembangan siswa dan arsip resmi belum tersedia.',
+    actions: [{
+      label: 'Program BK & Kegiatan',
+      path: '/program-kegiatan',
+      ikon: 'file',
+      actionLabel: 'Buka rancangan lokal',
+    }],
   },
   '/pemantauan/pendampingan': {
     ringkasan: 'Belum ada modul tindak lanjut atau catatan pendampingan individual. Hindari menyimpan informasi konseling, diagnosis, atau kasus siswa pada halaman panduan.',
@@ -289,6 +290,128 @@ const PANDUAN_PEMANTAUAN_GURU = {
     ringkasan: 'Belum ada modul khusus komunikasi guru-orang tua yang memverifikasi relasi wali–siswa. Chat tersedia sesuai hak akses, tetapi tidak membuka data akademik anak.',
     langkah: ['Pastikan penerima dan tujuan komunikasi sesuai prosedur sekolah', 'Gunakan Chat hanya untuk percakapan yang diizinkan', 'Jangan membagikan nilai, presensi, atau informasi sensitif jika relasi belum diverifikasi'],
     status: 'Chat tersedia sebagai kanal umum; relasi wali–siswa dan akses akademik tetap harus diverifikasi oleh sekolah.',
+    actions: [{ label: 'Percakapan', path: '/chat', ikon: 'chat' }],
+  },
+  '/kolaborasi/grup-chat': {
+    ringkasan: 'Tautan ini membuka grup Chat yang diizinkan. Grup menyediakan percakapan, bukan ruang kerja dokumen atau repositori kolaborasi.',
+    langkah: ['Buka grup Chat yang tersedia untuk akun Anda', 'Pastikan isi pesan sesuai tujuan dan izin peserta', 'Jangan membagikan data pribadi siswa tanpa dasar dan izin yang sesuai'],
+    status: 'Grup Chat tersedia; penyimpanan berkas, penugasan, dan arsip praktik bersama belum tersedia.',
+    actions: [{ label: 'Grup Chat', path: '/chat/grup', ikon: 'users' }],
+  },
+  '/refleksi/pembelajaran': {
+    ringkasan: 'Belum ada formulir refleksi pembelajaran yang tersimpan. Jurnal mengajar menyediakan bukti kegiatan kelas, tetapi bukan refleksi atau evaluasi resmi.',
+    langkah: ['Tinjau jurnal kelas pada modul sumber', 'Gunakan prosedur sekolah untuk refleksi atau supervisi resmi', 'Catatan pribadi guru bukan arsip bersama dan bukan pengganti dokumen resmi'],
+    status: 'Refleksi terstruktur belum tersedia; jurnal mengajar adalah sumber kegiatan, bukan modul refleksi.',
+    actions: [{ label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' }],
+  },
+  '/refleksi/supervisi': {
+    ringkasan: 'Belum ada penjadwalan, instrumen, persetujuan, atau arsip supervisi dan observasi pada aplikasi.',
+    langkah: ['Koordinasikan supervisi melalui prosedur sekolah', 'Jangan masukkan hasil observasi ke catatan pribadi seolah-olah arsip resmi', 'Gunakan jurnal kelas hanya sebagai sumber kegiatan bila diperlukan'],
+    status: 'Modul supervisi dan arsip observasi belum tersedia.',
+    actions: [{ label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' }],
+  },
+  '/refleksi/portofolio': {
+    ringkasan: 'Portofolio profesional guru belum tersedia. Arsip Perencanaan hanya menampilkan dokumen perencanaan milik akun, bukan portofolio kompetensi atau bukti kinerja.',
+    langkah: ['Buka arsip untuk meninjau dokumen perencanaan yang tersimpan', 'Ikuti ketentuan sekolah untuk portofolio resmi', 'Jangan menyamakan arsip perencanaan dengan evaluasi kinerja'],
+    status: 'Modul portofolio guru belum tersedia; arsip yang ada hanya untuk dokumen perencanaan.',
+    actions: [{ label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' }],
+  },
+  '/refleksi/kompetensi': {
+    ringkasan: 'Aplikasi belum memiliki profil kompetensi, riwayat pelatihan, atau rekam pengembangan profesional guru.',
+    langkah: ['Gunakan sistem atau dokumen resmi yang ditetapkan sekolah', 'Jangan menganggap catatan pribadi sebagai rekam kompetensi', 'Kembali ke menu ini setelah sumber data dan kebijakan disepakati'],
+    status: 'Modul kompetensi dan pengembangan profesional belum tersedia.',
+  },
+  '/refleksi/perbaikan': {
+    ringkasan: 'Rencana perbaikan terstruktur belum tersedia. Dokumen perencanaan dan jurnal dapat ditinjau, tetapi tidak membuktikan tindak lanjut atau persetujuan.',
+    langkah: ['Tinjau dokumen perencanaan milik akun bila relevan', 'Catat tindak lanjut pada prosedur sekolah yang berlaku', 'Jangan menganggap arsip atau catatan pribadi sebagai persetujuan'],
+    status: 'Modul rencana perbaikan dan pelacakan tindak lanjut belum tersedia.',
+    actions: [{ label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' }],
+  },
+  '/laporan/ketercapaian': {
+    ringkasan: 'Laporan ketercapaian kurikulum yang resmi belum tersedia. Analisis tugas dan kuis hanya menunjukkan hasil asesmen Ruang Kelas, bukan ketercapaian CP/TP menyeluruh.',
+    langkah: ['Gunakan Analisis Hasil hanya untuk tugas dan kuis Ruang Kelas', 'Tinjau capaian kurikulum pada sumber resmi sekolah', 'Jangan menyimpulkan capaian seluruh mapel dari data terbatas'],
+    status: 'Laporan ketercapaian kurikulum lintas sumber belum tersedia.',
+    actions: [{ label: 'Analisis Tugas dan Kuis Ruang Kelas', path: '/asesmen/analisis', ikon: 'chart' }],
+  },
+  '/laporan/kinerja-guru': {
+    ringkasan: 'Laporan kinerja atau penilaian guru belum tersedia. Jurnal dan arsip perencanaan bukan evaluasi kinerja maupun bukti supervisi.',
+    langkah: ['Tinjau jurnal dan perencanaan hanya sebagai dokumen sumber milik Anda', 'Ikuti mekanisme penilaian resmi sekolah', 'Jangan gunakan hitungan aktivitas sebagai penilaian kinerja'],
+    status: 'Modul kinerja guru dan evaluasi resmi belum tersedia.',
+    actions: [
+      { label: 'Laporan Aktivitas Kelas', path: '/laporan/harian-bulanan', ikon: 'file' },
+      { label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' },
+    ],
+  },
+  '/laporan/ekspor-cetak': {
+    ringkasan: 'Pusat ekspor dan pencetakan terpadu belum tersedia. Beberapa laporan sumber menyediakan ekspor CSV untuk data terbatas; aplikasi tidak menyimpan riwayat cetak.',
+    langkah: ['Buka laporan sumber yang diperlukan', 'Periksa filter dan cakupan data sebelum ekspor', 'Simpan berkas sesuai kebijakan perlindungan data sekolah'],
+    status: 'Ekspor hanya tersedia pada beberapa laporan sumber; tidak ada arsip ekspor atau riwayat cetak terpadu.',
+    actions: [
+      { label: 'Laporan Aktivitas Kelas · CSV', path: '/laporan/harian-bulanan', ikon: 'file' },
+      { label: 'Laporan Penilaian · CSV', path: '/laporan/penilaian', ikon: 'file' },
+    ],
+  },
+  '/laporan/dokumen': {
+    ringkasan: 'Pustaka dokumen baca-saja lintas modul belum tersedia. Arsip Perencanaan hanya memuat dokumen perencanaan akun yang tersimpan.',
+    langkah: ['Gunakan Arsip Perencanaan untuk dokumen milik akun', 'Dokumen kelas lain tetap mengikuti hak akses sumbernya', 'Tidak ada indeks dokumen sekolah lintas modul pada halaman ini'],
+    status: 'Pustaka dokumen terpadu belum tersedia.',
+    actions: [{ label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' }],
+  },
+  '/laporan/riwayat-cetak': {
+    ringkasan: 'Aplikasi belum mencatat pekerjaan cetak atau riwayat unduhan. CSV dapat dibuat ulang dari laporan sumber yang masih tersedia.',
+    langkah: ['Buka laporan aktivitas atau penilaian untuk membuat ekspor baru', 'Simpan berkas pada lokasi yang dikelola sesuai kebijakan sekolah', 'Jangan mengandalkan halaman ini sebagai arsip audit cetak'],
+    status: 'Riwayat cetak dan audit unduhan belum tersedia.',
+    actions: [
+      { label: 'Laporan Aktivitas Kelas', path: '/laporan/harian-bulanan', ikon: 'file' },
+      { label: 'Laporan Penilaian', path: '/laporan/penilaian', ikon: 'file' },
+    ],
+  },
+  '/kolaborasi/ruang-kerja': {
+    ringkasan: 'Ruang kerja tim atau MGMP dengan berkas bersama, penugasan, dan kontrol versi belum tersedia. Chat grup hanya menyediakan percakapan sesuai izin.',
+    langkah: ['Gunakan grup Chat untuk koordinasi yang diizinkan', 'Jangan mengirim data siswa melalui grup tanpa dasar dan izin yang sesuai', 'Berkas bersama dan pengelolaan MGMP belum disediakan'],
+    status: 'Modul ruang kerja tim dan MGMP belum tersedia.',
+    actions: [{ label: 'Grup Chat', path: '/chat/grup', ikon: 'users' }],
+  },
+  '/kolaborasi/praktik-baik': {
+    ringkasan: 'Repositori berbagi praktik baik, kurasi, dan persetujuan publikasi belum tersedia.',
+    langkah: ['Gunakan kanal kolaborasi resmi sekolah bila tersedia', 'Pastikan materi yang dibagikan tidak memuat data pribadi siswa', 'Aplikasi belum mengarsipkan praktik baik pada menu ini'],
+    status: 'Repositori praktik baik belum tersedia.',
+    actions: [{ label: 'Grup Chat', path: '/chat/grup', ikon: 'users' }],
+  },
+  '/kolaborasi/kepala-sekolah': {
+    ringkasan: 'Berbagi akses kepala sekolah secara khusus belum dikonfigurasi sebagai alur persetujuan atau tinjauan dokumen.',
+    langkah: ['Gunakan mekanisme akses sekolah yang telah ditetapkan', 'Jangan membagikan kata sandi atau tautan privat', 'Akses baca dan jejak audit perlu ditetapkan oleh pengelola sekolah'],
+    status: 'Modul tinjauan dan pembagian akses kepala sekolah belum tersedia.',
+  },
+  '/kolaborasi/guru-pengganti': {
+    ringkasan: 'Penugasan guru pengganti, delegasi kelas, dan pencabutan akses sementara belum tersedia.',
+    langkah: ['Koordinasikan pengganti melalui prosedur sekolah', 'Jangan berbagi akun atau kredensial', 'Akses pengganti harus ditetapkan melalui alur admin yang terverifikasi'],
+    status: 'Modul guru pengganti dan delegasi akses belum tersedia.',
+  },
+  '/pengaturan/peran': {
+    ringkasan: 'Guru tidak dapat mengubah peran atau hak akses melalui menu ini. Peran dan akses sekolah dikelola melalui proses berizin oleh administrator.',
+    langkah: ['Hubungi admin sekolah jika peran akun tidak sesuai', 'Jangan mencoba memakai akun atau hak pengguna lain', 'Katalog menu tidak menggantikan izin backend dan RLS'],
+    status: 'Pengubahan peran tidak tersedia bagi guru.',
+  },
+  '/pengaturan/preferensi': {
+    ringkasan: 'Pengaturan preferensi aplikasi yang tersimpan belum tersedia pada menu ini.',
+    langkah: ['Gunakan kontrol yang memang tersedia pada halaman terkait', 'Pengaturan akun tidak menyimpan preferensi aplikasi umum', 'Jangan menganggap perubahan tampilan sementara sebagai pengaturan tersimpan'],
+    status: 'Modul preferensi pengguna belum tersedia.',
+  },
+  '/pengaturan/cadangan': {
+    ringkasan: 'Cadangan dan pemulihan sistem tidak tersedia untuk dikelola guru. Sinkronisasi dokumen pribadi bukan backup database sekolah.',
+    langkah: ['Jangan mengunggah cadangan database melalui menu ini', 'Gunakan hanya prosedur pemulihan resmi yang dikelola administrator', 'Pemulihan perlu diuji pada lingkungan nonproduksi'],
+    status: 'Modul backup dan pemulihan guru tidak tersedia; backup platform harus diverifikasi terpisah.',
+  },
+  '/pengaturan/bantuan': {
+    ringkasan: 'Pusat bantuan dan tiket dukungan resmi belum terhubung. Chat aplikasi bukan jaminan kanal support atau tanggap insiden.',
+    langkah: ['Gunakan kontak dukungan resmi sekolah yang telah disediakan', 'Jangan kirim kata sandi, token, atau data anak melalui chat', 'Aplikasi belum menyimpan tiket dukungan untuk menu ini'],
+    status: 'Pusat bantuan dan sistem tiket belum tersedia.',
+  },
+  '/pengaturan/notifikasi': {
+    ringkasan: 'Preferensi notifikasi per pengguna belum tersedia pada menu ini.',
+    langkah: ['Tinjau notifikasi yang ditampilkan oleh fitur terkait', 'Perubahan preferensi tidak disimpan melalui halaman panduan', 'Jangan menganggap pemberitahuan visual sebagai bukti pengiriman atau penerimaan'],
+    status: 'Modul pengaturan notifikasi belum tersedia.',
   },
 };
 
@@ -327,14 +450,14 @@ export default function SubMenuPage() {
     langkah: ['Pilih konteks kerja', 'Tinjau informasi yang tersedia', 'Lanjutkan ke aktivitas terkait'],
   };
   const isCoverGuide = isTeacherRole(role) && item.path === '/perangkat/cover';
-  const teacherMonitoringGuide = isTeacherRole(role)
-    ? PANDUAN_PEMANTAUAN_GURU[item.path]
+  const teacherGuide = isTeacherRole(role)
+    ? PANDUAN_GURU[item.path]
     : null;
-  const ringkasan = teacherMonitoringGuide?.ringkasan
+  const ringkasan = teacherGuide?.ringkasan
     || (isSchoolAdminRole(role) && item.path === '/admin/dashboard/chat'
       ? 'Monitoring Chat menampilkan ringkasan agregat chat per tenant tanpa isi percakapan atau identitas peserta; ini bukan audit log lengkap atau alat moderasi.'
       : alur.ringkasan);
-  const langkah = teacherMonitoringGuide?.langkah
+  const langkah = teacherGuide?.langkah
     || (isSchoolAdminRole(role) && item.path === '/admin/dashboard/chat'
     ? [
       'Tinjau jumlah percakapan baru 30 hari, pesan 7 hari, dan pengirim aktif.',
@@ -342,7 +465,11 @@ export default function SubMenuPage() {
       'Gunakan jalur perlindungan sekolah untuk tindak lanjut; halaman ini bukan alat moderasi.',
     ]
       : alur.langkah);
-  const terkait = grup.item.filter((sub) => sub !== item && sub.path);
+  const terkait = grup.item.filter((sub) => (
+    sub !== item
+    && sub.path
+    && !(isTeacherRole(role) && grup.id === 'refleksi' && sub.path === '/guru/catatan-pribadi')
+  ));
   const statusModul = role === 'siswa'
     ? 'Data jadwal, materi, tugas, ujian, atau nilai hanya muncul setelah sekolah menautkan data akademik ke akun siswa.'
     : ['ortu', 'orang_tua'].includes(role)
@@ -350,7 +477,7 @@ export default function SubMenuPage() {
       : isTeacherRole(role)
       ? isCoverGuide
         ? 'Pembuat cover perangkat belum tersedia. Gunakan Perencanaan untuk menyusun dokumen ajar; cover tidak dibuat atau disimpan oleh halaman ini.'
-        : teacherMonitoringGuide?.status || 'Menu ini belum memiliki modul akademik khusus. Catatan Kerja Pribadi tersedia terpisah dan bukan pengganti data akademik resmi.'
+        : teacherGuide?.status || 'Menu ini belum memiliki modul akademik khusus. Catatan Kerja Pribadi tersedia terpisah dan bukan pengganti data akademik resmi.'
         : isSchoolAdminRole(role)
           ? modulAktifAdmin.length
             ? 'Modul tenant untuk sebagian alur pada bagian ini tersedia melalui tautan di bawah. Halaman ini sendiri hanya panduan dan ringkasannya bukan audit log lengkap.'
@@ -399,7 +526,9 @@ export default function SubMenuPage() {
         </aside>
       </div>
 
-      {(modulAktifAdmin.length > 0 || modulAktifGuru.length > 0 || modulAktifOrtu.length > 0) && (
+      {(modulAktifAdmin.length > 0
+        || (teacherGuide?.actions || modulAktifGuru).length > 0
+        || modulAktifOrtu.length > 0) && (
         <section className="ale-submenu-related" aria-labelledby="submenu-active-modules-title">
           <div className="ale-submenu-section-heading">
             <div>
@@ -409,14 +538,14 @@ export default function SubMenuPage() {
             <span>Kesiapan dan izin dijelaskan di setiap halaman tujuan</span>
           </div>
           <div className="ale-submenu-links">
-            {[...modulAktifAdmin, ...modulAktifGuru, ...modulAktifOrtu]
+            {[...modulAktifAdmin, ...(teacherGuide?.actions || modulAktifGuru), ...modulAktifOrtu]
               .filter((modul) => modul.path !== item.path)
               .map((modul) => (
-              <a key={modul.path} className="ale-submenu-link" href={`#${modul.path}`}>
-                <span className="ale-submenu-link-icon"><Ikon nama={modul.ikon} /></span>
-                <span><strong>{modul.label}</strong><small>{modul.actionLabel || 'Buka modul'}</small></span>
-                <span className="ale-submenu-arrow" aria-hidden="true">›</span>
-              </a>
+                <a key={modul.path} className="ale-submenu-link" href={`#${modul.path}`}>
+                  <span className="ale-submenu-link-icon"><Ikon nama={modul.ikon} /></span>
+                  <span><strong>{modul.label}</strong><small>{modul.actionLabel || 'Buka modul'}</small></span>
+                  <span className="ale-submenu-arrow" aria-hidden="true">›</span>
+                </a>
               ))}
           </div>
         </section>

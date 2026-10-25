@@ -109,6 +109,11 @@ describe('submenu platform superadmin', () => {
         '/laporan/kinerja-guru',
         '/kolaborasi/praktik-baik',
       ];
+      const expectedGuidance = new Map([
+        ['/refleksi/pembelajaran', 'Refleksi terstruktur belum tersedia'],
+        ['/laporan/kinerja-guru', 'Modul kinerja guru dan evaluasi resmi belum tersedia'],
+        ['/kolaborasi/praktik-baik', 'Repositori praktik baik belum tersedia'],
+      ]);
       const teacherItems = GRUP_MENU.flatMap((group) => group.item);
 
       for (const path of targetPaths) {
@@ -116,9 +121,8 @@ describe('submenu platform superadmin', () => {
         expect(item, `menu ${path} tersedia`).toBeDefined();
         const html = renderSubmenu(path);
         expect(html, path).toContain(`<h2>${item.label.replaceAll('&', '&amp;')}</h2>`);
-        expect(html, path).toContain('belum memiliki modul akademik khusus');
+        expect(html, path).toContain(expectedGuidance.get(path));
         expect(html, path).toContain('Panduan · baca saja');
-        expect(html, path).toContain('Catatan Kerja Pribadi');
         expect(html, path).not.toContain('Catatan pribadi opsional untuk guru');
         expect(html, path).not.toContain('Buat catatan kerja');
         expect(html, path).not.toContain('Hindari memasukkan nama');
@@ -189,7 +193,7 @@ describe('submenu platform superadmin', () => {
         expect(character).toContain('Belum ada arsip perkembangan karakter per siswa');
         expect(character).toContain('href="#/program-kegiatan"');
         expect(character).toContain('bukan bukti observasi');
-        expect(character).toContain('Buka rancangan');
+        expect(character).toContain('Buka rancangan lokal');
         expect(character).toContain('tersimpan lokal di browser');
 
         const followUp = renderSubmenu('/pemantauan/pendampingan');
@@ -200,6 +204,42 @@ describe('submenu platform superadmin', () => {
         const communication = renderSubmenu('/pemantauan/komunikasi');
         expect(communication).toContain('tidak membuka data akademik anak');
         expect(communication).toContain('relasi wali–siswa dan akses akademik tetap harus diverifikasi');
+      }
+    });
+
+    it('labels teacher reflection, reports, collaboration, and settings by route without claiming guide pages are modules', () => {
+      for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+        auth.role = role;
+        auth.activeRole = '';
+
+        const reflection = renderSubmenu('/refleksi/supervisi');
+        expect(reflection).toContain('Modul supervisi dan arsip observasi belum tersedia');
+        expect(reflection).toContain('href="#/pelaksanaan/jurnal"');
+        expect(reflection).not.toContain('href="#/guru/catatan-pribadi"');
+
+        const portfolio = renderSubmenu('/refleksi/portofolio');
+        expect(portfolio).toContain('bukan portofolio kompetensi atau bukti kinerja');
+        expect(portfolio).toContain('href="#/laporan/arsip-perencanaan"');
+
+        const achievement = renderSubmenu('/laporan/ketercapaian');
+        expect(achievement).toContain('bukan ketercapaian CP/TP menyeluruh');
+        expect(achievement).toContain('href="#/asesmen/analisis"');
+
+        const printHistory = renderSubmenu('/laporan/riwayat-cetak');
+        expect(printHistory).toContain('belum mencatat pekerjaan cetak atau riwayat unduhan');
+        expect(printHistory).toContain('href="#/laporan/harian-bulanan"');
+
+        const team = renderSubmenu('/kolaborasi/ruang-kerja');
+        expect(team).toContain('Modul ruang kerja tim dan MGMP belum tersedia');
+        expect(team).toContain('href="#/chat/grup"');
+
+        const groupChat = renderSubmenu('/kolaborasi/grup-chat');
+        expect(groupChat).toContain('Grup Chat tersedia; penyimpanan berkas');
+        expect(groupChat).toContain('href="#/chat/grup"');
+
+        const backup = renderSubmenu('/pengaturan/cadangan');
+        expect(backup).toContain('Sinkronisasi dokumen pribadi bukan backup database sekolah');
+        expect(backup).not.toContain('Buka modul terkait');
       }
     });
 
