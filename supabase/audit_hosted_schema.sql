@@ -378,6 +378,7 @@ from unnest(array[
   'security_audit',
   'student_account_link_audit',
   'student_account_links',
+  'student_guardian_links',
   'students',
   'tenant_entitlements',
   'tenants',

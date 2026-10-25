@@ -14,7 +14,10 @@ vi.mock('../context/AuthContext.jsx', () => ({
 }));
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }));
 
-import AdminUsersPage, { peranKategoriPengguna } from './AdminUsersPage.jsx';
+import AdminUsersPage, {
+  penggunaMemilikiKategori,
+  peranKategoriPengguna,
+} from './AdminUsersPage.jsx';
 
 function render(path = '/admin/pengguna/admin') {
   return renderToStaticMarkup(
@@ -73,8 +76,19 @@ describe('AdminUsersPage role and route integration', () => {
     ['/admin/pengguna/siswa', '<h2>Siswa</h2>'],
     ['/admin/pengguna/orang-tua', '<h2>Orang tua</h2>'],
     ['/admin/pengguna/admin', '<h2>Admin sekolah</h2>'],
+    ['/admin/pengguna/operator', '<h2>Operator</h2>'],
     ['/admin/pengguna/peran', '<h2>Peran dan hak akses</h2>'],
   ])('renders the admin user destination %s', (path, heading) => {
     expect(render(path)).toContain(heading);
+  });
+
+  it('keeps operators separate from teachers and demo users outside the school directory', () => {
+    expect(peranKategoriPengguna('operator')).toEqual(['operator']);
+    expect(peranKategoriPengguna('guru')).not.toContain('operator');
+    expect(peranKategoriPengguna('guru')).not.toContain('demo');
+    expect(peranKategoriPengguna('demo')).toEqual([]);
+    expect(penggunaMemilikiKategori({ role: 'admin_sekolah', roles: ['admin_sekolah', 'operator'] }, ['operator'])).toBe(true);
+    expect(penggunaMemilikiKategori({ role: 'operator' }, peranKategoriPengguna('guru'))).toBe(false);
+    expect(render('/admin/pengguna/peran')).toContain('Akun uji coba dikelola di luar direktori pengguna sekolah.');
   });
 });

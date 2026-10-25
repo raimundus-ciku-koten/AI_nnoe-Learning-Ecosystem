@@ -42,6 +42,7 @@ describe('menu admin sekolah aktif pada sidebar legacy dan modern', () => {
       assert.ok(items.length > 1);
       for (const item of items) assertTautanMenuValid(role, item);
       assert.ok(items.some((item) => item.href === '#/admin/pengguna/guru'));
+      assert.ok(items.some((item) => item.href === '#/admin/pengguna/operator'));
       assert.ok(items.some((item) => item.href === '#/datadasar/profil'));
       assert.ok(items.some((item) => item.href === '#/ruang-kelas'));
     });

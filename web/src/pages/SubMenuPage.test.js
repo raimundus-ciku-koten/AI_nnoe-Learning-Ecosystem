@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   GRUP_MENU, MENU_SUPERADMIN, menuUntukPeran,
 } from '../navigasi.js';
+import { hasRenderedDestination } from '../../tests/role-route-render-manifest.mjs';
 
 const auth = vi.hoisted(() => ({
   role: 'superadmin',
@@ -289,34 +290,6 @@ describe('submenu platform superadmin', () => {
   });
 
   it('merender fallback katalog sebagai panduan tanpa menyamarkan catatan sebagai modul', () => {
-    const directRoute = (path) => (
-      path === '/dashboard' ||
-      path === '/purchase' ||
-      path === '/ruang-kelas' ||
-      path === '/testimoni' ||
-      path === '/pengumuman' ||
-      path === '/trial' ||
-      path === '/pengaturan/akun' ||
-      path === '/orang-tua/anak' ||
-      path === '/orang-tua/nilai-kehadiran' ||
-      path === '/guru/catatan-pribadi' ||
-      path === '/admin/komunikasi/pengumuman' ||
-      path.startsWith('/datadasar/') ||
-      path.startsWith('/perencanaan') ||
-      path.startsWith('/chat') ||
-      path.startsWith('/platform/') ||
-      path.startsWith('/admin/pengguna/') ||
-      path.startsWith('/admin/perencanaan/paket') ||
-      ['/pelaksanaan/presensi', '/pelaksanaan/jurnal', '/laporan/harian-bulanan',
-        '/program-kegiatan', '/pengaturan/google', '/pengaturan/api-ai',
-        '/asesmen/bank-soal', '/asesmen/ujian-online', '/asesmen/analisis', '/asesmen/remedial',
-        '/pemantauan/catatan',
-        '/laporan/penilaian', '/asesmen/rapor', '/admin/akademik/rapor',
-        '/admin/akademik/wali-kelas', '/kepala-sekolah/ringkasan', '/wali-kelas/pemantauan',
-        '/siswa/rapor', '/siswa/ujian', '/siswa/nilai', '/siswa/jadwal',
-        '/siswa/materi', '/hasil/perencanaan', '/laporan/arsip-perencanaan',
-        '/asisten'].includes(path)
-    );
     const roles = [
       'admin', 'admin_sekolah', 'guru', 'guru_bk', 'guru_kokurikuler',
       'guru_ekstrakurikuler', 'operator', 'siswa', 'ortu', 'orang_tua',
@@ -325,7 +298,7 @@ describe('submenu platform superadmin', () => {
     for (const role of roles) {
       auth.role = role;
       for (const item of menuUntukPeran(role).flatMap((group) => group.item)) {
-        if (directRoute(item.path)) continue;
+        if (hasRenderedDestination(item.path)) continue;
         const html = renderSubmenu(item.path, item.search || '');
         expect(html, `${role}: ${item.path}`).toContain(`<h2>${item.label.replaceAll('&', '&amp;')}</h2>`);
         expect(html, `${role}: ${item.path}`).toContain('Panduan · baca saja');

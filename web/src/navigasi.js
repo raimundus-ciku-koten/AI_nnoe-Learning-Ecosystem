@@ -250,6 +250,7 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Tautkan akun siswa ke roster', '/admin/pengguna/tautkan-siswa', 'users'),
     tautan('Orang Tua', '/admin/pengguna/orang-tua', 'users'),
     tautan('Admin Sekolah', '/admin/pengguna/admin', 'user'),
+    tautan('Operator', '/admin/pengguna/operator', 'users'),
     tautan('Peran dan Hak Akses', '/admin/pengguna/peran', 'settings'),
   ]),
   grup('admin-akademik', 'Manajemen Akademik', 'book', [
