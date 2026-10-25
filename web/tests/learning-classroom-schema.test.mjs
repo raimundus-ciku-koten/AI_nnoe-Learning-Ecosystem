@@ -121,7 +121,7 @@ test('quiz answer keys stay private and submission is scored server-side once', 
   assert.match(quizzesMigration, /revoke all on table public\.learning_classroom_quizzes,[\s\S]*from public, anon, authenticated/);
   assert.doesNotMatch(quizzesMigration, /grant select[^;]*learning_classroom_quiz_questions[^;]*authenticated/i);
   assert.match(quizzesMigration, /create or replace function public\.learning_classroom_quiz_questions_for_student/);
-  assert.match(quizzesMigration, /returns table \(question_id uuid, position smallint, prompt text, choices jsonb\)/);
+  assert.match(quizzesMigration, /returns table \(question_id uuid, "position" smallint, prompt text, choices jsonb\)/);
   assert.doesNotMatch(
     quizzesMigration.match(/create or replace function public\.learning_classroom_quiz_questions_for_student[\s\S]*?\$\$;/)?.[0] || '',
     /correct_choice/,
