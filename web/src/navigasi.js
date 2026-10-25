@@ -276,6 +276,7 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Analisis Hasil', '/admin/asesmen/analisis', 'chart'),
   ]),
   grup('admin-konten', 'Manajemen Konten', 'file', [
+    tautan('Ringkasan Materi Sekolah', '/admin/konten/ringkasan', 'chart'),
     tautan('Modul Ajar', '/admin/konten/modul-ajar', 'book'),
     tautan('Bahan Ajar', '/admin/konten/bahan-ajar', 'file'),
     tautan('Perpustakaan Digital', '/admin/konten/perpustakaan', 'file'),
