@@ -306,6 +306,14 @@ describe('submenu platform superadmin', () => {
     expect(settings).not.toContain('Buka modul terkait');
   });
 
+  it('membedakan ringkasan dan katalog materi dari perpustakaan digital yang masih berupa panduan', () => {
+    auth.role = 'admin_sekolah';
+    const guide = renderSubmenu('/admin/konten/perpustakaan');
+    expect(guide).toContain('Buka modul terkait');
+    expect(guide).toContain('href="#/admin/konten/materi"');
+    expect(guide).toContain('perpustakaan digital admin belum tersedia');
+  });
+
   it('menyelaraskan fallback admin alias tanpa memberi hak tambahan kepada operator', () => {
     const route = '/admin/asesmen/monitoring';
     auth.role = 'admin';

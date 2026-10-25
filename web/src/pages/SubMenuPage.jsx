@@ -46,8 +46,8 @@ const ALUR = {
     langkah: ['Buat pengumuman untuk tenant sekolah aktif', 'Tinjau dan perbarui informasi yang diterbitkan', 'Gunakan Chat untuk komunikasi individual'],
   },
   'admin-konten': {
-    ringkasan: 'Ringkasan jumlah materi dan pengumuman tenant tersedia. Pengelolaan konten dilakukan melalui Ruang Kelas; arsip perencanaan terenkripsi dan perpustakaan digital admin belum tersedia.',
-    langkah: ['Tinjau jumlah materi melalui Ringkasan Materi Sekolah', 'Buka Ruang Kelas untuk alur materi yang tersedia', 'Ringkasan tidak menyatakan materi telah ditinjau atau dipublikasikan'],
+    ringkasan: 'Ringkasan jumlah materi dan pengumuman tenant serta katalog baca-saja judul materi Ruang Kelas tersedia. Arsip perencanaan terenkripsi dan perpustakaan digital admin belum tersedia.',
+    langkah: ['Tinjau hitungan melalui Ringkasan Materi Sekolah', 'Gunakan katalog untuk membuka kelas dan meninjau materi sumber', 'Ringkasan tidak menyatakan materi telah ditinjau atau dipublikasikan'],
   },
   'admin-keuangan': {
     ringkasan: 'Laporan transaksi dan pencatatan keuangan sekolah belum tersedia. Harga Paket hanya katalog informasi dan bukan modul keuangan sekolah.',
@@ -200,6 +200,7 @@ const MODUL_ADMIN_AKTIF = {
   ],
   'admin-konten': [
     { label: 'Ringkasan Materi Sekolah', path: '/admin/konten/ringkasan', ikon: 'chart' },
+    { label: 'Katalog Materi Ruang Kelas', path: '/admin/konten/materi', ikon: 'book' },
     { label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' },
     { label: 'Materi Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
   ],
