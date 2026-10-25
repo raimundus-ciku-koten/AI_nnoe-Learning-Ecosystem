@@ -109,15 +109,16 @@ and advertising assets/integrations are removed from the active web app. No
 hosted database migration was applied, no credentials were entered, and no
 signup was submitted. Staging backup run #12 successfully restored its plaintext dump to
 a disposable PostgreSQL 17.11 database before encryption and uploaded the
-encrypted artifact. The hosted schema and migration-provenance review and
-server-side CAPTCHA blockers below still apply; the uploaded ciphertext itself
-has not yet been decrypted and restored.
+encrypted artifact. At the time of this 2026-10-22 snapshot the encrypted
+artifact had not yet been restored; that recovery path was subsequently
+verified by Staging backup run #25 on 2026-10-25. The hosted schema
+reconciliation and Production release blockers below still apply.
 
-The Staging backup workflow source now uploads the encrypted artifact, downloads
-that artifact within the same run, decrypts it, compares the restored dump with
-the source dump, and restores it into a disposable PostgreSQL database. This
-end-to-end validation has not yet been run; a successful future workflow run is
-required before treating encrypted-backup recovery as proven.
+The Staging backup workflow uploads the encrypted artifact, downloads it in
+the same run, decrypts it, compares the restored dump with the source dump, and
+restores it into a disposable PostgreSQL database. Run #25 completed this
+round trip successfully for its Staging snapshot. This does not constitute a
+restorable Production backup or a durable recovery copy.
 
 A read-only GitHub Actions check on 2026-10-25 confirmed that run #12
 ([40087589412](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/40087589412))
@@ -898,11 +899,11 @@ The Dashboard Backups page was checked on 2026-10-18 and confirms that the
 Free Plan does not include scheduled project backups. Workflow run #12
 (`40087589412`) on 2026-10-24 successfully dumped Staging and restored the
 plaintext dump to a disposable Supabase PostgreSQL 17.11 database, detecting
-47 user tables, before encrypting and uploading the artifact. This does not
-verify decryption and restore of the uploaded ciphertext itself, and the
-one-day artifact is not a durable recovery copy. Verify that artifact
-end-to-end and arrange an approved no-cost recovery path before hosted schema
-or data mutations.
+47 user tables, before encrypting and uploading the artifact. Run #25
+subsequently verified decryption and restore of the uploaded ciphertext for
+its Staging snapshot. The one-day artifact is not a durable
+recovery copy and does not cover Production. Obtain and verify a restorable
+Production backup before hosted schema or data mutations.
 
 The selected target keeps identity, role, tenant, school/class/guardian access
 indexes, Drive file IDs and ciphertext metadata, security audit entries, and
