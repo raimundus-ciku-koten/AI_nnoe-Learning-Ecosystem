@@ -22,9 +22,9 @@ function buildLocalDatabaseEnvironment(environment) {
   const allowed = environment.PGHOST === '127.0.0.1'
     && environment.PGPORT === '5432'
     && environment.PGUSER === 'supabase_admin'
-    && environment.PGDATABASE === 'postgres';
+    && environment.PGDATABASE === 'backup_restore_validation';
   if (!allowed) {
-    throw new Error('Migration-chain validation is restricted to the disposable local PostgreSQL service.');
+    throw new Error('Migration-chain validation is restricted to the disposable restored Staging clone.');
   }
 
   const psqlEnvironment = { ...environment, PGAPPNAME: 'migration-chain-validation' };
@@ -43,19 +43,6 @@ export async function validateMigrationChain({
   const orderedMigrationFiles = getOrderedMigrationFiles(
     migrationFiles ?? await readdir(migrationDirectory),
   );
-  const database = 'migration_chain_validation';
-  const commonOptions = { encoding: 'utf8', env: psqlEnvironment };
-
-  const created = runCommand(
-    'createdb',
-    ['--host', '127.0.0.1', '--port', '5432', '--username', 'supabase_admin', database],
-    commonOptions,
-  );
-  if (created.error || created.status !== 0) {
-    throw new Error('Could not create the fresh disposable database for migration validation.');
-  }
-
-  const migrationEnvironment = { ...psqlEnvironment, PGDATABASE: database };
   for (const file of orderedMigrationFiles) {
     const result = runCommand(
       'psql',
@@ -66,14 +53,14 @@ export async function validateMigrationChain({
         '--file',
         join(migrationDirectory, file),
       ],
-      { encoding: 'utf8', env: migrationEnvironment },
+      { encoding: 'utf8', env: psqlEnvironment },
     );
     if (result.error || result.status !== 0) {
-      throw new Error(`Migration-chain validation failed at ${file}; the disposable database was not changed on Staging.`);
+      throw new Error(`Migration-chain validation failed at ${file}; only the restored disposable clone was targeted.`);
     }
   }
 
-  return `Validated ${orderedMigrationFiles.length} migrations in version order on a fresh disposable PostgreSQL database.`;
+  return `Validated ${orderedMigrationFiles.length} migrations in version order on the restored disposable Staging clone.`;
 }
 
 async function main() {

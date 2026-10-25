@@ -9,7 +9,7 @@ const environment = {
   PGHOST: '127.0.0.1',
   PGPORT: '5432',
   PGUSER: 'supabase_admin',
-  PGDATABASE: 'postgres',
+  PGDATABASE: 'backup_restore_validation',
   PGPASSWORD: 'local-only',
   SUPABASE_DB_URL: 'must-not-be-inherited',
   BACKUP_ENCRYPTION_KEY: 'must-not-be-inherited',
@@ -37,7 +37,7 @@ test('orders versioned SQL files and rejects duplicate or malformed versions', (
   );
 });
 
-test('executes each migration in its own transaction against a fresh local database', async () => {
+test('executes each migration in its own transaction against the restored disposable clone', async () => {
   const calls = [];
   const result = await validateMigrationChain({
     migrationDirectory: 'C:\\migrations',
@@ -53,14 +53,13 @@ test('executes each migration in its own transaction against a fresh local datab
   });
 
   assert.match(result, /Validated 2 migrations/);
-  assert.equal(calls[0].command, 'createdb');
-  assert.equal(calls[0].args.at(-1), 'migration_chain_validation');
-  assert.equal(calls[1].command, 'psql');
-  assert.ok(calls[1].args.includes('--single-transaction'));
-  assert.match(calls[1].args.at(-1), /20261016000100_identity_foundation\.sql$/);
-  assert.equal(calls[1].options.env.PGDATABASE, 'migration_chain_validation');
-  assert.equal('SUPABASE_DB_URL' in calls[1].options.env, false);
-  assert.equal('BACKUP_ENCRYPTION_KEY' in calls[1].options.env, false);
+  assert.equal(calls.length, 2);
+  assert.ok(calls.every((call) => call.command === 'psql'));
+  assert.ok(calls[0].args.includes('--single-transaction'));
+  assert.match(calls[0].args.at(-1), /20261016000100_identity_foundation\.sql$/);
+  assert.equal(calls[0].options.env.PGDATABASE, 'backup_restore_validation');
+  assert.equal('SUPABASE_DB_URL' in calls[0].options.env, false);
+  assert.equal('BACKUP_ENCRYPTION_KEY' in calls[0].options.env, false);
 });
 
 test('stops at the first failed migration without echoing connection details', async () => {
@@ -95,7 +94,7 @@ test('rejects non-local database targets before running commands', async () => {
         return { status: 0 };
       },
     }),
-    /restricted to the disposable local PostgreSQL service/,
+    /restricted to the disposable restored Staging clone/,
   );
   assert.equal(commandCalled, false);
 });
