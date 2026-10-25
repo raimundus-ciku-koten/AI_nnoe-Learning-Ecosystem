@@ -195,6 +195,7 @@ describe('authenticated role × route destination rendering', () => {
 
   it('renders admin assessment destinations only for the school admin roles', async () => {
     for (const path of [
+      '/admin/dashboard/ujian',
       '/admin/asesmen/paket',
       '/admin/asesmen/jadwal',
       '/admin/asesmen/monitoring',

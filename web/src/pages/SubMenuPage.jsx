@@ -10,7 +10,7 @@ import '../styles/submenu.css';
 
 const ALUR = {
   'admin-dashboard': {
-    ringkasan: 'Dashboard menampilkan ringkasan yang tersedia untuk akun sekolah. Monitoring aktivitas, ujian, dan chat khusus admin belum tersedia sebagai modul tersendiri.',
+    ringkasan: 'Dashboard menampilkan ringkasan sekolah. Monitoring ujian berbasis data tenant telah tersedia; monitoring aktivitas dan chat khusus admin masih berupa panduan.',
     langkah: ['Tinjau ringkasan pada Dashboard', 'Pilih modul aktif dari tautan terkait', 'Gunakan halaman panduan ini hanya sebagai petunjuk'],
   },
   'admin-pengguna': {
@@ -165,6 +165,7 @@ const MODUL_ADMIN_AKTIF = {
   'admin-monitoring': [
     { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
     { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'file' },
+    { label: 'Monitoring Ujian', path: '/admin/asesmen/monitoring', ikon: 'check' },
     { label: 'Chat Sekolah', path: '/chat', ikon: 'chat' },
   ],
   'admin-instansi': [

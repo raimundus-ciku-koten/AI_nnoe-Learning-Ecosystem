@@ -335,6 +335,7 @@ export function RouteWrapper() {
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/asesmen/penilaian-otomatis" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/asesmen/analisis" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
+        <Route path="/admin/dashboard/ujian" element={<PrivateShell><HalamanAsesmenAdmin /></PrivateShell>} />
         <Route path="/admin/asesmen/paket" element={<PrivateShell><HalamanAsesmenAdmin /></PrivateShell>} />
         <Route path="/admin/asesmen/jadwal" element={<PrivateShell><HalamanAsesmenAdmin /></PrivateShell>} />
         <Route path="/admin/asesmen/monitoring" element={<PrivateShell><HalamanAsesmenAdmin /></PrivateShell>} />
