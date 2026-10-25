@@ -131,7 +131,7 @@ jobs:
             exit 1
           fi
           echo "Uploaded encrypted artifact decrypted and restored successfully ($table_count user tables)."
-      - name: Prepare the disposable Supabase auth helper
+      - name: Prepare auth helpers on the disposable Supabase baseline
         shell: bash
         env:
           PGHOST: 127.0.0.1
@@ -142,6 +142,8 @@ jobs:
           PGSSLMODE: disable
         run: |
           psql --no-psqlrc --set=ON_ERROR_STOP=1 <<'SQL'
+          ALTER TABLE auth.users
+            ADD COLUMN IF NOT EXISTS email_confirmed_at timestamptz;
           CREATE OR REPLACE FUNCTION auth.jwt()
           RETURNS jsonb
           LANGUAGE sql
