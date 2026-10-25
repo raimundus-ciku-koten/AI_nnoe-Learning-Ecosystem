@@ -23,6 +23,8 @@ test('builds a read-only inventory query from the audited relation list', () => 
   assert.ok(names.includes('learning_classrooms'));
   assert.match(query, /to_regclass\('public\.' \|\| relation\.name\)/);
   assert.match(query, /to_regclass\('supabase_migrations\.schema_migrations'\)/);
+  assert.match(query, /from pg_policies as policy/);
+  assert.match(query, /force_row_level_security/);
   assert.doesNotMatch(query, /\b(insert|update|delete|alter|drop|grant|revoke|truncate)\b/i);
 });
 
@@ -59,6 +61,20 @@ test('reports missing feature relations and migration history without exposing c
         status: 0,
         stdout: JSON.stringify({
           relations: { learning_classrooms: false, students: true },
+          relation_details: [{
+            name: 'students',
+            row_level_security: true,
+            force_row_level_security: false,
+            columns: [{ name: 'id', type: 'pg_catalog.uuid', nullable: false, default: null }],
+            constraints: [],
+            policies: [{
+              name: 'student scope',
+              command: 'SELECT',
+              roles: ['authenticated'],
+              using: 'tenant_id = current_tenant_id()',
+              with_check: null,
+            }],
+          }],
           migration_history_exists: false,
         }),
       };
@@ -71,6 +87,8 @@ test('reports missing feature relations and migration history without exposing c
   assert.match(summary, /Hosted migration versions: unavailable/);
   assert.match(summary, /Missing public relations: learning_classrooms/);
   assert.match(summary, /Present public relations: students/);
+  assert.match(summary, /"row_level_security": true/);
+  assert.match(summary, /"student scope"/);
   assert.doesNotMatch(summary, /secret|postgresql:\/\//i);
   assert.match(executedQuery, /learning_classrooms/);
   assert.equal(psqlEnvironment.PGHOST, 'aws-0-ap-south-1.pooler.supabase.com');
@@ -95,6 +113,7 @@ test('compares repository and hosted migration versions when a history table exi
       stdout: args.at(-1).includes('to_regclass')
         ? JSON.stringify({
             relations: { learning_classrooms: true },
+            relation_details: [],
             migration_history_exists: true,
           })
         : JSON.stringify(['20261016000100', '20261017000999']),

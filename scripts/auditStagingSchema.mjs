@@ -47,6 +47,52 @@ export function buildSchemaAuditQuery(relationNames) {
     select jsonb_object_agg(relation.name, to_regclass('public.' || relation.name) is not null)
     from unnest(array[${relations}]) as relation(name)
   ),
+  'relation_details', (
+    select coalesce(jsonb_agg(jsonb_build_object(
+      'name', feature.name,
+      'row_level_security', relation_class.relrowsecurity,
+      'force_row_level_security', relation_class.relforcerowsecurity,
+      'columns', (
+        select coalesce(jsonb_agg(jsonb_build_object(
+          'name', column_info.column_name,
+          'type', column_info.udt_schema || '.' || column_info.udt_name,
+          'nullable', column_info.is_nullable = 'YES',
+          'default', column_info.column_default
+        ) order by column_info.ordinal_position), '[]'::jsonb)
+        from information_schema.columns as column_info
+        where column_info.table_schema = 'public'
+          and column_info.table_name = feature.name
+      ),
+      'constraints', (
+        select coalesce(jsonb_agg(jsonb_build_object(
+          'name', constraint_info.conname,
+          'type', constraint_info.contype,
+          'definition', pg_get_constraintdef(constraint_info.oid)
+        ) order by constraint_info.conname), '[]'::jsonb)
+        from pg_constraint as constraint_info
+        where constraint_info.conrelid = relation_class.oid
+      ),
+      'policies', (
+        select coalesce(jsonb_agg(jsonb_build_object(
+          'name', policy.policyname,
+          'command', policy.cmd,
+          'roles', policy.roles,
+          'using', policy.qual,
+          'with_check', policy.with_check
+        ) order by policy.policyname), '[]'::jsonb)
+        from pg_policies as policy
+        where policy.schemaname = 'public'
+          and policy.tablename = feature.name
+      )
+    ) order by feature.name), '[]'::jsonb)
+    from unnest(array[${relations}]) as feature(name)
+    join pg_class as relation_class
+      on relation_class.relname = feature.name
+    join pg_namespace as relation_namespace
+      on relation_namespace.oid = relation_class.relnamespace
+      and relation_namespace.nspname = 'public'
+    where relation_class.relkind in ('r', 'p', 'v', 'm', 'f')
+  ),
   'migration_history_exists', to_regclass('supabase_migrations.schema_migrations') is not null
 );`;
 }
@@ -88,10 +134,17 @@ export function buildPsqlEnvironment(connectionString, baseEnvironment = process
   };
 }
 
-export function renderSchemaAuditSummary(report, expectedMigrationVersions, appliedMigrationVersions) {
+export function renderSchemaAuditSummary(
+  report,
+  expectedMigrationVersions,
+  appliedMigrationVersions,
+) {
   const relations = report?.relations;
   if (!relations || typeof relations !== 'object' || Array.isArray(relations)) {
     throw new Error('Staging schema audit returned an invalid relations report.');
+  }
+  if (!Array.isArray(report.relation_details)) {
+    throw new Error('Staging schema audit returned an invalid relation metadata report.');
   }
   if (typeof report.migration_history_exists !== 'boolean') {
     throw new Error('Staging schema audit returned an invalid migration history status.');
@@ -143,6 +196,10 @@ export function renderSchemaAuditSummary(report, expectedMigrationVersions, appl
   }
   if (present.length > 0) {
     lines.push('', `- Present public relations: ${present.join(', ')}`);
+  }
+  if (report.relation_details.length > 0) {
+    lines.push('', '### Metadata for present expected relations', '', '```json');
+    lines.push(JSON.stringify(report.relation_details, null, 2), '```');
   }
   return `${lines.join('\n')}\n`;
 }
