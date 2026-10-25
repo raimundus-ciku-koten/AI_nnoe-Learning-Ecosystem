@@ -34,6 +34,39 @@ export function buildSchemaAuditQuery(relationNames) {
 );`;
 }
 
+export function buildPsqlEnvironment(connectionString, baseEnvironment = process.env) {
+  const target = new URL(connectionString);
+  const environment = { ...baseEnvironment };
+  for (const name of Object.keys(environment)) {
+    if (name.startsWith('PG')) delete environment[name];
+  }
+  delete environment.SUPABASE_DB_URL;
+  delete environment.BACKUP_ENCRYPTION_KEY;
+
+  let username;
+  let password;
+  let database;
+  try {
+    username = decodeURIComponent(target.username);
+    password = decodeURIComponent(target.password);
+    database = decodeURIComponent(target.pathname.replace(/^\//, ''));
+  } catch {
+    throw new Error('Staging database URL contains invalid encoded connection fields.');
+  }
+
+  return {
+    ...environment,
+    PGHOST: target.hostname,
+    PGPORT: target.port || '5432',
+    PGUSER: username,
+    PGPASSWORD: password,
+    PGDATABASE: database || 'postgres',
+    PGSSLMODE: 'require',
+    PGCONNECT_TIMEOUT: '20',
+    PGAPPNAME: 'staging-schema-audit',
+  };
+}
+
 export function renderSchemaAuditSummary(report) {
   const relations = report?.relations;
   if (!relations || typeof relations !== 'object' || Array.isArray(relations)) {
@@ -69,7 +102,7 @@ export async function auditStagingSchema({
     ['--no-psqlrc', '--set=ON_ERROR_STOP=1', '--tuples-only', '--no-align', '--command', query],
     {
       encoding: 'utf8',
-      env: { ...process.env, PGDATABASE: connectionString },
+      env: buildPsqlEnvironment(connectionString),
     },
   );
   if (result.error || result.status !== 0) {

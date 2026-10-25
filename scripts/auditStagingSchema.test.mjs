@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import {
   auditStagingSchema,
   buildSchemaAuditQuery,
+  buildPsqlEnvironment,
   getExpectedRelationNames,
   renderSchemaAuditSummary,
 } from './auditStagingSchema.mjs';
@@ -25,11 +26,13 @@ test('builds a read-only inventory query from the audited relation list', () => 
 
 test('reports missing feature relations and migration history without exposing connection details', async () => {
   let executedQuery = '';
+  let psqlEnvironment;
   const summary = await auditStagingSchema({
     connectionString: 'postgresql://postgres.samszhfyhbjuculrcffg:secret@aws-0-ap-south-1.pooler.supabase.com:5432/postgres',
     auditSql,
-    runPsql: (_command, args) => {
+    runPsql: (_command, args, options) => {
       executedQuery = args.at(-1);
+      psqlEnvironment = options.env;
       return {
         status: 0,
         stdout: JSON.stringify({
@@ -45,6 +48,27 @@ test('reports missing feature relations and migration history without exposing c
   assert.match(summary, /Missing public relations: learning_classrooms/);
   assert.doesNotMatch(summary, /secret|postgresql:\/\//i);
   assert.match(executedQuery, /learning_classrooms/);
+  assert.equal(psqlEnvironment.PGHOST, 'aws-0-ap-south-1.pooler.supabase.com');
+  assert.equal(psqlEnvironment.PGUSER, 'postgres.samszhfyhbjuculrcffg');
+  assert.equal(psqlEnvironment.PGPASSWORD, 'secret');
+  assert.equal(psqlEnvironment.PGDATABASE, 'postgres');
+  assert.equal(psqlEnvironment.PGSSLMODE, 'require');
+  assert.equal('SUPABASE_DB_URL' in psqlEnvironment, false);
+  assert.equal('BACKUP_ENCRYPTION_KEY' in psqlEnvironment, false);
+});
+
+test('parses encoded PostgreSQL connection fields without inheriting PG overrides', () => {
+  const environment = buildPsqlEnvironment(
+    'postgresql://postgres.samszhfyhbjuculrcffg:encoded%40password@aws-0-ap-south-1.pooler.supabase.com:6543/postgres',
+    { PATH: 'system-path', PGHOST: 'wrong-host', PGDATABASE: 'wrong-db' },
+  );
+
+  assert.equal(environment.PGHOST, 'aws-0-ap-south-1.pooler.supabase.com');
+  assert.equal(environment.PGPORT, '6543');
+  assert.equal(environment.PGPASSWORD, 'encoded@password');
+  assert.equal(environment.PGDATABASE, 'postgres');
+  assert.equal(environment.PGSSLMODE, 'require');
+  assert.equal(environment.PATH, 'system-path');
 });
 
 test('rejects non-Staging URLs before invoking psql', async () => {
