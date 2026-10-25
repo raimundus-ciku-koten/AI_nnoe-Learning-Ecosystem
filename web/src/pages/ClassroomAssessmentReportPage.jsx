@@ -12,6 +12,7 @@ import {
 } from '../services/learningClassrooms.js';
 import {
   buatBarisAnalisisPenilaian,
+  klasifikasiTindakLanjut,
   ringkasAnalisisPenilaian,
   ringkasPenilaianPerAktivitas,
 } from '../services/classroomAssessmentReport.js';
@@ -33,11 +34,17 @@ export default function ClassroomAssessmentReportPage() {
   const currentRole = activeRole || role;
   const isTeacher = PERAN_GURU_KELAS.includes(currentRole);
   const isReportRoute = location.pathname === '/laporan/penilaian';
+  const isRemedialRoute = location.pathname === '/asesmen/remedial';
+  const isProgressRoute = location.pathname === '/pemantauan/catatan';
   const [classes, setClasses] = useState([]);
   const [rows, setRows] = useState([]);
   const [classFilter, setClassFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [remedialThreshold, setRemedialThreshold] = useState('');
+  const [enrichmentThreshold, setEnrichmentThreshold] = useState('');
+  const [appliedThresholds, setAppliedThresholds] = useState(null);
+  const [thresholdError, setThresholdError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -88,13 +95,35 @@ export default function ClassroomAssessmentReportPage() {
   }, [classFilter, rows, search, typeFilter]);
   const summary = useMemo(() => ringkasAnalisisPenilaian(visibleRows), [visibleRows]);
   const activities = useMemo(() => ringkasPenilaianPerAktivitas(visibleRows), [visibleRows]);
+  const followUpRows = useMemo(() => {
+    if (!appliedThresholds) return [];
+    return klasifikasiTindakLanjut(visibleRows, appliedThresholds);
+  }, [appliedThresholds, visibleRows]);
+
+  function applyThresholds(event) {
+    event.preventDefault();
+    const remedial = Number(remedialThreshold);
+    const enrichment = Number(enrichmentThreshold);
+    if (!remedialThreshold.trim() || !enrichmentThreshold.trim() ||
+        !Number.isFinite(remedial) || !Number.isFinite(enrichment) ||
+        remedial < 0 || enrichment > 100 || remedial >= enrichment) {
+      setThresholdError('Masukkan batas remedial dan pengayaan 0–100; batas remedial harus lebih rendah.');
+      setAppliedThresholds(null);
+      return;
+    }
+    setThresholdError('');
+    setAppliedThresholds({ remedial, enrichment });
+  }
 
   function exportCsv() {
     const header = [
       'Kelas', 'Mata pelajaran', 'Jenis', 'Aktivitas', 'Nama siswa',
       'Nilai', 'Status', 'Waktu pengumpulan', 'Umpan balik',
     ];
-    const data = visibleRows.map((row) => [
+    const exportingFollowUp = isRemedialRoute && appliedThresholds;
+    if (exportingFollowUp) header.push('Saran peninjauan');
+    const sourceRows = exportingFollowUp ? followUpRows : visibleRows;
+    const data = sourceRows.map((row) => [
       row.classroomName,
       row.subject,
       row.activityType,
@@ -104,9 +133,10 @@ export default function ClassroomAssessmentReportPage() {
       row.score === null ? 'Menunggu penilaian' : 'Dinilai',
       formatTanggal(row.submittedAt),
       row.feedback,
+      ...(exportingFollowUp ? [row.followUp] : []),
     ]);
     unduhBerkas(
-      'laporan-penilaian-kelas.csv',
+      exportingFollowUp ? 'tinjauan-remedial-pengayaan.csv' : 'laporan-penilaian-kelas.csv',
       buatCsv([header, ...data].map((line) => line.map((value) => csvEscape(value)))),
       'text/csv',
     );
@@ -116,19 +146,64 @@ export default function ClassroomAssessmentReportPage() {
     <main className="assessment-report">
       <header className="assessment-report-hero">
         <p className="assessment-report-kicker">Ruang Kelas · Asesmen</p>
-        <h1>{isReportRoute ? 'Laporan Penilaian' : 'Analisis Hasil'}</h1>
+        <h1>
+          {isRemedialRoute
+            ? 'Remedial & Pengayaan'
+            : isProgressRoute
+              ? 'Pemantauan Perkembangan Belajar'
+              : isReportRoute ? 'Laporan Penilaian' : 'Analisis Hasil'}
+        </h1>
         <p>
-          Ringkasan ini menggabungkan nilai tugas dan kuis yang dikumpulkan di Ruang Kelas
-          pada kelas yang Anda ampu. Nilai hanya dihitung untuk pengumpulan yang sudah dinilai.
+          {isRemedialRoute
+            ? 'Tinjau hasil tugas dan kuis yang sudah dinilai pada kelas yang Anda ampu. Tentukan sendiri batas sesuai kriteria sekolah sebelum mengidentifikasi tindak lanjut.'
+            : isProgressRoute
+              ? 'Pantau pengumpulan tugas dan kuis serta status penilaiannya pada Ruang Kelas yang Anda ampu.'
+              : 'Ringkasan ini menggabungkan nilai tugas dan kuis yang dikumpulkan di Ruang Kelas pada kelas yang Anda ampu. Nilai hanya dihitung untuk pengumpulan yang sudah dinilai.'}
         </p>
         <p className="assessment-report-notice">
-          Laporan ini bukan rapor resmi, tidak mencakup nilai di luar Ruang Kelas, dan tidak
-          menetapkan kriteria ketuntasan otomatis. Data dibatasi hingga 100 tugas dan 100 kuis
-          terbaru per kelas.
+          {isRemedialRoute
+            ? 'Ini adalah alat bantu peninjauan, bukan keputusan otomatis atau catatan intervensi resmi. Hanya pengumpulan yang sudah dinilai yang ditampilkan; siswa yang belum mengumpulkan tidak tercakup.'
+            : isProgressRoute
+              ? 'Data hanya berasal dari tugas dan kuis Ruang Kelas pada kelas yang diampu. Tampilan ini bukan profil siswa atau catatan perkembangan resmi; pengumpulan yang belum dinilai ditandai terpisah.'
+              : 'Laporan ini bukan rapor resmi, tidak mencakup nilai di luar Ruang Kelas, dan tidak menetapkan kriteria ketuntasan otomatis. Data dibatasi hingga 100 tugas dan 100 kuis terbaru per kelas.'}
         </p>
       </header>
 
       {error && <p className="assessment-report-error" role="alert">{error}</p>}
+      {isRemedialRoute && (
+        <section className="assessment-report-panel" aria-labelledby="follow-up-threshold-title">
+          <h2 id="follow-up-threshold-title">Kriteria peninjauan sekolah</h2>
+          <p>Ambang berikut hanya digunakan pada tampilan ini dan tidak disimpan. Tinjau bukti belajar serta konteks siswa sebelum menentukan tindak lanjut.</p>
+          <form className="assessment-report-filters" onSubmit={applyThresholds}>
+            <label>
+              Tinjau untuk remedial jika nilai di bawah
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={remedialThreshold}
+                onChange={(event) => setRemedialThreshold(event.target.value)}
+                required
+              />
+            </label>
+            <label>
+              Tinjau untuk pengayaan jika nilai sama dengan atau di atas
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                value={enrichmentThreshold}
+                onChange={(event) => setEnrichmentThreshold(event.target.value)}
+                required
+              />
+            </label>
+            <button type="submit">Terapkan kriteria sementara</button>
+          </form>
+          {thresholdError && <p className="assessment-report-error" role="alert">{thresholdError}</p>}
+        </section>
+      )}
       <section className="assessment-report-panel" aria-label="Filter analisis">
         <div className="assessment-report-filters">
           <label>
@@ -164,7 +239,13 @@ export default function ClassroomAssessmentReportPage() {
           <button type="button" className="assessment-report-secondary" onClick={() => void load()} disabled={loading}>
             {loading ? 'Memuat…' : 'Muat ulang'}
           </button>
-          <button type="button" onClick={exportCsv} disabled={loading || visibleRows.length === 0}>
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={loading || (isRemedialRoute && appliedThresholds
+              ? followUpRows.length === 0
+              : visibleRows.length === 0)}
+          >
             Ekspor CSV
           </button>
         </div>
@@ -180,6 +261,35 @@ export default function ClassroomAssessmentReportPage() {
             <article><span>Menunggu penilaian</span><strong>{summary.jumlahMenunggu}</strong></article>
             <article><span>Rata-rata nilai dinilai</span><strong>{summary.rataRata ?? '—'}</strong></article>
           </section>
+          {isRemedialRoute && appliedThresholds && (
+            <section className="assessment-report-panel" aria-labelledby="follow-up-results-title">
+              <h2 id="follow-up-results-title">Hasil peninjauan berdasarkan kriteria sementara</h2>
+              <p>
+                Remedial: {followUpRows.filter((row) => row.followUp === 'Tinjau untuk remedial').length}
+                {' · '}Pengayaan: {followUpRows.filter((row) => row.followUp === 'Tinjau untuk pengayaan').length}
+              </p>
+              {!followUpRows.length ? (
+                <p className="assessment-report-empty">Belum ada hasil yang sudah dinilai pada filter ini.</p>
+              ) : (
+                <div className="assessment-report-table-wrap">
+                  <table>
+                    <thead><tr>
+                      <th>Siswa</th><th>Kelas</th><th>Aktivitas</th><th>Nilai</th><th>Saran peninjauan</th>
+                    </tr></thead>
+                    <tbody>{followUpRows.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.studentName}</td>
+                        <td>{row.classroomName}</td>
+                        <td>{row.activityType}: {row.activityName}</td>
+                        <td>{row.score}</td>
+                        <td>{row.followUp}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
           {classes.length === 0 ? (
             <p className="assessment-report-empty">Belum ada Ruang Kelas yang ditugaskan ke akun ini.</p>
           ) : visibleRows.length === 0 ? (

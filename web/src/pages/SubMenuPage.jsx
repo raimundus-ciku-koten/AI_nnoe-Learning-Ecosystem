@@ -228,10 +228,12 @@ const MODUL_GURU_AKTIF = {
     { label: 'Program BK & Kegiatan', path: '/program-kegiatan', ikon: 'file' },
   ],
   asesmen: [
+    { label: 'Remedial & Pengayaan', path: '/asesmen/remedial', ikon: 'refresh' },
     { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'book' },
     { label: 'Ujian Online', path: '/asesmen/ujian-online', ikon: 'check' },
   ],
   pemantauan: [
+    { label: 'Pemantauan Perkembangan Belajar', path: '/pemantauan/catatan', ikon: 'file' },
     { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
     { label: 'Presensi Siswa', path: '/pelaksanaan/presensi', ikon: 'check' },
   ],

@@ -83,6 +83,7 @@ export function ringkasPenilaianPerAktivitas(rows) {
       group.jumlahDinilai += 1;
       group.totalNilai += row.score;
     }
+
     grouped.set(key, group);
   }
   return [...grouped.values()].map((group) => ({
@@ -92,4 +93,28 @@ export function ringkasPenilaianPerAktivitas(rows) {
       ? Math.round(group.totalNilai / group.jumlahDinilai)
       : null,
   }));
+}
+
+export function klasifikasiTindakLanjut(rows, thresholds) {
+  if (!Array.isArray(rows) || rows.some((row) => !row ||
+      (row.score !== null &&
+        (!Number.isFinite(row.score) || row.score < 0 || row.score > 100)))) {
+    throw new TypeError('Baris peninjauan tindak lanjut tidak valid.');
+  }
+  if (!thresholds || !Number.isFinite(thresholds.remedial) ||
+      !Number.isFinite(thresholds.enrichment) ||
+      thresholds.remedial < 0 || thresholds.enrichment > 100 ||
+      thresholds.remedial >= thresholds.enrichment) {
+    throw new TypeError('Kriteria peninjauan tindak lanjut tidak valid.');
+  }
+  return rows
+    .filter((row) => row.score !== null)
+    .map((row) => ({
+      ...row,
+      followUp: row.score < thresholds.remedial
+        ? 'Tinjau untuk remedial'
+        : row.score >= thresholds.enrichment
+          ? 'Tinjau untuk pengayaan'
+          : 'Dalam rentang kriteria',
+    }));
 }

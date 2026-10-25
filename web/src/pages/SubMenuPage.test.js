@@ -102,8 +102,6 @@ describe('submenu platform superadmin', () => {
 
     it('menjelaskan status submenu guru dan hanya menautkan modul akademik yang tersedia', () => {
       const targetPaths = [
-        '/asesmen/remedial',
-        '/pemantauan/catatan',
         '/refleksi/pembelajaran',
         '/laporan/kinerja-guru',
         '/kolaborasi/praktik-baik',
@@ -301,7 +299,8 @@ describe('submenu platform superadmin', () => {
       path.startsWith('/admin/perencanaan/paket') ||
       ['/pelaksanaan/presensi', '/pelaksanaan/jurnal', '/laporan/harian-bulanan',
         '/program-kegiatan', '/pengaturan/google', '/pengaturan/api-ai',
-        '/asesmen/bank-soal', '/asesmen/ujian-online', '/asesmen/analisis',
+        '/asesmen/bank-soal', '/asesmen/ujian-online', '/asesmen/analisis', '/asesmen/remedial',
+        '/pemantauan/catatan',
         '/laporan/penilaian', '/asesmen/rapor', '/admin/akademik/rapor',
         '/siswa/rapor', '/siswa/ujian', '/siswa/nilai', '/siswa/jadwal',
         '/siswa/materi', '/hasil/perencanaan', '/laporan/arsip-perencanaan',

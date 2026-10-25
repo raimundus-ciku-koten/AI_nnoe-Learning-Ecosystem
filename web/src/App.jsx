@@ -327,6 +327,8 @@ function RouteWrapper() {
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/asesmen/analisis" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
+        <Route path="/asesmen/remedial" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
+        <Route path="/pemantauan/catatan" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
         <Route path="/laporan/penilaian" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
         <Route path="/asesmen/rapor" element={<PrivateShell><HalamanRaporSekolah /></PrivateShell>} />
         <Route path="/admin/akademik/rapor" element={<PrivateShell><HalamanRaporSekolah /></PrivateShell>} />
