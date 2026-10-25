@@ -1,0 +1,91 @@
+import { spawnSync } from 'node:child_process';
+import { readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+export function getOrderedMigrationFiles(files) {
+  const migrations = files.filter((file) => file.endsWith('.sql')).sort();
+  const versions = migrations.map((file) => {
+    const match = /^(\d{14})_[a-z0-9_]+\.sql$/i.exec(file);
+    if (!match) {
+      throw new Error(`Migration filename does not use the expected version format: ${file}`);
+    }
+    return match[1];
+  });
+  if (migrations.length === 0 || new Set(versions).size !== versions.length) {
+    throw new Error('Migration chain is empty or contains duplicate versions.');
+  }
+  return migrations;
+}
+
+function buildLocalDatabaseEnvironment(environment) {
+  const allowed = environment.PGHOST === '127.0.0.1'
+    && environment.PGPORT === '5432'
+    && environment.PGUSER === 'supabase_admin'
+    && environment.PGDATABASE === 'postgres';
+  if (!allowed) {
+    throw new Error('Migration-chain validation is restricted to the disposable local PostgreSQL service.');
+  }
+
+  const psqlEnvironment = { ...environment, PGAPPNAME: 'migration-chain-validation' };
+  delete psqlEnvironment.SUPABASE_DB_URL;
+  delete psqlEnvironment.BACKUP_ENCRYPTION_KEY;
+  return psqlEnvironment;
+}
+
+export async function validateMigrationChain({
+  migrationDirectory,
+  migrationFiles,
+  environment = process.env,
+  runCommand = spawnSync,
+}) {
+  const psqlEnvironment = buildLocalDatabaseEnvironment(environment);
+  const orderedMigrationFiles = getOrderedMigrationFiles(
+    migrationFiles ?? await readdir(migrationDirectory),
+  );
+  const database = 'migration_chain_validation';
+  const commonOptions = { encoding: 'utf8', env: psqlEnvironment };
+
+  const created = runCommand(
+    'createdb',
+    ['--host', '127.0.0.1', '--port', '5432', '--username', 'supabase_admin', database],
+    commonOptions,
+  );
+  if (created.error || created.status !== 0) {
+    throw new Error('Could not create the fresh disposable database for migration validation.');
+  }
+
+  const migrationEnvironment = { ...psqlEnvironment, PGDATABASE: database };
+  for (const file of orderedMigrationFiles) {
+    const result = runCommand(
+      'psql',
+      [
+        '--no-psqlrc',
+        '--set=ON_ERROR_STOP=1',
+        '--single-transaction',
+        '--file',
+        join(migrationDirectory, file),
+      ],
+      { encoding: 'utf8', env: migrationEnvironment },
+    );
+    if (result.error || result.status !== 0) {
+      throw new Error(`Migration-chain validation failed at ${file}; the disposable database was not changed on Staging.`);
+    }
+  }
+
+  return `Validated ${orderedMigrationFiles.length} migrations in version order on a fresh disposable PostgreSQL database.`;
+}
+
+async function main() {
+  const result = await validateMigrationChain({
+    migrationDirectory: fileURLToPath(new URL('../supabase/migrations/', import.meta.url)),
+  });
+  process.stdout.write(`${result}\n`);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(`[migration-chain-validation] ${error.message}`);
+    process.exitCode = 1;
+  });
+}

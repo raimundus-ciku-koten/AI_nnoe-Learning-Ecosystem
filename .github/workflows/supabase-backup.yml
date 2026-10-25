@@ -131,6 +131,16 @@ jobs:
             exit 1
           fi
           echo "Uploaded encrypted artifact decrypted and restored successfully ($table_count user tables)."
+      - name: Validate repository migrations on a fresh disposable database
+        shell: bash
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: supabase_admin
+          PGPASSWORD: restore-validation-only
+          PGDATABASE: postgres
+          PGSSLMODE: disable
+        run: node scripts/validateMigrationChain.mjs
       - name: Remove temporary database files
         if: always()
         shell: bash
