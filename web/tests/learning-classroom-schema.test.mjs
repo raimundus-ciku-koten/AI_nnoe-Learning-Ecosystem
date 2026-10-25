@@ -26,6 +26,10 @@ const journalsMigration = await readFile(
   new URL('../../supabase/migrations/20261025000800_learning_classroom_journals.sql', import.meta.url),
   'utf8',
 );
+const schedulesMigration = await readFile(
+  new URL('../../supabase/migrations/20261026000100_learning_classroom_schedules.sql', import.meta.url),
+  'utf8',
+);
 
 test('learning classrooms are tenant-scoped and protected by RLS', () => {
   assert.match(migration, /create table if not exists public\.learning_classrooms/);
@@ -162,4 +166,20 @@ test('class attendance is tenant-scoped and students can only read their own rec
   assert.match(attendanceMigration, /revoke all on table public\.learning_classroom_attendance_sessions,[\s\S]*from public, anon, authenticated/);
   assert.doesNotMatch(attendanceMigration, /grant insert, update, delete on table public\.learning_classroom_attendance(?:_sessions)?\s+to authenticated/i);
   assert.match(attendanceMigration, /grant execute on function public\.record_learning_classroom_attendance\(uuid, jsonb\)\s+to authenticated/);
+});
+
+test('published classroom schedules are tenant-scoped, readable by class members, and teacher-managed', () => {
+  assert.match(schedulesMigration, /create table if not exists public\.learning_classroom_schedules/);
+  assert.match(schedulesMigration, /foreign key \(classroom_id, tenant_id\)/);
+  assert.match(schedulesMigration, /weekday between 1 and 7/);
+  assert.match(schedulesMigration, /ends_at > starts_at/);
+  assert.match(schedulesMigration, /unique \(classroom_id, teacher_id, weekday, starts_at\)/);
+  assert.match(schedulesMigration, /alter table public\.learning_classroom_schedules enable row level security/);
+  assert.match(schedulesMigration, /create policy "Active classroom members read published schedules"/);
+  assert.match(schedulesMigration, /public\.current_user_is_active\(\)/);
+  assert.match(schedulesMigration, /tenant\.active = true/);
+  assert.match(schedulesMigration, /member\.user_id = \(select auth\.uid\(\)\)/);
+  assert.match(schedulesMigration, /'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'/);
+  assert.match(schedulesMigration, /teacher_id = \(select auth\.uid\(\)\)/);
+  assert.match(schedulesMigration, /grant select, insert, update, delete on table public\.learning_classroom_schedules\s+to authenticated/);
 });

@@ -16,6 +16,8 @@ vi.mock('../context/AuthContext.jsx', () => ({
 
 vi.mock('../services/learningClassrooms.js', () => ({
   buatKuisRuangKelas: vi.fn(),
+  buatJadwalRuangKelas: vi.fn(),
+  ubahJadwalRuangKelas: vi.fn(),
   buatMateriRuangKelas: vi.fn(),
   buatRuangKelas: vi.fn(),
   buatSesiPresensiKelas: vi.fn(),
@@ -24,6 +26,7 @@ vi.mock('../services/learningClassrooms.js', () => ({
   kirimJawabanKuis: vi.fn(),
   muatHasilKuisGuru: vi.fn(),
   muatHasilKuisSiswa: vi.fn(),
+  muatJadwalRuangKelas: vi.fn(),
   muatCatatanPresensiKelas: vi.fn(),
   muatKuisRuangKelas: vi.fn(),
   muatSoalKuisUntukSiswa: vi.fn(),
@@ -31,6 +34,7 @@ vi.mock('../services/learningClassrooms.js', () => ({
   muatKandidatAnggotaRuangKelas: vi.fn(),
   muatPengumpulanTugas: vi.fn(),
   muatMateriRuangKelas: vi.fn(),
+  hapusJadwalRuangKelas: vi.fn(),
   muatRosterPresensiKelas: vi.fn(),
   muatSesiPresensiKelas: vi.fn(),
   muatTugasRuangKelas: vi.fn(),

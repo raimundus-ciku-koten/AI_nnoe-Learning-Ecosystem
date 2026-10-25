@@ -66,7 +66,11 @@ jobs:
         shell: bash
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: node scripts/auditStagingSchema.mjs >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          set -euo pipefail
+          node scripts/auditStagingSchema.mjs \
+            | tee "${RUNNER_TEMP}/staging-schema-audit.md" \
+            >> "$GITHUB_STEP_SUMMARY"
       - name: Create and encrypt database dump
         shell: bash
         env:
@@ -161,10 +165,21 @@ jobs:
           PGDATABASE: postgres
           PGSSLMODE: disable
         run: node scripts/validateMigrationChain.mjs
+      - name: Require expected Staging relation and ledger inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          audit="${RUNNER_TEMP}/staging-schema-audit.md"
+          if ! grep -Fq -- "- Relation/history inventory readiness: READY" "$audit"; then
+            echo "::error::Encrypted backup recovery and clean migration replay completed, but Staging relation or migration-ledger inventory is blocked. Review the read-only schema audit above; no Staging schema changes were made."
+            exit 1
+          fi
+          echo "Expected Staging relation and migration-ledger inventory is complete. Definition-level parity still requires review before hosted changes."
       - name: Remove temporary database files
         if: always()
         shell: bash
         run: |
+          rm -f "${RUNNER_TEMP}/staging-schema-audit.md"
           rm -f "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.dump"
           rm -f "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}-restored.dump"
           rm -f "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.aeb"

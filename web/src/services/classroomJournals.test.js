@@ -15,6 +15,9 @@ const mocks = vi.hoisted(() => {
       activities: 'Diskusi dan latihan.',
       reflection: '',
       follow_up: '',
+      planning_package_id: null,
+      planning_document_type: null,
+      planning_unit: null,
       created_at: '2026-10-25T10:00:00Z',
       updated_at: '2026-10-25T10:00:00Z',
     },
@@ -68,6 +71,9 @@ describe('classroomJournals', () => {
       activities: 'Diskusi dan latihan.',
       reflection: '',
       follow_up: '',
+      planning_package_id: null,
+      planning_document_type: null,
+      planning_unit: null,
       created_at: '2026-10-25T10:00:00Z',
       updated_at: '2026-10-25T10:00:00Z',
     };
@@ -91,7 +97,33 @@ describe('classroomJournals', () => {
       author_id: 'teacher-1',
       lesson_date: '2026-10-25',
       topic: 'Sistem persamaan',
+      planning_package_id: null,
     }));
+  });
+
+  it('menyimpan referensi paket dan dokumen perencanaan pada jurnal yang sama', async () => {
+    const planningRef = { packageId: 'planning-package-1', documentType: 'modul', unit: '2' };
+    mocks.state.row = {
+      ...mocks.state.row,
+      planning_package_id: planningRef.packageId,
+      planning_document_type: planningRef.documentType,
+      planning_unit: planningRef.unit,
+    };
+    await expect(createClassroomJournal(context, 'class-1', { ...input, planningRef }))
+      .resolves.toMatchObject({ planningRef });
+    expect(mocks.query.insert).toHaveBeenCalledWith(expect.objectContaining({
+      planning_package_id: planningRef.packageId,
+      planning_document_type: planningRef.documentType,
+      planning_unit: planningRef.unit,
+    }));
+  });
+
+  it('menolak referensi perencanaan yang tidak valid', async () => {
+    await expect(createClassroomJournal(context, 'class-1', {
+      ...input,
+      planningRef: { packageId: 'package-1', documentType: 'diagnosis' },
+    })).rejects.toThrow('Referensi dokumen perencanaan tidak valid');
+    expect(mocks.from).not.toHaveBeenCalled();
   });
 
   it('menolak tanggal mustahil dan input kosong sebelum permintaan database', async () => {

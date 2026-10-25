@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import {
   muatDaftarRuangKelas,
   muatCatatanPresensiKelas,
+  muatJadwalRuangKelas,
   muatHasilKuisSiswa,
   muatKuisRuangKelas,
   muatMateriRuangKelas,
@@ -22,6 +23,9 @@ const LABEL_STATUS_PRESENSI = {
   sakit: 'Sakit',
   alpa: 'Tanpa keterangan',
 };
+const HARI_MINGGU = [
+  'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu',
+];
 
 export function tautanKeKelas(classroomId, jenisAktivitas, activityId) {
   const params = new URLSearchParams({ kelas: classroomId });
@@ -49,6 +53,36 @@ export function riwayatPresensiSiswa(sessions, records, classroomName, userId) {
 
 export function hasilKuisMilikSiswa(results, userId) {
   return results.filter((result) => result.userId === userId);
+}
+
+export function urutkanJadwalSiswa(schedules) {
+  return [...schedules].sort((a, b) =>
+    a.hari - b.hari || a.mulai.localeCompare(b.mulai) ||
+    a.namaKelas.localeCompare(b.namaKelas, 'id'));
+}
+
+export function JadwalPelajaranSiswa({ schedules }) {
+  const ordered = urutkanJadwalSiswa(schedules);
+  return (
+    <section className="ale-classrooms-materials" aria-labelledby="student-schedule-title">
+      <h3 id="student-schedule-title">Jadwal pelajaran</h3>
+      {ordered.length ? (
+        <ul className="ale-classrooms-assignment-list">
+          {ordered.map((schedule) => (
+            <li key={schedule.id}>
+              <h4>{HARI_MINGGU[schedule.hari - 1]} · {schedule.mulai}–{schedule.selesai}</h4>
+              <small>{schedule.namaKelas}</small>
+              <p>{schedule.topik}{schedule.tempat ? ` · ${schedule.tempat}` : ''}</p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="ale-classrooms-empty">
+          Belum ada jadwal pelajaran yang diterbitkan untuk kelas Anda.
+        </p>
+      )}
+    </section>
+  );
 }
 
 function waktu(nilai) {
@@ -135,7 +169,8 @@ export default function StudentLearningPage() {
   const materiMode = pathname === MODE_MATERI;
   const nilaiMode = pathname === MODE_NILAI;
   const [data, setData] = useState({
-    classes: [], materials: [], tasks: [], quizzes: [], results: [], attendance: [], examResults: [],
+    classes: [], materials: [], tasks: [], quizzes: [], results: [], attendance: [],
+    schedules: [], examResults: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -148,7 +183,8 @@ export default function StudentLearningPage() {
       setError('');
       if (role !== 'siswa' || !user?.uid || !tenantId) {
         setData({
-          classes: [], materials: [], tasks: [], quizzes: [], results: [], attendance: [], examResults: [],
+          classes: [], materials: [], tasks: [], quizzes: [], results: [], attendance: [],
+          schedules: [], examResults: [],
         });
         setError(role !== 'siswa'
           ? 'Halaman ini hanya tersedia untuk akun siswa.'
@@ -168,12 +204,14 @@ export default function StudentLearningPage() {
                 quizzes: [],
                 submissions: [],
                 attendance: [],
+                schedules: [],
               };
             }
-            const [tasks, quizzes, attendanceSessions] = await Promise.all([
+            const [tasks, quizzes, attendanceSessions, schedules] = await Promise.all([
               muatTugasRuangKelas(room.id, room.tenantId),
               muatKuisRuangKelas(room.id, room.tenantId),
               nilaiMode ? Promise.resolve([]) : muatSesiPresensiKelas(room.id, room.tenantId),
+              nilaiMode ? Promise.resolve([]) : muatJadwalRuangKelas(room.id, room.tenantId, user.uid),
             ]);
             const [submissions, results, attendanceRecords] = await Promise.all([
               muatPengumpulanTugas(room.id, role, tasks.map((task) => task.id)),
@@ -184,7 +222,7 @@ export default function StudentLearningPage() {
             ]);
             return {
               room, materials: [], tasks, quizzes, submissions, results,
-              attendanceSessions, attendanceRecords,
+              attendanceSessions, attendanceRecords, schedules,
             };
           })),
           nilaiMode ? muatNilaiUjianSiswa() : Promise.resolve([]),
@@ -209,6 +247,8 @@ export default function StudentLearningPage() {
           ),
           attendance: perClass.flatMap(({ room, attendanceSessions = [], attendanceRecords = [] }) =>
             riwayatPresensiSiswa(attendanceSessions, attendanceRecords, room.nama, user.uid)),
+          schedules: urutkanJadwalSiswa(perClass.flatMap(({ room, schedules = [] }) =>
+            schedules.map((schedule) => ({ ...schedule, namaKelas: room.nama })))),
           examResults,
         });
       } catch (loadError) {
@@ -232,6 +272,13 @@ export default function StudentLearningPage() {
     (a.tenggat || '9999').localeCompare(b.tenggat || '9999'));
   const quizzes = [...data.quizzes].sort((a, b) =>
     (a.tenggat || '9999').localeCompare(b.tenggat || '9999'));
+  const learningLinks = [
+    { href: '/siswa/jadwal', label: 'Jadwal dan tugas', active: !materiMode && !nilaiMode },
+    { href: '/siswa/materi', label: 'Materi', active: materiMode },
+    { href: '/siswa/nilai', label: 'Nilai saya', active: nilaiMode },
+    { href: '/siswa/ujian', label: 'Ujian saya', active: false },
+    { href: '/siswa/rapor', label: 'Rapor resmi', active: false },
+  ];
 
   return (
     <main className="ale-classrooms ale-student-learning">
@@ -243,8 +290,20 @@ export default function StudentLearningPage() {
             ? 'Materi yang diterbitkan guru untuk kelas yang ditetapkan kepada Anda.'
             : nilaiMode
               ? 'Nilai tugas, kuis, dan ujian yang tercatat untuk akun siswa Anda.'
-            : 'Tugas, kuis, dan tenggat dari kelas yang ditetapkan kepada Anda.'}
+            : 'Jadwal yang diterbitkan guru; Tugas, kuis, dan tenggat dari kelas yang ditetapkan kepada Anda.'}
         </p>
+        <nav className="ale-student-learning-nav" aria-label="Navigasi ruang belajar">
+          {learningLinks.map(({ href, label, active }) => (
+            <a
+              key={href}
+              href={`#${href}`}
+              aria-current={active ? 'page' : undefined}
+              className={active ? 'is-active' : ''}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
       </header>
       {error && (
         <p className="ale-classrooms-message is-error" role="alert">
@@ -286,6 +345,7 @@ export default function StudentLearningPage() {
         />
       ) : !error ? (
         <>
+          <JadwalPelajaranSiswa schedules={data.schedules} />
           <section className="ale-classrooms-materials" aria-labelledby="student-tasks-title">
             <h3 id="student-tasks-title">Tugas</h3>
             {tasks.length ? (
@@ -354,7 +414,7 @@ export default function StudentLearningPage() {
             )}
           </section>
           <p className="ale-classrooms-footnote">
-            Jadwal pelajaran belum tersambung ke daftar kelas ini; tugas, kuis, dan presensi ditampilkan dari Ruang Kelas.
+            Jadwal hanya menampilkan slot yang diterbitkan guru pada Ruang Kelas. Jadwal pribadi guru tidak dibagikan ke siswa.
           </p>
         </>
       ) : null}

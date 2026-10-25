@@ -36,10 +36,12 @@ export default function ClassroomAssessmentReportPage() {
   const isReportRoute = location.pathname === '/laporan/penilaian';
   const isRemedialRoute = location.pathname === '/asesmen/remedial';
   const isProgressRoute = location.pathname === '/pemantauan/catatan';
+  const isStudentProfileRoute = location.pathname === '/pemantauan/profil-siswa';
   const [classes, setClasses] = useState([]);
   const [rows, setRows] = useState([]);
   const [classFilter, setClassFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [profileStudentId, setProfileStudentId] = useState('');
   const [search, setSearch] = useState('');
   const [remedialThreshold, setRemedialThreshold] = useState('');
   const [enrichmentThreshold, setEnrichmentThreshold] = useState('');
@@ -85,14 +87,31 @@ export default function ClassroomAssessmentReportPage() {
     void load();
   }, [load]);
 
+  const students = useMemo(() => {
+    const byId = new Map();
+    for (const row of rows) {
+      const student = byId.get(row.studentId) || {
+        id: row.studentId,
+        name: row.studentName,
+        classrooms: new Set(),
+      };
+      student.classrooms.add(row.classroomName);
+      byId.set(row.studentId, student);
+    }
+    return [...byId.values()]
+      .map((student) => ({ ...student, classroomNames: [...student.classrooms].join(', ') }))
+      .sort((left, right) => left.name.localeCompare(right.name, 'id-ID'));
+  }, [rows]);
+
   const visibleRows = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('id-ID');
     return rows.filter((row) =>
       (classFilter === 'all' || row.classroomId === classFilter) &&
       (typeFilter === 'all' || row.activityType === typeFilter) &&
+      (!isStudentProfileRoute || (profileStudentId && row.studentId === profileStudentId)) &&
       (!term || [row.studentName, row.activityName, row.classroomName, row.subject]
         .some((value) => value.toLocaleLowerCase('id-ID').includes(term))));
-  }, [classFilter, rows, search, typeFilter]);
+  }, [classFilter, isStudentProfileRoute, profileStudentId, rows, search, typeFilter]);
   const summary = useMemo(() => ringkasAnalisisPenilaian(visibleRows), [visibleRows]);
   const activities = useMemo(() => ringkasPenilaianPerAktivitas(visibleRows), [visibleRows]);
   const followUpRows = useMemo(() => {
@@ -151,6 +170,8 @@ export default function ClassroomAssessmentReportPage() {
             ? 'Remedial & Pengayaan'
             : isProgressRoute
               ? 'Pemantauan Perkembangan Belajar'
+              : isStudentProfileRoute
+                ? 'Profil Belajar Siswa'
               : isReportRoute ? 'Laporan Penilaian' : 'Analisis Hasil'}
         </h1>
         <p>
@@ -158,6 +179,8 @@ export default function ClassroomAssessmentReportPage() {
             ? 'Tinjau hasil tugas dan kuis yang sudah dinilai pada kelas yang Anda ampu. Tentukan sendiri batas sesuai kriteria sekolah sebelum mengidentifikasi tindak lanjut.'
             : isProgressRoute
               ? 'Pantau pengumpulan tugas dan kuis serta status penilaiannya pada Ruang Kelas yang Anda ampu.'
+              : isStudentProfileRoute
+                ? 'Tinjau bukti pengumpulan tugas dan kuis seorang siswa pada kelas yang Anda ampu. Profil ini terbatas pada aktivitas yang tersedia di Ruang Kelas.'
               : 'Ringkasan ini menggabungkan nilai tugas dan kuis yang dikumpulkan di Ruang Kelas pada kelas yang Anda ampu. Nilai hanya dihitung untuk pengumpulan yang sudah dinilai.'}
         </p>
         <p className="assessment-report-notice">
@@ -165,8 +188,17 @@ export default function ClassroomAssessmentReportPage() {
             ? 'Ini adalah alat bantu peninjauan, bukan keputusan otomatis atau catatan intervensi resmi. Hanya pengumpulan yang sudah dinilai yang ditampilkan; siswa yang belum mengumpulkan tidak tercakup.'
             : isProgressRoute
               ? 'Data hanya berasal dari tugas dan kuis Ruang Kelas pada kelas yang diampu. Tampilan ini bukan profil siswa atau catatan perkembangan resmi; pengumpulan yang belum dinilai ditandai terpisah.'
+              : isStudentProfileRoute
+                ? 'Hanya menampilkan bukti akademik yang sudah tersedia pada kelas yang ditugaskan: pengumpulan tugas dan kuis, nilai, serta status penilaian. Tidak ada diagnosis, catatan konseling, intervensi, atau kesimpulan otomatis. Siswa tanpa pengumpulan belum tentu muncul.'
               : 'Laporan ini bukan rapor resmi, tidak mencakup nilai di luar Ruang Kelas, dan tidak menetapkan kriteria ketuntasan otomatis. Data dibatasi hingga 100 tugas dan 100 kuis terbaru per kelas.'}
         </p>
+        {isStudentProfileRoute && (
+          <nav className="assessment-report-actions" aria-label="Sumber bukti belajar">
+            <a href="#/asesmen/analisis">Analisis kelas</a>
+            <a href="#/pelaksanaan/jurnal">Jurnal Mengajar</a>
+            <a href="#/ruang-kelas">Ruang Kelas</a>
+          </nav>
+        )}
       </header>
 
       {error && <p className="assessment-report-error" role="alert">{error}</p>}
@@ -206,6 +238,22 @@ export default function ClassroomAssessmentReportPage() {
       )}
       <section className="assessment-report-panel" aria-label="Filter analisis">
         <div className="assessment-report-filters">
+          {isStudentProfileRoute && (
+            <label>
+              Siswa dengan aktivitas tercatat
+              <select
+                value={profileStudentId}
+                onChange={(event) => setProfileStudentId(event.target.value)}
+              >
+                <option value="">Pilih siswa</option>
+                {students.map((student) => (
+                  <option key={student.id} value={student.id}>
+                    {student.name} · {student.classroomNames}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
             Kelas
             <select value={classFilter} onChange={(event) => setClassFilter(event.target.value)}>
@@ -290,7 +338,11 @@ export default function ClassroomAssessmentReportPage() {
               )}
             </section>
           )}
-          {classes.length === 0 ? (
+          {isStudentProfileRoute && !profileStudentId ? (
+            <p className="assessment-report-empty">
+              Pilih siswa yang memiliki aktivitas tugas atau kuis tercatat untuk meninjau bukti belajarnya.
+            </p>
+          ) : classes.length === 0 ? (
             <p className="assessment-report-empty">Belum ada Ruang Kelas yang ditugaskan ke akun ini.</p>
           ) : visibleRows.length === 0 ? (
             <p className="assessment-report-empty">Belum ada pengumpulan yang cocok dengan filter.</p>

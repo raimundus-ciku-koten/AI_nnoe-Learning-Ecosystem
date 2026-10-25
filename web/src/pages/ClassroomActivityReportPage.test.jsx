@@ -35,5 +35,7 @@ describe('ClassroomActivityReportPage', () => {
     expect(html).toContain('Semua kelas yang diampu');
     expect(html).toContain('Bulanan');
     expect(html).toContain('tidak mengganti rekap resmi sekolah di luar Ruang Kelas');
+    expect(html).toContain('href="#/pelaksanaan/jurnal"');
+    expect(html).toContain('href="#/ruang-kelas"');
   });
 });

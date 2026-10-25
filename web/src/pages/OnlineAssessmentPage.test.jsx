@@ -1,5 +1,6 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const auth = vi.hoisted(() => ({
@@ -20,6 +21,7 @@ vi.mock('../services/onlineAssessments.js', () => ({
   kirimJawabanUjian: vi.fn(),
   muatJawabanUraianGuru: vi.fn(),
   muatHasilUjianGuru: vi.fn(),
+  muatKategoriUjianGuru: vi.fn(),
   muatRingkasanUjianGuru: vi.fn(),
   muatDraftUjian: vi.fn(),
   muatSoalUjianGuru: vi.fn(),
@@ -31,8 +33,12 @@ vi.mock('../services/onlineAssessments.js', () => ({
 
 import OnlineAssessmentPage from './OnlineAssessmentPage.jsx';
 
-function render() {
-  return renderToStaticMarkup(<OnlineAssessmentPage />);
+function render(path = '/asesmen/ujian-online') {
+  return renderToStaticMarkup(
+    <MemoryRouter initialEntries={[path]}>
+      <OnlineAssessmentPage />
+    </MemoryRouter>,
+  );
 }
 
 describe('OnlineAssessmentPage role destination', () => {
@@ -57,6 +63,15 @@ describe('OnlineAssessmentPage role destination', () => {
     auth.activeRole = 'guru_ekstrakurikuler';
 
     expect(render()).toContain('Jadwalkan Ujian Online');
+  });
+
+  it.each([
+    ['/asesmen/diagnostik', 'Asesmen diagnostik'],
+    ['/asesmen/formatif', 'Asesmen formatif'],
+    ['/asesmen/sumatif', 'Asesmen sumatif'],
+  ])('opens a persisted %s workflow', (path, label) => {
+    expect(render(path)).toContain(label);
+    expect(render(path)).toContain('tidak menetapkan diagnosis');
   });
 
   it('renders the student exam destination for the student role', () => {

@@ -95,6 +95,7 @@ vi.mock('../src/pages/ClassroomActivityReportPage.jsx', () => ({ default: probe(
 vi.mock('../src/pages/GoogleWorkspacePage.jsx', () => ({ default: probe('GoogleWorkspace') }));
 vi.mock('../src/pages/AIIntegrationsPage.jsx', () => ({ default: probe('IntegrasiAI') }));
 vi.mock('../src/pages/QuestionBankPage.jsx', () => ({ default: probe('BankSoal') }));
+vi.mock('../src/pages/ClassroomRubricsPage.jsx', () => ({ default: probe('RubrikKelas') }));
 vi.mock('../src/pages/OnlineAssessmentPage.jsx', () => ({ default: probe('UjianOnline') }));
 vi.mock('../src/pages/ClassroomAssessmentReportPage.jsx', () => ({ default: probe('AnalisisPenilaian') }));
 vi.mock('../src/pages/SchoolAssessmentOverviewPage.jsx', () => ({ default: probe('AsesmenAdminSekolah') }));
@@ -199,6 +200,13 @@ describe('authenticated role × route destination rendering', () => {
     expect(markup).toContain('data-route-page="ProgramKegiatan"');
   });
 
+  it('renders the class quick note as the teacher journal workflow', async () => {
+    for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+      const markup = await renderAuthenticatedRoute('/pelaksanaan/catatan-cepat', '', role);
+      expect(markup, role).toContain('data-route-page="Jurnal"');
+    }
+  });
+
   it('renders admin assessment destinations only for the school admin roles', async () => {
     for (const path of [
       '/admin/dashboard/ujian',
@@ -213,6 +221,36 @@ describe('authenticated role × route destination rendering', () => {
       }
       const markup = await renderAuthenticatedRoute(path, '', 'operator');
       expect(markup, `operator: ${path}`).not.toContain('data-route-page="AsesmenAdminSekolah"');
+    }
+  });
+
+  it('renders teacher planning, specialized assessment, and learning profile workflows', async () => {
+    for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+      for (const path of [
+        '/pelaksanaan/realisasi',
+        '/asesmen/diagnostik',
+        '/asesmen/formatif',
+        '/asesmen/sumatif',
+        '/pemantauan/profil-siswa',
+      ]) {
+        const markup = await renderAuthenticatedRoute(path, '', role);
+        const expectedPage = path === '/asesmen/diagnostik' ||
+          path === '/asesmen/formatif' || path === '/asesmen/sumatif'
+          ? 'UjianOnline'
+          : path === '/pemantauan/profil-siswa' ? 'AnalisisPenilaian' : 'Jurnal';
+        expect(markup, `${role}: ${path}`).toContain(`data-route-page="${expectedPage}"`);
+      }
+    }
+  });
+
+  it('renders versioned classroom rubric authoring only for teacher roles', async () => {
+    for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+      const markup = await renderAuthenticatedRoute('/asesmen/rubrik', '', role);
+      expect(markup, role).toContain('data-route-page="RubrikKelas"');
+    }
+    for (const role of ['siswa', 'admin_sekolah', 'superadmin']) {
+      const markup = await renderAuthenticatedRoute('/asesmen/rubrik', '', role);
+      expect(markup, role).not.toContain('data-route-page="RubrikKelas"');
     }
   });
 

@@ -10,8 +10,9 @@ const TEACHER_ROLES = new Set([
   'guru_kokurikuler',
   'guru_ekstrakurikuler',
 ]);
-const COLUMNS = 'id,classroom_id,tenant_id,author_id,lesson_date,topic,objectives,activities,reflection,follow_up,created_at,updated_at';
+const COLUMNS = 'id,classroom_id,tenant_id,author_id,lesson_date,topic,objectives,activities,reflection,follow_up,planning_package_id,planning_document_type,planning_unit,created_at,updated_at';
 const LIMIT_PER_CLASS = 100;
+const PLANNING_TYPES = new Set(['rpe', 'atp', 'prota', 'prosem', 'kktp', 'modul']);
 
 function ensureSupabase() {
   if (!isSupabaseConfigured) {
@@ -55,6 +56,7 @@ function validateInput(input) {
   const activities = typeof input?.activities === 'string' ? input.activities.trim() : '';
   const reflection = typeof input?.reflection === 'string' ? input.reflection.trim() : '';
   const followUp = typeof input?.followUp === 'string' ? input.followUp.trim() : '';
+  const planningRef = input?.planningRef ?? null;
   if (!isRealDate(lessonDate)) {
     throw new TypeError('Tanggal pembelajaran tidak valid.');
   }
@@ -70,7 +72,33 @@ function validateInput(input) {
   if (reflection.length > 4000 || followUp.length > 4000) {
     throw new TypeError('Refleksi dan tindak lanjut maksimal 4.000 karakter.');
   }
-  return { lessonDate, topic, objectives, activities, reflection, followUp };
+  if (planningRef !== null && (
+    typeof planningRef !== 'object' ||
+    typeof planningRef.packageId !== 'string' ||
+    planningRef.packageId.trim().length < 1 ||
+    planningRef.packageId.trim().length > 120 ||
+    !PLANNING_TYPES.has(planningRef.documentType) ||
+    (planningRef.documentType === 'modul'
+      ? typeof planningRef.unit !== 'string' ||
+        planningRef.unit.trim().length < 1 ||
+        planningRef.unit.trim().length > 80
+      : planningRef.unit !== null && planningRef.unit !== undefined && planningRef.unit !== '')
+  )) {
+    throw new TypeError('Referensi dokumen perencanaan tidak valid.');
+  }
+  return {
+    lessonDate,
+    topic,
+    objectives,
+    activities,
+    reflection,
+    followUp,
+    planningRef: planningRef ? {
+      packageId: planningRef.packageId.trim(),
+      documentType: planningRef.documentType,
+      unit: planningRef.documentType === 'modul' ? planningRef.unit.trim() : null,
+    } : null,
+  };
 }
 
 function fromRow(row, tenantId, classroomId) {
@@ -84,6 +112,12 @@ function fromRow(row, tenantId, classroomId) {
       typeof row.activities !== 'string' ||
       typeof row.reflection !== 'string' ||
       typeof row.follow_up !== 'string' ||
+      (row.planning_package_id !== null && typeof row.planning_package_id !== 'string') ||
+      (row.planning_document_type !== null && !PLANNING_TYPES.has(row.planning_document_type)) ||
+      (row.planning_unit !== null && typeof row.planning_unit !== 'string') ||
+      (row.planning_package_id === null) !== (row.planning_document_type === null) ||
+      (row.planning_package_id === null) !== (row.planning_unit === null &&
+        row.planning_document_type !== 'modul') ||
       typeof row.created_at !== 'string' ||
       typeof row.updated_at !== 'string' ||
       !Number.isFinite(Date.parse(row.created_at)) ||
@@ -101,6 +135,11 @@ function fromRow(row, tenantId, classroomId) {
     activities: row.activities,
     reflection: row.reflection,
     followUp: row.follow_up,
+    planningRef: row.planning_package_id ? {
+      packageId: row.planning_package_id,
+      documentType: row.planning_document_type,
+      unit: row.planning_unit,
+    } : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -146,6 +185,9 @@ export async function createClassroomJournal(context, classroomId, input) {
       activities: value.activities,
       reflection: value.reflection,
       follow_up: value.followUp,
+      planning_package_id: value.planningRef?.packageId ?? null,
+      planning_document_type: value.planningRef?.documentType ?? null,
+      planning_unit: value.planningRef?.unit ?? null,
     })
     .select(COLUMNS)
     .single();
@@ -169,6 +211,9 @@ export async function updateClassroomJournal(context, classroomId, journalId, in
       activities: value.activities,
       reflection: value.reflection,
       follow_up: value.followUp,
+      planning_package_id: value.planningRef?.packageId ?? null,
+      planning_document_type: value.planningRef?.documentType ?? null,
+      planning_unit: value.planningRef?.unit ?? null,
     })
     .eq('id', journalId)
     .eq('tenant_id', tenantId)

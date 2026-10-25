@@ -226,6 +226,35 @@ function dariBarisSesiPresensi(row) {
   };
 }
 
+function dariBarisJadwal(row, userId = '') {
+  if (!row || typeof row.id !== 'string' ||
+      typeof row.classroom_id !== 'string' ||
+      typeof row.tenant_id !== 'string' ||
+      typeof row.teacher_id !== 'string' ||
+      !Number.isInteger(row.weekday) || row.weekday < 1 || row.weekday > 7 ||
+      typeof row.starts_at !== 'string' || !/^\d{2}:\d{2}(:\d{2})?$/.test(row.starts_at) ||
+      typeof row.ends_at !== 'string' || !/^\d{2}:\d{2}(:\d{2})?$/.test(row.ends_at) ||
+      row.starts_at.slice(0, 5) >= row.ends_at.slice(0, 5) ||
+      typeof row.topic !== 'string' || typeof row.location !== 'string' ||
+      typeof row.created_at !== 'string' || !Number.isFinite(Date.parse(row.created_at)) ||
+      typeof row.updated_at !== 'string' || !Number.isFinite(Date.parse(row.updated_at))) {
+    throw new Error('Supabase mengembalikan data jadwal kelas yang tidak valid.');
+  }
+  return {
+    id: row.id,
+    classroomId: row.classroom_id,
+    tenantId: row.tenant_id,
+    dapatDikelola: Boolean(userId && row.teacher_id === userId),
+    hari: row.weekday,
+    mulai: row.starts_at.slice(0, 5),
+    selesai: row.ends_at.slice(0, 5),
+    topik: row.topic,
+    tempat: row.location,
+    dibuat: row.created_at,
+    diperbarui: row.updated_at,
+  };
+}
+
 function dariBarisPresensi(row) {
   if (!row || typeof row.session_id !== 'string' ||
       typeof row.student_id !== 'string' ||
@@ -571,6 +600,96 @@ export async function muatSesiPresensiKelas(classroomId, tenantId) {
   if (error) throw error;
   if (!Array.isArray(data)) throw new Error('Supabase tidak mengembalikan sesi presensi.');
   return data.map(dariBarisSesiPresensi);
+}
+
+export async function muatJadwalRuangKelas(classroomId, tenantId, userId = '') {
+  validasiTenantId(tenantId);
+  if (typeof classroomId !== 'string' || !classroomId.trim()) {
+    throw new TypeError('Pilih ruang kelas yang valid untuk memuat jadwal.');
+  }
+  if (typeof userId !== 'string') throw new TypeError('Identitas pengguna jadwal tidak valid.');
+  const { data, error } = await supabase
+    .from('learning_classroom_schedules')
+    .select('id,classroom_id,tenant_id,teacher_id,weekday,starts_at,ends_at,topic,location,created_at,updated_at')
+    .eq('classroom_id', classroomId)
+    .eq('tenant_id', tenantId)
+    .order('weekday')
+    .order('starts_at')
+    .limit(200);
+  if (error) throw error;
+  if (!Array.isArray(data)) throw new Error('Supabase tidak mengembalikan daftar jadwal kelas.');
+  return data.map((row) => dariBarisJadwal(row, userId));
+}
+
+function dataJadwalBersih({ hari, mulai, selesai, topik, tempat = '' }) {
+  if (!Number.isInteger(Number(hari)) || Number(hari) < 1 || Number(hari) > 7 ||
+      typeof mulai !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(mulai) ||
+      typeof selesai !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(selesai) ||
+      mulai >= selesai || !validasiTeks(topik, 120) ||
+      typeof tempat !== 'string' || tempat.trim().length > 120 ||
+      /[\u0000-\u001f\u007f]/.test(tempat)) {
+    throw new TypeError('Hari, waktu, topik, atau lokasi jadwal tidak valid.');
+  }
+  return {
+    weekday: Number(hari),
+    starts_at: mulai,
+    ends_at: selesai,
+    topic: topik.trim(),
+    location: tempat.trim(),
+  };
+}
+
+export async function buatJadwalRuangKelas({
+  classroomId, tenantId, userId, hari, mulai, selesai, topik, tempat = '',
+}) {
+  validasiTenantId(tenantId);
+  if (typeof classroomId !== 'string' || !classroomId.trim() ||
+      typeof userId !== 'string' || !userId.trim()) {
+    throw new TypeError('Ruang kelas atau identitas guru untuk jadwal tidak valid.');
+  }
+  const schedule = dataJadwalBersih({ hari, mulai, selesai, topik, tempat });
+  const { data, error } = await supabase
+    .from('learning_classroom_schedules')
+    .insert({
+      classroom_id: classroomId,
+      tenant_id: tenantId,
+      ...schedule,
+    })
+    .select('id,classroom_id,tenant_id,teacher_id,weekday,starts_at,ends_at,topic,location,created_at,updated_at')
+    .single();
+  if (error) throw error;
+  return dariBarisJadwal(data, userId);
+}
+
+export async function ubahJadwalRuangKelas(scheduleId, updates, userId) {
+  if (typeof scheduleId !== 'string' || !scheduleId.trim() ||
+      typeof userId !== 'string' || !userId.trim()) {
+    throw new TypeError('Jadwal atau identitas guru untuk pembaruan tidak valid.');
+  }
+  const schedule = dataJadwalBersih(updates);
+  const { data, error } = await supabase
+    .from('learning_classroom_schedules')
+    .update(schedule)
+    .eq('id', scheduleId)
+    .select('id,classroom_id,tenant_id,teacher_id,weekday,starts_at,ends_at,topic,location,created_at,updated_at')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Jadwal tidak ditemukan atau tidak dapat diubah oleh akun ini.');
+  return dariBarisJadwal(data, userId);
+}
+
+export async function hapusJadwalRuangKelas(scheduleId) {
+  if (typeof scheduleId !== 'string' || !scheduleId.trim()) {
+    throw new TypeError('Pilih jadwal yang valid untuk dihapus.');
+  }
+  const { data, error } = await supabase
+    .from('learning_classroom_schedules')
+    .delete()
+    .eq('id', scheduleId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Jadwal tidak ditemukan atau tidak dapat dihapus oleh akun ini.');
 }
 
 export async function muatRosterPresensiKelas(classroomId) {

@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { validateStagingBackupTarget } from './validateStagingBackupTarget.mjs';
 
+const EXPECTED_FEATURE_RELATION_COUNT = 61;
+
 export function getExpectedRelationNames(auditSql) {
   const list = auditSql.match(
     /from unnest\(array\[([\s\S]*?)\]\) as feature\(name\)/i,
@@ -13,8 +15,11 @@ export function getExpectedRelationNames(auditSql) {
   }
 
   const names = [...list.matchAll(/'([a-z0-9_]+)'/gi)].map((match) => match[1]);
-  if (names.length === 0 || new Set(names).size !== names.length) {
-    throw new Error('Hosted schema audit relation inventory is empty or contains duplicates.');
+  if (
+    names.length !== EXPECTED_FEATURE_RELATION_COUNT
+    || new Set(names).size !== names.length
+  ) {
+    throw new Error('Hosted schema audit must declare exactly 61 unique feature relations.');
   }
   return names;
 }
@@ -143,6 +148,9 @@ export function renderSchemaAuditSummary(
   if (!relations || typeof relations !== 'object' || Array.isArray(relations)) {
     throw new Error('Staging schema audit returned an invalid relations report.');
   }
+  if (Object.keys(relations).length !== EXPECTED_FEATURE_RELATION_COUNT) {
+    throw new Error('Staging schema audit returned an incomplete feature relation inventory.');
+  }
   if (!Array.isArray(report.relation_details)) {
     throw new Error('Staging schema audit returned an invalid relation metadata report.');
   }
@@ -166,9 +174,24 @@ export function renderSchemaAuditSummary(
   const appliedVersions = new Set(appliedMigrationVersions);
   const unappliedVersions = [...expectedVersions].filter((version) => !appliedVersions.has(version));
   const unknownVersions = [...appliedVersions].filter((version) => !expectedVersions.has(version));
+  const readinessBlockers = [];
+  if (missing.length > 0) {
+    readinessBlockers.push(`${missing.length} expected feature relations missing`);
+  }
+  if (report.migration_history_exists !== true) {
+    readinessBlockers.push('hosted migration ledger missing');
+  } else {
+    if (unappliedVersions.length > 0) {
+      readinessBlockers.push(`${unappliedVersions.length} repository migrations not recorded`);
+    }
+    if (unknownVersions.length > 0) {
+      readinessBlockers.push(`${unknownVersions.length} unknown hosted migration versions`);
+    }
+  }
   const lines = [
     '## Staging schema inventory (read-only)',
     '',
+    `- Relation/history inventory readiness: ${readinessBlockers.length === 0 ? 'READY' : `BLOCKED (${readinessBlockers.join('; ')})`}`,
     `- Expected feature relations present: ${presentCount}/${Object.keys(relations).length}`,
     `- Supabase migration history table: ${report.migration_history_exists === true ? 'found' : 'not found'}`,
   ];

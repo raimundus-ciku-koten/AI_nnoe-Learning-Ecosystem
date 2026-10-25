@@ -20,6 +20,7 @@ vi.mock('../services/learningClassrooms.js', () => ({
   muatDaftarRuangKelas: vi.fn(),
   muatCatatanPresensiKelas: vi.fn(),
   muatHasilKuisSiswa: vi.fn(),
+  muatJadwalRuangKelas: vi.fn(),
   muatKuisRuangKelas: vi.fn(),
   muatMateriRuangKelas: vi.fn(),
   muatPengumpulanTugas: vi.fn(),
@@ -32,9 +33,11 @@ vi.mock('../services/onlineAssessments.js', () => ({
 
 import StudentLearningPage, {
   hasilKuisMilikSiswa,
+  JadwalPelajaranSiswa,
   riwayatPresensiSiswa,
   StudentGrades,
   tautanKeKelas,
+  urutkanJadwalSiswa,
 } from './StudentLearningPage.jsx';
 
 function render(path) {
@@ -119,10 +122,47 @@ describe('StudentLearningPage', () => {
   });
 
   it('renders the live student assignments and quiz destination', () => {
-    expect(render('/siswa/jadwal')).toContain('Jadwal dan Tugas');
-    expect(render('/siswa/jadwal')).toContain('Tugas');
-    expect(render('/siswa/jadwal')).toContain('kuis');
-    expect(render('/siswa/jadwal')).toContain('Memuat ruang belajar');
+    const html = render('/siswa/jadwal');
+    expect(html).toContain('Jadwal dan Tugas');
+    expect(html).toContain('Tugas');
+    expect(html).toContain('kuis');
+    expect(html).toContain('Memuat ruang belajar');
+    expect(html).toContain('href="#/siswa/materi"');
+    expect(html).toContain('href="#/siswa/nilai"');
+    expect(html).toContain('href="#/siswa/ujian"');
+    expect(html).toContain('href="#/siswa/rapor"');
+    expect(html).toContain('aria-current="page"');
+  });
+
+  it('sorts and renders only the published class schedule fields', () => {
+    const schedules = [
+      {
+        id: 'schedule-2',
+        hari: 2,
+        mulai: '10:00',
+        selesai: '11:00',
+        namaKelas: 'IPA',
+        topik: 'Biologi',
+        tempat: '',
+      },
+      {
+        id: 'schedule-1',
+        hari: 1,
+        mulai: '08:00',
+        selesai: '09:00',
+        namaKelas: 'Matematika',
+        topik: 'Aljabar',
+        tempat: 'Ruang 2',
+      },
+    ];
+    expect(urutkanJadwalSiswa(schedules).map(({ id }) => id))
+      .toEqual(['schedule-1', 'schedule-2']);
+
+    const html = renderToStaticMarkup(<JadwalPelajaranSiswa schedules={schedules} />);
+    expect(html).toContain('Senin · 08:00–09:00');
+    expect(html).toContain('Matematika');
+    expect(html).toContain('Aljabar · Ruang 2');
+    expect(html).toContain('Selasa · 10:00–11:00');
   });
 
   it('renders the live class-material destination', () => {

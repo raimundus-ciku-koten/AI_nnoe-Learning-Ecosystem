@@ -60,6 +60,11 @@ describe('ClassroomAssessmentReportPage', () => {
       expect(monitoring).toContain('<h1>Pemantauan Perkembangan Belajar</h1>');
       expect(monitoring).toContain('status penilaiannya');
       expect(monitoring).toContain('bukan profil siswa');
+
+      const profile = render('/pemantauan/profil-siswa');
+      expect(profile).toContain('<h1>Profil Belajar Siswa</h1>');
+      expect(profile).toContain('Siswa dengan aktivitas tercatat');
+      expect(profile).toContain('Tidak ada diagnosis, catatan konseling, intervensi');
     },
   );
 });

@@ -105,6 +105,12 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   const restore = workflow.match(
     /      - name: Decrypt and restore uploaded artifact to disposable database([\s\S]*?)(?=      - name:|$)/,
   )?.[1];
+  const readiness = workflow.match(
+    /      - name: Require expected Staging relation and ledger inventory([\s\S]*?)(?=      - name:|$)/,
+  )?.[1];
+  const cleanup = workflow.match(
+    /      - name: Remove temporary database files([\s\S]*?)(?=      - name:|$)/,
+  )?.[1];
 
   assert.doesNotMatch(workflow, /^    env:/m);
   assert.doesNotMatch(workflow, /^  schedule:/m);
@@ -114,6 +120,8 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.ok(upload);
   assert.ok(download);
   assert.ok(restore);
+  assert.ok(readiness);
+  assert.ok(cleanup);
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(
     validate,
@@ -126,7 +134,10 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.match(targetValidator, /sessionPoolerStaging/);
   assert.match(workflow, /Install PostgreSQL 17 client/);
   assert.match(workflow, /Audit Staging schema metadata \(read-only\)/);
-  assert.match(workflow, /node scripts\/auditStagingSchema\.mjs >> "\$GITHUB_STEP_SUMMARY"/);
+  assert.match(
+    workflow,
+    /node scripts\/auditStagingSchema\.mjs\s*\\\r?\n\s*\| tee "\$\{RUNNER_TEMP\}\/staging-schema-audit\.md"\s*\\\r?\n\s*>> "\$GITHUB_STEP_SUMMARY"/,
+  );
   assert.match(workflow, /postgresql-client-17/);
   assert.match(
     workflow,
@@ -171,4 +182,21 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.match(restore, /Encrypted artifact restore completed without any user tables/);
   assert.match(restore, /BACKUP_ENCRYPTION_KEY:/);
   assert.doesNotMatch(restore, /SUPABASE_DB_URL:/);
+  assert.match(
+    workflow,
+    /node scripts\/auditStagingSchema\.mjs\s*\\\r?\n\s*\| tee "\$\{RUNNER_TEMP\}\/staging-schema-audit\.md"/,
+  );
+  assert.match(readiness, /Relation\/history inventory readiness: READY/);
+  assert.match(readiness, /Definition-level parity still requires review/);
+  assert.match(readiness, /no Staging schema changes were made/);
+  assert.match(readiness, /exit 1/);
+  assert.ok(
+    workflow.indexOf('- name: Decrypt and restore uploaded artifact to disposable database') <
+      workflow.indexOf('- name: Require expected Staging relation and ledger inventory'),
+  );
+  assert.ok(
+    workflow.indexOf('- name: Validate migrations and expected feature schema on a clean disposable Supabase database') <
+      workflow.indexOf('- name: Require expected Staging relation and ledger inventory'),
+  );
+  assert.match(cleanup, /staging-schema-audit\.md/);
 });

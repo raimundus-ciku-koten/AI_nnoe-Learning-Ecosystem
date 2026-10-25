@@ -71,6 +71,19 @@
   gap: .5rem;
   margin-top: .8rem;
 }
+.classroom-activity-hero .classroom-activity-actions { justify-content: flex-start; }
+.classroom-activity-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.35rem;
+  padding: .48rem .78rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .58rem;
+  color: #334155;
+  font-size: .8rem;
+  font-weight: 750;
+  text-decoration: none;
+}
 .classroom-activity-report button {
   min-height: 2.35rem;
   padding: .48rem .78rem;

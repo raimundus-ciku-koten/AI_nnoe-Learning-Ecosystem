@@ -13,10 +13,13 @@ import {
   buatSesiPresensiKelas,
   buatMateriRuangKelas,
   buatRuangKelas,
+  buatJadwalRuangKelas,
+  hapusJadwalRuangKelas,
   kirimJawabanTugas,
   kirimJawabanKuis,
   muatPengumpulanTugas,
   muatDaftarRuangKelas,
+  muatJadwalRuangKelas,
   muatKandidatAnggotaRuangKelas,
   muatMateriRuangKelas,
   muatKuisRuangKelas,
@@ -31,6 +34,7 @@ import {
   muatTenantRuangKelas,
   simpanPresensiKelas,
   ringkasNilaiKuis,
+  ubahJadwalRuangKelas,
 } from './learningClassrooms.js';
 
 describe('learning classrooms service', () => {
@@ -601,5 +605,175 @@ describe('learning classrooms service', () => {
       { quizId: 'quiz-1', id: 'result-1', nilai: 80, benar: 4, jumlahSoal: 5 },
     ]);
     expect(builder.in).toHaveBeenCalledWith('quiz_id', ['quiz-1']);
+  });
+
+  it('loads published class schedules without exposing teacher identifiers', async () => {
+    const builder = {
+      select: vi.fn(() => builder),
+      eq: vi.fn(() => builder),
+      order: vi.fn(() => builder),
+      limit: vi.fn(async () => ({
+        data: [{
+          id: 'schedule-1',
+          classroom_id: 'room-1',
+          tenant_id: 'school-1',
+          teacher_id: 'teacher-1',
+          weekday: 1,
+          starts_at: '08:00:00',
+          ends_at: '09:30:00',
+          topic: 'Matematika',
+          location: 'Ruang 1',
+          created_at: '2026-10-25T10:00:00.000Z',
+          updated_at: '2026-10-25T10:00:00.000Z',
+        }],
+        error: null,
+      })),
+    };
+    supabase.from.mockReturnValue(builder);
+
+    await expect(muatJadwalRuangKelas('room-1', 'school-1', 'teacher-1')).resolves.toEqual([{
+      id: 'schedule-1',
+      classroomId: 'room-1',
+      tenantId: 'school-1',
+      dapatDikelola: true,
+      hari: 1,
+      mulai: '08:00',
+      selesai: '09:30',
+      topik: 'Matematika',
+      tempat: 'Ruang 1',
+      dibuat: '2026-10-25T10:00:00.000Z',
+      diperbarui: '2026-10-25T10:00:00.000Z',
+    }]);
+    expect(supabase.from).toHaveBeenCalledWith('learning_classroom_schedules');
+    expect(builder.eq).toHaveBeenNthCalledWith(1, 'classroom_id', 'room-1');
+    expect(builder.eq).toHaveBeenNthCalledWith(2, 'tenant_id', 'school-1');
+    expect(builder.select.mock.calls[0][0]).toContain('teacher_id');
+  });
+
+  it('publishes validated class schedule entries and rejects invalid times', async () => {
+    const builder = {
+      insert: vi.fn(() => builder),
+      select: vi.fn(() => builder),
+      single: vi.fn(async () => ({
+        data: {
+          id: 'schedule-2',
+          classroom_id: 'room-1',
+          tenant_id: 'school-1',
+          teacher_id: 'teacher-1',
+          weekday: 3,
+          starts_at: '10:00:00',
+          ends_at: '11:00:00',
+          topic: 'IPA',
+          location: '',
+          created_at: '2026-10-25T10:00:00.000Z',
+          updated_at: '2026-10-25T10:00:00.000Z',
+        },
+        error: null,
+      })),
+    };
+    supabase.from.mockReturnValue(builder);
+
+    await expect(buatJadwalRuangKelas({
+      classroomId: 'room-1',
+      tenantId: 'school-1',
+      userId: 'teacher-1',
+      hari: 3,
+      mulai: '10:00',
+      selesai: '11:00',
+      topik: ' IPA ',
+    })).resolves.toMatchObject({ hari: 3, mulai: '10:00', topik: 'IPA' });
+    expect(builder.insert).toHaveBeenCalledWith({
+      classroom_id: 'room-1',
+      tenant_id: 'school-1',
+      weekday: 3,
+      starts_at: '10:00',
+      ends_at: '11:00',
+      topic: 'IPA',
+      location: '',
+    });
+
+    await expect(buatJadwalRuangKelas({
+      classroomId: 'room-1',
+      tenantId: 'school-1',
+      userId: 'teacher-1',
+      hari: 3,
+      mulai: '11:00',
+      selesai: '10:00',
+      topik: 'IPA',
+    })).rejects.toThrow('Hari, waktu, topik, atau lokasi jadwal tidak valid');
+    expect(builder.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates a schedule only when the RLS-protected entry remains visible', async () => {
+    const builder = {
+      update: vi.fn(() => builder),
+      eq: vi.fn(() => builder),
+      select: vi.fn(() => builder),
+      maybeSingle: vi.fn()
+        .mockResolvedValueOnce({
+          data: {
+            id: 'schedule-1',
+            classroom_id: 'room-1',
+            tenant_id: 'school-1',
+            teacher_id: 'teacher-1',
+            weekday: 4,
+            starts_at: '09:00:00',
+            ends_at: '10:00:00',
+            topic: 'Fisika',
+            location: 'Lab',
+            created_at: '2026-10-25T10:00:00.000Z',
+            updated_at: '2026-10-26T10:00:00.000Z',
+          },
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: null, error: null }),
+    };
+    supabase.from.mockReturnValue(builder);
+
+    await expect(ubahJadwalRuangKelas('schedule-1', {
+      hari: 4,
+      mulai: '09:00',
+      selesai: '10:00',
+      topik: 'Fisika',
+      tempat: 'Lab',
+    }, 'teacher-1')).resolves.toMatchObject({
+      id: 'schedule-1',
+      hari: 4,
+      topik: 'Fisika',
+      dapatDikelola: true,
+    });
+    expect(builder.update).toHaveBeenCalledWith({
+      weekday: 4,
+      starts_at: '09:00',
+      ends_at: '10:00',
+      topic: 'Fisika',
+      location: 'Lab',
+    });
+    await expect(ubahJadwalRuangKelas('schedule-2', {
+      hari: 4,
+      mulai: '09:00',
+      selesai: '10:00',
+      topik: 'Fisika',
+    }, 'teacher-1')).rejects.toThrow('Jadwal tidak ditemukan atau tidak dapat diubah');
+  });
+
+  it('confirms schedule deletion and reports entries not visible to the current user', async () => {
+    const builder = {
+      delete: vi.fn(() => builder),
+      eq: vi.fn(() => builder),
+      select: vi.fn(() => builder),
+      maybeSingle: vi.fn()
+        .mockResolvedValueOnce({ data: { id: 'schedule-1' }, error: null })
+        .mockResolvedValueOnce({ data: null, error: null }),
+    };
+    supabase.from.mockReturnValue(builder);
+
+    await expect(hapusJadwalRuangKelas('schedule-1')).resolves.toBeUndefined();
+    await expect(hapusJadwalRuangKelas('schedule-2'))
+      .rejects.toThrow('Jadwal tidak ditemukan atau tidak dapat dihapus');
+    await expect(hapusJadwalRuangKelas(''))
+      .rejects.toThrow('Pilih jadwal yang valid');
+    expect(builder.eq).toHaveBeenNthCalledWith(1, 'id', 'schedule-1');
+    expect(builder.eq).toHaveBeenNthCalledWith(2, 'id', 'schedule-2');
   });
 });

@@ -71,9 +71,27 @@
 }
 .assessment-report-actions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: .5rem;
   margin-top: .8rem;
+}
+.assessment-report-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.35rem;
+  padding: .48rem .78rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .58rem;
+  color: #334155;
+  font-size: .8rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+.assessment-report-actions a:focus-visible {
+  outline: 3px solid rgb(20 184 166 / .3);
+  outline-offset: 2px;
 }
 .assessment-report button {
   min-height: 2.35rem;

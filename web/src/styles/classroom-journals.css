@@ -71,6 +71,26 @@
   font-size: .8rem;
   font-weight: 750;
 }
+.ale-journals-form details {
+  display: grid;
+  gap: .65rem;
+  padding: .75rem;
+  border: 1px solid #e1e8f0;
+  border-radius: .7rem;
+  background: #f8fafc;
+}
+.ale-journals-form details summary {
+  color: #334155;
+  font-size: .82rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+.ale-journals-form details[open] summary { margin-bottom: .2rem; }
+.ale-journals-form details label {
+  color: #42516a;
+  font-size: .8rem;
+  font-weight: 750;
+}
 .ale-journals-form input,
 .ale-journals-form textarea,
 .ale-journals-form select,
@@ -97,6 +117,18 @@
   display: flex;
   flex-wrap: wrap;
   gap: .5rem;
+}
+.ale-journals-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.35rem;
+  padding: .48rem .78rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .58rem;
+  color: #334155;
+  font-size: .8rem;
+  font-weight: 750;
+  text-decoration: none;
 }
 .ale-journals button {
   min-height: 2.35rem;

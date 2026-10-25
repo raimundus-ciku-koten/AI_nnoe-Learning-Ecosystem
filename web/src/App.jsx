@@ -132,6 +132,7 @@ const HalamanLaporanAktivitasKelas = lazy(() => import('./pages/ClassroomActivit
 const HalamanGoogleWorkspace = lazy(() => import('./pages/GoogleWorkspacePage.jsx'));
 const HalamanIntegrasiAI = lazy(() => import('./pages/AIIntegrationsPage.jsx'));
 const HalamanBankSoal = lazy(() => import('./pages/QuestionBankPage.jsx'));
+const HalamanRubrikKelas = lazy(() => import('./pages/ClassroomRubricsPage.jsx'));
 const HalamanUjianOnline = lazy(() => import('./pages/OnlineAssessmentPage.jsx'));
 const HalamanAnalisisPenilaian = lazy(() => import('./pages/ClassroomAssessmentReportPage.jsx'));
 const HalamanAsesmenAdmin = lazy(() => import('./pages/SchoolAssessmentOverviewPage.jsx'));
@@ -335,6 +336,8 @@ export function RouteWrapper() {
         <Route path="/pengumuman" element={<PrivateShell><HalamanPengumumanSekolah /></PrivateShell>} />
         <Route path="/pelaksanaan/presensi" element={<PrivateShell><HalamanPresensi /></PrivateShell>} />
         <Route path="/pelaksanaan/jurnal" element={<PrivateShell><HalamanJurnalMengajar /></PrivateShell>} />
+        <Route path="/pelaksanaan/catatan-cepat" element={<PrivateShell><HalamanJurnalMengajar quickMode /></PrivateShell>} />
+        <Route path="/pelaksanaan/realisasi" element={<PrivateShell><HalamanJurnalMengajar realizationMode /></PrivateShell>} />
         <Route path="/laporan/harian-bulanan" element={<PrivateShell><HalamanLaporanAktivitasKelas /></PrivateShell>} />
         <Route path="/program-kegiatan" element={<PrivateShell><HalamanProgramKegiatan /></PrivateShell>} />
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
@@ -342,10 +345,15 @@ export function RouteWrapper() {
         <Route path="/perangkat/modul-siswa" element={<Navigate to="/perencanaan?jenis=modul" replace />} />
         <Route path="/perangkat/cover" element={<PrivateShell><HalamanSubMenu /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
+        <Route path="/asesmen/rubrik" element={<PrivateShell><HalamanRubrikKelas /></PrivateShell>} />
         <Route path="/asesmen/generator-ai" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
+        <Route path="/asesmen/diagnostik" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
+        <Route path="/asesmen/formatif" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
+        <Route path="/asesmen/sumatif" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/asesmen/penilaian-otomatis" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/asesmen/analisis" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
+        <Route path="/pemantauan/profil-siswa" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
         <Route path="/admin/dashboard/ujian" element={<PrivateShell><HalamanAsesmenAdmin /></PrivateShell>} />
         <Route path="/admin/asesmen/paket" element={<PrivateShell><HalamanAsesmenAdmin /></PrivateShell>} />
         <Route path="/admin/asesmen/jadwal" element={<PrivateShell><HalamanAsesmenAdmin /></PrivateShell>} />

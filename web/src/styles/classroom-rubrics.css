@@ -1,0 +1,118 @@
+.classroom-rubrics-page {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.classroom-rubrics-header { margin-bottom: 1.5rem; }
+.classroom-rubrics-header h1 { margin: .25rem 0; }
+.classroom-rubrics-header > p:last-child { max-width: 75ch; color: var(--muted, #596579); }
+.classroom-rubrics-kicker { margin: 0 0 .35rem; color: var(--brand-700, #176b67); font-weight: 750; }
+.classroom-rubrics-editor, .classroom-rubric-card {
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid #d9e1e7;
+  border-radius: .9rem;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(20 42 60 / 5%);
+}
+.classroom-rubrics-editor form { display: grid; gap: 1.25rem; }
+.classroom-rubrics-section-heading, .classroom-rubric-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.classroom-rubrics-section-heading { margin-bottom: 1rem; }
+.classroom-rubrics-section-heading h2, .classroom-rubric-card h3 { margin: 0; }
+.classroom-rubrics-note, .classroom-rubrics-disclaimer {
+  padding: .8rem 1rem;
+  border-radius: .65rem;
+  background: #f0f6f7;
+  color: #344c59;
+}
+.classroom-rubrics-note { margin: 0 0 1.2rem; }
+.classroom-rubrics-disclaimer { margin-top: 1.25rem; }
+.classroom-rubrics-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .9rem;
+}
+.classroom-rubrics-page label { display: grid; gap: .4rem; font-weight: 650; }
+.classroom-rubrics-page input, .classroom-rubrics-page textarea, .classroom-rubrics-page select {
+  width: 100%;
+  min-height: 2.7rem;
+  padding: .65rem .75rem;
+  border: 1px solid #cbd5df;
+  border-radius: .6rem;
+  background: #fff;
+  color: #17212b;
+  font: inherit;
+}
+.classroom-rubrics-page textarea { resize: vertical; }
+.classroom-rubrics-wide { grid-column: 1 / -1; }
+.classroom-rubric-criteria-list { display: grid; gap: 1rem; }
+.classroom-rubric-criterion {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid #d4dde5;
+  border-radius: .75rem;
+}
+.classroom-rubric-criterion legend { padding: 0 .35rem; font-weight: 750; }
+.classroom-rubric-levels {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .75rem;
+  margin-top: .9rem;
+}
+.classroom-rubric-levels label { font-size: .9rem; }
+.classroom-rubrics-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+.rubric-button {
+  min-height: 2.65rem;
+  padding: .55rem .9rem;
+  border: 1px solid var(--brand-700, #176b67);
+  border-radius: .6rem;
+  background: var(--brand-700, #176b67);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.rubric-button.is-secondary { background: white; color: #234; border-color: #9aa8b7; }
+.rubric-button:disabled { opacity: .6; cursor: wait; }
+.classroom-rubrics-message, .classroom-rubrics-empty { padding: .85rem 1rem; border-radius: .65rem; }
+.classroom-rubrics-message.is-error { color: #7b2020; background: #fff0f0; }
+.classroom-rubrics-message.is-success { color: #155b3a; background: #eaf8f0; }
+.classroom-rubrics-list { margin-top: 2rem; }
+.classroom-rubric-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.classroom-rubric-card { min-width: 0; }
+.classroom-rubric-card-heading { align-items: flex-start; margin-bottom: .9rem; }
+.classroom-rubric-card h3 { overflow-wrap: anywhere; }
+.classroom-rubric-version {
+  flex: 0 0 auto;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  background: #e9f5f3;
+  color: #155e56;
+  font-size: .85rem;
+  font-weight: 750;
+}
+.classroom-rubric-meta { color: #596579; font-size: .9rem; }
+.classroom-rubric-criteria-preview { display: grid; gap: .55rem; padding-left: 1.25rem; }
+.classroom-rubric-criteria-preview li { padding-left: .2rem; }
+.classroom-rubric-criteria-preview li span { display: block; margin-top: .15rem; color: #596579; }
+.classroom-rubric-history { margin: 1rem 0; }
+.classroom-rubric-history summary { color: #176b67; font-weight: 700; cursor: pointer; }
+.classroom-rubric-history > ol { display: grid; gap: .8rem; padding-left: 1.4rem; }
+.classroom-rubric-history li { padding-left: .2rem; }
+.classroom-rubric-history ul { display: grid; gap: .4rem; }
+.classroom-rubric-history li span { display: block; color: #596579; }
+
+@media (max-width: 760px) {
+  .classroom-rubrics-fields, .classroom-rubric-cards { grid-template-columns: 1fr; }
+  .classroom-rubric-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 440px) {
+  .classroom-rubrics-section-heading, .classroom-rubric-card-heading { align-items: flex-start; flex-direction: column; }
+  .classroom-rubric-levels { grid-template-columns: 1fr; }
+}

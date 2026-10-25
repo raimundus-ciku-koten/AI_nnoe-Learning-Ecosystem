@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   buatRuangKelas,
+  buatJadwalRuangKelas,
+  ubahJadwalRuangKelas,
   buatMateriRuangKelas,
   buatKuisRuangKelas,
   buatTugasRuangKelas,
@@ -17,7 +19,9 @@ import {
   muatSesiPresensiKelas,
   simpanPresensiKelas,
   muatDaftarRuangKelas,
+  hapusJadwalRuangKelas,
   muatKandidatAnggotaRuangKelas,
+  muatJadwalRuangKelas,
   muatMateriRuangKelas,
   muatKuisRuangKelas,
   muatSoalKuisUntukSiswa,
@@ -30,6 +34,9 @@ import '../styles/learning-classrooms.css';
 
 const PERAN_PENGELOLA = new Set(['admin', 'admin_sekolah', 'operator', 'superadmin']);
 const STATUS_PRESENSI = ['hadir', 'izin', 'sakit', 'alpa'];
+const HARI_MINGGU = [
+  'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu',
+];
 
 export function bolehKelolaAktivitasKelas(role) {
   return PERAN_GURU_KELAS.includes(role);
@@ -80,6 +87,12 @@ export default function RuangKelasPage() {
   const [tenantDipilih, setTenantDipilih] = useState('');
   const [rooms, setRooms] = useState([]);
   const [members, setMembers] = useState([]);
+  const [schedulesByRoom, setSchedulesByRoom] = useState({});
+  const [schedulesLoading, setSchedulesLoading] = useState({});
+  const [schedulesError, setSchedulesError] = useState({});
+  const [scheduleDrafts, setScheduleDrafts] = useState({});
+  const [scheduleEditing, setScheduleEditing] = useState({});
+  const [scheduleSaving, setScheduleSaving] = useState({});
   const [materialsByRoom, setMaterialsByRoom] = useState({});
   const [materialsLoading, setMaterialsLoading] = useState({});
   const [materialsSaving, setMaterialsSaving] = useState({});
@@ -116,6 +129,8 @@ export default function RuangKelasPage() {
   const [refresh, setRefresh] = useState(0);
   const loadedMaterials = useRef(new Set());
   const loadingMaterials = useRef(new Set());
+  const loadedSchedules = useRef(new Set());
+  const loadingSchedules = useRef(new Set());
   const savingMaterialsRef = useRef(new Set());
   const loadedActivities = useRef(new Set());
   const loadingActivities = useRef(new Set());
@@ -148,6 +163,14 @@ export default function RuangKelasPage() {
     let active = true;
     loadedMaterials.current.clear();
     loadingMaterials.current.clear();
+    loadedSchedules.current.clear();
+    loadingSchedules.current.clear();
+    setSchedulesByRoom({});
+    setSchedulesLoading({});
+    setSchedulesError({});
+    setScheduleDrafts({});
+    setScheduleEditing({});
+    setScheduleSaving({});
     setMaterialsByRoom({});
     setMaterialsLoading({});
     setMaterialsError({});
@@ -322,8 +345,127 @@ export default function RuangKelasPage() {
       loadingMaterials.current.delete(room.id);
       setMaterialsLoading((current) => ({ ...current, [room.id]: false }));
     }
+  }
 
-    function pilihSesiPresensi(room, sessionId) {
+  async function muatJadwal(room, force = false) {
+      if (loadingSchedules.current.has(room.id) ||
+          (!force && loadedSchedules.current.has(room.id))) return;
+      loadingSchedules.current.add(room.id);
+      setSchedulesLoading((current) => ({ ...current, [room.id]: true }));
+      setSchedulesError((current) => ({ ...current, [room.id]: '' }));
+      try {
+        const schedules = await muatJadwalRuangKelas(room.id, room.tenantId, user?.uid);
+        setSchedulesByRoom((current) => ({ ...current, [room.id]: schedules }));
+        loadedSchedules.current.add(room.id);
+      } catch (loadError) {
+        console.error('[ruang-kelas] Gagal memuat jadwal kelas:', loadError);
+        setSchedulesError((current) => ({
+          ...current,
+          [room.id]: 'Jadwal kelas tidak dapat dimuat. Periksa koneksi dan izin Supabase.',
+        }));
+      } finally {
+        loadingSchedules.current.delete(room.id);
+        setSchedulesLoading((current) => ({ ...current, [room.id]: false }));
+      }
+    }
+
+  function ubahDraftJadwal(roomId, field, value) {
+      setScheduleDrafts((current) => ({
+        ...current,
+        [roomId]: { ...current[roomId], [field]: value },
+      }));
+    }
+
+  async function terbitkanJadwal(event, room) {
+    event.preventDefault();
+    const key = `schedule:${room.id}`;
+    if (savingActivities.current.has(key)) return;
+    const draft = scheduleDrafts[room.id] || {
+      hari: '1',
+      mulai: '08:00',
+      selesai: '09:00',
+      topik: room.mapel || '',
+      tempat: '',
+    };
+    const scheduleId = scheduleEditing[room.id];
+    savingActivities.current.add(key);
+    setScheduleSaving((current) => ({ ...current, [room.id]: true }));
+    setSchedulesError((current) => ({ ...current, [room.id]: '' }));
+    try {
+      if (scheduleId) {
+        const updatedSchedule = await ubahJadwalRuangKelas(scheduleId, {
+          ...draft,
+          hari: Number(draft.hari),
+        }, user?.uid);
+        setSchedulesByRoom((current) => ({
+          ...current,
+          [room.id]: (current[room.id] || []).map((item) =>
+            item.id === scheduleId ? updatedSchedule : item)
+            .sort((a, b) => a.hari - b.hari || a.mulai.localeCompare(b.mulai)),
+        }));
+        setScheduleEditing((current) => ({ ...current, [room.id]: '' }));
+        setNotice('Jadwal berhasil diperbarui.');
+      } else {
+        const schedule = await buatJadwalRuangKelas({
+          classroomId: room.id,
+          tenantId: room.tenantId,
+          userId: user?.uid,
+          ...draft,
+          hari: Number(draft.hari),
+        });
+        setSchedulesByRoom((current) => ({
+          ...current,
+          [room.id]: [...(current[room.id] || []), schedule]
+            .sort((a, b) => a.hari - b.hari || a.mulai.localeCompare(b.mulai)),
+        }));
+      }
+      loadedSchedules.current.add(room.id);
+      setScheduleDrafts((current) => ({
+        ...current,
+        [room.id]: { ...draft, topik: room.mapel || '', tempat: '' },
+      }));
+      if (!scheduleId) setNotice('Jadwal berhasil diterbitkan untuk anggota kelas.');
+    } catch (saveError) {
+      console.error('[ruang-kelas] Gagal menyimpan jadwal kelas:', saveError);
+      setSchedulesError((current) => ({
+        ...current,
+        [room.id]: saveError?.code === '23505'
+          ? 'Slot jadwal pada hari dan waktu tersebut sudah diterbitkan oleh Anda.'
+          : saveError?.message || 'Jadwal tidak dapat disimpan.',
+      }));
+    } finally {
+      savingActivities.current.delete(key);
+      setScheduleSaving((current) => ({ ...current, [room.id]: false }));
+    }
+  }
+
+  async function hapusJadwal(room, schedule) {
+      const key = `schedule-delete:${schedule.id}`;
+      if (savingActivities.current.has(key) ||
+          !window.confirm(`Hapus jadwal ${schedule.topik} hari ${HARI_MINGGU[schedule.hari - 1]}?`)) return;
+      savingActivities.current.add(key);
+      setScheduleSaving((current) => ({ ...current, [schedule.id]: true }));
+      setSchedulesError((current) => ({ ...current, [room.id]: '' }));
+      try {
+        await hapusJadwalRuangKelas(schedule.id);
+        setSchedulesByRoom((current) => ({
+          ...current,
+          [room.id]: (current[room.id] || []).filter((item) => item.id !== schedule.id),
+        }));
+        setNotice('Jadwal berhasil dihapus.');
+      } catch (deleteError) {
+        console.error('[ruang-kelas] Gagal menghapus jadwal kelas:', deleteError);
+        setSchedulesError((current) => ({
+          ...current,
+          [room.id]: deleteError?.message || 'Jadwal tidak dapat dihapus.',
+        }));
+      } finally {
+        savingActivities.current.delete(key);
+        setScheduleSaving((current) => ({ ...current, [schedule.id]: false }));
+      }
+    }
+
+  function pilihSesiPresensi(room, sessionId) {
       setSelectedAttendanceSession((current) => ({ ...current, [room.id]: sessionId }));
       const roster = attendanceRoster[room.id] || [];
       const savedRecords = attendanceRecords[room.id] || [];
@@ -342,7 +484,7 @@ export default function RuangKelasPage() {
       }));
     }
 
-    function ubahDraftPresensi(sessionId, studentId, field, value) {
+  function ubahDraftPresensi(sessionId, studentId, field, value) {
       setAttendanceDrafts((current) => ({
         ...current,
         [sessionId]: {
@@ -356,7 +498,7 @@ export default function RuangKelasPage() {
       }));
     }
 
-    async function buatSesiPresensi(event, room) {
+  async function buatSesiPresensi(event, room) {
       event.preventDefault();
       const draft = attendanceSessionDrafts[room.id] || {
         tanggal: tanggalHariIni(),
@@ -391,7 +533,7 @@ export default function RuangKelasPage() {
       }
     }
 
-    async function simpanPresensi(event, room, session) {
+  async function simpanPresensi(event, room, session) {
       event.preventDefault();
       const key = `attendance:${session.id}`;
       if (savingActivities.current.has(key)) return;
@@ -418,7 +560,6 @@ export default function RuangKelasPage() {
       } finally {
         savingActivities.current.delete(key);
         setActivitySaving((current) => ({ ...current, [key]: false }));
-      }
     }
   }
 
@@ -901,6 +1042,7 @@ export default function RuangKelasPage() {
                     if (event.currentTarget.open) {
                       void muatMateri(room);
                       void muatAktivitas(room);
+                      void muatJadwal(room);
                     }
                   }}
                 >
@@ -975,6 +1117,149 @@ export default function RuangKelasPage() {
                         >
                           {materialsSaving[room.id] ? 'Menerbitkan…' : 'Terbitkan materi'}
                         </button>
+                      </form>
+                    )}
+                  </div>
+                  <div className="ale-classrooms-materials">
+                    <h4>Jadwal kelas untuk siswa</h4>
+                    <p className="ale-classrooms-footnote">
+                      Hanya slot yang diterbitkan di sini yang terlihat oleh anggota kelas. Jadwal pribadi Google Drive tetap privat.
+                    </p>
+                    {schedulesLoading[room.id] ? (
+                      <p role="status">Memuat jadwal kelas…</p>
+                    ) : schedulesError[room.id] ? (
+                      <p className="ale-classrooms-message is-error" role="alert">
+                        {schedulesError[room.id]}
+                        <button type="button" onClick={() => {
+                          loadedSchedules.current.delete(room.id);
+                          void muatJadwal(room, true);
+                        }}>Coba lagi</button>
+                      </p>
+                    ) : (schedulesByRoom[room.id] || []).length === 0 ? (
+                      <p className="ale-classrooms-empty">Belum ada jadwal yang diterbitkan untuk kelas ini.</p>
+                    ) : (
+                      <ul className="ale-classrooms-assignment-list">
+                        {(schedulesByRoom[room.id] || []).map((schedule) => (
+                          <li key={schedule.id}>
+                            <h5>{HARI_MINGGU[schedule.hari - 1]} · {schedule.mulai}–{schedule.selesai}</h5>
+                            <p>{schedule.topik}{schedule.tempat ? ` · ${schedule.tempat}` : ''}</p>
+                            {bolehKelolaAktivitasKelas(role) && schedule.dapatDikelola && (
+                              <div className="ale-classrooms-row">
+                                <button
+                                  className="ale-classrooms-submit"
+                                  type="button"
+                                  disabled={Boolean(scheduleSaving[schedule.id])}
+                                  onClick={() => {
+                                    setScheduleEditing((current) => ({
+                                      ...current,
+                                      [room.id]: schedule.id,
+                                    }));
+                                    setScheduleDrafts((current) => ({
+                                      ...current,
+                                      [room.id]: {
+                                        hari: String(schedule.hari),
+                                        mulai: schedule.mulai,
+                                        selesai: schedule.selesai,
+                                        topik: schedule.topik,
+                                        tempat: schedule.tempat,
+                                      },
+                                    }));
+                                  }}
+                                >
+                                  Ubah jadwal
+                                </button>
+                                <button
+                                  className="ale-classrooms-submit"
+                                  type="button"
+                                  disabled={Boolean(scheduleSaving[schedule.id])}
+                                  onClick={() => void hapusJadwal(room, schedule)}
+                                >
+                                  {scheduleSaving[schedule.id] ? 'Menghapus…' : 'Hapus jadwal'}
+                                </button>
+                              </div>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {bolehKelolaAktivitasKelas(role) && (
+                      <form
+                        className="ale-classrooms-material-form"
+                        onSubmit={(event) => void terbitkanJadwal(event, room)}
+                      >
+                        <h5>{scheduleEditing[room.id] ? 'Perbarui jadwal kelas' : 'Terbitkan jadwal kelas'}</h5>
+                        <div className="ale-classrooms-row">
+                          <label className="ale-classrooms-field">
+                            Hari
+                            <select
+                              value={scheduleDrafts[room.id]?.hari || '1'}
+                              onChange={(event) => ubahDraftJadwal(room.id, 'hari', event.currentTarget.value)}
+                            >
+                              {HARI_MINGGU.map((hari, index) => (
+                                <option key={hari} value={String(index + 1)}>{hari}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="ale-classrooms-field">
+                            Mulai
+                            <input
+                              type="time"
+                              value={scheduleDrafts[room.id]?.mulai || '08:00'}
+                              onChange={(event) => ubahDraftJadwal(room.id, 'mulai', event.currentTarget.value)}
+                              required
+                            />
+                          </label>
+                          <label className="ale-classrooms-field">
+                            Selesai
+                            <input
+                              type="time"
+                              value={scheduleDrafts[room.id]?.selesai || '09:00'}
+                              onChange={(event) => ubahDraftJadwal(room.id, 'selesai', event.currentTarget.value)}
+                              required
+                            />
+                          </label>
+                        </div>
+                        <label className="ale-classrooms-field">
+                          Mata pelajaran / kegiatan
+                          <input
+                            value={scheduleDrafts[room.id]?.topik ?? room.mapel}
+                            onChange={(event) => ubahDraftJadwal(room.id, 'topik', event.currentTarget.value)}
+                            maxLength={120}
+                            required
+                          />
+                        </label>
+                        <label className="ale-classrooms-field">
+                          Ruang (opsional)
+                          <input
+                            value={scheduleDrafts[room.id]?.tempat || ''}
+                            onChange={(event) => ubahDraftJadwal(room.id, 'tempat', event.currentTarget.value)}
+                            maxLength={120}
+                          />
+                        </label>
+                        <button
+                          className="ale-classrooms-submit"
+                          type="submit"
+                          disabled={Boolean(scheduleSaving[room.id])}
+                        >
+                          {scheduleSaving[room.id]
+                            ? scheduleEditing[room.id] ? 'Menyimpan…' : 'Menerbitkan…'
+                            : scheduleEditing[room.id] ? 'Simpan perubahan' : 'Terbitkan untuk siswa'}
+                        </button>
+                        {scheduleEditing[room.id] && (
+                          <button
+                            className="ale-classrooms-submit"
+                            type="button"
+                            onClick={() => {
+                              setScheduleEditing((current) => ({ ...current, [room.id]: '' }));
+                              setScheduleDrafts((current) => ({
+                                ...current,
+                                [room.id]: { hari: '1', mulai: '08:00', selesai: '09:00', topik: room.mapel || '', tempat: '' },
+                              }));
+                            }}
+                          >
+                            Batal
+                          </button>
+                        )}
                       </form>
                     )}
                   </div>

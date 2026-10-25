@@ -20,6 +20,26 @@
 }
 .ale-classrooms-header h2 { margin: 0; color: #18233d; font-size: clamp(1.5rem, 3vw, 2rem); }
 .ale-classrooms-header > p:last-child { max-width: 72ch; margin: .6rem 0 0; color: #59677d; line-height: 1.6; }
+.ale-student-learning-nav { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+.ale-student-learning-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: .5rem .8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .65rem;
+  background: #fff;
+  color: #334155;
+  font-size: .86rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+.ale-student-learning-nav a:hover,
+.ale-student-learning-nav a.is-active {
+  border-color: #0f766e;
+  background: #f0fdfa;
+  color: #0f766e;
+}
 .ale-classrooms-card {
   padding: clamp(1rem, 2.5vw, 1.4rem);
   border: 1px solid #e1e8f0;

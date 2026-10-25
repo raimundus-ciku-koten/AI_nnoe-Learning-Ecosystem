@@ -178,6 +178,10 @@ export default function ClassroomActivityReportPage() {
           100 sesi presensi terbaru per kelas. Ringkasan ini tidak mengganti rekap resmi
           sekolah di luar Ruang Kelas.
         </p>
+        <nav className="classroom-activity-actions" aria-label="Modul kelas terkait">
+          <a href="#/pelaksanaan/jurnal">Buka Jurnal Mengajar</a>
+          <a href="#/ruang-kelas">Buka Ruang Kelas</a>
+        </nav>
       </header>
 
       {error && <p className="classroom-activity-error" role="alert">{error}</p>}

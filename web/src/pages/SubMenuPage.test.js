@@ -42,7 +42,7 @@ vi.mock('../services/platformAdminApi.js', () => ({
 }));
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }));
 import SubMenuPage from './SubMenuPage.jsx';
-import PlatformTenantsPage from './PlatformTenantsPage.jsx';
+import PlatformTenantsPage, { ringkasStatusTenant } from './PlatformTenantsPage.jsx';
 import PlatformUsersPage from './PlatformUsersPage.jsx';
 import PlatformOperationsPage, { aktivitasAudit, rincianAudit } from './PlatformOperationsPage.jsx';
 import { MaintenanceGuard } from '../context/PlatformControlContext.jsx';
@@ -177,26 +177,10 @@ describe('submenu platform superadmin', () => {
       auth.role = 'guru';
     });
 
-    it('menautkan guru reguler dan spesialis ke jurnal serta laporan kelas yang tersedia', () => {
-      for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
-        auth.role = role;
-        auth.activeRole = '';
-        const html = renderSubmenu('/pelaksanaan/realisasi');
-        expect(html, role).toContain('href="#/pelaksanaan/jurnal"');
-        expect(html, role).toContain('href="#/laporan/harian-bulanan"');
-      }
-    });
-
-    it('memberi panduan dan tautan sumber spesifik untuk pelaksanaan dan asesmen yang belum memiliki modul khusus', () => {
+    it('memberi panduan hanya untuk area yang belum memiliki backend khusus', () => {
       const cases = [
-        ['/pelaksanaan/realisasi', 'Pelacakan rencana-ke-realisasi belum tersedia', '/pelaksanaan/jurnal'],
         ['/pelaksanaan/berdiferensiasi', 'Modul diferensiasi dan pemantauan kebutuhan individual belum tersedia', '/perencanaan'],
         ['/pelaksanaan/kelas-khusus', 'Rancangan lokal tidak membuktikan persetujuan', '/program-kegiatan'],
-        ['/pelaksanaan/catatan-cepat', 'Jurnal Mengajar adalah sumber pencatatan kelas yang tersedia', '/pelaksanaan/jurnal'],
-        ['/asesmen/diagnostik', 'Klasifikasi, instrumen, dan tindak lanjut diagnostik khusus belum tersedia', '/asesmen/bank-soal'],
-        ['/asesmen/formatif', 'Pelacakan siklus formatif dan umpan balik khusus belum tersedia', '/asesmen/analisis'],
-        ['/asesmen/sumatif', 'Rekap sumatif lintas asesmen dan pengesahan hasil belum tersedia', '/asesmen/rapor'],
-        ['/asesmen/rubrik', 'Editor, katalog, dan arsip rubrik belum tersedia', '/asesmen/bank-soal'],
       ];
 
       for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
@@ -220,8 +204,8 @@ describe('submenu platform superadmin', () => {
         expect(planning, role).toContain('href="#/perencanaan?jenis=modul"');
 
         const monitoring = renderSubmenu('/pemantauan/profil-siswa');
-        expect(monitoring, role).toContain('Belum ada profil siswa satu halaman');
-        expect(monitoring, role).toContain('catatan kasus atau intervensi individual tidak ditampilkan');
+        expect(monitoring, role).toContain('Tinjau aktivitas kelas dari jurnal mengajar');
+        expect(monitoring, role).toContain('intervensi individual bukan bagian dari ringkasan ini');
         expect(monitoring, role).toContain('href="#/laporan/harian-bulanan"');
         expect(monitoring, role).toContain('href="#/pelaksanaan/presensi"');
       }
@@ -388,6 +372,16 @@ describe('submenu platform superadmin', () => {
     expect(render()).toContain('Data tenant lintas sekolah hanya tersedia bagi superadmin.');
   });
 
+  it('merangkum status tenant secara eksplisit tanpa mengubah data sumber', () => {
+    const tenants = [
+      { id: 'school-a', active: true },
+      { id: 'school-b', active: false },
+      { id: 'school-c', active: true },
+    ];
+    expect(ringkasStatusTenant(tenants)).toEqual({ aktif: 2, nonaktif: 1 });
+    expect(tenants).toHaveLength(3);
+  });
+
   it('menggunakan role aktif untuk akses data tenant platform', () => {
     auth.role = 'admin_sekolah';
     auth.activeRole = 'superadmin';
@@ -476,7 +470,33 @@ describe('submenu platform superadmin', () => {
         expect(html, `${role}: ${item.path}`).toContain('Panduan · baca saja');
         expect(html, `${role}: ${item.path}`).not.toContain('Catatan pribadi opsional untuk guru');
         expect(html, `${role}: ${item.path}`).not.toContain('Simpan catatan');
+        expect(html, `${role}: ${item.path}`).not.toContain('<form');
+        expect(html, `${role}: ${item.path}`).not.toContain('<button');
       }
+    }
+  });
+
+  it('menjaga panduan guru yang belum memiliki backend tetap baca-saja dan menautkan sumber kerja nyata', () => {
+    auth.role = 'guru';
+    for (const path of ['/pelaksanaan/berdiferensiasi', '/pemantauan/pendampingan', '/kolaborasi/praktik-baik']) {
+      const html = renderSubmenu(path);
+      expect(html, path).toContain('Panduan · baca saja');
+      expect(html, path).not.toContain('<form');
+      expect(html, path).not.toContain('<button');
+    }
+
+    const workspace = renderSubmenu('/guru/catatan-pribadi');
+    expect(workspace).toContain('href="#/pelaksanaan/jurnal"');
+    expect(workspace).toContain('href="#/laporan/harian-bulanan"');
+    expect(workspace).toContain('href="#/ruang-kelas"');
+  });
+
+  it('menjaga informasi platform tanpa backend operasional tetap baca-saja', () => {
+    for (const path of ['/platform/laporan/biaya', '/platform/ai/monitoring', '/platform/konten/template']) {
+      const html = renderOperations(path);
+      expect(html, path).toContain('Pusat kendali · superadmin');
+      expect(html, path).not.toContain('<form');
+      expect(html, path).not.toContain('<button');
     }
   });
 

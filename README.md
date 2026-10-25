@@ -34,6 +34,50 @@ does not read applied migration versions, establish migration provenance, or
 prove hosted parity; review actual hosted definitions and migration records
 separately before any change.
 
+## Staging schema checkpoint (2026-10-25)
+
+Workflow run #25
+([40207632790](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/40207632790))
+completed the encrypted Staging backup round trip: the uploaded artifact was
+downloaded, decrypted, compared with its source dump, and restored to a
+disposable database. The read-only Staging audit passed its expected
+58-relation and migration-history inventory gate. The workflow also replayed
+all 59 migrations then checked in on a clean Supabase baseline and verified
+all 58 expected feature relations. Neither check changed Staging. This proves
+backup recovery for that Staging snapshot and repository migration replay for
+that commit; it does not establish definition-level parity with Production or
+authorize hosted DDL. The short-lived Actions artifact is not a durable
+Production recovery copy.
+
+The current worktree adds migrations
+`20261026000100_learning_classroom_schedules.sql`,
+`20261026000200_teacher_learning_workflows.sql`, and
+`20261026000300_teacher_rubric_workflows.sql`, adding three expected feature
+relations to the 58-relation baseline. These additions were not part of run
+#25. Their application-level tests and production build pass locally; replay
+of the expanded 62-migration chain still needs a CI run against the disposable
+Supabase database. Production restore
+evidence, exact Staging/Production definition comparison, migration-specific
+approval, and authenticated release acceptance tests remain required before
+hosted schema changes. Keep public signup and billing disabled.
+
+PR #15 remains open against `main`. Its Web CI and Vercel Preview checks
+passed for the remote PR commit, not the newer uncommitted changes in this
+worktree. A disposable Supabase migration replay is now part of Web CI so
+future PR updates validate the actual migration chain and audited feature
+relations before they can be considered release candidates.
+The approved rollout scope is the active, data-backed features for the
+superadmin, guru, and siswa roles; billing/payment and public signup/trial
+remain excluded. Scope approval does not authorize hosted DDL before the
+restored-schema preflight and approval of the exact migration versions.
+The Staging audit now rejects an incomplete expected-relation inventory and
+labels relation/history inventory readiness as blocked whenever relations or
+hosted migration history do not match. The backup workflow preserves a
+verified encrypted artifact, then fails the overall run if that inventory is
+blocked; the inventory is not a definition-level schema comparison.
+Historical rollout notes below may describe the earlier, unverified backup
+state.
+
 The web app also provides spoken Indonesian (`id-ID`) feedback for the initial
 welcome, loading states, and in-app notifications. Browsers commonly block
 autoplay, so speech begins after the user's first click, tap, or keyboard
@@ -116,13 +160,14 @@ is active in the hosted project. Several legacy planning links are explicitly
 marked as such in the menu; some menu destinations are not built. Program
 drafts stay in page memory until printed or saved as PDF. Chat, assessments,
 and other data modules require their Supabase schema to be deployed and
-verified; the hosted inventory currently shows those feature relations are
-missing. Google features require OAuth setup and user consent. External AI
-providers are optional, require a user-supplied key and explicit disclosure,
-and may incur provider charges; checkout and payment are disabled. The package catalog is
-informational and does not guarantee package entitlements or feature
-availability. Public metadata and landing-page copy should preserve these
-limitations.
+verified. The 2026-10-25 Staging relation/history inventory passed for the
+then-current 58-relation schema; it is not a Production schema comparison and
+does not validate newer migrations. Google features require OAuth setup and
+user consent. External AI providers are optional, require a user-supplied key
+and explicit disclosure, and may incur provider charges; checkout and payment
+are disabled. The package catalog is informational and does not guarantee
+package entitlements or feature availability. Public metadata and landing-page
+copy should preserve these limitations.
 
 ### Ruang Kelas access foundation
 
@@ -177,6 +222,39 @@ classroom; tenant membership, role, and author checks are enforced by RLS.
 This module does not replace official attendance, grades, or reports. Its
 schema is `supabase/migrations/20261025000800_learning_classroom_journals.sql`
 and has not been applied to the hosted project.
+
+Teacher `Realisasi terhadap Rencana` now records an explicit link from a
+class journal entry to a document in that teacher's planning archive. The
+reference is selected from the signed-in owner's Drive archive, stored with
+the existing journal, and can be reopened from the journal history. This is a
+manual evidence link, not automatic plan validation, school approval, or an
+official realization score.
+
+Diagnostic, formative, and summative assessment menus now create online exams
+with a server-stored category. Students see that category beside assigned
+exams. Question-bank writes and exam creation require the active teacher to
+own the questions and be assigned to a classroom matching the subject and
+class. The category does not diagnose students or make academic decisions.
+The teacher `Rubrik & Instrumen` route now supports a tenant- and
+class-scoped rubric catalog with four validated achievement descriptions per
+criterion and append-only versions. Assigned teachers can read rubrics for
+their classes; only the author can create a revision. The page does not score
+students, store individual assessment evidence, or publish official grades.
+Its schema and server-side access controls are in
+`supabase/migrations/20261026000300_teacher_rubric_workflows.sql`.
+
+`Profil Belajar Siswa` filters submitted classroom task and quiz evidence by
+student within the active teacher's assigned classes. It has no free-text
+case, health, counseling, or intervention notes and is not a complete student
+record. The metadata, assessment categories, and assignment-scoped question
+bank policies are in
+`supabase/migrations/20261026000200_teacher_learning_workflows.sql`. This
+migration has not been applied to the hosted project; the new links/categories
+will not work there until it is reviewed and deployed through the approved
+staging process.
+The rubric migration is also local-only and requires the same verified backup,
+disposable staging validation, schema reconciliation, and explicit approval
+before any hosted deployment.
 
 Teacher submenu `Analisis Hasil` and `Laporan Penilaian` now combine submitted
 classroom assignments and quiz results for classes assigned to the active

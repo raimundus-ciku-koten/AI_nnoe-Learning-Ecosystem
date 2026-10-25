@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import {
   buatUjianOnline,
@@ -7,6 +8,7 @@ import {
   kirimJawabanUjian,
   muatJawabanUraianGuru,
   muatHasilUjianGuru,
+  muatKategoriUjianGuru,
   muatRingkasanUjianGuru,
   muatDraftUjian,
   muatSoalUjianGuru,
@@ -17,6 +19,13 @@ import {
 } from '../services/onlineAssessments.js';
 import { isTeacherRole } from '../services/roleAccess.js';
 import '../styles/online-assessments.css';
+
+const LABEL_JENIS_ASESMEN = {
+  umum: 'Asesmen umum',
+  diagnostik: 'Asesmen diagnostik',
+  formatif: 'Asesmen formatif',
+  sumatif: 'Asesmen sumatif',
+};
 
 function formatWaktu(value) {
   return new Date(value).toLocaleString('id-ID', {
@@ -112,7 +121,10 @@ function StudentAssessments({ userId }) {
           : 'Draft ujian dipulihkan dari sesi browser.');
       } else {
         const started = await mulaiUjianOnline(examId);
-        setActive(started);
+        setActive({
+          ...started,
+          assessmentType: exams.find((exam) => exam.exam_id === examId)?.assessment_type || 'umum',
+        });
         setAnswers({});
       }
     } catch (openError) {
@@ -159,7 +171,9 @@ function StudentAssessments({ userId }) {
       <section className="ale-exam-card" aria-labelledby="exam-active-title">
         <div className="ale-exam-heading">
           <div>
-            <p className="ale-exam-kicker">Sedang mengerjakan</p>
+            <p className="ale-exam-kicker">
+              {LABEL_JENIS_ASESMEN[active.assessmentType] || 'Sedang mengerjakan'}
+            </p>
             <h2 id="exam-active-title">{active.title}</h2>
           </div>
           <p className="ale-exam-deadline">
@@ -268,6 +282,7 @@ function StudentAssessments({ userId }) {
             <li key={exam.exam_id}>
               <div>
                 <strong>{exam.title}</strong>
+                <span>{LABEL_JENIS_ASESMEN[exam.assessment_type] || LABEL_JENIS_ASESMEN.umum}</span>
                 <span>Kelas {exam.kelas} · {formatWaktu(exam.starts_at)} · {exam.duration_minutes} menit</span>
                 {draft?.submissionId && <span>Pengumpulan menunggu konfirmasi server</span>}
               </div>
@@ -295,11 +310,12 @@ function StudentAssessments({ userId }) {
   );
 }
 
-function TeacherAssessments({ tenantId, userId }) {
+function TeacherAssessments({ tenantId, userId, assessmentType }) {
   const [questions, setQuestions] = useState([]);
   const [exams, setExams] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [results, setResults] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [essayScores, setEssayScores] = useState({});
   const [title, setTitle] = useState('');
   const [kelas, setKelas] = useState('');
@@ -317,9 +333,11 @@ function TeacherAssessments({ tenantId, userId }) {
       muatJawabanUraianGuru(),
       muatHasilUjianGuru(),
     ]);
+    const categoryRows = await muatKategoriUjianGuru();
     setExams(examRows);
     setReviews(essayRows);
     setResults(resultRows);
+    setCategories(categoryRows);
   };
 
   useEffect(() => {
@@ -348,6 +366,7 @@ function TeacherAssessments({ tenantId, userId }) {
         endsAt: new Date(endsAt).toISOString(),
         durationMinutes: Number(duration),
         questionIds: selected,
+        assessmentType,
       });
       setNotice(`Ujian berhasil dijadwalkan. ID ujian: ${examId}`);
       setTitle('');
@@ -383,7 +402,18 @@ function TeacherAssessments({ tenantId, userId }) {
   return (
     <section className="ale-exam-card" aria-labelledby="exam-create-title">
       <p className="ale-exam-kicker">Asesmen dan penilaian</p>
-      <h2 id="exam-create-title">Jadwalkan Ujian Online</h2>
+      <h2 id="exam-create-title">
+        {assessmentType === 'umum'
+          ? 'Jadwalkan Ujian Online'
+          : `${LABEL_JENIS_ASESMEN[assessmentType]} · Jadwalkan Ujian`}
+      </h2>
+      {assessmentType !== 'umum' && (
+        <p className="ale-exam-intro">
+          Kategori ini disimpan pada ujian dan terlihat pada daftar siswa. Gunakan instrumen
+          dan kriteria yang telah ditetapkan sekolah; kategori tidak menetapkan diagnosis
+          atau keputusan akademik otomatis.
+        </p>
+      )}
       <p className="ale-exam-intro">Soal disalin sebagai snapshot saat ujian dibuat. Kunci jawaban hanya digunakan di server untuk penilaian.</p>
       {!questions.length && !error && <p>Bank soal milik Anda masih kosong.</p>}
       <form className="ale-exam-form" onSubmit={createExam}>
@@ -434,7 +464,13 @@ function TeacherAssessments({ tenantId, userId }) {
         {exams.map((exam) => (
           <li key={exam.exam_id}>
             <div>
-              <strong>{exam.title} · Kelas {exam.kelas}</strong>
+              <strong>
+                {exam.title} · Kelas {exam.kelas} · {
+                  LABEL_JENIS_ASESMEN[
+                    categories.find((category) => category.exam_id === exam.exam_id)?.assessment_type
+                  ] || LABEL_JENIS_ASESMEN.umum
+                }
+              </strong>
               <span>{formatWaktu(exam.starts_at)}–{formatWaktu(exam.ends_at)} · {exam.duration_minutes} menit</span>
               <span>{exam.submitted_count}/{exam.participant_count} terkumpul · {exam.pending_review_count} menunggu penilaian uraian</span>
             </div>
@@ -511,12 +547,23 @@ function TeacherAssessments({ tenantId, userId }) {
 }
 
 export default function OnlineAssessmentPage() {
+  const location = useLocation();
   const { role: baseRole, activeRole, tenantId, user } = useAuth();
   const role = activeRole || baseRole;
+  const requestedType = location.pathname.split('/').pop();
+  const assessmentType = ['diagnostik', 'formatif', 'sumatif'].includes(requestedType)
+    ? requestedType
+    : 'umum';
 
   if (role === 'siswa' && user?.uid) return <StudentAssessments userId={user.uid} />;
   if (isTeacherRole(role) && user?.uid && tenantId) {
-    return <TeacherAssessments tenantId={tenantId} userId={user.uid} />;
+    return (
+      <TeacherAssessments
+        tenantId={tenantId}
+        userId={user.uid}
+        assessmentType={assessmentType}
+      />
+    );
   }
   return (
     <section className="ale-exam-card">

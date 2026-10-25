@@ -5,6 +5,13 @@ import '../styles/platform-tenants.css';
 
 const UKURAN_HALAMAN = 40;
 
+export function ringkasStatusTenant(tenants) {
+  return tenants.reduce((summary, tenant) => {
+    summary[tenant.active ? 'aktif' : 'nonaktif'] += 1;
+    return summary;
+  }, { aktif: 0, nonaktif: 0 });
+}
+
 function statusTenant(active) {
   return active
     ? { label: 'Aktif', className: 'is-active' }
@@ -44,6 +51,11 @@ export default function PlatformTenantsPage() {
       if (berikutnya && cursor.current) request = request.gt('id', cursor.current);
       const { data, error: queryError } = await request;
       if (queryError) throw queryError;
+      if (!Array.isArray(data) || data.some((tenant) =>
+        !tenant || typeof tenant.id !== 'string' ||
+        typeof tenant.name !== 'string' || typeof tenant.active !== 'boolean')) {
+        throw new Error('Supabase mengembalikan daftar tenant yang tidak valid.');
+      }
 
       const page = data.slice(0, UKURAN_HALAMAN);
       cursor.current = page.at(-1)?.id || cursor.current;
@@ -72,6 +84,7 @@ export default function PlatformTenantsPage() {
       [tenant.id, tenant.name].some((nilai) =>
         String(nilai || '').toLocaleLowerCase('id').includes(kata)));
   }, [search, tenants]);
+  const status = useMemo(() => ringkasStatusTenant(tenants), [tenants]);
 
   if (role !== 'superadmin') {
     return (
@@ -99,7 +112,7 @@ export default function PlatformTenantsPage() {
             <p>{tenants.length ? `${tenants.length} tenant dimuat` : 'Daftar tenant pada platform.'}</p>
           </div>
           <label className="platform-tenants-search">
-            <span>Cari nama atau ID tenant</span>
+            <span>Cari di tenant yang sudah dimuat</span>
             <input
               type="search"
               value={search}
@@ -118,6 +131,17 @@ export default function PlatformTenantsPage() {
         </div>
 
         {error && <p className="platform-tenants-error" role="alert">{error}</p>}
+        {!error && tenants.length > 0 && (
+          <div className="platform-ops-counts" aria-label="Ringkasan status tenant yang dimuat">
+            <article><span>Tenant aktif · data dimuat</span><strong>{status.aktif.toLocaleString('id-ID')}</strong></article>
+            <article><span>Tenant nonaktif · data dimuat</span><strong>{status.nonaktif.toLocaleString('id-ID')}</strong></article>
+          </div>
+        )}
+        {hasMore && (
+          <p className="platform-ops-note">
+            Pencarian hanya mencakup tenant yang sudah dimuat. Muat halaman berikutnya untuk memperluas cakupan pencarian.
+          </p>
+        )}
         {loading && !tenants.length ? (
           <p className="platform-tenants-empty" role="status">Memuat daftar tenant…</p>
         ) : !error && !terlihat.length ? (

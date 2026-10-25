@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AKSI_ADMIN_SEKOLAH, AKSI_SUPERADMIN } from './dashboard.js';
+import { AKSI_ADMIN_SEKOLAH, AKSI_SUPERADMIN, tampilanPortal } from './dashboard.js';
 
 describe('dashboard admin shortcuts', () => {
   it('routes school administrators to modules their role can actually use', () => {
@@ -26,5 +26,13 @@ describe('dashboard admin shortcuts', () => {
     ]);
     expect(AKSI_SUPERADMIN.some(({ href }) => href === '#/platform/ai/monitoring')).toBe(false);
     expect(AKSI_SUPERADMIN.some(({ href }) => href === '#/platform/laporan/biaya')).toBe(false);
+  });
+
+  it('describes the published student schedule without claiming private teacher schedules are shared', () => {
+    const html = tampilanPortal({ role: 'siswa', nama: 'Siswa Uji' });
+
+    expect(html).toContain('Jadwal yang diterbitkan guru');
+    expect(html).toContain('Jadwal pribadi guru tidak dibagikan ke siswa');
+    expect(html).not.toContain('Jadwal pelajaran penuh belum tersambung');
   });
 });

@@ -109,8 +109,8 @@ const ALUR = {
     langkah: ['Pilih kelas dan tanggal', 'Catat kegiatan atau kehadiran', 'Tinjau keterlaksanaan'],
   },
   asesmen: {
-    ringkasan: 'Bank Soal, Ujian Online, analisis hasil kelas, remedial/pengayaan berbasis hasil, dan rapor terhubung ke modul. Asesmen diagnostik, formatif, sumatif, serta rubrik khusus masih berupa panduan.',
-    langkah: ['Buka Bank Soal atau Ujian Online untuk menyusun dan melaksanakan CBT', 'Tinjau hasil tugas/kuis pada Analisis atau Remedial', 'Jangan anggap halaman panduan diagnostik, formatif, sumatif, atau rubrik sebagai instrumen tersimpan'],
+    ringkasan: 'Bank Soal dan Ujian Online mendukung asesmen umum serta kategori diagnostik, formatif, dan sumatif. Rubrik terversi dan pengesahan hasil lintas sumber belum tersedia.',
+    langkah: ['Pilih kategori asesmen dan gunakan soal milik Anda pada kelas yang ditugaskan', 'Tinjau hasil CBT atau tugas/kuis pada Analisis', 'Kategori bukan diagnosis, keputusan otomatis, atau pengganti rubrik resmi sekolah'],
   },
   pemantauan: {
     ringkasan: 'Tinjau aktivitas kelas dari jurnal mengajar dan sesi presensi yang tersimpan. Profil siswa, catatan kasus, dan intervensi individual bukan bagian dari ringkasan ini.',
@@ -233,16 +233,21 @@ const MODUL_GURU_AKTIF = {
   ],
   pelaksanaan: [
     { label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' },
+    { label: 'Realisasi terhadap Rencana', path: '/pelaksanaan/realisasi', ikon: 'chart' },
     { label: 'Presensi Siswa', path: '/pelaksanaan/presensi', ikon: 'check' },
     { label: 'Program BK & Kegiatan', path: '/program-kegiatan', ikon: 'file' },
     { label: 'Laporan Harian s.d. Bulanan', path: '/laporan/harian-bulanan', ikon: 'file' },
   ],
   asesmen: [
     { label: 'Remedial & Pengayaan', path: '/asesmen/remedial', ikon: 'refresh' },
+    { label: 'Asesmen Diagnostik', path: '/asesmen/diagnostik', ikon: 'check' },
+    { label: 'Asesmen Formatif', path: '/asesmen/formatif', ikon: 'check' },
+    { label: 'Asesmen Sumatif', path: '/asesmen/sumatif', ikon: 'check' },
     { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'book' },
     { label: 'Ujian Online', path: '/asesmen/ujian-online', ikon: 'check' },
   ],
   pemantauan: [
+    { label: 'Profil Belajar Siswa', path: '/pemantauan/profil-siswa', ikon: 'user' },
     { label: 'Laporan Aktivitas Kelas', path: '/laporan/harian-bulanan', ikon: 'file' },
     { label: 'Presensi Siswa', path: '/pelaksanaan/presensi', ikon: 'check' },
     { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
@@ -264,16 +269,6 @@ const MODUL_ORTU_AKTIF = [
 ];
 
 const PANDUAN_GURU = {
-  '/pelaksanaan/realisasi': {
-    ringkasan: 'Aplikasi belum mencocokkan dokumen perencanaan dengan bukti pelaksanaan secara otomatis. Jurnal mengajar adalah catatan kegiatan kelas yang tersedia untuk ditinjau.',
-    langkah: ['Buka dokumen perencanaan milik akun Anda', 'Tinjau jurnal mengajar pada kelas yang Anda ampu', 'Bandingkan secara manual; halaman ini tidak menyimpan validasi realisasi'],
-    status: 'Pelacakan rencana-ke-realisasi belum tersedia. Jurnal dan dokumen perencanaan tetap menjadi sumber terpisah.',
-    actions: [
-      { label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' },
-      { label: 'Laporan Aktivitas Kelas', path: '/laporan/harian-bulanan', ikon: 'chart' },
-      { label: 'Perencanaan Pembelajaran', path: '/perencanaan', ikon: 'book' },
-    ],
-  },
   '/pelaksanaan/berdiferensiasi': {
     ringkasan: 'Belum ada alur khusus untuk merancang dan melacak pembelajaran berdiferensiasi. Perencanaan umum dan jurnal kelas tersedia sebagai sumber terpisah.',
     langkah: ['Susun perangkat ajar pada Perencanaan', 'Catat kegiatan kelas pada Jurnal Mengajar', 'Jangan mencatat profil atau kebutuhan sensitif siswa pada panduan ini'],
@@ -290,56 +285,6 @@ const PANDUAN_GURU = {
     actions: [
       { label: 'Program BK & Kegiatan', path: '/program-kegiatan', ikon: 'file', actionLabel: 'Buka rancangan lokal' },
       { label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' },
-    ],
-  },
-  '/pelaksanaan/catatan-cepat': {
-    ringkasan: 'Formulir catatan kelas cepat belum tersedia. Gunakan Jurnal Mengajar untuk pencatatan kegiatan resmi yang tersedia; catatan kerja pribadi bukan penggantinya.',
-    langkah: ['Buka Jurnal Mengajar pada kelas yang Anda ampu', 'Simpan informasi yang relevan melalui formulir jurnal', 'Hindari menaruh data siswa pada catatan pribadi'],
-    status: 'Menu catatan cepat belum menjadi modul. Jurnal Mengajar adalah sumber pencatatan kelas yang tersedia.',
-    actions: [{ label: 'Jurnal Mengajar Harian', path: '/pelaksanaan/jurnal', ikon: 'file' }],
-  },
-  '/asesmen/diagnostik': {
-    ringkasan: 'Alur diagnostik khusus dan penyimpanan hasilnya belum tersedia. Bank Soal dan Ujian Online membantu menyiapkan soal serta pelaksanaan asesmen umum.',
-    langkah: ['Siapkan soal pada Bank Soal', 'Gunakan Ujian Online bila sesuai tujuan dan kebijakan sekolah', 'Tinjau hasil hanya pada modul sumber; jangan anggap halaman ini sebagai profil diagnostik siswa'],
-    status: 'Klasifikasi, instrumen, dan tindak lanjut diagnostik khusus belum tersedia.',
-    actions: [
-      { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'book' },
-      { label: 'Ujian Online', path: '/asesmen/ujian-online', ikon: 'check' },
-    ],
-  },
-  '/asesmen/formatif': {
-    ringkasan: 'Alur asesmen formatif khusus belum tersedia. Soal dapat dikelola di Bank Soal dan tugas atau kuis kelas dapat ditinjau pada modul Ruang Kelas.',
-    langkah: ['Gunakan Bank Soal untuk mengelola butir yang tersedia', 'Buka Ujian Online atau Ruang Kelas sesuai jenis aktivitas', 'Gunakan Analisis Hasil hanya untuk data tugas dan kuis yang tercatat'],
-    status: 'Pelacakan siklus formatif dan umpan balik khusus belum tersedia.',
-    actions: [
-      { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'book' },
-      { label: 'Ujian Online', path: '/asesmen/ujian-online', ikon: 'check' },
-      { label: 'Analisis Hasil', path: '/asesmen/analisis', ikon: 'chart' },
-    ],
-  },
-  '/asesmen/sumatif': {
-    ringkasan: 'Alur sumatif khusus dan rekap lintas sumber belum tersedia. Ujian Online dan analisis nilai hanya mencakup data yang tersimpan pada modul masing-masing.',
-    langkah: ['Buat asesmen pada modul yang sesuai', 'Pastikan kriteria dan jadwal mengikuti ketentuan sekolah', 'Gunakan Rapor resmi untuk alur rapor; jangan menyamakan laporan kelas dengan rapor'],
-    status: 'Rekap sumatif lintas asesmen dan pengesahan hasil belum tersedia pada menu ini.',
-    actions: [
-      { label: 'Ujian Online', path: '/asesmen/ujian-online', ikon: 'check' },
-      { label: 'Analisis Hasil', path: '/asesmen/analisis', ikon: 'chart' },
-      { label: 'Nilai & Capaian Rapor', path: '/asesmen/rapor', ikon: 'file' },
-    ],
-  },
-  '/asesmen/rubrik': {
-    ringkasan: 'Pustaka rubrik dan instrumen penilaian yang terversi belum tersedia. Bank Soal dan Ujian Online tidak menggantikan pengelolaan rubrik.',
-    langkah: ['Gunakan instrumen yang telah disetujui sekolah', 'Kelola butir soal melalui Bank Soal bila relevan', 'Jangan menganggap nilai otomatis sebagai penilaian berbasis rubrik'],
-    status: 'Editor, katalog, dan arsip rubrik belum tersedia.',
-    actions: [{ label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'book' }],
-  },
-  '/pemantauan/profil-siswa': {
-    ringkasan: 'Belum ada profil siswa satu halaman. Pemantauan yang tersedia terbatas pada aktivitas kelas, jurnal, dan presensi; catatan kasus atau intervensi individual tidak ditampilkan.',
-    langkah: ['Pilih kelas yang memang Anda ampu', 'Tinjau jurnal, laporan aktivitas, atau presensi pada modul sumber', 'Jangan menyimpan diagnosis atau detail kasus siswa pada panduan ini'],
-    status: 'Profil individual, catatan kasus, dan intervensi siswa belum tersedia. Modul kelas hanya menampilkan data sesuai penugasan dan izin yang berlaku.',
-    actions: [
-      { label: 'Laporan Aktivitas Kelas', path: '/laporan/harian-bulanan', ikon: 'file' },
-      { label: 'Presensi Siswa', path: '/pelaksanaan/presensi', ikon: 'check' },
     ],
   },
   '/pemantauan/karakter': {

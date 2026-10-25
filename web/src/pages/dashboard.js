@@ -298,7 +298,7 @@ function tampilanAdmin({ role, nama, sekolah }) {
     </div>`;
 }
 
-function tampilanPortal({ role, nama }) {
+export function tampilanPortal({ role, nama }) {
   const peran = LABEL_PERAN[role] || role || 'Pengguna';
   const ringkasan = role === 'siswa'
     ? 'Akses jadwal, materi, ujian, nilai, dan komunikasi yang disediakan sekolah untuk akun Anda.'
@@ -308,7 +308,7 @@ function tampilanPortal({ role, nama }) {
         ? 'Buka area kerja operasional sesuai peran dan ruang lingkup sekolah Anda.'
         : 'Pilih menu yang tersedia untuk akun Anda. Setiap tautan membuka halaman sesuai peran.';
   const catatan = role === 'siswa'
-    ? 'Materi, tugas, kuis, presensi, ujian, dan nilai tersedia sesuai kelas serta data yang ditautkan sekolah. Jadwal pelajaran penuh belum tersambung.'
+    ? 'Jadwal yang diterbitkan guru, materi, tugas, kuis, presensi, ujian, dan nilai tersedia sesuai kelas serta data yang ditautkan sekolah. Jadwal pribadi guru tidak dibagikan ke siswa.'
     : ['ortu', 'orang_tua'].includes(role)
       ? 'Informasi anak hanya dapat ditampilkan setelah sekolah menautkan akun orang tua secara resmi. Halaman yang belum terhubung hanya menampilkan panduan.'
       : role === 'operator'

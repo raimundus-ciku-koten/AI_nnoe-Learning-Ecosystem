@@ -281,6 +281,11 @@ export default function TeacherWorkspacePage({ grup, item }) {
         <a className="teacher-workspace-related" href="#/dashboard">
           <Ikon nama="home" /> Kembali ke Dashboard
         </a>
+        <nav className="teacher-workspace-nav" aria-label="Modul pembelajaran terkait">
+          <a className="teacher-workspace-related" href="#/pelaksanaan/jurnal">Jurnal Mengajar</a>
+          <a className="teacher-workspace-related" href="#/laporan/harian-bulanan">Laporan Aktivitas Kelas</a>
+          <a className="teacher-workspace-related" href="#/ruang-kelas">Ruang Kelas</a>
+        </nav>
         <button type="button" onClick={hubungkanDrive} disabled={connecting || !canUse}>
           <Ikon nama="external" />
           {connecting ? 'Menghubungkan…' : tokenAktif ? `Google Drive: ${koneksi.email}` : 'Hubungkan Google Drive'}

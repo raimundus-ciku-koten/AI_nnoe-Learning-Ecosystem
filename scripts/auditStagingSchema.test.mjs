@@ -20,12 +20,17 @@ test('builds a read-only inventory query from the audited relation list', () => 
   const names = getExpectedRelationNames(auditSql);
   const query = buildSchemaAuditQuery(names);
 
+  assert.equal(names.length, 61);
   assert.ok(names.includes('learning_classrooms'));
   assert.match(query, /to_regclass\('public\.' \|\| relation\.name\)/);
   assert.match(query, /to_regclass\('supabase_migrations\.schema_migrations'\)/);
   assert.match(query, /from pg_policies as policy/);
   assert.match(query, /force_row_level_security/);
   assert.doesNotMatch(query, /\b(insert|update|delete|alter|drop|grant|revoke|truncate)\b/i);
+  assert.throws(
+    () => getExpectedRelationNames(auditSql.replace("'attendance_records',", '')),
+    /exactly 61 unique feature relations/,
+  );
 });
 
 test('validates and queries versioned migration filenames without mutating Staging', () => {
@@ -60,7 +65,10 @@ test('reports missing feature relations and migration history without exposing c
       return {
         status: 0,
         stdout: JSON.stringify({
-          relations: { learning_classrooms: false, students: true },
+          relations: Object.fromEntries(
+            getExpectedRelationNames(auditSql)
+              .map((name) => [name, name !== 'learning_classrooms']),
+          ),
           relation_details: [{
             name: 'students',
             row_level_security: true,
@@ -81,12 +89,13 @@ test('reports missing feature relations and migration history without exposing c
     },
   });
 
-  assert.match(summary, /Expected feature relations present: 1\/2/);
+  assert.match(summary, /Relation\/history inventory readiness: BLOCKED/);
+  assert.match(summary, /Expected feature relations present: 60\/61/);
   assert.match(summary, /migration history table: not found/);
   assert.match(summary, /Repository migrations: [1-9]\d*/);
   assert.match(summary, /Hosted migration versions: unavailable/);
   assert.match(summary, /Missing public relations: learning_classrooms/);
-  assert.match(summary, /Present public relations: students/);
+  assert.match(summary, /Present public relations: [^\n]*\bstudents\b/);
   assert.match(summary, /"row_level_security": true/);
   assert.match(summary, /"student scope"/);
   assert.doesNotMatch(summary, /secret|postgresql:\/\//i);
@@ -112,7 +121,9 @@ test('compares repository and hosted migration versions when a history table exi
       status: 0,
       stdout: args.at(-1).includes('to_regclass')
         ? JSON.stringify({
-            relations: { learning_classrooms: true },
+            relations: Object.fromEntries(
+              getExpectedRelationNames(auditSql).map((name) => [name, true]),
+            ),
             relation_details: [],
             migration_history_exists: true,
           })
@@ -126,6 +137,24 @@ test('compares repository and hosted migration versions when a history table exi
   assert.match(summary, /Staging history versions absent from repository: 1/);
   assert.match(summary, /Unapplied repository versions: 20261017000100/);
   assert.match(summary, /Unknown Staging history versions: 20261017000999/);
+  assert.match(summary, /Relation\/history inventory readiness: BLOCKED/);
+});
+
+test('marks schema readiness only when all relations and migration versions match', () => {
+  const versions = ['20261016000100_identity_foundation.sql'];
+  const summary = renderSchemaAuditSummary(
+    {
+      relations: Object.fromEntries(
+        getExpectedRelationNames(auditSql).map((name) => [name, true]),
+      ),
+      relation_details: [],
+      migration_history_exists: true,
+    },
+    getExpectedMigrationVersions(versions),
+    ['20261016000100'],
+  );
+
+  assert.match(summary, /Relation\/history inventory readiness: READY/);
 });
 
 test('parses encoded PostgreSQL connection fields without inheriting PG overrides', () => {

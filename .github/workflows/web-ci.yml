@@ -10,6 +10,20 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      disposable-postgres:
+        image: supabase/postgres:17.11.0.007@sha256:b0463b9ab930a3535478d529b915d37def49d5a8fb0cb1927929e96af992b519
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: migration-validation-only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -20,6 +34,46 @@ jobs:
       - name: Install web dependencies
         run: npm ci
         working-directory: web
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client-17
+          psql --version
+      - name: Prepare Supabase auth helpers on disposable database
+        shell: bash
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: supabase_admin
+          PGPASSWORD: migration-validation-only
+          PGDATABASE: postgres
+          PGSSLMODE: disable
+        run: |
+          psql --no-psqlrc --set=ON_ERROR_STOP=1 <<'SQL'
+          ALTER TABLE auth.users
+            ADD COLUMN IF NOT EXISTS email_confirmed_at timestamptz;
+          CREATE OR REPLACE FUNCTION auth.jwt()
+          RETURNS jsonb
+          LANGUAGE sql
+          STABLE
+          SET search_path = ''
+          AS $$ SELECT '{}'::jsonb $$;
+          SQL
+      - name: Replay migrations and audit schema on disposable database
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: supabase_admin
+          PGPASSWORD: migration-validation-only
+          PGDATABASE: postgres
+          PGSSLMODE: disable
+        run: node scripts/validateMigrationChain.mjs
       - name: Build web app
         run: npm run build -- --mode ci
         working-directory: web

@@ -42,6 +42,7 @@
   text-decoration: none;
 }
 .teacher-workspace-related:hover { border-color: #82c9c3; color: #137b75; }
+.teacher-workspace-nav { display: flex; flex-wrap: wrap; gap: .45rem; }
 .teacher-workspace-privacy {
   display: flex;
   align-items: flex-start;
