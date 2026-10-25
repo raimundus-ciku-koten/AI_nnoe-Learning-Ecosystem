@@ -4,7 +4,9 @@ import { test } from 'node:test';
 import {
   auditStagingSchema,
   buildSchemaAuditQuery,
+  buildMigrationVersionsQuery,
   buildPsqlEnvironment,
+  getExpectedMigrationVersions,
   getExpectedRelationNames,
   renderSchemaAuditSummary,
 } from './auditStagingSchema.mjs';
@@ -22,6 +24,22 @@ test('builds a read-only inventory query from the audited relation list', () => 
   assert.match(query, /to_regclass\('public\.' \|\| relation\.name\)/);
   assert.match(query, /to_regclass\('supabase_migrations\.schema_migrations'\)/);
   assert.doesNotMatch(query, /\b(insert|update|delete|alter|drop|grant|revoke|truncate)\b/i);
+});
+
+test('validates and queries versioned migration filenames without mutating Staging', () => {
+  assert.deepEqual(
+    getExpectedMigrationVersions([
+      '20261016000100_identity_foundation.sql',
+      '20261017000100_platform_user_management.sql',
+    ]),
+    ['20261016000100', '20261017000100'],
+  );
+  assert.throws(
+    () => getExpectedMigrationVersions(['unversioned.sql']),
+    /expected version format/,
+  );
+  assert.match(buildMigrationVersionsQuery(), /^select coalesce\(jsonb_agg/);
+  assert.doesNotMatch(buildMigrationVersionsQuery(), /\b(insert|update|delete|alter|drop|truncate)\b/i);
 });
 
 test('reports missing feature relations and migration history without exposing connection details', async () => {
@@ -45,6 +63,8 @@ test('reports missing feature relations and migration history without exposing c
 
   assert.match(summary, /Expected feature relations present: 1\/2/);
   assert.match(summary, /migration history table: not found/);
+  assert.match(summary, /Repository migrations: 59/);
+  assert.match(summary, /Hosted migration versions: unavailable/);
   assert.match(summary, /Missing public relations: learning_classrooms/);
   assert.doesNotMatch(summary, /secret|postgresql:\/\//i);
   assert.match(executedQuery, /learning_classrooms/);
@@ -55,6 +75,33 @@ test('reports missing feature relations and migration history without exposing c
   assert.equal(psqlEnvironment.PGSSLMODE, 'require');
   assert.equal('SUPABASE_DB_URL' in psqlEnvironment, false);
   assert.equal('BACKUP_ENCRYPTION_KEY' in psqlEnvironment, false);
+});
+
+test('compares repository and hosted migration versions when a history table exists', async () => {
+  const summary = await auditStagingSchema({
+    connectionString: 'postgresql://postgres.samszhfyhbjuculrcffg:pw@aws-0-ap-south-1.pooler.supabase.com:5432/postgres',
+    auditSql,
+    migrationFiles: [
+      '20261016000100_identity_foundation.sql',
+      '20261017000100_platform_user_management.sql',
+    ],
+    runPsql: (_command, args) => ({
+      status: 0,
+      stdout: args.at(-1).includes('to_regclass')
+        ? JSON.stringify({
+            relations: { learning_classrooms: true },
+            migration_history_exists: true,
+          })
+        : JSON.stringify(['20261016000100', '20261017000999']),
+    }),
+  });
+
+  assert.match(summary, /Repository migrations: 2/);
+  assert.match(summary, /Hosted applied migrations: 2/);
+  assert.match(summary, /Repository migrations absent from Staging history: 1/);
+  assert.match(summary, /Staging history versions absent from repository: 1/);
+  assert.match(summary, /Unapplied repository versions: 20261017000100/);
+  assert.match(summary, /Unknown Staging history versions: 20261017000999/);
 });
 
 test('parses encoded PostgreSQL connection fields without inheriting PG overrides', () => {
