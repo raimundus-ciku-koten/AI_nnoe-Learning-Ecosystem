@@ -225,7 +225,7 @@ end;
 $$;
 
 create or replace function public.learning_classroom_quiz_questions_for_student(p_quiz_id uuid)
-returns table (question_id uuid, position smallint, prompt text, choices jsonb)
+returns table (question_id uuid, "position" smallint, prompt text, choices jsonb)
 language plpgsql
 security definer
 set search_path = ''
