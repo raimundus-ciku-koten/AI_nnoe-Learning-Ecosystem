@@ -4,6 +4,14 @@ import {
   getOrderedMigrationFiles,
   validateMigrationChain,
 } from './validateMigrationChain.mjs';
+import { getExpectedRelationNames } from './auditStagingSchema.mjs';
+import { readFile } from 'node:fs/promises';
+
+const auditSql = await readFile(
+  new URL('../supabase/audit_hosted_schema.sql', import.meta.url),
+  'utf8',
+);
+const expectedRelations = getExpectedRelationNames(auditSql);
 
 const environment = {
   PGHOST: '127.0.0.1',
@@ -37,10 +45,11 @@ test('orders versioned SQL files and rejects duplicate or malformed versions', (
   );
 });
 
-test('executes each migration in its own transaction against the clean disposable Supabase database', async () => {
+test('replays each migration then verifies all expected feature relations on the clean disposable database', async () => {
   const calls = [];
   const result = await validateMigrationChain({
     migrationDirectory: 'C:\\migrations',
+    auditSql,
     migrationFiles: [
       '20261017000100_platform_user_management.sql',
       '20261016000100_identity_foundation.sql',
@@ -48,18 +57,21 @@ test('executes each migration in its own transaction against the clean disposabl
     environment,
     runCommand: (command, args, options) => {
       calls.push({ command, args, options });
-      return { status: 0 };
+      return args.includes('--command')
+        ? { status: 0, stdout: JSON.stringify({ relations: Object.fromEntries(expectedRelations.map((name) => [name, true])) }) }
+        : { status: 0 };
     },
   });
 
-  assert.match(result, /Validated 2 migrations/);
-  assert.equal(calls.length, 2);
+  assert.match(result, new RegExp(`Validated 2 migrations and all ${expectedRelations.length} expected feature relations`));
+  assert.equal(calls.length, 3);
   assert.ok(calls.every((call) => call.command === 'psql'));
   assert.ok(calls[0].args.includes('--single-transaction'));
   assert.match(calls[0].args.at(-1), /20261016000100_identity_foundation\.sql$/);
   assert.equal(calls[0].options.env.PGDATABASE, 'postgres');
   assert.equal('SUPABASE_DB_URL' in calls[0].options.env, false);
   assert.equal('BACKUP_ENCRYPTION_KEY' in calls[0].options.env, false);
+  assert.ok(calls[2].args.includes('--command'));
 });
 
 test('stops at the first failed migration without echoing connection details', async () => {
@@ -67,6 +79,7 @@ test('stops at the first failed migration without echoing connection details', a
   await assert.rejects(
     validateMigrationChain({
       migrationDirectory: 'C:\\migrations',
+      auditSql,
       migrationFiles: [
         '20261016000100_identity_foundation.sql',
         '20261017000100_platform_user_management.sql',
@@ -80,6 +93,29 @@ test('stops at the first failed migration without echoing connection details', a
     /failed at 20261017000100_platform_user_management\.sql; only a disposable local database was targeted/,
   );
   assert.equal(migrationCalls, 2);
+});
+
+test('fails when the clean replay is missing an expected feature relation', async () => {
+  let commandCalled = 0;
+  await assert.rejects(
+    validateMigrationChain({
+      migrationDirectory: 'C:\\migrations',
+      auditSql,
+      migrationFiles: ['20261016000100_identity_foundation.sql'],
+      environment,
+      runCommand: (_command, args) => {
+        if (args.includes('--command')) {
+          commandCalled += 1;
+          const relations = Object.fromEntries(expectedRelations.map((name) => [name, true]));
+          relations.learning_classrooms = false;
+          return { status: 0, stdout: JSON.stringify({ relations }) };
+        }
+        return { status: 0 };
+      },
+    }),
+    /missing relations: learning_classrooms/,
+  );
+  assert.equal(commandCalled, 1);
 });
 
 test('rejects non-local database targets before running commands', async () => {

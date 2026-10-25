@@ -151,7 +151,7 @@ jobs:
           SET search_path = ''
           AS $$ SELECT '{}'::jsonb $$;
           SQL
-      - name: Validate repository migrations on a clean disposable Supabase database
+      - name: Validate migrations and expected feature schema on a clean disposable Supabase database
         shell: bash
         env:
           PGHOST: 127.0.0.1

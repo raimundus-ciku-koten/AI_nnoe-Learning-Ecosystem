@@ -1,7 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { readdir } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  buildSchemaAuditQuery,
+  getExpectedRelationNames,
+} from './auditStagingSchema.mjs';
 
 export function getOrderedMigrationFiles(files) {
   const migrations = files.filter((file) => file.endsWith('.sql')).sort();
@@ -36,12 +40,17 @@ function buildLocalDatabaseEnvironment(environment) {
 export async function validateMigrationChain({
   migrationDirectory,
   migrationFiles,
+  auditSql,
   environment = process.env,
   runCommand = spawnSync,
 }) {
   const psqlEnvironment = buildLocalDatabaseEnvironment(environment);
   const orderedMigrationFiles = getOrderedMigrationFiles(
     migrationFiles ?? await readdir(migrationDirectory),
+  );
+  const relationAuditSql = auditSql ?? await readFile(
+    new URL('../supabase/audit_hosted_schema.sql', import.meta.url),
+    'utf8',
   );
   for (const file of orderedMigrationFiles) {
     const result = runCommand(
@@ -60,7 +69,39 @@ export async function validateMigrationChain({
     }
   }
 
-  return `Validated ${orderedMigrationFiles.length} migrations in version order on the clean disposable Supabase database.`;
+  const expectedRelations = getExpectedRelationNames(relationAuditSql);
+  const schemaResult = runCommand(
+    'psql',
+    [
+      '--no-psqlrc',
+      '--set=ON_ERROR_STOP=1',
+      '--tuples-only',
+      '--no-align',
+      '--command',
+      buildSchemaAuditQuery(expectedRelations),
+    ],
+    { encoding: 'utf8', env: psqlEnvironment },
+  );
+  if (schemaResult.error || schemaResult.status !== 0) {
+    throw new Error('Expected-schema validation failed on the disposable local database.');
+  }
+
+  let schemaReport;
+  try {
+    schemaReport = JSON.parse(schemaResult.stdout.trim());
+  } catch {
+    throw new Error('Expected-schema validation returned invalid JSON.');
+  }
+  if (!schemaReport?.relations || typeof schemaReport.relations !== 'object' ||
+      Array.isArray(schemaReport.relations)) {
+    throw new Error('Expected-schema validation returned an invalid relation inventory.');
+  }
+  const missingRelations = expectedRelations.filter((name) => schemaReport.relations[name] !== true);
+  if (missingRelations.length > 0) {
+    throw new Error(`Expected-schema validation found missing relations: ${missingRelations.join(', ')}.`);
+  }
+
+  return `Validated ${orderedMigrationFiles.length} migrations and all ${expectedRelations.length} expected feature relations on the clean disposable Supabase database.`;
 }
 
 async function main() {
