@@ -6,7 +6,6 @@ import { cariMenu } from '../navigasi.js';
 import Ikon from '../components/Ikon.jsx';
 import TeacherWorkspacePage from './TeacherWorkspacePage.jsx';
 import TeacherAccountPage from './TeacherAccountPage.jsx';
-import PrivateWorkspaceRecords from './PrivateWorkspaceRecords.jsx';
 import '../styles/submenu.css';
 
 const ALUR = {
@@ -47,16 +46,16 @@ const ALUR = {
     langkah: ['Buka Ruang Kelas atau Arsip Perencanaan', 'Tinjau materi sesuai hak akses', 'Halaman ini tidak memublikasikan konten'],
   },
   'admin-keuangan': {
-    ringkasan: 'Halaman ini menampilkan harga katalog dan kontak WhatsApp owner.',
-    langkah: ['Buka Harga Paket', 'Tinjau harga katalog dan ekuivalen bulanannya', 'Hubungi owner melalui WhatsApp untuk bertanya'],
+    ringkasan: 'Laporan transaksi dan pencatatan keuangan sekolah belum tersedia. Harga Paket hanya katalog informasi dan bukan modul keuangan sekolah.',
+    langkah: ['Jangan gunakan halaman ini sebagai catatan transaksi', 'Gunakan prosedur keuangan resmi sekolah', 'Tunggu modul laporan keuangan dengan sumber data yang tervalidasi'],
   },
   'admin-laporan': {
-    ringkasan: 'Arsip Perencanaan dan Bank Soal tersedia. Laporan analitik akademik, keuangan, kinerja, serta ekspor admin belum tersedia.',
-    langkah: ['Buka arsip atau Bank Soal', 'Tinjau data yang tersedia di modul tujuan', 'Menu laporan lain masih berupa panduan'],
+    ringkasan: 'Rapor sekolah tersedia sebagai modul resmi. Laporan analitik akademik, keuangan, kinerja, serta ekspor admin lainnya belum tersedia.',
+    langkah: ['Buka modul Rapor Sekolah untuk alur rapor', 'Tinjau data sesuai periode dan izin sekolah', 'Menu laporan lainnya masih berupa panduan'],
   },
   'admin-pengaturan': {
-    ringkasan: 'Tautan integrasi membuka pengaturan akun pribadi. Konfigurasi integrasi tingkat sekolah, API, cadangan, dan log admin belum tersedia.',
-    langkah: ['Buka pengaturan akun pribadi hanya bila diperlukan', 'Perhatikan cakupan akun pada halaman tujuan', 'Jangan masukkan rahasia layanan sekolah pada halaman pribadi'],
+    ringkasan: 'Konfigurasi integrasi tingkat sekolah, API, cadangan, dan log admin belum tersedia. Pengaturan akun pribadi tidak mengelola layanan sekolah.',
+    langkah: ['Jangan masukkan rahasia layanan sekolah pada pengaturan pribadi', 'Kelola kredensial hanya melalui prosedur tepercaya yang disetujui', 'Tunggu modul admin sekolah yang memiliki audit dan cakupan tenant'],
   },
   'admin-bantuan': {
     ringkasan: 'Chat tersedia sebagai kanal aplikasi. Panduan admin, FAQ, dan kontak dukungan khusus belum terhubung ke layanan bantuan.',
@@ -202,16 +201,8 @@ const MODUL_ADMIN_AKTIF = {
     { label: 'Chat Sekolah', path: '/chat', ikon: 'chat' },
     { label: 'Testimoni', path: '/testimoni', ikon: 'chat' },
   ],
-  'admin-keuangan': [
-    { label: 'Harga Paket', path: '/purchase', ikon: 'badge' },
-  ],
   'admin-laporan': [
-    { label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' },
-    { label: 'Bank Soal', path: '/asesmen/bank-soal', ikon: 'file' },
-  ],
-  'admin-pengaturan': [
-    { label: 'Google Workspace pribadi', path: '/pengaturan/google', ikon: 'settings' },
-    { label: 'AI & Layanan pribadi (provider nonaktif)', path: '/pengaturan/api-ai', ikon: 'settings' },
+    { label: 'Rapor Sekolah', path: '/admin/akademik/rapor', ikon: 'file' },
   ],
   'admin-bantuan': [
     { label: 'Chat Sekolah', path: '/chat', ikon: 'chat' },
@@ -236,6 +227,9 @@ const MODUL_GURU_AKTIF = {
     { label: 'Pemantauan Perkembangan Belajar', path: '/pemantauan/catatan', ikon: 'file' },
     { label: 'Ruang Kelas', path: '/ruang-kelas', ikon: 'book' },
     { label: 'Presensi Siswa', path: '/pelaksanaan/presensi', ikon: 'check' },
+  ],
+  refleksi: [
+    { label: 'Catatan Kerja Pribadi', path: '/guru/catatan-pribadi', ikon: 'file' },
   ],
   laporan: [
     { label: 'Arsip Perencanaan', path: '/laporan/arsip-perencanaan', ikon: 'file' },
@@ -296,14 +290,12 @@ export default function SubMenuPage() {
     : ['ortu', 'orang_tua'].includes(role)
       ? 'Data anak belum ditampilkan karena hubungan akun wali-siswa harus diverifikasi oleh sekolah. Pengumuman dan Chat sekolah tetap tersedia sesuai hak akses.'
       : isTeacherRole(role)
-        ? 'Menu ini belum memiliki modul akademik khusus. Ruang kerja di bawah membantu mencatat tindak lanjut pribadi, bukan pengganti data akademik resmi.'
+      ? 'Menu ini belum memiliki modul akademik khusus. Catatan Kerja Pribadi tersedia terpisah dan bukan pengganti data akademik resmi.'
         : isSchoolAdminRole(role)
           ? 'Halaman ini adalah panduan baca-saja. Modul administrasi khusus untuk menu ini belum tersedia; gunakan tautan modul terkait bila tersedia.'
           : role === 'operator'
             ? 'Halaman ini adalah panduan baca-saja. Akses operasional tetap mengikuti izin peran dan tenant sekolah.'
             : `Tautan menu ${item.label} membuka panduan baca-saja, bukan modul data atau arsip resmi. Gunakan modul terkait bila tersedia.`;
-  const tersediaRuangKerja = isTeacherRole(role);
-
   return (
     <div className="ale-submenu-page">
       <header className="ale-submenu-hero">
@@ -342,19 +334,6 @@ export default function SubMenuPage() {
           <p>{statusModul}</p>
         </aside>
       </div>
-
-      {tersediaRuangKerja && (
-        <section aria-label="Catatan pribadi opsional">
-          <p className="ale-submenu-label">
-            Catatan pribadi opsional untuk guru; bukan modul akademik resmi.
-          </p>
-          <PrivateWorkspaceRecords
-            route={item.path}
-            search={item.search || ''}
-            heading={`Catatan ${item.label}`}
-          />
-        </section>
-      )}
 
       {(modulAktifAdmin.length > 0 || modulAktifGuru.length > 0 || modulAktifOrtu.length > 0) && (
         <section className="ale-submenu-related" aria-labelledby="submenu-active-modules-title">

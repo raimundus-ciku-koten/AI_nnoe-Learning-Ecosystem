@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  GRUP_MENU, MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN, menuUntukPeran,
+  GRUP_MENU, MENU_SUPERADMIN, menuUntukPeran,
 } from '../navigasi.js';
 
 const auth = vi.hoisted(() => ({
@@ -100,7 +100,7 @@ describe('submenu platform superadmin', () => {
       auth.role = 'guru';
     });
 
-    it('menjelaskan status submenu guru dan hanya menautkan modul akademik yang tersedia', () => {
+    it('menjelaskan fallback guru dan menautkan catatan pribadi secara terpisah', () => {
       const targetPaths = [
         '/refleksi/pembelajaran',
         '/laporan/kinerja-guru',
@@ -115,7 +115,8 @@ describe('submenu platform superadmin', () => {
         expect(html, path).toContain(`<h2>${item.label.replaceAll('&', '&amp;')}</h2>`);
         expect(html, path).toContain('belum memiliki modul akademik khusus');
         expect(html, path).toContain('Panduan · baca saja');
-        expect(html, path).toContain('Simpan catatan');
+        expect(html, path).toContain('Catatan Kerja Pribadi');
+        expect(html, path).not.toContain('Catatan pribadi opsional untuk guru');
         expect(html, path).not.toContain('Buat catatan kerja');
         expect(html, path).not.toContain('Hindari memasukkan nama');
       }
@@ -125,10 +126,29 @@ describe('submenu platform superadmin', () => {
     });
 
     it('membuka ruang kerja pribadi hanya dari menu catatan kerja pribadi', () => {
-      const html = renderSubmenu('/guru/catatan-pribadi');
-      expect(html).toContain('Buat catatan kerja');
-      expect(html).toContain('Catatan ini hanya dapat dibaca oleh akun guru Anda');
+      for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+        auth.role = role;
+        auth.activeRole = '';
+        const html = renderSubmenu('/guru/catatan-pribadi');
+        expect(html, role).toContain('Buat catatan kerja');
+        expect(html, role).toContain('Catatan ini hanya dapat dibaca oleh akun guru Anda');
+        expect(html, role).not.toContain('hanya tersedia bagi guru');
+        if (role === 'guru_bk') {
+          expect(html).toContain('Jangan simpan catatan konseling, diagnosis, atau detail kasus siswa');
+        }
+      }
+      auth.role = 'guru';
       expect(renderSubmenu('/asesmen/remedial')).not.toContain('Buat catatan kerja');
+    });
+
+    it('menggunakan peran aktif saat akun berpindah konteks kerja', () => {
+      auth.role = 'admin_sekolah';
+      auth.activeRole = 'guru_bk';
+
+      expect(renderSubmenu('/guru/catatan-pribadi')).toContain('Buat catatan kerja');
+
+      auth.activeRole = '';
+      auth.role = 'guru';
     });
 
     it('tidak membuka data pribadi bila konteks guru/tenant tidak tersedia', () => {
@@ -228,40 +248,19 @@ describe('submenu platform superadmin', () => {
     expect(renderSubmenu('/admin/asesmen/paket')).not.toContain('Buka modul terkait');
   });
 
-  it('menyediakan setidaknya satu pintasan aktif untuk setiap grup submenu admin sekolah', () => {
+  it('menautkan laporan ke rapor resmi dan tidak menyamarkan katalog/akun pribadi sebagai modul admin', () => {
     auth.role = 'admin_sekolah';
-    for (const group of MENU_ADMIN_SEKOLAH) {
-      const firstFallbackItem = group.item.find((entry) => (
-        ![
-          '/dashboard',
-          '/ruang-kelas',
-          '/purchase',
-          '/testimoni',
-          '/admin/pengguna/guru',
-          '/admin/pengguna/siswa',
-          '/admin/pengguna/tautkan-siswa',
-          '/admin/pengguna/orang-tua',
-          '/admin/pengguna/admin',
-          '/admin/pengguna/peran',
-          '/datadasar/profil',
-          '/datadasar/ta',
-          '/datadasar/kelas',
-          '/datadasar/jadwal',
-          '/datadasar/denah',
-          '/asesmen/bank-soal',
-          '/admin/perencanaan/paket',
-          '/laporan/arsip-perencanaan',
-          '/chat',
-          '/chat/kontak',
-          '/chat/grup',
-        ].includes(entry.path)
-      ));
-      if (!firstFallbackItem) continue;
+    const report = renderSubmenu('/admin/laporan/akademik');
+    expect(report).toContain('href="#/admin/akademik/rapor"');
+    expect(report).toContain('Rapor Sekolah');
 
-      const html = renderSubmenu(firstFallbackItem.path, firstFallbackItem.search || '');
-      expect(html, group.id).toContain('Buka modul terkait');
-      expect(html, group.id).toContain('Buka modul</small>');
-    }
+    const finance = renderSubmenu('/admin/keuangan/laporan');
+    expect(finance).toContain('bukan modul keuangan sekolah');
+    expect(finance).not.toContain('Buka modul terkait');
+
+    const settings = renderSubmenu('/admin/pengaturan/integrasi');
+    expect(settings).toContain('Pengaturan akun pribadi tidak mengelola layanan sekolah');
+    expect(settings).not.toContain('Buka modul terkait');
   });
 
   it('menyelaraskan fallback admin alias tanpa memberi hak tambahan kepada operator', () => {
@@ -279,7 +278,7 @@ describe('submenu platform superadmin', () => {
     expect(operatorHtml).toContain('Halaman tidak ditemukan');
   });
 
-  it('merender setiap fallback katalog sebagai panduan dan hanya menawarkan catatan pribadi kepada guru', () => {
+  it('merender fallback katalog sebagai panduan tanpa menyamarkan catatan sebagai modul', () => {
     const directRoute = (path) => (
       path === '/dashboard' ||
       path === '/purchase' ||
@@ -318,11 +317,8 @@ describe('submenu platform superadmin', () => {
         const html = renderSubmenu(item.path, item.search || '');
         expect(html, `${role}: ${item.path}`).toContain(`<h2>${item.label.replaceAll('&', '&amp;')}</h2>`);
         expect(html, `${role}: ${item.path}`).toContain('Panduan · baca saja');
-        if (['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(role)) {
-          expect(html, `${role}: ${item.path}`).toContain('Catatan pribadi opsional untuk guru');
-        } else {
-          expect(html, `${role}: ${item.path}`).not.toContain('Catatan pribadi opsional untuk guru');
-        }
+        expect(html, `${role}: ${item.path}`).not.toContain('Catatan pribadi opsional untuk guru');
+        expect(html, `${role}: ${item.path}`).not.toContain('Simpan catatan');
       }
     }
   });

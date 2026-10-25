@@ -11,6 +11,7 @@ import {
   sesiGoogleWorkspacePerPengguna,
 } from '../services/googleWorkspaceAuth.js';
 import { identitasEnkripsiDriveDalamSesi } from '../services/driveEncryption.js';
+import { isTeacherRole } from '../services/roleAccess.js';
 import '../styles/teacher-workspace.css';
 
 function tanggalHariIni() {
@@ -64,7 +65,8 @@ function unduhCsv(items, namaFile) {
 }
 
 export default function TeacherWorkspacePage({ grup, item }) {
-  const { user, role, tenantId } = useAuth();
+  const { user, role: baseRole, activeRole, tenantId } = useAuth();
+  const role = activeRole || baseRole;
   const [catatan, setCatatan] = useState([]);
   const [form, setForm] = useState(() => formKosong(item.path, item.label));
   const [editId, setEditId] = useState('');
@@ -78,7 +80,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
   const loadRequest = useRef(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const canUse = role === 'guru' && Boolean(user?.uid && tenantId);
+  const canUse = isTeacherRole(role) && Boolean(user?.uid && tenantId);
   const ownerKey = canUse ? `${tenantId}:${user.uid}` : '';
   const [koneksi, setKoneksi] = useState(() => sesiGoogleWorkspacePerPengguna(user?.uid));
   const [identitasVault, setIdentitasVault] = useState(() => identitasEnkripsiDriveDalamSesi(user?.uid));
@@ -301,6 +303,12 @@ export default function TeacherWorkspacePage({ grup, item }) {
           laporan resmi, atau komunikasi dengan siswa/orang tua. Hindari memasukkan nama,
           nomor identitas, maupun informasi pribadi siswa.
         </p>
+        {role === 'guru_bk' && (
+          <p>
+            Untuk Guru BK, ruang ini hanya untuk perencanaan umum. Jangan simpan catatan
+            konseling, diagnosis, atau detail kasus siswa di sini.
+          </p>
+        )}
       </aside>
 
       <div className="teacher-workspace-grid">
