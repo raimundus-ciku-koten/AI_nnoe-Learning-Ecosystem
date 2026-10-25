@@ -67,7 +67,7 @@ test('reports missing feature relations and migration history without exposing c
 
   assert.match(summary, /Expected feature relations present: 1\/2/);
   assert.match(summary, /migration history table: not found/);
-  assert.match(summary, /Repository migrations: \d+/);
+  assert.match(summary, /Repository migrations: [1-9]\d*/);
   assert.match(summary, /Hosted migration versions: unavailable/);
   assert.match(summary, /Missing public relations: learning_classrooms/);
   assert.match(summary, /Present public relations: students/);
