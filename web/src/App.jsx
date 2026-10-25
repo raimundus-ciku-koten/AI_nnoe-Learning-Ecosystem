@@ -134,6 +134,7 @@ const HalamanIntegrasiAI = lazy(() => import('./pages/AIIntegrationsPage.jsx'));
 const HalamanBankSoal = lazy(() => import('./pages/QuestionBankPage.jsx'));
 const HalamanUjianOnline = lazy(() => import('./pages/OnlineAssessmentPage.jsx'));
 const HalamanAnalisisPenilaian = lazy(() => import('./pages/ClassroomAssessmentReportPage.jsx'));
+const HalamanAsesmenAdmin = lazy(() => import('./pages/SchoolAssessmentOverviewPage.jsx'));
 const HalamanRaporSekolah = lazy(() => import('./pages/SchoolReportCardPage.jsx'));
 const HalamanKepemimpinanSekolah = lazy(() => import('./pages/SchoolLeadershipPage.jsx'));
 const HalamanPenugasanWaliKelas = lazy(() => import('./pages/HomeroomAssignmentsPage.jsx'));
@@ -330,8 +331,14 @@ export function RouteWrapper() {
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
         <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanIntegrasiAI /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
+        <Route path="/asesmen/generator-ai" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
+        <Route path="/asesmen/penilaian-otomatis" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/asesmen/analisis" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
+        <Route path="/admin/asesmen/paket" element={<PrivateShell><HalamanAsesmenAdmin /></PrivateShell>} />
+        <Route path="/admin/asesmen/jadwal" element={<PrivateShell><HalamanAsesmenAdmin /></PrivateShell>} />
+        <Route path="/admin/asesmen/monitoring" element={<PrivateShell><HalamanAsesmenAdmin /></PrivateShell>} />
+        <Route path="/admin/asesmen/analisis" element={<PrivateShell><HalamanAsesmenAdmin /></PrivateShell>} />
         <Route path="/asesmen/remedial" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
         <Route path="/pemantauan/catatan" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />
         <Route path="/laporan/penilaian" element={<PrivateShell><HalamanAnalisisPenilaian /></PrivateShell>} />

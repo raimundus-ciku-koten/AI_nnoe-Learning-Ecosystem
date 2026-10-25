@@ -310,7 +310,7 @@ describe('submenu platform superadmin', () => {
 
   it('tidak menampilkan menu pembayaran atau tagihan admin', () => {
     auth.role = 'admin_sekolah';
-    expect(renderSubmenu('/admin/asesmen/monitoring')).toContain('Paket ujian, jadwal, monitoring, dan analisis hasil admin belum tersedia');
+    expect(renderSubmenu('/admin/asesmen/monitoring')).toContain('Admin sekolah dapat meninjau daftar ujian');
     expect(renderSubmenu('/admin/keuangan/pembayaran')).toContain('Halaman tidak ditemukan');
     expect(renderSubmenu('/admin/keuangan/tagihan')).toContain('Halaman tidak ditemukan');
     expect(renderSubmenu('/admin/pengaturan/cadangan')).toContain('cadangan, dan log admin belum tersedia');

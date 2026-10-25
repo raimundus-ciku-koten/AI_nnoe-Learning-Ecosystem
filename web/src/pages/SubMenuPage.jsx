@@ -34,8 +34,8 @@ const ALUR = {
     langkah: ['Buka paket perencanaan atau arsip', 'Tinjau dokumen sesuai akses yang diberikan', 'Halaman panduan ini tidak menyimpan persetujuan'],
   },
   'admin-asesmen': {
-    ringkasan: 'Bank Soal tersedia untuk dibaca administrator sekolah. Paket ujian, jadwal, monitoring, dan analisis hasil admin belum tersedia.',
-    langkah: ['Buka Bank Soal untuk meninjau soal', 'Perubahan soal hanya tersedia bagi guru', 'Jangan gunakan menu panduan sebagai laporan ujian'],
+    ringkasan: 'Admin sekolah dapat meninjau daftar ujian, jadwal, jumlah soal, peserta tertaut, jawaban terkumpul, dan antrean penilaian uraian dalam tenant. Penyusunan ujian serta penilaian uraian tetap dilakukan guru.',
+    langkah: ['Buka Paket, Jadwal, Monitoring, atau Analisis Ujian', 'Tinjau hanya ringkasan tenant tanpa data jawaban individual', 'Gunakan Bank Soal untuk tinjauan; pengubahan soal tetap sesuai hak guru'],
   },
   'admin-komunikasi': {
     ringkasan: 'Kanal Pengumuman menyimpan informasi resmi sekolah untuk dibaca pengguna yang berhak. Broadcast otomatis dan monitoring agregat belum tersedia.',
@@ -102,8 +102,8 @@ const ALUR = {
     langkah: ['Pilih kelas dan tanggal', 'Catat kegiatan atau kehadiran', 'Tinjau keterlaksanaan'],
   },
   asesmen: {
-    ringkasan: 'Susun bukti belajar, pantau capaian, dan tentukan tindak lanjut yang sesuai.',
-    langkah: ['Tentukan tujuan dan kriteria', 'Siapkan instrumen penilaian', 'Tinjau hasil dan tindak lanjut'],
+    ringkasan: 'Bank Soal, Ujian Online, analisis hasil kelas, remedial/pengayaan berbasis hasil, dan rapor terhubung ke modul. Asesmen diagnostik, formatif, sumatif, serta rubrik khusus masih berupa panduan.',
+    langkah: ['Buka Bank Soal atau Ujian Online untuk menyusun dan melaksanakan CBT', 'Tinjau hasil tugas/kuis pada Analisis atau Remedial', 'Jangan anggap halaman panduan diagnostik, formatif, sumatif, atau rubrik sebagai instrumen tersimpan'],
   },
   pemantauan: {
     ringkasan: 'Satukan catatan siswa agar perkembangan dan kebutuhan pendampingan mudah ditinjau.',

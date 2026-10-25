@@ -82,7 +82,7 @@ describe('Question Bank AI mode choices', () => {
   it('does not grant operator access through the school-admin alias', () => {
     auth.role = 'operator';
     const html = renderPage();
-    expect(html).toContain('hanya tersedia untuk guru serta administrator sekolah');
+    expect(html).toContain('hanya tersedia untuk guru, guru spesialis, serta administrator sekolah');
     expect(html).not.toContain('Tambah soal');
   });
 
@@ -90,7 +90,7 @@ describe('Question Bank AI mode choices', () => {
     auth.role = 'admin_sekolah';
     auth.activeRole = 'operator';
     const html = renderPage();
-    expect(html).toContain('hanya tersedia untuk guru serta administrator sekolah');
+    expect(html).toContain('hanya tersedia untuk guru, guru spesialis, serta administrator sekolah');
     expect(html).not.toContain('Tambah soal');
   });
 });

@@ -233,7 +233,7 @@ export default function QuestionBankPage() {
       <main className="question-bank-page">
         <section className="ale-kartu question-bank-notice" role="status">
           <h1>Bank Soal</h1>
-          <p>Bank soal dan kunci jawaban hanya tersedia untuk guru serta administrator sekolah.</p>
+          <p>Bank soal dan kunci jawaban hanya tersedia untuk guru, guru spesialis, serta administrator sekolah.</p>
         </section>
       </main>
     );
