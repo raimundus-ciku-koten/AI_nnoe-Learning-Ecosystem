@@ -131,6 +131,24 @@ jobs:
             exit 1
           fi
           echo "Uploaded encrypted artifact decrypted and restored successfully ($table_count user tables)."
+      - name: Prepare the disposable Supabase auth helper
+        shell: bash
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: supabase_admin
+          PGPASSWORD: restore-validation-only
+          PGDATABASE: postgres
+          PGSSLMODE: disable
+        run: |
+          psql --no-psqlrc --set=ON_ERROR_STOP=1 <<'SQL'
+          CREATE OR REPLACE FUNCTION auth.jwt()
+          RETURNS jsonb
+          LANGUAGE sql
+          STABLE
+          SET search_path = ''
+          AS $$ SELECT '{}'::jsonb $$;
+          SQL
       - name: Validate repository migrations on a clean disposable Supabase database
         shell: bash
         env:

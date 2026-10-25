@@ -77,7 +77,7 @@ test('stops at the first failed migration without echoing connection details', a
         return { status: command === 'psql' && migrationCalls === 2 ? 1 : 0 };
       },
     }),
-    /failed at 20261017000100_platform_user_management\.sql/,
+    /failed at 20261017000100_platform_user_management\.sql; only a disposable local database was targeted/,
   );
   assert.equal(migrationCalls, 2);
 });

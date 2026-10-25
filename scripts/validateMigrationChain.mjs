@@ -56,7 +56,7 @@ export async function validateMigrationChain({
       { encoding: 'utf8', env: psqlEnvironment },
     );
     if (result.error || result.status !== 0) {
-      throw new Error(`Migration-chain validation failed at ${file}; only the restored disposable clone was targeted.`);
+      throw new Error(`Migration-chain validation failed at ${file}; only a disposable local database was targeted.`);
     }
   }
 
