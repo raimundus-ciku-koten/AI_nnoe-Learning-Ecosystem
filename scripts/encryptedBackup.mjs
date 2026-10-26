@@ -4,6 +4,7 @@ import { access, link, mkdtemp, open, rm, stat } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
+import { pathToFileURL } from 'node:url';
 
 const MAGIC = Buffer.from('ALEBKP01');
 const IV_LENGTH = 12;
@@ -112,7 +113,7 @@ async function main(args) {
   console.log(`Operasi ${operation} berhasil: ${basename(resolve(output))}`);
 }
 
-if (import.meta.url === new URL(process.argv[1], 'file:').href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   main(process.argv.slice(2)).catch((error) => {
     console.error(`[encrypted-backup] ${error.message}`);
     process.exitCode = 1;

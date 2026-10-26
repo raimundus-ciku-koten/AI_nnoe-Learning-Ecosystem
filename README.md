@@ -57,10 +57,12 @@ relations to the 58-relation baseline. These additions were not part of run
 #25. Commit `cf6a54b` has since replayed the expanded 62-migration chain
 against the pinned disposable Supabase database in Web CI; Web CI and Vercel
 Preview both passed for that commit. The Preview is Vercel-protected, so an
-anonymous browser acceptance check could not be completed. Production restore
-evidence, exact Staging/Production definition comparison, migration-specific
-approval, and authenticated release acceptance tests remain required before
-hosted schema changes. Keep public signup and billing disabled.
+anonymous browser acceptance check could not be completed. An extension-
+limited Production restore was verified later (see the checkpoint below), but
+Vault recovery, exact Staging/Production definition comparison,
+migration-specific approval, and authenticated release acceptance tests
+remain required before hosted schema changes. Keep public signup and billing
+disabled.
 
 Workflow run #26
 ([40246881726](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/40246881726))
@@ -78,16 +80,52 @@ apply migrations until the Staging/Production/source definitions and backup
 provenance have been reconciled. Run #25's earlier 58-relation READY result is
 historical and does not describe the inventory observed by run #26.
 
+## Production backup checkpoint (2026-10-26)
+
+A Production custom-format `pg_dump` was created, encrypted with the locally
+stored 32-byte backup key, and authenticated/decrypted successfully. The
+encrypted artifact was restored into a disposable PostgreSQL 17.11 database
+bound only to loopback; 51 user tables were restored and verified. The local
+PostgreSQL distribution does not include Supabase's `supabase_vault`
+extension, so the local restore excluded the extension declaration and
+`vault.secrets` table data. That Vault data remains preserved inside the
+encrypted backup artifact, but its restore has not been independently tested.
+The artifact is stored outside the repository under
+`%LOCALAPPDATA%\AinnoeLE\ProductionBackups`; plaintext dumps and temporary
+restore files were removed. A subsequent `pg_dump` retry ended when the server
+closed the connection; it produced no retained partial dump and did not
+invalidate the already verified encrypted artifact.
+
+The same artifact passed `.\scripts\verifyProductionBackupRestore.ps1` again
+on 2026-10-27: authentication/decryption and the isolated local restore
+succeeded, with 51 user tables verified. This repeat check still excluded
+`supabase_vault` and `vault.secrets`; it does not verify Vault recovery or
+create a new backup.
+
+This proves authenticated backup recovery for the non-Vault database objects,
+not a complete Supabase environment restore or Production/Staging schema
+parity. Do not apply hosted migrations until the Vault recovery path and
+definition-level schema inventories are reviewed, the Staging inventory gap
+is resolved, and authenticated role acceptance is complete.
+
 An owner-authenticated, read-only Dashboard check on 2026-10-26 confirmed the
 project labels `Ainnoe LE` (Production) and `Ainnoe LE Staging` in the same
-Supabase organization. The Production SQL Editor inventory returned six
-public relations, six of the 61 expected feature relations present, and no
-`supabase_migrations.schema_migrations` table. The Dashboard Backups page
-reports that the Free Plan does not include project backups and shows no
-Supabase-managed backups for Production or Staging. This confirms the target
-labels and current backup limitation, but it is not a Production backup,
-restore test, or definition-level schema reconciliation. The dashboard also
-displayed a Supabase technical-issue banner during this check.
+Supabase organization. A later owner-authenticated, read-only SQL Editor
+inventory on 2026-10-27 found six expected public feature tables in Production
+and seven expected feature tables plus the legacy `school_registration_requests`
+table in Staging. The Staging project is missing 54 of 61 expected feature
+relations. Neither project has
+`supabase_migrations.schema_migrations`. The Dashboard Backups page reports
+that the Free Plan does not include project backups and shows no
+Supabase-managed backups for Production or Staging. These inventories do not
+authorize DDL; see `DEPLOYMENT_GUIDE.md` for the extended read-only catalog
+comparison and remaining release gates. The 2026-10-27 comparison also found
+10/13 public routines, 2/2 public triggers, 7/9 RLS policies, and 92/122
+table-grant rows in Production/Staging. Trigger definition fingerprints match;
+routine, policy, and grant fingerprints do not. Both projects report
+`supabase_vault` 0.3.1, which confirms extension installation only—not secret
+decryption or Vault recovery. No isolated Vault restore or authenticated
+acceptance test for superadmin, guru, or siswa has been completed.
 
 PR #15 remains open against `main` and includes the validated feature-code
 commit `cf6a54b`. Its Web CI, including the disposable migration replay, and
@@ -144,8 +182,9 @@ reconciliation and Production release blockers below still apply.
 The Staging backup workflow uploads the encrypted artifact, downloads it in
 the same run, decrypts it, compares the restored dump with the source dump, and
 restores it into a disposable PostgreSQL database. Run #25 completed this
-round trip successfully for its Staging snapshot. This does not constitute a
-restorable Production backup or a durable recovery copy.
+round trip successfully for its Staging snapshot. That workflow run itself is
+not a Production backup or a durable Production recovery copy; the separate
+Production artifact and its local restore limitations are documented above.
 
 A read-only GitHub Actions check on 2026-10-25 confirmed that run #12
 ([40087589412](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/40087589412))

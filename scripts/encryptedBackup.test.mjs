@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { decryptBackup, encryptBackup } from './encryptedBackup.mjs';
 
 const temporary = () => mkdtemp(resolve(tmpdir(), 'ale-backup-test-'));
@@ -22,6 +24,36 @@ test('encrypted backup round-trips arbitrary dump bytes', async () => {
     assert.notDeepEqual(await readFile(encrypted), original);
     await decryptBackup(encrypted, restored, key);
     assert.deepEqual(await readFile(restored), original);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('encrypted backup CLI runs on the current platform', async () => {
+  const directory = await temporary();
+  const key = randomBytes(32).toString('base64');
+  const source = resolve(directory, 'dump.sql');
+  const encrypted = resolve(directory, 'dump.aeb');
+  const restored = resolve(directory, 'restored.sql');
+  const cli = fileURLToPath(new URL('./encryptedBackup.mjs', import.meta.url));
+  const env = { ...process.env, BACKUP_ENCRYPTION_KEY: key };
+
+  try {
+    await writeFile(source, randomBytes(128));
+    const encrypt = spawnSync(process.execPath, [cli, 'encrypt', source, encrypted], {
+      encoding: 'utf8',
+      env,
+    });
+    assert.equal(encrypt.status, 0, encrypt.stderr);
+    assert.match(encrypt.stdout, /Operasi encrypt berhasil/);
+
+    const decrypt = spawnSync(process.execPath, [cli, 'decrypt', encrypted, restored], {
+      encoding: 'utf8',
+      env,
+    });
+    assert.equal(decrypt.status, 0, decrypt.stderr);
+    assert.match(decrypt.stdout, /Operasi decrypt berhasil/);
+    assert.deepEqual(await readFile(restored), await readFile(source));
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
