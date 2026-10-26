@@ -91,8 +91,9 @@ DO NOT run migrations on production until ALL of the following are true:
   - The owner/administrator explicitly approves the migration (written sign-off).
 
 Backup checklist:
-  - Use Supabase Console "Backups" to create a backup and download it OR use `pg_dump` from a trusted machine that can access the DB (service_role or DB credentials).
-  - Verify the backup file can be restored into a local or staging Postgres instance.
+  - The current Supabase Free Plan does not include managed project backups. Do not upgrade or enable a paid service without separate approval.
+  - For Production, create an encrypted `pg_dump` on an owner-controlled trusted machine using the database connection credentials stored in an approved secret manager. A Supabase `service_role` API key is not a PostgreSQL connection credential and must not be used for `pg_dump`.
+  - Keep Production dump files out of source control, GitHub Actions artifacts, chat, and other third-party storage. Restore the encrypted dump into an isolated, access-controlled disposable PostgreSQL instance and verify the restore before approval of any migration.
 
 Applying migrations (recommended workflow):
   1. Use the existing disposable staging project and verify that it matches the intended Production schema without copying production user data.
