@@ -62,6 +62,22 @@ evidence, exact Staging/Production definition comparison, migration-specific
 approval, and authenticated release acceptance tests remain required before
 hosted schema changes. Keep public signup and billing disabled.
 
+Workflow run #26
+([40246881726](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/40246881726))
+on commit `080764e` successfully created the encrypted Staging backup, restored
+the downloaded artifact into a disposable database, and replayed all 62
+repository migrations on a clean disposable Supabase baseline. Its read-only
+Staging inventory gate failed: only 7 of 61 expected public feature relations
+are present, 54 are missing, and `supabase_migrations.schema_migrations` is
+absent. The seven present relations are `platform_audit`, `platform_control`,
+`platform_public_config`, `profiles`, `tenants`, `trial_registrations`, and
+`user_allowlist`. No Staging schema changes were made. The encrypted artifact
+is temporary (one-day retention), not a durable Production backup. Treat this
+as a newly confirmed Staging blocker; do not initialize the migration ledger or
+apply migrations until the Staging/Production/source definitions and backup
+provenance have been reconciled. Run #25's earlier 58-relation READY result is
+historical and does not describe the inventory observed by run #26.
+
 PR #15 remains open against `main` and includes the validated feature-code
 commit `cf6a54b`. Its Web CI, including the disposable migration replay, and
 its Vercel Preview deployment passed. Future PR updates continue to validate
