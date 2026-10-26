@@ -78,6 +78,17 @@ apply migrations until the Staging/Production/source definitions and backup
 provenance have been reconciled. Run #25's earlier 58-relation READY result is
 historical and does not describe the inventory observed by run #26.
 
+An owner-authenticated, read-only Dashboard check on 2026-10-26 confirmed the
+project labels `Ainnoe LE` (Production) and `Ainnoe LE Staging` in the same
+Supabase organization. The Production SQL Editor inventory returned six
+public relations, six of the 61 expected feature relations present, and no
+`supabase_migrations.schema_migrations` table. The Dashboard Backups page
+reports that the Free Plan does not include project backups and shows no
+Supabase-managed backups for Production or Staging. This confirms the target
+labels and current backup limitation, but it is not a Production backup,
+restore test, or definition-level schema reconciliation. The dashboard also
+displayed a Supabase technical-issue banner during this check.
+
 PR #15 remains open against `main` and includes the validated feature-code
 commit `cf6a54b`. Its Web CI, including the disposable migration replay, and
 its Vercel Preview deployment passed. Future PR updates continue to validate
