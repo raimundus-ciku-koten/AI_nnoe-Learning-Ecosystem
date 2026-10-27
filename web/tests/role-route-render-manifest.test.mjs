@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { cariMenu, menuUntukPeran } from '../src/navigasi.js';
 import { canOpenRolePath } from '../src/services/roleAccess.js';
 import {
   buildRoleRouteRenderManifest,
@@ -33,6 +34,40 @@ test('every menu destination for every role resolves to an App route and is role
       extractAppRoutePatterns().some((pattern) => matchesRoutePattern(pattern, entry.path)),
       `${context} does not resolve to an explicit route or the fallback`,
     );
+  }
+});
+
+test('menu groups and submenu destinations are unique and resolve to the active item', () => {
+  const roles = [
+    'admin', 'admin_sekolah', 'operator',
+    'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',
+    'siswa', 'ortu', 'orang_tua', 'superadmin', 'demo',
+    'kepala_sekolah', 'wali_kelas',
+  ];
+
+  for (const role of roles) {
+    const groupIds = new Set();
+    const destinations = new Set();
+
+    for (const group of menuUntukPeran(role)) {
+      assert.equal(groupIds.has(group.id), false, `${role}: duplicate group ${group.id}`);
+      groupIds.add(group.id);
+
+      for (const item of group.item) {
+        const context = `${role}: ${item.label} (${item.path}${item.search || ''})`;
+        const destination = `${item.path}${item.search || ''}`;
+
+        assert.ok(item.path.startsWith('/'), `${context} must use a root-relative route`);
+        assert.equal(item.path.includes('?'), false, `${context} must keep query separate`);
+        assert.ok(!item.search || item.search.startsWith('?'), `${context} has an invalid query`);
+        assert.equal(destinations.has(destination), false, `${context} duplicates a menu destination`);
+        destinations.add(destination);
+
+        const active = cariMenu(item.path, item.search || '', role);
+        assert.equal(active?.grup, group, `${context} must resolve to its menu group`);
+        assert.equal(active?.item, item, `${context} must resolve as the active submenu`);
+      }
+    }
   }
 });
 
