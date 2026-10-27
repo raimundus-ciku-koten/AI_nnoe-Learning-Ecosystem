@@ -106,6 +106,16 @@ export function buildMigrationVersionsQuery() {
   return "select coalesce(jsonb_agg(version::text order by version), '[]'::jsonb) from supabase_migrations.schema_migrations;";
 }
 
+function getPsqlDiagnostic(result) {
+  return String(result.stderr ?? '')
+    .trim()
+    .replace(/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, '[connection URI redacted]')
+    .split(/\r?\n/)
+    .slice(0, 4)
+    .join(' ')
+    .slice(0, 500);
+}
+
 export function buildPsqlEnvironment(connectionString, baseEnvironment = process.env) {
   const target = new URL(connectionString);
   const environment = { ...baseEnvironment };
@@ -248,7 +258,11 @@ export async function auditStagingSchema({
     options,
   );
   if (result.error || result.status !== 0) {
-    throw new Error(`Staging schema audit failed to execute (psql exit ${result.status ?? 'unknown'}).`);
+    const diagnostic = getPsqlDiagnostic(result);
+    throw new Error(
+      `Staging schema audit failed to execute (psql exit ${result.status ?? 'unknown'}).`
+      + (diagnostic ? ` ${diagnostic}` : ''),
+    );
   }
 
   let report;
@@ -273,7 +287,11 @@ export async function auditStagingSchema({
       options,
     );
     if (migrationResult.error || migrationResult.status !== 0) {
-      throw new Error(`Staging migration history audit failed to execute (psql exit ${migrationResult.status ?? 'unknown'}).`);
+      const diagnostic = getPsqlDiagnostic(migrationResult);
+      throw new Error(
+        `Staging migration history audit failed to execute (psql exit ${migrationResult.status ?? 'unknown'}).`
+        + (diagnostic ? ` ${diagnostic}` : ''),
+      );
     }
     try {
       appliedMigrationVersions = JSON.parse(migrationResult.stdout.trim());

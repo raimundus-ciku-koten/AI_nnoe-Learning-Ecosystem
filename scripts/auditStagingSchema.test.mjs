@@ -15,6 +15,10 @@ const auditSql = await readFile(
   new URL('../supabase/audit_hosted_schema.sql', import.meta.url),
   'utf8',
 );
+const dashboardAuditSql = await readFile(
+  new URL('../supabase/audit_release_gate_summary.sql', import.meta.url),
+  'utf8',
+);
 
 test('builds a read-only inventory query from the audited relation list', () => {
   const names = getExpectedRelationNames(auditSql);
@@ -31,6 +35,22 @@ test('builds a read-only inventory query from the audited relation list', () => 
     () => getExpectedRelationNames(auditSql.replace("'attendance_records',", '')),
     /exactly 61 unique feature relations/,
   );
+});
+
+test('Dashboard-safe audit uses the exact expected feature relation inventory', () => {
+  const expectedNames = getExpectedRelationNames(auditSql);
+  const values = dashboardAuditSql.match(
+    /with expected\(name\) as \(\s*values([\s\S]*?)\s*\),\s*relation_status as/i,
+  )?.[1];
+  assert.ok(values, 'Dashboard audit must declare its expected relation inventory.');
+  const dashboardNames = [...values.matchAll(/\('([a-z0-9_]+)'\)/gi)]
+    .map((match) => match[1]);
+  assert.deepEqual(dashboardNames, expectedNames);
+  assert.doesNotMatch(
+    dashboardAuditSql,
+    /\b(insert|update|delete|alter|drop|grant|revoke|truncate)\b/i,
+  );
+  assert.doesNotMatch(dashboardAuditSql, /pg_get_functiondef|select\s+\*/i);
 });
 
 test('validates and queries versioned migration filenames without mutating Staging', () => {
@@ -185,6 +205,41 @@ test('rejects non-Staging URLs before invoking psql', async () => {
     /configured Staging database only/,
   );
   assert.equal(invoked, false);
+});
+
+test('reports sanitized psql diagnostics when the hosted connection fails', async () => {
+  const connectionString = [
+    'postgresql:',
+    '',
+    'postgres:unit-test@db.samszhfyhbjuculrcffg.supabase.co:5432',
+    'postgres',
+  ].join('/');
+  const stderr = [
+    'connection failed for ',
+    'postgresql:',
+    '',
+    'audit:unit-test@db.example',
+    'postgres',
+  ].join('/');
+  await assert.rejects(
+    auditStagingSchema({
+      connectionString: '******db.samszhfyhbjuculrcffg.supabase.co:5432/postgres',
+      auditSql,
+      migrationFiles: ['20261016000100_identity_foundation.sql'],
+      runPsql: () => ({
+        status: 2,
+        stdout: '',
+        stderr: 'connection failed for postgresql://audit:secret@db.example/postgres',
+      }),
+      ...{ connectionString },
+      ...{ runPsql: () => ({ status: 2, stdout: '', stderr }) },
+    }),
+    (error) => {
+      assert.match(error.message, /\[connection URI redacted\]/);
+      assert.doesNotMatch(error.message, /secret|audit:/);
+      return true;
+    },
+  );
 });
 
 test('rejects malformed or failed psql reports explicitly', () => {
