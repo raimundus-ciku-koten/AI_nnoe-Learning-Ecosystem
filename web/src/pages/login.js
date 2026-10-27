@@ -252,6 +252,13 @@ export function halamanLogin(wadah) {
     await captchaReady;
     if (captchaSetupError) throw captchaSetupError;
     if (!TURNSTILE_SITE_KEY) return undefined;
+    const widgetErrorCode = captchaWidget?.errorCode();
+    if (widgetErrorCode) {
+      const error = new Error('Cloudflare tidak dapat menyelesaikan pemeriksaan keamanan.');
+      error.code = 'captcha_widget_error';
+      error.providerCode = widgetErrorCode;
+      throw error;
+    }
     const token = captchaWidget?.token();
     if (!token) {
       const error = new Error('Verifikasi keamanan Cloudflare belum selesai.');
