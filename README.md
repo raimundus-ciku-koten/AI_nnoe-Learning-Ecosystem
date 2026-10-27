@@ -1398,9 +1398,11 @@ Production-mode builds require the Staging project unless the explicit
 Production project. Vercel Preview is restricted to Staging, and Vercel
 Production is restricted to Production. Never set the diagnostic override in
 shared environments.
-For Staging UAT, copy `web/.env.staging.example` to
-`web/.env.staging.local`, set the Staging anon/publishable key locally, then
-use `npm run dev:staging` or `npm run build:staging` from `web/`. Staging mode
+For Staging UAT, copy `web/env/staging/.env.staging.example` to
+`web/env/staging/.env.staging`; the ignored
+`web/env/staging/.env.staging.local` holds the Staging anon/publishable key.
+Then use `npm run dev:staging`, `npm run build:staging`, or
+`npm run preview:staging` from `web/`. Staging mode
 refuses missing credentials and any URL other than the approved Staging
 project; it does not make the Staging schema ready or authorize hosted DDL.
 Never put credentials in chat or source control. Configure Vercel Preview to

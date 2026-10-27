@@ -13,6 +13,7 @@
     "build": "vite build",
     "build:staging": "vite build --mode staging",
     "preview": "vite preview --port 4173",
+    "preview:staging": "vite preview --mode staging --port 4173",
     "pretest": "npm run test:rubrics",
     "test": "npm run test:unit && npm run test:report-card && npm run test:planning-source && npm run test:assessment && npm run test:assessment-role-scope && npm run test:school-monitoring-schema && npm run test:school-activity-report-schema && npm run test:school-content-overview-schema && npm run test:school-admin-material-catalog-schema && npm run test:zero-cost && npm run test:role-route-manifest && npm run test:guardian-links && npm run test:vitest && npm run test:role-route-render && npm run test:assessment-ui && npm run test:role-access && npm run test:dashboard && npm run test:audio && npm run test:schema-audit && npm run test:staging-config && npm run test:brand-assets",
     "test:rubrics": "node --test tests/teacher-rubric-workflows-schema.test.mjs && vitest run src/services/classroomRubrics.test.js src/pages/ClassroomRubricsPage.test.jsx",

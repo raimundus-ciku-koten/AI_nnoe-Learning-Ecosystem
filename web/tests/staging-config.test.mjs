@@ -1,11 +1,30 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  resolveViteEnvDirectory,
   validateDeploymentSupabaseConfig,
   validateStagingSupabaseConfig,
 } from '../vite.config.js';
+import { resolve } from 'node:path';
 
 const stagingKey = 'staging-anon-key';
+
+test('loads development and Staging environment files from the isolated profile', () => {
+  const projectRoot = 'C:\\workspace\\web';
+  assert.equal(
+    resolveViteEnvDirectory('development', projectRoot),
+    resolve(projectRoot, 'env', 'staging'),
+  );
+  assert.equal(
+    resolveViteEnvDirectory('staging', projectRoot),
+    resolve(projectRoot, 'env', 'staging'),
+  );
+});
+
+test('loads production environment files from the web project root', () => {
+  const projectRoot = 'C:\\workspace\\web';
+  assert.equal(resolveViteEnvDirectory('production', projectRoot), resolve(projectRoot));
+});
 
 test('accepts a complete configuration for the approved Staging project', () => {
   assert.doesNotThrow(() => validateStagingSupabaseConfig({

@@ -1,4 +1,12 @@
 import { defineConfig, loadEnv } from 'vite';
+import { resolve } from 'node:path';
+
+export function resolveViteEnvDirectory(mode, projectRoot = process.cwd()) {
+  const directory = mode === 'development' || mode === 'staging'
+    ? 'env/staging'
+    : '.';
+  return resolve(projectRoot, directory);
+}
 
 export function validateStagingSupabaseConfig(env) {
   const projectUrl = env.VITE_SUPABASE_URL?.trim();
@@ -6,7 +14,7 @@ export function validateStagingSupabaseConfig(env) {
 
   if (!projectUrl || !anonKey) {
     throw new Error(
-      'Staging mode requires VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in web/.env.staging.local.',
+      'Staging mode requires VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the isolated Staging profile.',
     );
   }
 
@@ -100,7 +108,8 @@ export function validateDeploymentSupabaseConfig(
 }
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+  const envDir = resolveViteEnvDirectory(mode);
+  const env = loadEnv(mode, envDir, '');
   if (mode === 'development' || mode === 'staging') {
     validateStagingSupabaseConfig(env);
   } else if (mode === 'production') {
@@ -108,6 +117,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
+    envDir,
     server: {
       port: 5173,
       strictPort: true,
