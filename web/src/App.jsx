@@ -11,7 +11,8 @@ import { UserIntegrationConsentProvider, useUserIntegrationConsent } from './con
 import { logout } from './auth.js';
 import PrivilegedMfaGate from './components/PrivilegedMfaGate.jsx';
 import IntegrationConsentOnboarding from './components/IntegrationConsentOnboarding.jsx';
-import { canOpenRolePath } from './services/roleAccess.js';
+import RoleAccessGate from './components/RoleAccessGate.jsx';
+import { canOpenRolePath, isKnownRole } from './services/roleAccess.js';
 import { ucapkanNotifikasi } from './services/announcementAudio.js';
 
 function SpokenStatus({ as: Element = 'div', className, children }) {
@@ -155,7 +156,7 @@ const HalamanTrial = lazy(() => import('./pages/TrialDemoPage.jsx'));
 const AppShell = lazy(() => import('./components/AppShell.jsx'));
 
 function PrivateShell({ children }) {
-  const { user, role, activeRole, passwordRecovery } = useAuth();
+  const { user, role, activeRole, roles, passwordRecovery, switchRole } = useAuth();
   const menuAccess = useUserMenuAccess();
   const integrationConsent = useUserIntegrationConsent();
   const location = useLocation();
@@ -177,6 +178,15 @@ function PrivateShell({ children }) {
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;
   if ((activeRole || role) === 'demo') return <Navigate to="/trial" replace />;
+  if (!isKnownRole(activeRole || role)) {
+    return (
+      <RoleAccessGate
+        roles={roles}
+        onSelectRole={switchRole}
+        onLogout={keluarDariAkun}
+      />
+    );
+  }
   if (!canOpenRolePath(activeRole || role, location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }

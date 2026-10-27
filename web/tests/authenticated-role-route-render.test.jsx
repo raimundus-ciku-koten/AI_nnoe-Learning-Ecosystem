@@ -11,8 +11,10 @@ const auth = vi.hoisted(() => ({
   user: { uid: 'authenticated-route-test-user' },
   role: 'admin_sekolah',
   activeRole: null,
+  roles: [],
   tenantId: 'authenticated-route-test-tenant',
   passwordRecovery: false,
+  switchRole: vi.fn(),
 }));
 
 vi.mock('../src/context/AuthContext.jsx', () => ({
@@ -123,9 +125,10 @@ const roleAliasRedirect = new Map([
 ]);
 const clientRedirectPaths = new Set(['/perangkat/modul-siswa']);
 
-function renderAuthenticatedRoute(path, search, role, activeRole = null) {
+function renderAuthenticatedRoute(path, search, role, activeRole = null, roles = []) {
   auth.role = role;
   auth.activeRole = activeRole;
+  auth.roles = roles;
   auth.user = { uid: `authenticated-${role}` };
   const entry = `${roleAliasRedirect.get(path) || path}${search}`;
   const element = (
@@ -152,6 +155,7 @@ describe('authenticated role × route destination rendering', () => {
   afterEach(() => {
     auth.role = 'admin_sekolah';
     auth.activeRole = null;
+    auth.roles = [];
   });
 
   it('renders the App route destination for every authorized role-menu entry', async () => {
@@ -198,6 +202,29 @@ describe('authenticated role × route destination rendering', () => {
       '/program-kegiatan', '', 'admin_sekolah', 'guru_bk',
     );
     expect(markup).toContain('data-route-page="ProgramKegiatan"');
+  });
+
+  it('does not silently show a dashboard-only menu when no active role is provisioned', async () => {
+    const markup = await renderAuthenticatedRoute(
+      '/dashboard',
+      '',
+      'unprovisioned',
+      null,
+      ['guru', 'admin_sekolah'],
+    );
+
+    expect(markup).toContain('Pilih peran kerja Anda');
+    expect(markup).toContain('Lanjut sebagai Guru');
+    expect(markup).toContain('Lanjut sebagai Admin Sekolah');
+    expect(markup).not.toContain('data-app-path="/dashboard"');
+  });
+
+  it('explains when no authorized role is assigned instead of showing the fallback menu', async () => {
+    const markup = await renderAuthenticatedRoute('/dashboard', '', 'unprovisioned');
+
+    expect(markup).toContain('Peran akun belum tersedia');
+    expect(markup).toContain('administrator menetapkan peran yang sah');
+    expect(markup).not.toContain('data-app-path="/dashboard"');
   });
 
   it('renders the class quick note as the teacher journal workflow', async () => {

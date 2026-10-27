@@ -20,6 +20,18 @@ const KNOWN_ROLES = new Set([
   'demo',
 ]);
 
+export function isKnownRole(role) {
+  return KNOWN_ROLES.has(String(role || '').trim().toLowerCase());
+}
+
+export function getAssignedRoleChoices(roles) {
+  if (!Array.isArray(roles)) return [];
+  return [...new Set(roles
+    .filter((role) => typeof role === 'string')
+    .map((role) => role.trim().toLowerCase())
+    .filter((role) => KNOWN_ROLES.has(role)))];
+}
+
 export function isSchoolAdminRole(role) {
   return ['admin', 'admin_sekolah'].includes(String(role || '').trim().toLowerCase());
 }

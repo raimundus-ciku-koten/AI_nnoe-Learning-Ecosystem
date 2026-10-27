@@ -71,7 +71,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   const menu = cariMenu(path, search, peranAktif);
   const judulAktif = judulHalaman || menu?.item.label || 'Halaman';
 
-  const [sideTutup, setSideTutup] = useState(sideTutupTersimpan);
+  const [sideTutup, setSideTutup] = useState(false);
   const [mobileBuka, setMobileBuka] = useState(false);
   const [suaraIdTersedia, setSuaraIdTersedia] = useState(suaraIndonesiaTersedia);
   const [profilBuka, setProfilBuka] = useState(false);
@@ -87,6 +87,12 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   const sidebarRef = useRef(null);
   const kontenRef = useRef(null);
   const previousPathRef = useRef(path);
+
+  useEffect(() => {
+    const savedPreference = sideTutupTersimpan(user?.uid, peranAktif);
+    setSideTutup(savedPreference);
+    terapkanSideTutup(savedPreference, user?.uid, peranAktif);
+  }, [peranAktif, user?.uid]);
 
   useEffect(() => pantauSuaraIndonesia(setSuaraIdTersedia), []);
 
@@ -187,11 +193,11 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
     if (desktop) {
       const baru = !sideTutup;
       setSideTutup(baru);
-      terapkanSideTutup(baru);
+      terapkanSideTutup(baru, user?.uid, peranAktif);
     } else {
       setMobileBuka((v) => !v);
     }
-  }, [desktop, sideTutup]);
+  }, [desktop, peranAktif, sideTutup, user?.uid]);
 
   const toggleGrup = (id) =>
     setGrupBuka((lama) => {

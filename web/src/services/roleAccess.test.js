@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { menuUntukPeran } from '../navigasi.js';
 import {
-  canOpenRolePath, isParentRole, isSchoolAdminRole, isTeacherRole,
+  canOpenRolePath, getAssignedRoleChoices, isKnownRole,
+  isParentRole, isSchoolAdminRole, isTeacherRole,
 } from './roleAccess.js';
 import { isMenuPathDisabled } from './menuAccessPolicy.js';
 import { isMaintenanceBlocked, requiresPrivilegedMfa } from './privilegedAccessPolicy.js';
@@ -79,6 +80,17 @@ test('peran yang tidak dikenal hanya dapat membuka dashboard', () => {
       assert.equal(canOpenRolePath(role, path), false, `${role}: ${path}`);
     }
   }
+});
+
+test('role yang belum diprovisikan hanya menawarkan role valid dari klaim server', () => {
+  assert.equal(isKnownRole('admin_sekolah'), true);
+  assert.equal(isKnownRole('unprovisioned'), false);
+  assert.equal(isKnownRole(null), false);
+  assert.deepEqual(
+    getAssignedRoleChoices(['guru', 'admin_sekolah', 'guru', 'unprovisioned', null, 4]),
+    ['guru', 'admin_sekolah'],
+  );
+  assert.deepEqual(getAssignedRoleChoices('guru'), []);
 });
 
 test('catatan kerja pribadi hanya dapat dibuka peran guru', () => {

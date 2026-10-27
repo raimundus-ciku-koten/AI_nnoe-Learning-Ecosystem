@@ -4,12 +4,9 @@ import './styles/base.css';
 
 import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { pulihkanSideTutup } from './ui.js'; //[cite: 11]
 import App from './App.jsx'; //[cite: 11]
 import { pasangAudioPembuka } from './services/announcementAudio.js';
 
-// Terapkan preferensi sidebar sebelum render pertama (tanpa kedip)[cite: 11]
-pulihkanSideTutup(); 
 pasangAudioPembuka();
 
 // Global Error Handler dari main.js lama[cite: 9]
