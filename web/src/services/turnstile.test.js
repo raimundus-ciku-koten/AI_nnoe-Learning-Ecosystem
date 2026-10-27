@@ -10,6 +10,7 @@ test('Turnstile returns only verified tokens and resets or removes its widget', 
     render(container, options) {
       assert.equal(container.id, 'login-captcha');
       assert.equal(options.sitekey, 'public-site-key');
+      assert.equal(options.appearance, 'always');
       callbacks = options;
       return 'widget-1';
     },

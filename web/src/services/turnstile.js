@@ -55,7 +55,7 @@ export async function pasangTurnstile(container, siteKey) {
     callback: (value) => { token = value; },
     'error-callback': () => { token = ''; },
     'expired-callback': () => { token = ''; },
-    appearance: 'interaction-only',
+    appearance: 'always',
   });
   return {
     token: () => token,
