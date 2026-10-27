@@ -146,8 +146,6 @@ test('manifest dan lockfile aktif tidak menyertakan Firebase', () => {
   for (const manifestPath of [
     '../../package.json',
     '../package.json',
-    '../../functions/package.json',
-    '../../tests-rules/package.json',
   ]) {
     const manifest = JSON.parse(readFileSync(new URL(manifestPath, import.meta.url), 'utf8'));
     const dependencies = Object.keys({
@@ -173,25 +171,24 @@ test('manifest dan lockfile aktif tidak menyertakan Firebase', () => {
   assert.doesNotMatch(rootViteConfig, /firebase/i);
 });
 
-test('fungsi checkout dan webhook Supabase fail-closed tanpa gateway pembayaran', () => {
-  for (const functionName of ['midtrans-checkout', 'midtrans-webhook']) {
-    const source = readFileSync(
-      new URL(`../../supabase/functions/${functionName}/index.ts`, import.meta.url),
-      'utf8',
-    );
-    assert.match(source, /status:\s*410/, functionName);
-    assert.doesNotMatch(source, /midtrans\.com|MIDTRANS_SERVER_KEY|SUPABASE_SERVICE_ROLE_KEY|fetch\s*\(/i, functionName);
+test('Firebase credentials/configuration and Midtrans runtime are absent locally', () => {
+  for (const removedPath of [
+    '../../functions/index.js',
+    '../../functions/package.json',
+    '../../tests-rules/package.json',
+    '../../service-account.json.json',
+    '../../node.js.json',
+    '../../firestore.rules',
+    '../../database.rules.json',
+    '../../storage.rules',
+    '../../supabase/functions/midtrans-checkout/index.ts',
+    '../../supabase/functions/midtrans-webhook/index.ts',
+  ]) {
+    assert.equal(existsSync(new URL(removedPath, import.meta.url)), false, removedPath);
   }
-  const checkout = readFileSync(
-    new URL('../../supabase/functions/midtrans-checkout/index.ts', import.meta.url),
-    'utf8',
-  );
-  assert.match(checkout, /CHECKOUT_DISABLED/);
-  const webhook = readFileSync(
-    new URL('../../supabase/functions/midtrans-webhook/index.ts', import.meta.url),
-    'utf8',
-  );
-  assert.match(webhook, /PAYMENTS_DISABLED/);
+
+  const config = readFileSync(new URL('../../supabase/config.toml', import.meta.url), 'utf8');
+  assert.doesNotMatch(config, /\[functions\.midtrans-/);
 });
 
 test('aplikasi tidak menyediakan alias deployment atau emulator Firebase', () => {
@@ -205,16 +202,6 @@ test('aplikasi tidak menyediakan alias deployment atau emulator Firebase', () =>
     Object.keys(webManifest.scripts).filter((name) => /firebase|rules/i.test(name)),
     [],
   );
-});
-
-test('entry point Firebase Functions legacy berhenti sebelum memuat Firebase SDK', () => {
-  for (const entrypoint of ['index.js', 'chat-functions.js']) {
-    const source = readFileSync(new URL(`../../functions/${entrypoint}`, import.meta.url), 'utf8');
-    const guardIndex = source.indexOf('throw new Error(');
-    const firebaseImportIndex = source.search(/require\(['"]firebase-(?:admin|functions)/);
-    assert.ok(guardIndex >= 0, `${entrypoint} must fail closed`);
-    assert.ok(firebaseImportIndex < 0 || guardIndex < firebaseImportIndex, `${entrypoint} must guard before Firebase SDK imports`);
-  }
 });
 
 test('skrip lama tidak mengekspos perintah Firebase atau administrasi', () => {
@@ -235,7 +222,7 @@ test('skrip lama tidak mengekspos perintah Firebase atau administrasi', () => {
   }
 });
 
-test('skrip mutasi Firebase dan aturan lama hanya menjadi guard arsip', () => {
+test('skrip dan aturan Firebase yang sudah dipensiunkan tidak ada di checkout', () => {
   const archivedPaths = [
     '../../scripts/bootstrap.ts',
     '../../scripts/syncDirectory.js',
@@ -246,11 +233,14 @@ test('skrip mutasi Firebase dan aturan lama hanya menjadi guard arsip', () => {
     './firestore.rules.test.mjs',
     './rules/siswa.rules.test.js',
     '../../tests-rules/rules.test.js',
+    '../../firebase/firestore.rules',
+    '../../reference/legacy-firebase/README.md',
+    '../../reference/legacy-root-app/firebase.js',
+    '../../reference/feature-packs/barcode-kit/firebase.json',
+    '../../reference/feature-packs/paket-siswa/firebase.json',
   ];
   for (const archivedPath of archivedPaths) {
-    const source = readFileSync(new URL(archivedPath, import.meta.url), 'utf8');
-    assert.match(source, /^throw new Error\(.+arsip/i, archivedPath);
-    assert.doesNotMatch(source, /firebase-admin|firebase\/firestore|firebase emulators/i, archivedPath);
+    assert.equal(existsSync(new URL(archivedPath, import.meta.url)), false, archivedPath);
   }
 });
 
@@ -258,8 +248,6 @@ test('manifest proyek tidak memasang atau menyediakan perintah Firebase', () => 
   const manifestPaths = [
     '../../package.json',
     '../package.json',
-    '../../functions/package.json',
-    '../../tests-rules/package.json',
   ];
   for (const manifestPath of manifestPaths) {
     const manifest = JSON.parse(readFileSync(new URL(manifestPath, import.meta.url), 'utf8'));

@@ -5,7 +5,7 @@ import { isEconomyMode } from '../services/economyMode.js';
  * Batas di sini harus sama dengan validasi layanan dan skema chat.
  */
 
-export const MAKS_TEKS = 2000;               // database.rules.json: text <= 2000
+export const MAKS_TEKS = 2000;               // Keep aligned with backend chat-message limits.
 export const MAKS_BERKAS = 2 * 1024 * 1024;
 export const MAKS_ANGGOTA_GRUP = 50;         // Client-side group creation limit.
 export const MAKS_JUDUL = 80;

@@ -58,6 +58,31 @@ test('callback Google tidak menambahkan hash router ke fragmen token OAuth', () 
   assert.match(authService, /const redirectTo = `\$\{window\.location\.origin\}\$\{window\.location\.pathname\}`;/);
 });
 
+test('Firebase and Midtrans runtimes/configuration are absent while Supabase login remains', async () => {
+  const removedFiles = [
+    '../../functions/index.js',
+    '../../firebase.json',
+    '../../firestore.rules',
+    '../../service-account.json.json',
+    '../public/ads.txt',
+    '../../supabase/functions/midtrans-checkout/index.ts',
+    '../../supabase/functions/midtrans-webhook/index.ts',
+  ];
+
+  for (const path of removedFiles) {
+    await assert.rejects(readFile(new URL(path, import.meta.url)), { code: 'ENOENT' }, path);
+  }
+
+  const [config, authSource] = await Promise.all([
+    readFile(new URL('../../supabase/config.toml', import.meta.url), 'utf8'),
+    readFile(new URL('../src/auth.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(config, /\[auth\]\s+enable_signup = false/);
+  assert.doesNotMatch(config, /\[functions\.midtrans-/);
+  assert.match(authSource, /supabase\.auth\.signInWithPassword/);
+  assert.doesNotMatch(authSource, /supabase\.auth\.signUp/);
+});
+
 test('demo hanya memanipulasi data contoh lokal dengan batas lima item', () => {
   assert.match(demoPage, /additions\.current >= 5/);
   assert.match(demoPage, /window\.setInterval/);

@@ -181,7 +181,7 @@ apply migrations or submit real user data as part of this setup.
 Important:
 - The frontend must never receive service_role or other server secrets.
 - Do not configure Midtrans secrets, ad publisher IDs, or ad units; payments and advertising are outside the zero-billing configuration described here.
-- The public price list uses `functions/shared/pricing.json`; monthly equivalents use its configured divisor. The owner WhatsApp number is intentionally public in `web/src/services/publicPricing.js`. Update it only after owner confirmation.
+- The informational price list uses `web/src/data/pricing.json`; monthly equivalents use its configured divisor. The owner WhatsApp number is intentionally public in `web/src/services/publicPricing.js`. Update it only after owner confirmation.
 - After staging exists: create a dedicated Managed Cloudflare Turnstile widget for the exact Vercel Preview hostname(s) used for staging; configure its site key and secret in the staging Supabase Authentication → Attack Protection → CAPTCHA protection settings; and add only the public site key as `VITE_TURNSTILE_SITE_KEY` to Vercel Preview. Do not use a broad `*.vercel.app` hostname allowlist. Validate missing, invalid, and expired tokens before any Production rollout.
 - After staging validation and written approval, create a separate Turnstile widget restricted to `ainnoe-le.vercel.app`, configure its key pair in Production Supabase, add the public site key to Vercel Production, redeploy, and verify the live signup flow. Never store or expose the Turnstile secret in Vercel, source control, chat, or a frontend build.
 - The current local UI has no public signup/trial form. Turnstile is relevant only if a future, explicitly approved signup flow is designed; do not add the frontend site key as part of this release.
@@ -190,7 +190,7 @@ Important:
 5) Billing and payments
 
 - The application operates without in-app billing. Do not implement, configure, or deploy Midtrans checkout or payment processing under this requirement.
-- The local `midtrans-checkout` and `midtrans-webhook` Edge Functions return HTTP 410 for non-preflight requests. Keep them fail-closed; do not add gateway calls, secrets, or service-role access.
+- The local Midtrans Edge Function source and function configuration have been removed. Do not restore gateway calls, secrets, checkout routes, or service-role access.
 - The `finalize_midtrans_payment()` routine and billing migrations are retained historical/local schema artifacts, not authorization to activate payments. Do not apply them to a hosted project as part of ordinary setup.
 - Do not create payment orders, collect payment credentials, test with real payments, or enable a billing provider. Entitlement display, if schema is present, is informational only.
 - A future change to this policy requires explicit owner approval, review of provider fees and hosted schema, and a separate deployment plan.

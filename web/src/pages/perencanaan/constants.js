@@ -1,12 +1,12 @@
 /**
  * @file Konstanta modul Perencanaan Pembelajaran.
  * Satu-satunya tempat nilai "ajaib" (batas, nama koleksi, urutan dokumen).
- * Nilai batas HARUS selaras dengan firestore.rules dan functions/lib/schema.js.
+ * Nilai batas harus selaras dengan validasi dan kontrak data aktif.
  */
 
 export const SCHEMA_VERSION = 1;
 
-/** Nama koleksi Firestore lama, dipertahankan untuk rekonsiliasi data migrasi. */
+/** Nama area data perencanaan yang dipertahankan untuk rekonsiliasi migrasi. */
 export const KOLEKSI = Object.freeze({
   ROOT: 'perencanaan',
   PAKET: 'paket',

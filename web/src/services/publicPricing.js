@@ -1,4 +1,4 @@
-import catalog from '../../../functions/shared/pricing.json';
+import catalog from '../data/pricing.json';
 
 export const NOMOR_WHATSAPP_OWNER = '6282236267895';
 const PEMBAGI_BULANAN = catalog.monthlyDivisor;

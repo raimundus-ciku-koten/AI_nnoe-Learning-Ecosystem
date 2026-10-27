@@ -612,9 +612,10 @@ confirm a recoverable deployment plan.
 
 The Edge Functions page was rechecked on 2026-10-18 and showed “Deploy your
 first edge function”; `chat-push`, `midtrans-checkout`, and `midtrans-webhook`
-are not deployed to this project. Do not rely on chat push or automated
-checkout/webhooks until their reviewed source, secrets, provider configuration,
-and end-to-end behavior have been deployed and verified.
+were not deployed to that project at that time. The local Midtrans function
+source and configuration have since been removed. Hosted state must still be
+checked separately; do not rely on chat push or automated checkout/webhooks
+without verifying their current deployment and end-to-end behavior.
 
 The owner bootstrap is complete for project `jvcrmzmuxgyuetkjqady`. The Auth
 identity is confirmed and the matching profile/allowlist have been verified
@@ -863,9 +864,9 @@ hosted feature is not ready until migrations and Drive sharing are verified
 there. A Supabase Edge Function now sends Web Push for new chat messages;
 deployment and VAPID configuration still need verification.
 
-The application is not yet Firebase-free. The active Data Siswa list and
-write paths now use Supabase, but its schema is local and existing roster data
-still requires reconciliation/import. The dashboard reads recent chat previews from the RLS-protected Supabase
+The active Data Siswa list and write paths now use Supabase, but its schema is
+local and existing roster data still requires reconciliation/import. The
+dashboard reads recent chat previews from the RLS-protected Supabase
 `chat_inbox` view and no longer imports Firebase. The teacher dashboard reads
 today's schedule from the encrypted Google Drive vault when the user's Google
 session and vault key are available; it links to Workspace settings otherwise.
@@ -922,18 +923,11 @@ Teacher assignments are read from Supabase `profiles.mapel_ids` and
 empty in the read-only console snapshot on 2026-10-17.
 Planning packages have moved off the active Firestore runtime, but legacy
 Firestore packages have not been imported. Legacy Teacher Workspace, schedule,
-and seating entries also remain in Firestore pending encrypted import, although
-their active pages no longer read those sources. Other Firebase services,
-configuration, backend functions, and legacy feature code remain in the
-repository; the application must not be described as Firebase-free yet. The
-active browser application no longer imports the Firebase Web SDK or retains
-the unused Firebase client shims. The unused FCM service worker has been
-removed.
-This only completes the frontend client cleanup: Firebase Functions/Admin SDK,
-legacy data, and hosted Firebase services have not been retired or fully
-verified as unused. Root Firebase deployment/emulator configuration, the
-default Firebase project alias, and the local Spark deploy helper have been
-removed. The
+and seating data still require a separately reviewed encrypted import. The
+local integration cleanup removed Firebase source/configuration, rules,
+emulator tests, archived adapters, and local credential/cache artifacts from
+this checkout. It did not delete hosted data or services, and no claim is made
+that a hosted Firebase project has been retired. The
 Bank Soal runtime
 now reads and writes the tenant-scoped Supabase `question_bank` table with RLS:
 teachers and school admins can read within their tenant, while only an entitled
@@ -945,11 +939,11 @@ directory and school subscription status now read Supabase
 profiles/entitlements. The planning generator uses local AI by default; an
 external-provider action is offered only after disclosure, with a user-owned
 key and potential provider costs. This does not enable platform checkout or
-billing. The personal entitlement and Midtrans billing schema is
-local only and still requires deployment and payment-flow verification.
-Remaining backing schemas, authorization, data migration, and production
-verification must be completed before removing Firebase configuration or
-services.
+billing. The personal entitlement and Midtrans billing migrations are
+historical schema records, not an active payment implementation. Remaining
+backing schemas, authorization, data migration, and production verification
+must be completed before claiming that hosted legacy data or services have
+been retired.
 
 ### Materi digital, impor PDF, dan pendaftaran tenant
 
@@ -1432,29 +1426,23 @@ verified. Do not upgrade or enable billing to overcome a free-plan limit.
 
 ### Legacy data and Firebase retirement
 
-The active frontend no longer imports Firebase SDKs. The root Firebase CLI
-configuration and local deploy helper, plus deployment, emulator, and
-rules-test npm aliases, have been removed. Do not invoke Firebase CLI,
-Firebase Admin, Cloud Functions, or Firebase deployment commands.
-
-Legacy Firebase Functions source is retained only as migration reference; its
-entry points throw before loading Firebase SDKs. It is not an application
-service and must not be deployed. The Supabase project still lacks required
-feature tables/functions, and no restore-tested backup or completed data
-reconciliation has been verified. Therefore, this repository cannot yet
-promise that hosted Firebase services have been shut down or that all former
-Firebase-backed features are available on Supabase. Do not delete the legacy
-source or change hosted services in this step; the owner must first confirm an
-independent recovery copy and complete the Supabase cutover. Never attach
-billing or enable a paid plan to perform that work.
+Firebase client/server source, deployment configuration, database rules,
+archived adapters, emulator tests, and local credential/cache artifacts have
+been removed from this checkout. Midtrans Edge Function source and
+configuration have also been removed. Supabase local Auth signup remains
+disabled; the existing login uses Supabase Auth for provisioned accounts.
+Informational prices remain available but do not create orders or accept
+payments. Hosted Firebase/Supabase resources and user data were not changed.
+The Supabase project still lacks required feature tables/functions, so hosted
+Firebase retirement and the full data reconciliation remain unverified. Do
+not configure payment secrets or enable a paid plan to perform that work.
 
 The 2026-10-18 local audit found no Firebase packages in the root or web
-dependency trees, no Firebase imports/endpoints in the active web source or
-production bundle, and no active Firebase deployment configuration. Old
-installable Android APK/AAB outputs have been preserved with a `.disabled`
-suffix; do not restore their package extensions or distribute them. Historical
-Firebase rules, offline reconciliation utilities, and feature snapshots remain
-for migration analysis only and are not runtime dependencies.
+dependency trees or imports/endpoints in the active web source or production
+bundle. Old installable Android APK/AAB outputs have been preserved with a
+`.disabled` suffix; do not restore their package extensions or distribute
+them. Older dated notes elsewhere in this document describe the repository
+before the local integration cleanup and are retained only as release history.
 
 ### Referensi kalender pendidikan 2026/2027
 
@@ -1480,15 +1468,10 @@ that school and must not be treated as the default for other schools.
 | `web/src/styles/` | Shared and feature-specific stylesheets. |
 | `web/tests/` | Active frontend unit and integration tests. |
 | `web/src/styles/legacy/` | Preserved unused stylesheets, excluded from runtime imports. |
-| `functions/` | Inert legacy Firebase Functions source retained for cutover inventory; not used or deployed by the active application. |
-| `scripts/` | Historical migration utilities; Firebase mutators fail closed and are not part of the active workflow. |
-| `tests-rules/` | Archived Firebase Security Rules sources; active test entry points fail closed and do not launch emulators. |
+| `scripts/` | Active migration, backup, reconciliation, and audit utilities. |
 | `android-apk/` | TWA source; APK builds require an owner-provided non-Firebase `TWA_HOST` and matching Digital Asset Links configuration. |
-| `firestore.rules`, `firestore.indexes.json`, `storage.rules` | Historical Firebase rules retained for migration analysis, not active application policy. |
-| `database/`, `dataconnect/` | Historical Firebase configuration/assets retained for migration analysis. |
+| `web/src/data/pricing.json` | Informational package catalog; not connected to checkout or billing. |
 | `reference/feature-packs/` | Preserved feature-package snapshots; not part of the active frontend or deployment workflow. |
-| `reference/legacy-root-app/` | Unused root-level frontend snapshot, retained for reference and excluded from the app build. |
-| `reference/legacy-firebase/` | Unused alternative Firebase bootstrap helpers; not imported by the active app. |
 | `public/` | Root-level static assets retained for project tooling. The Vite app serves assets from `web/public/`. |
 
 ### Program BK dan kegiatan
@@ -1523,12 +1506,13 @@ npm test
 
 Frontend-specific tests and builds can also be run with
 `npm --prefix web run test` or `npm --prefix web run build`. Firebase-specific
-source and tests are retained for migration analysis but intentionally have no
-active npm run or deploy aliases.
+runtime source, rules, configuration, local credentials, and Firebase-specific
+tests have been removed from this checkout. Historical SQL migrations and
+dated release notes remain for provenance only.
 
 ## Package status and Google Workspace
 
-The historical package catalog in `functions/shared/pricing.json` supplies the
+The informational package catalog in `web/src/data/pricing.json` supplies the
 public informational price list. Annual amounts are shown alongside a monthly
 equivalent calculated using the catalog divisor; the monthly amount is not a
 checkout or billing option. Each package links to the owner’s public WhatsApp
@@ -1538,12 +1522,13 @@ application data, not a secret.
 The purchase page and public login landing page display prices and WhatsApp
 contact only; there is no public account signup, trial registration, order
 creation, checkout, or payment flow. Supabase local Auth signup is disabled in
-`supabase/config.toml`. Historic account/trial records, billing migrations,
-and fail-closed payment stubs are retained as source/database history; they
-were not purged from hosted systems. Do not configure payment secrets, apply
-the historical billing migration to a hosted project, or deploy payment
-components. Hosted functions have not been updated or verified; no claim is
-made about hosted payment state.
+`supabase/config.toml`. Firebase implementation files, local Firebase
+configuration, and the ignored service-account credential file were removed
+from this checkout. Midtrans Edge Function source/configuration was also
+removed. Historic Firebase and billing/trial migration notes remain only as
+documentation/schema provenance; hosted systems and migration history were
+not purged or changed. Do not configure payment secrets or apply historical
+billing migrations to hosted projects. Hosted payment state remains unverified.
 
 ## Google AdSense for web/PWA
 
@@ -1556,8 +1541,7 @@ a native AdMob app. Advertising is not configured in the active application.
 Do not add publisher scripts, IDs, or SDK integrations under the no-ad
 requirement.
 See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for the current no-billing
-deployment boundary. `functions/README.md` is an archival inventory only;
-its legacy merchant setup instructions must not be followed.
+deployment boundary.
 
 Google Workspace is available only to provisioned application users. Each user
 can link their own same-email Google account from **Pengaturan → Google
@@ -1707,16 +1691,13 @@ their trusted APIs, data contracts, and audit handling are implemented.
 
 ## Legacy Firebase configuration boundaries
 
-The root Firebase deployment configuration, default project alias, and deploy
-helper have been removed. Legacy `functions/`, Firebase rules, migration
-utilities, archived feature snapshots, and Firebase-related source remain as
-migration material.
-They are not used by the active browser application; hosted services and legacy
-data cannot honestly be called retired until separately verified. No npm
-script exposes Firebase deployment, emulator, or rules-test operations. Do not
-run Firebase CLI/Admin SDK commands or add Firebase settings to
-`web/.env.local`. Configure the active frontend only from
-`web/.env.example`; keep all provider secrets out of source control.
+Firebase runtime source, deployment configuration, rules, emulator tests,
+archived Firebase adapters, and local credential/cache artifacts have been
+removed from this checkout. Supabase local Auth signup is disabled and the
+login surface remains for provisioned accounts. This local cleanup does not
+retire hosted Firebase projects or delete hosted data; verify those resources
+separately. Configure the active frontend only from `web/.env.example`, and
+keep all provider secrets out of source control.
 
 ### Production release checks
 
@@ -1724,8 +1705,8 @@ The active frontend authenticates with Supabase and uses a separate Google
 Identity Services OAuth grant for Google Workspace. Configure the Supabase
 project URL and publishable/anon key, the approved Google OAuth client ID, and
 the restricted Google Picker API key for the deployed origin. Never expose a
-Supabase service-role key, Google client secret, Firebase service-account
-credentials, or payment/provider secrets through `VITE_*` variables.
+Supabase service-role key, Google client secret, service-account private key,
+or provider secret through `VITE_*` variables.
 
 The Android TWA no longer defaults to Firebase Hosting. Its Gradle build
 requires `TWA_HOST` (or `-PtwaHost`) to name the deployed non-Firebase HTTPS
@@ -1741,21 +1722,17 @@ Cloud Console; they cannot be enabled by this repository:
 1. Supabase Auth is the current web login provider. Configure its Google OAuth
    provider and redirect URLs. Google Workspace access is granted separately
    through the direct OAuth flow and must be limited to the required scopes.
-2. The active browser app uses Supabase Auth and data services and does not
-   import the Firebase Web SDK. Firebase Functions/Admin SDK, rules, migration
-   scripts, archived feature snapshots, and legacy data remain in the
-   repository but are deliberately not invoked. Root Firebase deployment
-   configuration has been removed. Hosted Firebase retirement is unverified and
-   cannot be completed from this workspace without owner-authorized access and
-   a migration/recovery plan.
+2. The active browser app uses Supabase Auth and data services. Firebase
+   runtime source, deployment configuration, rules, local credentials, and
+   emulator tests have been removed from this checkout. Hosted Firebase
+   retirement is unverified and requires a separately approved data/recovery
+   plan.
 3. Web Push subscriptions are stored in Supabase and the `chat-push` Edge
    Function is implemented locally. Its hosted deployment and VAPID
-   configuration must be verified before relying on delivery. The legacy
-   Firebase FCM/Realtime Database token workflow is not the active replacement.
-4. Crashlytics and App Distribution apply only if native Android/iOS Firebase
-   SDKs or release workflows are intentionally retained. The Android package
-   is a Trusted Web Activity; this web build does not initialize Firebase
-   Performance Monitoring or Firebase AI Logic.
+   configuration must be verified before relying on delivery. No legacy
+   Firebase FCM/Realtime Database runtime is retained locally.
+4. The Android package is a Trusted Web Activity; the web build does not
+   include a native mobile analytics or advertising SDK.
 5. The AI assistant and question drafts use local WebLLM by default and remain
    gated by superadmin feature controls. Users may optionally supply a personal
    API key for Gemini, DeepSeek, or Groq; prompts go directly to the chosen
@@ -1763,57 +1740,24 @@ Cloud Console; they cannot be enabled by this repository:
    outside the zero-cost guarantee. Keys exist only in tab memory. ATP, KKTP,
    and Modul Ajar prompts use the encrypted package's grade, phase CP, and
    schedule context; official CP remains verbatim while grade-specific
-   learning goals are teacher-reviewed proposals. Canva OAuth and server-side AI Firebase
-   callables remain legacy Functions; the active frontend does not call them.
-6. Do not enable Firebase Blaze, attach billing, run Firebase CLI commands, or
-   deploy legacy Firebase functions. Existing Firebase payment, platform
-   administration, server-side AI, media conversion, and chat-trigger code
-   must not be assumed retired merely because the current frontend no longer
-   calls some legacy endpoints.
+   learning goals are teacher-reviewed proposals. Canva server OAuth is not
+   part of the active integration surface.
+6. Do not attach billing or reintroduce Firebase runtime/deployment code.
+   Hosted provider projects and data were not changed by the local cleanup;
+   verify their status separately.
 7. Run `npm test` and `npm run build` for the active web application. Review
    Supabase migrations and target-project configuration before deployment;
    do not resolve a free-plan restriction by upgrading or enabling billing.
 
-### Legacy callable retirement inventory
+### Legacy service retirement status
 
-Historical Firebase Functions source in `functions/index.js` and
-`functions/chat-functions.js` is disabled at its entry points and must not be
-deployed. The following names are retained for migration inventory only:
-
-- `notifikasiPesanBaru` and `buatChat`: legacy Realtime Database/FCM chat
-  paths. Supabase `chat-push` is the local push replacement; verify the
-  Supabase chat creation flow and deployed push delivery before retiring either.
-- `buatPembayaran`, `buatPembayaranPaket`, and `midtransWebhook`: legacy
-  checkout/webhook paths. The local Supabase `midtrans-checkout` and
-  `midtrans-webhook` functions return HTTP 410 and are deliberately not
-  replacements for an active billing flow. The
-  `finalize_midtrans_payment` routine is a historical/local schema artifact.
-  Do not configure, deploy, or rely on payment components under the no-billing
-  requirement. `buatPembayaran` explicitly rejects its retired per-seat flow.
-  See `DEPLOYMENT_GUIDE.md`; older merchant setup instructions in
-  `functions/README.md` are archival and must not be followed.
-- `getAIProviderConnections`, `savePersonalAIProviderKey`,
-  `removePersonalAIProviderKey`, `setAIProviderPreference`,
-  `generateQuestionDraft`, `generatePerangkat`, and `chatAsisten`: legacy
-  server-side AI/settings callables. The browser AI flow does not call or
-  replace them; it uses local WebLLM by default and optional personal API keys
-  directly from the browser after user acknowledgement.
-- `startCanvaOAuth`, `canvaOAuthCallback`, and `createCanvaQuestionDesign`:
-  Canva server OAuth/design paths remain legacy; no Supabase Edge replacement
-  is present in `supabase/functions/`.
-- `setPlatformControl` and `createPlatformUser`: legacy platform callables.
-  Supabase migrations define `set_platform_control` and `manage_platform_user`
-  database routines, but their hosted deployment, authorization, and user
-  lifecycle parity remain unverified.
-
-This inventory is source-level only. It does not establish which functions are
-currently deployed or receiving traffic. Because Firebase is no longer to be
-used, do not inspect or invoke those services from this workflow. The legacy
-source remains a warning that hosted Firebase resources may still exist; their
-retirement is blocked until Supabase data/features are reconciled and an
-owner-approved recovery path exists. The Vercel configuration is present, but
-production frontend cutover and required hosted Supabase Edge Functions and
-migrations remain unverified.
+The local Firebase runtime/configuration and Midtrans Edge Function source
+have been removed. This is a source-checkout cleanup only: it does not delete
+or disable hosted Firebase resources, payment provider configuration, database
+objects, historical migration files, or existing user data. No hosted change
+was made. Verify provider dashboards independently before claiming hosted
+retirement. Supabase schema provenance and required feature relations remain
+unreconciled, so production deployment is still blocked.
 
 ## Android APK
 
@@ -1919,11 +1863,10 @@ end to end.
 - Put a new screen under its product area in `web/src/pages/`; reusable
   presentation belongs in `web/src/components/`; new auth/data integrations
   should follow the active Supabase or Google Workspace service patterns.
-- Do not add or invoke Firebase client/server dependencies or services. Keep
-  retained Firebase code inert as migration reference only; complete any
-  eventual data cutover through reviewed, no-cost export/import tooling.
-- Keep Cloud Function provider secrets server-side and put reusable function
-  logic in `functions/lib/`.
+- Do not add Firebase, payment, advertising, or public-signup integrations
+  without a separate approved scope and security review.
+- Keep provider secrets server-side and put reusable backend logic in the
+  existing Supabase Edge Functions.
 - Treat `reference/feature-packs/` as migration/reference material. Promote
   code into the active application explicitly rather than importing from an
   archived package.

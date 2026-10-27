@@ -1,11 +1,5 @@
 [auth]
 enable_signup = false
 
-[functions.midtrans-checkout]
-verify_jwt = true
-
-[functions.midtrans-webhook]
-verify_jwt = false
-
 [functions.chat-push]
 verify_jwt = true
