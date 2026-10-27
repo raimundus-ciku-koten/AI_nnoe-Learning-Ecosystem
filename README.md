@@ -99,12 +99,24 @@ invalidate the already verified encrypted artifact.
 The same artifact passed `.\scripts\verifyProductionBackupRestore.ps1` again
 on 2026-10-27: authentication/decryption and the isolated local restore
 succeeded, with 51 user tables verified. This repeat check still excluded
-`supabase_vault` and `vault.secrets`; it does not verify Vault recovery or
-create a new backup.
+`supabase_vault` and `vault.secrets`; that PostgreSQL-only test does not verify
+Vault recovery or create a new backup.
 
-This proves authenticated backup recovery for the non-Vault database objects,
-not a complete Supabase environment restore or Production/Staging schema
-parity. Do not apply hosted migrations until the Vault recovery path and
+On 2026-10-27, the full encrypted archive was also restored to a separate,
+loopback-only Supabase-compatible PostgreSQL 17.11 container with
+`supabase_vault` 0.3.1. The restored `vault.secrets` table had zero rows, so
+there were no Production Vault records in this artifact whose decryption could
+be verified. A synthetic create/decrypt canary passed inside the restored
+database, and its transaction rollback left no canary row. The restore
+container was removed after approval; the encrypted artifact remains unchanged
+and no secret values were selected or emitted. This confirms archive restore
+and extension operation, not recovery of non-empty Production Vault data or a
+complete managed-Supabase recovery.
+
+The Supabase-compatible restore also verifies the archived database objects;
+the PostgreSQL-only restore remains useful as a separate 51-table check.
+Neither test reconstructs managed Supabase Auth/Storage/functions or proves
+Production/Staging schema parity. Do not apply hosted migrations until the
 definition-level schema inventories are reviewed, the Staging inventory gap
 is resolved, and authenticated role acceptance is complete.
 
@@ -123,9 +135,36 @@ comparison and remaining release gates. The 2026-10-27 comparison also found
 10/13 public routines, 2/2 public triggers, 7/9 RLS policies, and 92/122
 table-grant rows in Production/Staging. Trigger definition fingerprints match;
 routine, policy, and grant fingerprints do not. Both projects report
-`supabase_vault` 0.3.1, which confirms extension installation only—not secret
-decryption or Vault recovery. No isolated Vault restore or authenticated
-acceptance test for superadmin, guru, or siswa has been completed.
+`supabase_vault` 0.3.1. The isolated archive restore found zero Vault secret
+rows and the synthetic canary passed, but recovery of any non-empty Production
+Vault data remains unverified. No authenticated acceptance test for
+superadmin, guru, or siswa has been completed.
+
+Repository history contains a possible source for the Staging-only
+`school_npsn` column and `school_registration_requests` table: unmerged branch
+`feature/demo-trial-release`, commit `ed52e430`, introduced migration
+`20261019000400_public_school_registration.sql`. That commit is not an
+ancestor of the current release branch and the migration is absent from its
+62-migration chain. The feature was merged only into
+`migration/supabase-foundation-preview`; PR
+`raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem#3` explicitly stated that
+the migration was source-only and had not been applied to hosted Supabase at
+that time. This is a matching historical definition, not proof of the live
+Staging objects' origin or deployment history. Preserve these objects and all
+existing data until the owner or provider confirms their provenance.
+
+To establish it, ask the Supabase provider/project administrator for the
+Staging project's non-secret migration/DDL audit records (timestamp, migration
+or statement identifier, actor role with personal identifiers redacted, and
+outcome), deployment-tool source commit/branch records, any ledger backup or
+explanation for its absence, and DDL/clone/restore events affecting
+`school_registration_requests`, `tenants.school_npsn`, or tenant-profile
+columns. Request that they preserve the current schema/data and make no DDL,
+reset, migration repair, or cleanup while collecting evidence. Never request
+passwords, connection strings, API keys, Vault contents, or application/student
+rows. The read-only audit query reports routine definitions; review and redact
+any embedded secret-like literals before sharing results outside the authorized
+owner/provider channel.
 
 PR #15 remains open against `main` and includes the validated feature-code
 commit `cf6a54b`. Its Web CI, including the disposable migration replay, and
@@ -1258,8 +1297,10 @@ repository root using `npx supabase start`; inspect its connection values with
 commands at the hosted project. `npx supabase db reset` is destructive to the
 local stack's data; run it only when that local data is disposable. Do not use
 `supabase db push`, `migration repair`, or hosted reset on the current project:
-its migration history and schema parity remain unreconciled, and a database
-restore has not yet been proven.
+its migration history and schema parity remain unreconciled. Recovery evidence
+now includes a local Production archive restore (with zero Vault secret rows)
+and the short-lived Staging workflow restore; neither is a durable, complete
+managed-Supabase recovery point or release authorization.
 
 ### Privileged login, quota mode, and privacy
 
@@ -1349,9 +1390,22 @@ this repository. This leaves data reconciliation and safe hosted retirement
 blocked; no hosted data export or production cutover has been run from this
 workspace.
 
-For local setup, copy `web/.env.example` to `web/.env.local`, then set
-`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`. For Vercel, set the same
-variables in the project's Development, Preview, and Production environments.
+For local development, copy `web/.env.example` to `web/.env.local` and set
+the intended project's `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+The default development server requires the approved Staging project. Local
+Production-mode builds require the Staging project unless the explicit
+`ALLOW_LOCAL_PRODUCTION_BUILD=true` diagnostic override is used with the
+Production project. Vercel Preview is restricted to Staging, and Vercel
+Production is restricted to Production. Never set the diagnostic override in
+shared environments.
+For Staging UAT, copy `web/.env.staging.example` to
+`web/.env.staging.local`, set the Staging anon/publishable key locally, then
+use `npm run dev:staging` or `npm run build:staging` from `web/`. Staging mode
+refuses missing credentials and any URL other than the approved Staging
+project; it does not make the Staging schema ready or authorize hosted DDL.
+Never put credentials in chat or source control. Configure Vercel Preview to
+use Staging and Vercel Production to use Production; the build rejects a
+mismatched target. Configure Vercel Development to use Staging as well.
 The frontend key must be the Supabase anon/publishable key; never expose a
 `service_role` key in the browser or a `VITE_*` variable. Configure database
 access with RLS before wiring application data to Supabase.

@@ -301,6 +301,71 @@ where namespace.nspname in ('public', 'auth')
 union all
 
 select
+  'owner',
+  namespace.nspname || '.' || relation.relname,
+  jsonb_build_object(
+    'relation_kind', relation.relkind,
+    'owner', pg_get_userbyid(relation.relowner)
+  )
+from pg_class as relation
+join pg_namespace as namespace
+  on namespace.oid = relation.relnamespace
+where namespace.nspname = 'public'
+  and relation.relkind in ('r', 'p', 'v', 'm', 'f', 'S')
+
+union all
+
+select
+  'owner',
+  namespace.nspname || '.' || routine_info.proname || '(' ||
+    pg_get_function_identity_arguments(routine_info.oid) || ')',
+  jsonb_build_object(
+    'routine_kind', routine_info.prokind,
+    'owner', pg_get_userbyid(routine_info.proowner)
+  )
+from pg_proc as routine_info
+join pg_namespace as namespace
+  on namespace.oid = routine_info.pronamespace
+where namespace.nspname = 'public'
+
+union all
+
+select
+  'owner',
+  namespace.nspname || '.' || type_info.typname,
+  jsonb_build_object('owner', pg_get_userbyid(type_info.typowner))
+from pg_type as type_info
+join pg_namespace as namespace
+  on namespace.oid = type_info.typnamespace
+where namespace.nspname = 'public'
+  and type_info.typtype in ('d', 'e', 'r', 'm')
+
+union all
+
+select
+  'owner',
+  'schema.' || namespace.nspname,
+  jsonb_build_object('owner', pg_get_userbyid(namespace.nspowner))
+from pg_namespace as namespace
+where namespace.nspname = 'public'
+
+union all
+
+select
+  'extension',
+  extension.extname,
+  jsonb_build_object(
+    'version', extension.extversion,
+    'schema', namespace.nspname,
+    'owner', pg_get_userbyid(extension.extowner)
+  )
+from pg_extension as extension
+left join pg_namespace as namespace
+  on namespace.oid = extension.extnamespace
+
+union all
+
+select
   'migration_history',
   'supabase_migrations.schema_migrations',
   jsonb_build_object(

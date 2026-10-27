@@ -40,4 +40,9 @@ test('hosted schema audit lists every public table and view created by migration
   assert.match(audit, /information_schema\.columns/);
   assert.match(audit, /table_schema = 'supabase_migrations'/);
   assert.match(audit, /table_name = 'schema_migrations'/);
+  assert.match(audit, /'owner',\s*namespace\.nspname \|\| '\.' \|\| relation\.relname/);
+  assert.match(audit, /'extension',\s*extension\.extname/);
+  assert.match(audit, /'default_grant'/);
+  assert.match(audit, /'sequence_grant'/);
+  assert.match(audit, /'routine_grant'/);
 });
