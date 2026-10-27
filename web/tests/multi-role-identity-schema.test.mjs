@@ -50,7 +50,8 @@ test('pemilih peran klien tidak dapat mengubah tenant atau peran tanpa RPC admin
   assert.match(auth, /const activeRole = claims\.role/);
   assert.match(userManagement, /supabase\.rpc\('manage_platform_user', request\)/);
   assert.match(userManagement, /Skema multi-peran belum diterapkan/);
-  assert.match(userManagement, /role: 'admin_sekolah',\s+roles: \[\]/);
+  assert.match(userManagement, /role: '',\s+roles: \[\]/);
+  assert.match(userManagement, /Peran utama\s*<select\s+required[\s\S]*?<option value="">Pilih peran utama<\/option>/);
   assert.match(userManagement, /supportsRoleAssignments\s*\?\s*\[\.\.\.new Set\(\[\.\.\.form\.roles, form\.role\]\)\]\s*:\s*\[form\.role\]/);
   assert.match(userManagement, /disabled=\{!supportsRoleAssignments && !LEGACY_ROLES\.has\(value\)\}/);
 });
