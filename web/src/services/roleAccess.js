@@ -32,6 +32,16 @@ export function getAssignedRoleChoices(roles) {
     .filter((role) => KNOWN_ROLES.has(role)))];
 }
 
+export function getRoleAssignmentFormState(user, allowedRoles) {
+  const allowed = new Set(allowedRoles);
+  const role = allowed.has(user?.role) ? user.role : '';
+  const roles = Array.isArray(user?.roles)
+    ? [...new Set(user.roles.filter((assignedRole) => allowed.has(assignedRole)))]
+    : [];
+  if (!roles.length && role) roles.push(role);
+  return { role, roles };
+}
+
 export function isSchoolAdminRole(role) {
   return ['admin', 'admin_sekolah'].includes(String(role || '').trim().toLowerCase());
 }

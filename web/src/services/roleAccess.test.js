@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { menuUntukPeran } from '../navigasi.js';
 import {
-  canOpenRolePath, getAssignedRoleChoices, isKnownRole,
+  canOpenRolePath, getAssignedRoleChoices, getRoleAssignmentFormState, isKnownRole,
   isParentRole, isSchoolAdminRole, isTeacherRole,
 } from './roleAccess.js';
 import { isMenuPathDisabled } from './menuAccessPolicy.js';
@@ -91,6 +91,22 @@ test('role yang belum diprovisikan hanya menawarkan role valid dari klaim server
     ['guru', 'admin_sekolah'],
   );
   assert.deepEqual(getAssignedRoleChoices('guru'), []);
+});
+
+test('form provisioning tidak mengarang peran untuk akun yang belum ditetapkan', () => {
+  const allowedRoles = ['admin_sekolah', 'guru', 'siswa'];
+  assert.deepEqual(
+    getRoleAssignmentFormState({ role: 'unprovisioned', roles: [] }, allowedRoles),
+    { role: '', roles: [] },
+  );
+  assert.deepEqual(
+    getRoleAssignmentFormState({ role: 'admin_sekolah', roles: ['admin_sekolah', 'unprovisioned'] }, allowedRoles),
+    { role: 'admin_sekolah', roles: ['admin_sekolah'] },
+  );
+  assert.deepEqual(
+    getRoleAssignmentFormState({ role: 'unprovisioned', roles: ['guru'] }, allowedRoles),
+    { role: '', roles: ['guru'] },
+  );
 });
 
 test('catatan kerja pribadi hanya dapat dibuka peran guru', () => {

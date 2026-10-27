@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase.ts';
+import { getRoleAssignmentFormState } from '../services/roleAccess.js';
 import '../styles/supabase-platform-users.css';
 
 const ROLES = [
@@ -22,7 +23,7 @@ const LEGACY_ROLES = new Set([
 const EMPTY_FORM = {
   email: '',
   nama: '',
-  role: 'admin_sekolah',
+  role: '',
   roles: [],
   tenantId: '',
   nip: '',
@@ -239,11 +240,14 @@ export default function SupabasePlatformUsersPage() {
   }
 
   function editUser(user) {
+    const assigned = getRoleAssignmentFormState(
+      user,
+      ROLES.map(([value]) => value),
+    );
     setForm({
       email: user.email || '',
       nama: user.nama || '',
-      role: user.role === 'unprovisioned' ? 'guru' : user.role,
-      roles: user.roles?.length ? user.roles : [user.role === 'unprovisioned' ? 'guru' : user.role],
+      ...assigned,
       tenantId: user.tenant_id || '',
       nip: user.nip || '',
       mapel: (user.mapel_ids || []).join(', '),
@@ -268,6 +272,7 @@ export default function SupabasePlatformUsersPage() {
       const selectedRoles = supportsRoleAssignments
         ? [...new Set([...form.roles, form.role])]
         : [form.role];
+      if (!form.role) throw new Error('Pilih peran utama secara eksplisit sebelum menyimpan akses pengguna.');
       const teacherSpecializations = [
         'wali_kelas', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',
       ];
@@ -391,9 +396,11 @@ export default function SupabasePlatformUsersPage() {
               <label>
                 Peran utama
                 <select
+                  required
                   value={form.role}
                   onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}
                 >
+                  <option value="">Pilih peran utama</option>
                   {ROLES.map(([value, label]) => (
                     <option key={value} value={value} disabled={!supportsRoleAssignments && !LEGACY_ROLES.has(value)}>
                       {label}
