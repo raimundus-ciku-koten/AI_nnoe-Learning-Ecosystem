@@ -62,7 +62,7 @@ function rakitState(user, claims = {}, profil = {}) {
 async function ambilProfil(uid) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,email,nama,role,tenant_id,instansi,active,logo_sekolah,photo_url')
+    .select('id,email,nama,role,tenant_id,active,photo_url')
     .eq('id', uid)
     .maybeSingle();
 
