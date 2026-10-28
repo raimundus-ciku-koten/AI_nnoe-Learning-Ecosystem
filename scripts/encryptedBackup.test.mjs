@@ -94,10 +94,13 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
     /      - name: Validate backup configuration([\s\S]*?)(?=      - name:|$)/,
   )?.[1];
   const create = workflow.match(
-    /      - name: Create and encrypt database dump([\s\S]*?)(?=      - name:|$)/,
+    /      - name: Create, encrypt, and restore database dump([\s\S]*?)(?=      - name:|$)/,
   )?.[1];
   const upload = workflow.match(
     /      - name: Upload encrypted backup artifact([\s\S]*?)(?=      - name:|$)/,
+  )?.[1];
+  const cleanup = workflow.match(
+    /      - name: Remove temporary database files([\s\S]*?)(?=      - name:|$)/,
   )?.[1];
 
   assert.doesNotMatch(workflow, /^    env:/m);
@@ -106,6 +109,7 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.ok(validate);
   assert.ok(create);
   assert.ok(upload);
+  assert.ok(cleanup);
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /Run this workflow from main only/);
   assert.match(validate, /validateStagingBackupTarget\.mjs/);
@@ -134,9 +138,20 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
     create.indexOf('pg_restore \\\n            --exit-on-error') <
       create.indexOf('node scripts/encryptedBackup.mjs encrypt'),
   );
+  assert.match(create, /node scripts\/encryptedBackup\.mjs decrypt "\$encrypted" "\$encrypted_restore"/);
+  assert.match(create, /pg_restore --list "\$encrypted_restore" > \/dev\/null/);
+  assert.match(create, /--dbname "\$encrypted_restore_db" "\$encrypted_restore"/);
+  assert.match(create, /encrypted_table_count != table_count/);
+  assert.match(create, /Encrypted artifact round-trip restore validated/);
+  assert.ok(
+    create.indexOf('node scripts/encryptedBackup.mjs encrypt') <
+      create.indexOf('node scripts/encryptedBackup.mjs decrypt'),
+  );
   assert.doesNotMatch(create, /export PGPASSWORD=/);
   assert.match(create, /test -s "\$dump"/);
   assert.match(create, /test -s "\$encrypted"/);
+  assert.match(create, /test -s "\$encrypted_restore"/);
+  assert.match(cleanup, /supabase-staging-\$\{GITHUB_RUN_ID\}-encrypted-restore\.dump/);
   assert.match(create, /400 \* 1024 \* 1024/);
   assert.match(validate, /SUPABASE_DB_URL:/);
   assert.match(validate, /BACKUP_ENCRYPTION_KEY:/);

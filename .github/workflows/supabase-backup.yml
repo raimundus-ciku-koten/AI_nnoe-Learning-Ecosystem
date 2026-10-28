@@ -58,7 +58,7 @@ jobs:
           sudo apt-get install --yes postgresql-client-17
           /usr/lib/postgresql/17/bin/pg_dump --version
           /usr/lib/postgresql/17/bin/pg_restore --version
-      - name: Create and encrypt database dump
+      - name: Create, encrypt, and restore database dump
         shell: bash
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
@@ -68,7 +68,9 @@ jobs:
           umask 077
           dump="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.dump"
           encrypted="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.aeb"
+          encrypted_restore="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}-encrypted-restore.dump"
           restore_db="backup_restore_validation"
+          encrypted_restore_db="backup_encrypted_restore_validation"
           /usr/lib/postgresql/17/bin/pg_dump --format=custom --no-owner --no-acl --file "$dump" "$SUPABASE_DB_URL"
           test -s "$dump"
           /usr/lib/postgresql/17/bin/pg_restore --list "$dump" > /dev/null
@@ -85,7 +87,7 @@ jobs:
             echo "::error::Disposable restore completed without any user tables."
             exit 1
           fi
-          echo "Disposable restore validated ($table_count user tables)."
+          echo "Disposable dump restore validated ($table_count user tables)."
           node scripts/encryptedBackup.mjs encrypt "$dump" "$encrypted"
           test -s "$encrypted"
           size=$(stat --format=%s "$encrypted")
@@ -94,6 +96,23 @@ jobs:
             echo "::error::Encrypted backup exceeds the 400 MiB free-storage safety cap."
             exit 1
           fi
+          node scripts/encryptedBackup.mjs decrypt "$encrypted" "$encrypted_restore"
+          test -s "$encrypted_restore"
+          /usr/lib/postgresql/17/bin/pg_restore --list "$encrypted_restore" > /dev/null
+          PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/createdb \
+            --host 127.0.0.1 --username supabase_admin "$encrypted_restore_db"
+          PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/pg_restore \
+            --exit-on-error --no-owner --no-acl \
+            --host 127.0.0.1 --username supabase_admin --dbname "$encrypted_restore_db" "$encrypted_restore"
+          encrypted_table_count=$(PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/psql \
+            --host 127.0.0.1 --username supabase_admin --dbname "$encrypted_restore_db" \
+            --tuples-only --no-align \
+            --command "SELECT count(*) FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')")
+          if (( encrypted_table_count != table_count )); then
+            echo "::error::Encrypted backup restore table count does not match the source dump restore."
+            exit 1
+          fi
+          echo "Encrypted artifact round-trip restore validated ($encrypted_table_count user tables)."
           echo "BACKUP_PATH=$encrypted" >> "$GITHUB_ENV"
       - name: Upload encrypted backup artifact
         uses: actions/upload-artifact@v4
@@ -107,5 +126,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          rm -f "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.dump"
-          rm -f "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.aeb"
+          rm -f \
+            "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.dump" \
+            "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.aeb" \
+            "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}-encrypted-restore.dump"
