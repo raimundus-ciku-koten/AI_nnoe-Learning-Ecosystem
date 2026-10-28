@@ -44,6 +44,8 @@ test('pemilih peran klien tidak dapat mengubah tenant atau peran tanpa RPC admin
   const auth = readFileSync(new URL('../src/auth.js', import.meta.url), 'utf8');
   const userManagement = readFileSync(new URL('../src/pages/SupabasePlatformUsersPage.jsx', import.meta.url), 'utf8');
 
+  assert.match(auth, /\.from\('profiles'\)\s*\.select\('id,email,nama,role,tenant_id,active,photo_url'\)/);
+  assert.doesNotMatch(auth, /\.select\([^)]*logo_sekolah/);
   assert.match(auth, /current\.roles\?\.includes\(role\)/);
   assert.match(auth, /supabase\.auth\.refreshSession\(\)/);
   assert.match(auth, /user\.app_metadata\?\.role !== role/);
