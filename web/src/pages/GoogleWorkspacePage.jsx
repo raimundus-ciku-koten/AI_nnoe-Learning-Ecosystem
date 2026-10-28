@@ -133,14 +133,38 @@ export default function GoogleWorkspacePage() {
     setStatus('');
     try {
       await simpanCadanganKunciDrive(tokenAktif, identitasDraft.encryptedPrivateKeyBackup);
-      await simpanKunciPublikPengguna(ownerId, identitasDraft);
       simpanIdentitasEnkripsiDriveDalamSesi(ownerId, identitasDraft);
       setIdentitasVault(identitasEnkripsiDriveDalamSesi(ownerId));
       setIdentitasDraft(null);
       setKodePemulihan('');
       setKodeKonfirmasi('');
-      await muatVault(tokenAktif);
-      setStatus('Kunci pemulihan terenkripsi tersimpan di Google Drive. Kode pemulihan hanya tersedia bagi Anda.');
+      let registrationError = null;
+      try {
+        await simpanKunciPublikPengguna(ownerId, identitasDraft);
+      } catch (err) {
+        registrationError = err;
+        console.error('[workspace] Direktori kunci publik belum tersedia:', err);
+      }
+      let refreshError = null;
+      try {
+        await muatVault(tokenAktif);
+      } catch (err) {
+        refreshError = err;
+        console.error('[workspace] Gagal memuat ulang daftar vault:', err);
+      }
+      setStatus('Vault pribadi aktif dan cadangan kunci terenkripsi tersimpan di Google Drive.');
+      if (registrationError || refreshError) {
+        const warnings = [];
+        if (registrationError) {
+          warnings.push(
+            `Direktori kunci publik Supabase tidak dapat diperbarui; berbagi perencanaan belum tersedia. ${registrationError.message || ''}`.trim(),
+          );
+        }
+        if (refreshError) {
+          warnings.push(`Daftar Drive belum dapat dimuat ulang. ${refreshError.message || ''}`.trim());
+        }
+        setError(warnings.join(' '));
+      }
     } catch (err) {
       console.error('[workspace] Gagal menyimpan cadangan kunci vault:', err);
       setError(err?.message || 'Cadangan kunci tidak dapat disimpan ke Drive.');
@@ -161,10 +185,16 @@ export default function GoogleWorkspacePage() {
       const backup = await pulihkanCadanganKunciDariDrive(tokenAktif, cadanganTerpilih);
       const identity = await pulihkanIdentitasEnkripsiDrive(backup, kodePemulihan.trim());
       simpanIdentitasEnkripsiDriveDalamSesi(ownerId, identity);
-      await simpanKunciPublikPengguna(ownerId, identity);
       setIdentitasVault(identitasEnkripsiDriveDalamSesi(ownerId));
       setKodePemulihan('');
-      setStatus('Kunci pemulihan berhasil dibuka hanya di memori sesi ini.');
+      try {
+        await simpanKunciPublikPengguna(ownerId, identity);
+        setStatus('Kunci pemulihan berhasil dibuka hanya di memori sesi ini.');
+      } catch (directoryError) {
+        console.error('[workspace] Direktori kunci publik belum tersedia:', directoryError);
+        setStatus('Kunci pemulihan berhasil dibuka di sesi ini. Berbagi perencanaan belum tersedia karena direktori kunci publik Supabase gagal diperbarui.');
+        setError(directoryError?.message || 'Direktori kunci publik Supabase belum tersedia.');
+      }
     } catch (err) {
       console.error('[workspace] Gagal memulihkan kunci vault:', err);
       setError(err?.message || 'Kunci tidak dapat dipulihkan. Periksa kode dan cadangan.');
