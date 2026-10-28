@@ -6,8 +6,8 @@ This document records the release state and the remaining safe rollout steps for
 
 Current release gate update ? 2026-10-28
 
-- Production deployment for `main` commit `4aff47b` is Ready. This confirms deployment health, not readiness of every feature for public release.
-- The latest Staging inventory found no migration ledger, 29 of 30 expected feature relations missing, and all audited chat relations missing. Structural RLS checks do not prove tenant isolation.
+- The Production site returned HTTP 200 on 2026-10-28. The deployed source SHA was not independently verified; availability does not confirm that the latest `main` commit is deployed or that every feature is ready for public release.
+- Fresh read-only Staging audit #3 (`40706044018`, `main` commit `cf2a900`) found no migration ledger and 29 of 30 expected feature relations missing across eight public base tables. The exact inventory and repository provenance limits are recorded in [STAGING_BASELINE_RECONCILIATION.md](./supabase/STAGING_BASELINE_RECONCILIATION.md). Structural RLS checks do not prove tenant isolation.
 - Super Admin tenant creation, MFA-stepped Super Admin provisioning, and active-role navigation updates are implemented locally with migration `20261028000100_platform_tenant_and_superadmin_provisioning.sql`; they are not deployed. The current Staging schema has only eight public tables and no migration ledger, so do not apply this migration in isolation or promote the UI to Production.
 - The manual, main-only Staging migration rehearsal is merged. Run #3 (`40658859733`) completed successfully in `current_staging_forward_only`: it restored a fresh Staging snapshot to a disposable Supabase Postgres service and replayed the pinned provisioning migration there. It never writes to hosted Staging or Production, does not create/stamp a migration ledger, and withholds database error output from Actions logs.
 - The rehearsal excludes Midtrans/billing catalog and public demo/trial migrations. Public signup, payment checkout, and ads remain out of release scope and must stay disabled.
