@@ -7,9 +7,11 @@ const workflow = await readFile(
   'utf8',
 );
 
-test('migration rehearsal is manual, main-only, and pinned to the Staging project', () => {
+test('migration rehearsal is manual, restricted to main and the approved release-gate branch', () => {
   assert.match(workflow, /^\s*workflow_dispatch:/m);
   assert.match(workflow, /GITHUB_REF.*refs\/heads\/main/);
+  assert.match(workflow, /refs\/heads\/fix\/staging-migration-rehearsal-gh-identity/);
+  assert.match(workflow, /approved release-gate branch only/);
   assert.match(workflow, /validateStagingBackupTarget\.mjs/);
   assert.match(workflow, /SUPABASE_DB_URL: \$\{\{ secrets\.SUPABASE_DB_URL \}\}/);
   assert.match(

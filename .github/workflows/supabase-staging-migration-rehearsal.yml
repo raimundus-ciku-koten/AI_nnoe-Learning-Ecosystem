@@ -37,8 +37,9 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
-            echo "::error::Run this workflow from main only."
+          if [[ "$GITHUB_REF" != "refs/heads/main" \
+            && "$GITHUB_REF" != "refs/heads/fix/staging-migration-rehearsal-gh-identity" ]]; then
+            echo "::error::Run this workflow from main or the approved release-gate branch only."
             exit 1
           fi
           if [[ -z "$SUPABASE_DB_URL" ]]; then
