@@ -246,6 +246,9 @@ test('local Production backup is target-bound and does not persist plaintext dum
   assert.match(script, /ValidateSet\('Production', 'Staging'\)/);
   assert.match(script, /jvcrmzmuxgyuetkjqady/);
   assert.match(script, /samszhfyhbjuculrcffg/);
+  assert.match(script, /PostgreSQL \$Target \(input tersembunyi\)/);
+  assert.match(script, /if \(\$databasePassword -match/);
+  assert.doesNotMatch(script, /\$productionPassword/);
   assert.match(script, /db\.\$projectRef\.supabase\.co/);
   assert.match(script, /postgres\.\$projectRef/);
   assert.match(script, /'encrypt-stdin'/);

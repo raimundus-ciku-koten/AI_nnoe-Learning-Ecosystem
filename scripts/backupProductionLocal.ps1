@@ -165,7 +165,7 @@ try {
     throw 'Docker daemon lokal tidak tersedia.'
   }
 
-  $secureUri = Read-Host 'Tempel URI koneksi PostgreSQL Production (input tersembunyi)' -AsSecureString
+  $secureUri = Read-Host "Tempel URI koneksi PostgreSQL $Target (input tersembunyi)" -AsSecureString
   $connectionString = ConvertTo-PlainText $secureUri
   $safeConnectionString = ConvertTo-SecureUri $connectionString
   $connectionString = $null
@@ -186,7 +186,7 @@ try {
   Set-PrivateAcl $backupRoot
   $parsedUri = [Uri]$safeConnectionString
   $decodedUser = [Uri]::UnescapeDataString($parsedUri.UserInfo)
-  if ($productionPassword -match '[\r\n]') {
+  if ($databasePassword -match '[\r\n]') {
     throw 'Password URI tidak boleh berisi baris baru.'
   }
   $pgPassLine = "$($parsedUri.Host):$($parsedUri.Port):postgres:${decodedUser}:$(Escape-PgPassField $databasePassword)"
