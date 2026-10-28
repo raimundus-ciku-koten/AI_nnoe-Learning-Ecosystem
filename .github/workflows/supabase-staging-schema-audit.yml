@@ -1,0 +1,76 @@
+name: Supabase Staging schema audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-staging-schema-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate the Staging-only target
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Run this workflow from main only."
+            exit 1
+          fi
+          if [[ -z "$SUPABASE_DB_URL" ]]; then
+            echo "::error::Add SUPABASE_DB_URL to GitHub Actions secrets."
+            exit 1
+          fi
+          node scripts/validateStagingBackupTarget.mjs
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client-17
+          /usr/lib/postgresql/17/bin/psql --version
+
+      - name: Run read-only schema and RLS inventory
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGAPPNAME: ai-nnoe-staging-schema-audit
+          PGCONNECT_TIMEOUT: 15
+          PGOPTIONS: -c default_transaction_read_only=on -c statement_timeout=60000
+        run: |
+          set -euo pipefail
+          report="${RUNNER_TEMP}/staging-schema-audit.json"
+          /usr/lib/postgresql/17/bin/psql \
+            --no-psqlrc \
+            --quiet \
+            --tuples-only \
+            --no-align \
+            --set=ON_ERROR_STOP=1 \
+            --file supabase/audit_staging_release_gate.sql \
+            "$SUPABASE_DB_URL" > "$report"
+          jq -e 'type == "object"' "$report" > /dev/null
+          cat "$report"
+
+      - name: Upload schema summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-schema-audit-${{ github.run_id }}
+          path: ${{ runner.temp }}/staging-schema-audit.json
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
