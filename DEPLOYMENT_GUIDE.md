@@ -4,6 +4,14 @@ Overview
 
 This document records the release state and the remaining safe rollout steps for AI_nnoe Learning Ecosystem.
 
+Current release gate update ? 2026-10-28
+
+- Production deployment for `main` commit `4aff47b` is Ready. This confirms deployment health, not readiness of every feature for public release.
+- The latest Staging inventory found no migration ledger, 29 of 30 expected feature relations missing, and all audited chat relations missing. Structural RLS checks do not prove tenant isolation.
+- A manual, main-only Staging migration rehearsal is being added. It takes a fresh Staging dump, restores it only to a disposable Supabase Postgres service, then replays in-scope migrations there. It never writes to hosted Staging or Production, does not create/stamp a migration ledger, and withholds database error output from Actions logs.
+- The rehearsal excludes Midtrans/billing catalog and public demo/trial migrations. Public signup, payment checkout, and ads remain out of release scope and must stay disabled.
+- A successful rehearsal is not authorization to migrate hosted databases and does not establish migration provenance, semantic RLS safety, or role UAT. Keep Production schema changes blocked until those gates, a verified recovery point, and authorized UAT are complete.
+
 Current release status:
 - **Production login access restored on 2026-10-22:** PR #7 (`832d04d`) restored the web application source to `main`; Vercel deployed the recovery. An anonymous check confirmed `https://ainnoe-le.vercel.app/#/login` renders the login page and the domain returns HTTP 200. The outage observed on 2026-10-21 was resolved without Instant Rollback. This is a login-only recovery, not confirmation that every feature module is ready.
 - The restored login page displays email/password and Google sign-in controls, with no public trial/signup controls. No credentials were entered, no signup was submitted, and no hosted database migration was applied. Hosted schema, backup/restore, and CAPTCHA blockers remain.

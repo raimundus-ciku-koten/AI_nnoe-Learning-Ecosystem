@@ -1,0 +1,188 @@
+name: Rehearse Staging migrations on disposable restore
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-staging-migration-rehearsal
+  cancel-in-progress: false
+
+jobs:
+  rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      disposable-postgres:
+        image: supabase/postgres:17.11.0.007@sha256:b0463b9ab930a3535478d529b915d37def49d5a8fb0cb1927929e96af992b519
+        env:
+          POSTGRES_USER: supabase_admin
+          POSTGRES_PASSWORD: restore-validation-only
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U supabase_admin -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate the Staging-only target
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Run this workflow from main only."
+            exit 1
+          fi
+          if [[ -z "$SUPABASE_DB_URL" ]]; then
+            echo "::error::Add SUPABASE_DB_URL to GitHub Actions secrets."
+            exit 1
+          fi
+          node scripts/validateStagingBackupTarget.mjs
+
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client-17
+          /usr/lib/postgresql/17/bin/psql --version
+
+      - name: Restore a fresh Staging snapshot to the disposable database
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGAPPNAME: ai-nnoe-staging-migration-rehearsal
+          PGCONNECT_TIMEOUT: 15
+        run: |
+          set -euo pipefail
+          umask 077
+          dump="${RUNNER_TEMP}/supabase-staging-rehearsal-${GITHUB_RUN_ID}.dump"
+          error_log="${RUNNER_TEMP}/supabase-staging-rehearsal-${GITHUB_RUN_ID}.log"
+          restore_db="migration_rehearsal_${GITHUB_RUN_ID}"
+          printf 'REHEARSAL_LOG_PATH=%s\n' "$error_log" >> "$GITHUB_ENV"
+
+          if ! /usr/lib/postgresql/17/bin/pg_dump \
+            --format=custom --no-owner --no-acl --file "$dump" "$SUPABASE_DB_URL" \
+            2> "$error_log"; then
+            echo "::error::Staging snapshot could not be created; database output was withheld."
+            exit 1
+          fi
+          dump_size=$(stat --format=%s "$dump")
+          max_dump_size=$((400 * 1024 * 1024))
+          if (( dump_size > max_dump_size )); then
+            echo "::error::Staging snapshot exceeds the 400 MiB rehearsal safety cap."
+            exit 1
+          fi
+          if [[ ! -s "$dump" ]] || ! /usr/lib/postgresql/17/bin/pg_restore \
+            --list "$dump" > /dev/null 2> "$error_log"; then
+            echo "::error::Staging snapshot validation failed; database output was withheld."
+            exit 1
+          fi
+
+          export PGPASSWORD=restore-validation-only
+          if ! /usr/lib/postgresql/17/bin/createdb \
+            --host 127.0.0.1 --username supabase_admin "$restore_db" \
+            2> "$error_log"; then
+            echo "::error::Disposable database creation failed."
+            exit 1
+          fi
+          if ! /usr/lib/postgresql/17/bin/pg_restore \
+            --exit-on-error --no-owner --no-acl \
+            --host 127.0.0.1 --username supabase_admin --dbname "$restore_db" "$dump" \
+            > /dev/null 2> "$error_log"; then
+            echo "::error::Staging snapshot restore failed; database output was withheld."
+            exit 1
+          fi
+
+          table_count=$(/usr/lib/postgresql/17/bin/psql \
+            --no-psqlrc --quiet --tuples-only --no-align --set=ON_ERROR_STOP=1 \
+            --host 127.0.0.1 --username supabase_admin --dbname "$restore_db" \
+            --command "SELECT count(*) FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')" \
+            2> "$error_log")
+          if (( table_count < 1 )); then
+            echo "::error::Disposable restore completed without any user tables."
+            exit 1
+          fi
+          echo "Fresh Staging snapshot restored to disposable database ($table_count user tables)."
+          echo "The hosted Staging database was not modified."
+
+      - name: Replay in-scope migrations on the disposable restore
+        shell: bash
+        env:
+          PGAPPNAME: ai-nnoe-disposable-migration-replay
+          PGCONNECT_TIMEOUT: 15
+          PGOPTIONS: -c statement_timeout=120000 -c lock_timeout=15000
+        run: |
+          set -euo pipefail
+          export PGPASSWORD=restore-validation-only
+          error_log="${REHEARSAL_LOG_PATH}"
+          restore_db="migration_rehearsal_${GITHUB_RUN_ID}"
+          migration_files=()
+          while IFS= read -r migration; do
+            case "$(basename "$migration")" in
+              20261018000400_midtrans_billing.sql|20261019000100_indonesia_price_catalog.sql|20261019000200_public_demo_trial.sql)
+                echo "Excluded from release scope: $(basename "$migration")"
+                continue
+                ;;
+            esac
+            migration_files+=("$migration")
+          done < <(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print | LC_ALL=C sort)
+
+          if (( ${#migration_files[@]} == 0 )); then
+            echo "::error::No in-scope migrations were found."
+            exit 1
+          fi
+          for required in \
+            20261017001000_chat_conversations.sql \
+            20261017001100_chat_messages.sql \
+            20261017001200_chat_read_receipts.sql \
+            20261017001300_chat_inbox_view.sql \
+            20261017001400_chat_contacts.sql \
+            20261017001500_chat_presence.sql \
+            20261018001200_multi_role_identity.sql; do
+            if [[ ! -f "supabase/migrations/${required}" ]]; then
+              echo "::error::Required release migration is missing: ${required}"
+              exit 1
+            fi
+          done
+
+          applied=0
+          for migration in "${migration_files[@]}"; do
+            name="$(basename "$migration")"
+            if ! /usr/lib/postgresql/17/bin/psql \
+              --no-psqlrc --quiet --set=ON_ERROR_STOP=1 --set=VERBOSITY=sqlstate \
+              --single-transaction \
+              --host 127.0.0.1 --username supabase_admin --dbname "$restore_db" \
+              --file "$migration" > /dev/null 2> "$error_log"; then
+              error_code="$(grep -Eo 'ERROR:[[:space:]]+[0-9A-Z]{5}' "$error_log" | tail -n 1 | sed -E 's/ERROR:[[:space:]]+//' || true)"
+              if [[ "$error_code" =~ ^[0-9A-Z]{5}$ ]]; then
+                echo "::error::Migration rehearsal stopped at ${name} (SQLSTATE ${error_code}); database error output was withheld. No hosted schema was changed."
+              else
+                echo "::error::Migration rehearsal stopped at ${name}; database error output was withheld. No hosted schema was changed."
+              fi
+              exit 1
+            fi
+            applied=$((applied + 1))
+            echo "Rehearsed: ${name}"
+          done
+          echo "Rehearsal completed: ${applied} in-scope migrations applied to the disposable restored snapshot."
+          echo "This result does not authorize or perform a hosted migration."
+
+      - name: Remove temporary database files
+        if: always()
+        shell: bash
+        run: |
+          rm -f "${RUNNER_TEMP}/supabase-staging-rehearsal-${GITHUB_RUN_ID}.dump"
+          rm -f "${RUNNER_TEMP}/supabase-staging-rehearsal-${GITHUB_RUN_ID}.log"
