@@ -65,7 +65,7 @@ function unduhCsv(items, namaFile) {
 }
 
 export default function TeacherWorkspacePage({ grup, item }) {
-  const { user, role, tenantId } = useAuth();
+  const { user, role, activeRole, tenantId } = useAuth();
   const [catatan, setCatatan] = useState([]);
   const [form, setForm] = useState(() => formKosong(item.path, item.label));
   const [editId, setEditId] = useState('');
@@ -79,7 +79,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
   const loadRequest = useRef(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const canUse = adalahPeranGuru(peranAktif) && Boolean(user?.uid && tenantId);
+  const canUse = adalahPeranGuru(activeRole || role) && Boolean(user?.uid && tenantId);
   const ownerKey = canUse ? `${tenantId}:${user.uid}` : '';
   const [koneksi, setKoneksi] = useState(() => sesiGoogleWorkspacePerPengguna(user?.uid));
   const [identitasVault, setIdentitasVault] = useState(() => identitasEnkripsiDriveDalamSesi(user?.uid));

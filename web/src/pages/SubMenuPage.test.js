@@ -63,6 +63,7 @@ function renderOperations(path) {
 describe('submenu platform superadmin', () => {
   beforeEach(() => {
     auth.role = 'superadmin';
+    auth.activeRole = null;
   });
 
   it('menjelaskan batas data untuk siswa dan orang tua', () => {

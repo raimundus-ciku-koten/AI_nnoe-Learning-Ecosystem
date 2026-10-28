@@ -156,8 +156,9 @@ const ALUR = {
 
 export default function SubMenuPage() {
   const { pathname, search } = useLocation();
-  const { role } = useAuth();
-  const menu = cariMenu(pathname, search, role);
+  const { role, activeRole } = useAuth();
+  const peranAktif = activeRole || role;
+  const menu = cariMenu(pathname, search, peranAktif);
 
   if (!menu) {
     return (
