@@ -22,7 +22,7 @@ const LEGACY_ROLES = new Set([
 const EMPTY_FORM = {
   email: '',
   nama: '',
-  role: 'admin_sekolah',
+  role: '',
   roles: [],
   tenantId: '',
   nip: '',
@@ -239,11 +239,12 @@ export default function SupabasePlatformUsersPage() {
   }
 
   function editUser(user) {
+    const primaryRole = user.role === 'unprovisioned' ? '' : user.role;
     setForm({
       email: user.email || '',
       nama: user.nama || '',
-      role: user.role === 'unprovisioned' ? 'guru' : user.role,
-      roles: user.roles?.length ? user.roles : [user.role === 'unprovisioned' ? 'guru' : user.role],
+      role: primaryRole,
+      roles: user.roles?.length ? user.roles : (primaryRole ? [primaryRole] : []),
       tenantId: user.tenant_id || '',
       nip: user.nip || '',
       mapel: (user.mapel_ids || []).join(', '),
@@ -259,6 +260,11 @@ export default function SupabasePlatformUsersPage() {
   async function saveUser(event) {
     event.preventDefault();
     if (saving || !profile) return;
+    if (!ROLES.some(([value]) => value === form.role)
+      || (!supportsRoleAssignments && !LEGACY_ROLES.has(form.role))) {
+      setError('Pilih peran utama yang didukung sebelum menyimpan pengguna.');
+      return;
+    }
     setSaving(true);
     setError('');
     setNotice('');
@@ -391,9 +397,11 @@ export default function SupabasePlatformUsersPage() {
               <label>
                 Peran utama
                 <select
+                  required
                   value={form.role}
                   onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}
                 >
+                  <option value="" disabled>Pilih peran utama</option>
                   {ROLES.map(([value, label]) => (
                     <option key={value} value={value} disabled={!supportsRoleAssignments && !LEGACY_ROLES.has(value)}>
                       {label}
