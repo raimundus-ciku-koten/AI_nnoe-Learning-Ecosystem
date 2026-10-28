@@ -37,6 +37,9 @@ test('migration rehearsal validates Staging and replays only into a disposable l
   assert.match(restore, /pg_restore/);
   assert.match(replay, /--host 127\.0\.0\.1/);
   assert.match(replay, /--single-transaction/);
+  assert.match(replay, /if \[\[ "\$error_code" == "23514" \]\]/);
+  assert.match(replay, /pg_catalog\.pg_get_constraintdef/);
+  assert.match(replay, /relation\.relname IN \('profiles', 'user_allowlist'\)/);
   assert.match(replay, /No hosted schema was changed/);
   assert.match(replay, /20261018000400_midtrans_billing\.sql/);
   assert.match(replay, /20261019000100_indonesia_price_catalog\.sql/);
