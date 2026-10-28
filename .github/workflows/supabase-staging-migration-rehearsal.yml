@@ -2,6 +2,15 @@ name: Rehearse Staging migrations on disposable restore
 
 on:
   workflow_dispatch:
+    inputs:
+      rehearsal_mode:
+        description: Which migration set to test against the disposable Staging snapshot
+        required: true
+        type: choice
+        default: full_history
+        options:
+          - full_history
+          - current_staging_forward_only
 
 permissions:
   contents: read
@@ -31,15 +40,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout pinned release migrations
+        uses: actions/checkout@v4
+        with:
+          ref: 3990f7cf858dce45d4fb64de7b4220749686707a
+          path: migration-source
+          persist-credentials: false
+
       - name: Validate the Staging-only target
         shell: bash
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_REF" != "refs/heads/main" \
-            && "$GITHUB_REF" != "refs/heads/fix/staging-migration-rehearsal-gh-identity" ]]; then
-            echo "::error::Run this workflow from main or the approved release-gate branch only."
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Run this workflow from main only."
             exit 1
           fi
           if [[ -z "$SUPABASE_DB_URL" ]]; then
@@ -125,39 +140,57 @@ jobs:
           PGAPPNAME: ai-nnoe-disposable-migration-replay
           PGCONNECT_TIMEOUT: 15
           PGOPTIONS: -c statement_timeout=120000 -c lock_timeout=15000
+          REHEARSAL_MODE: ${{ inputs.rehearsal_mode }}
         run: |
           set -euo pipefail
           export PGPASSWORD=restore-validation-only
           error_log="${REHEARSAL_LOG_PATH}"
           restore_db="migration_rehearsal_${GITHUB_RUN_ID}"
+          migrations="migration-source/supabase/migrations"
           migration_files=()
-          while IFS= read -r migration; do
-            case "$(basename "$migration")" in
-              20261018000400_midtrans_billing.sql|20261019000100_indonesia_price_catalog.sql|20261019000200_public_demo_trial.sql)
-                echo "Excluded from release scope: $(basename "$migration")"
-                continue
-                ;;
-            esac
-            migration_files+=("$migration")
-          done < <(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print | LC_ALL=C sort)
+          case "$REHEARSAL_MODE" in
+            current_staging_forward_only)
+              forward_migration="${migrations}/20261028000100_platform_tenant_and_superadmin_provisioning.sql"
+              if [[ ! -f "$forward_migration" ]]; then
+                echo "::error::Pinned source is missing the forward-only provisioning migration."
+                exit 1
+              fi
+              migration_files+=("$forward_migration")
+              ;;
+            full_history)
+              while IFS= read -r migration; do
+                case "$(basename "$migration")" in
+                  20261018000400_midtrans_billing.sql|20261019000100_indonesia_price_catalog.sql|20261019000200_public_demo_trial.sql)
+                    echo "Excluded from release scope: $(basename "$migration")"
+                    continue
+                    ;;
+                esac
+                migration_files+=("$migration")
+              done < <(find "$migrations" -maxdepth 1 -type f -name '*.sql' -print | LC_ALL=C sort)
 
-          if (( ${#migration_files[@]} == 0 )); then
-            echo "::error::No in-scope migrations were found."
-            exit 1
-          fi
-          for required in \
-            20261017001000_chat_conversations.sql \
-            20261017001100_chat_messages.sql \
-            20261017001200_chat_read_receipts.sql \
-            20261017001300_chat_inbox_view.sql \
-            20261017001400_chat_contacts.sql \
-            20261017001500_chat_presence.sql \
-            20261018001200_multi_role_identity.sql; do
-            if [[ ! -f "supabase/migrations/${required}" ]]; then
-              echo "::error::Required release migration is missing: ${required}"
+              if (( ${#migration_files[@]} == 0 )); then
+                echo "::error::No in-scope migrations were found."
+                exit 1
+              fi
+              for required in \
+                20261017001000_chat_conversations.sql \
+                20261017001100_chat_messages.sql \
+                20261017001200_chat_read_receipts.sql \
+                20261017001300_chat_inbox_view.sql \
+                20261017001400_chat_contacts.sql \
+                20261017001500_chat_presence.sql \
+                20261018001200_multi_role_identity.sql; do
+                if [[ ! -f "${migrations}/${required}" ]]; then
+                  echo "::error::Required release migration is missing: ${required}"
+                  exit 1
+                fi
+              done
+              ;;
+            *)
+              echo "::error::Unsupported rehearsal mode."
               exit 1
-            fi
-          done
+              ;;
+          esac
 
           applied=0
           for migration in "${migration_files[@]}"; do
@@ -168,6 +201,13 @@ jobs:
               --host 127.0.0.1 --username supabase_admin --dbname "$restore_db" \
               --file "$migration" > /dev/null 2> "$error_log"; then
               error_code="$(grep -Eo 'ERROR:[[:space:]]+[0-9A-Z]{5}' "$error_log" | tail -n 1 | sed -E 's/ERROR:[[:space:]]+//' || true)"
+              if [[ "$error_code" == "23514" ]]; then
+                echo "Identity-table check constraints from the disposable restore (definitions only):"
+                /usr/lib/postgresql/17/bin/psql \
+                  --no-psqlrc --quiet --tuples-only --no-align --set=ON_ERROR_STOP=1 \
+                  --host 127.0.0.1 --username supabase_admin --dbname "$restore_db" \
+                  --command "SELECT relation.relname || '.' || check_constraint.conname || ': ' || pg_catalog.pg_get_constraintdef(check_constraint.oid) FROM pg_catalog.pg_constraint AS check_constraint JOIN pg_catalog.pg_class AS relation ON relation.oid = check_constraint.conrelid JOIN pg_catalog.pg_namespace AS namespace ON namespace.oid = relation.relnamespace WHERE namespace.nspname = 'public' AND relation.relname IN ('profiles', 'user_allowlist') AND check_constraint.contype = 'c' ORDER BY relation.relname, check_constraint.conname"
+              fi
               if [[ "$error_code" =~ ^[0-9A-Z]{5}$ ]]; then
                 echo "::error::Migration rehearsal stopped at ${name} (SQLSTATE ${error_code}); database error output was withheld. No hosted schema was changed."
               else
@@ -178,7 +218,11 @@ jobs:
             applied=$((applied + 1))
             echo "Rehearsed: ${name}"
           done
-          echo "Rehearsal completed: ${applied} in-scope migrations applied to the disposable restored snapshot."
+          if [[ "$REHEARSAL_MODE" == "current_staging_forward_only" ]]; then
+            echo "Forward-only rehearsal completed: ${applied} candidate migration applied to the disposable restored snapshot."
+          else
+            echo "Rehearsal completed: ${applied} in-scope migrations applied to the disposable restored snapshot."
+          fi
           echo "This result does not authorize or perform a hosted migration."
 
       - name: Remove temporary database files
