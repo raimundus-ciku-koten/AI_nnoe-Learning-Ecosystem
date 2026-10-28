@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  GRUP_MENU, MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN, cariMenu, menuUntukPeran,
+  GRUP_MENU, MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN, adalahPeranGuru, cariMenu, menuUntukPeran,
 } from '../src/navigasi.js';
 
 const grup = (id) => GRUP_MENU.find((item) => item.id === id);
@@ -83,10 +83,13 @@ test('semua tautan untuk guru, siswa, orang tua, sekolah, dan platform cocok den
 
 test('spesialis guru memakai menu guru; kepala sekolah dan wali kelas tidak menjadi admin', () => {
   for (const role of ['guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']) {
+    assert.equal(adalahPeranGuru(role), true);
     assert.equal(menuUntukPeran(role), menuUntukPeran('guru'));
     assert.ok(menuUntukPeran(role).flatMap((group) => group.item)
       .some((item) => item.path === '/program-kegiatan'));
   }
+  assert.equal(adalahPeranGuru('guru'), true);
+  assert.equal(adalahPeranGuru(' admin_sekolah '), false);
   for (const role of ['kepala_sekolah', 'wali_kelas']) {
     const paths = menuUntukPeran(role).flatMap((group) => group.item.map((item) => item.path));
     assert.deepEqual(paths, ['/dashboard']);

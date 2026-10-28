@@ -63,6 +63,7 @@ function renderOperations(path) {
 describe('submenu platform superadmin', () => {
   beforeEach(() => {
     auth.role = 'superadmin';
+    auth.activeRole = null;
   });
 
   it('menjelaskan batas data untuk siswa dan orang tua', () => {
@@ -115,6 +116,30 @@ describe('submenu platform superadmin', () => {
       expect(html).toContain('Kirim tautan reset kata sandi');
       expect(html).toContain('Peran dan akses sekolah dikelola');
     });
+
+    it('mengikuti peran aktif saat akun berpindah dari peran utama admin ke guru', () => {
+      auth.role = 'admin_sekolah';
+      auth.activeRole = 'guru';
+      const html = renderSubmenu('/pelaksanaan/jurnal');
+
+      expect(html).toContain('<h1>Jurnal Mengajar Harian</h1>');
+      expect(html).toContain('Buat catatan kerja');
+      expect(html).not.toContain('Halaman tidak ditemukan');
+    });
+
+    it.each(['guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'])(
+      'menyediakan ruang kerja untuk peran aktif %s',
+      (role) => {
+        auth.role = 'guru';
+        auth.activeRole = role;
+        const html = renderSubmenu('/pelaksanaan/jurnal');
+
+        expect(html).toContain('<h1>Jurnal Mengajar Harian</h1>');
+        expect(html).toContain('Buat catatan kerja');
+        expect(html).not.toContain('hanya tersedia bagi guru');
+        expect(html).not.toContain('Halaman tidak ditemukan');
+      },
+    );
   });
 
   const itemsPlatform = MENU_SUPERADMIN

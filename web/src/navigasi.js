@@ -2,6 +2,11 @@ const tautan = (label, path, ikon, search = '') => ({ label, path, ikon, search 
 const perencanaan = (label, jenis, ikon) =>
   tautan(label, '/perencanaan', ikon, `?jenis=${jenis}`);
 
+export function adalahPeranGuru(role) {
+  return ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']
+    .includes(String(role || '').trim().toLowerCase());
+}
+
 export const GRUP_MENU = [
   {
     id: 'beranda', label: 'Dashboard', ikon: 'home',
@@ -354,7 +359,7 @@ export function menuUntukPeran(role) {
   if (peran === 'operator') return MENU_OPERATOR;
   if (peran === 'demo') return MENU_DEMO;
   if (['kepala_sekolah', 'wali_kelas'].includes(peran)) return MENU_KONTEKS_TERBATAS;
-  if (['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(peran)) return GRUP_MENU;
+  if (adalahPeranGuru(peran)) return GRUP_MENU;
   return MENU_TANPA_PERAN;
 }
 

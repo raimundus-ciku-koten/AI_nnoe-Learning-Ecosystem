@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { cariMenu } from '../navigasi.js';
+import { adalahPeranGuru, cariMenu } from '../navigasi.js';
 import Ikon from '../components/Ikon.jsx';
 import TeacherWorkspacePage from './TeacherWorkspacePage.jsx';
 import TeacherAccountPage from './TeacherAccountPage.jsx';
@@ -156,8 +156,9 @@ const ALUR = {
 
 export default function SubMenuPage() {
   const { pathname, search } = useLocation();
-  const { role } = useAuth();
-  const menu = cariMenu(pathname, search, role);
+  const { role, activeRole } = useAuth();
+  const peranAktif = activeRole || role;
+  const menu = cariMenu(pathname, search, peranAktif);
 
   if (!menu) {
     return (
@@ -171,8 +172,8 @@ export default function SubMenuPage() {
   }
 
   const { grup, item } = menu;
-  if (role === 'guru' && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
-  if (role === 'guru') return <TeacherWorkspacePage grup={grup} item={item} />;
+  if (adalahPeranGuru(peranAktif) && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
+  if (adalahPeranGuru(peranAktif)) return <TeacherWorkspacePage grup={grup} item={item} />;
 
   const alur = ALUR[grup.id] || {
     ringkasan: 'Pilih aktivitas yang dibutuhkan dan lanjutkan ke modul terkait.',
