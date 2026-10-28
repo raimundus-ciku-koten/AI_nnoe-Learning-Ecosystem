@@ -2,6 +2,15 @@ name: Rehearse Staging migrations on disposable restore
 
 on:
   workflow_dispatch:
+    inputs:
+      rehearsal_mode:
+        description: Which migration set to test against the disposable Staging snapshot
+        required: true
+        type: choice
+        default: full_history
+        options:
+          - full_history
+          - current_staging_forward_only
 
 permissions:
   contents: read
@@ -131,6 +140,7 @@ jobs:
           PGAPPNAME: ai-nnoe-disposable-migration-replay
           PGCONNECT_TIMEOUT: 15
           PGOPTIONS: -c statement_timeout=120000 -c lock_timeout=15000
+          REHEARSAL_MODE: ${{ inputs.rehearsal_mode }}
         run: |
           set -euo pipefail
           export PGPASSWORD=restore-validation-only
@@ -138,33 +148,49 @@ jobs:
           restore_db="migration_rehearsal_${GITHUB_RUN_ID}"
           migrations="migration-source/supabase/migrations"
           migration_files=()
-          while IFS= read -r migration; do
-            case "$(basename "$migration")" in
-              20261018000400_midtrans_billing.sql|20261019000100_indonesia_price_catalog.sql|20261019000200_public_demo_trial.sql)
-                echo "Excluded from release scope: $(basename "$migration")"
-                continue
-                ;;
-            esac
-            migration_files+=("$migration")
-          done < <(find "$migrations" -maxdepth 1 -type f -name '*.sql' -print | LC_ALL=C sort)
+          case "$REHEARSAL_MODE" in
+            current_staging_forward_only)
+              forward_migration="${migrations}/20261028000100_platform_tenant_and_superadmin_provisioning.sql"
+              if [[ ! -f "$forward_migration" ]]; then
+                echo "::error::Pinned source is missing the forward-only provisioning migration."
+                exit 1
+              fi
+              migration_files+=("$forward_migration")
+              ;;
+            full_history)
+              while IFS= read -r migration; do
+                case "$(basename "$migration")" in
+                  20261018000400_midtrans_billing.sql|20261019000100_indonesia_price_catalog.sql|20261019000200_public_demo_trial.sql)
+                    echo "Excluded from release scope: $(basename "$migration")"
+                    continue
+                    ;;
+                esac
+                migration_files+=("$migration")
+              done < <(find "$migrations" -maxdepth 1 -type f -name '*.sql' -print | LC_ALL=C sort)
 
-          if (( ${#migration_files[@]} == 0 )); then
-            echo "::error::No in-scope migrations were found."
-            exit 1
-          fi
-          for required in \
-            20261017001000_chat_conversations.sql \
-            20261017001100_chat_messages.sql \
-            20261017001200_chat_read_receipts.sql \
-            20261017001300_chat_inbox_view.sql \
-            20261017001400_chat_contacts.sql \
-            20261017001500_chat_presence.sql \
-            20261018001200_multi_role_identity.sql; do
-            if [[ ! -f "${migrations}/${required}" ]]; then
-              echo "::error::Required release migration is missing: ${required}"
+              if (( ${#migration_files[@]} == 0 )); then
+                echo "::error::No in-scope migrations were found."
+                exit 1
+              fi
+              for required in \
+                20261017001000_chat_conversations.sql \
+                20261017001100_chat_messages.sql \
+                20261017001200_chat_read_receipts.sql \
+                20261017001300_chat_inbox_view.sql \
+                20261017001400_chat_contacts.sql \
+                20261017001500_chat_presence.sql \
+                20261018001200_multi_role_identity.sql; do
+                if [[ ! -f "${migrations}/${required}" ]]; then
+                  echo "::error::Required release migration is missing: ${required}"
+                  exit 1
+                fi
+              done
+              ;;
+            *)
+              echo "::error::Unsupported rehearsal mode."
               exit 1
-            fi
-          done
+              ;;
+          esac
 
           applied=0
           for migration in "${migration_files[@]}"; do
@@ -192,7 +218,11 @@ jobs:
             applied=$((applied + 1))
             echo "Rehearsed: ${name}"
           done
-          echo "Rehearsal completed: ${applied} in-scope migrations applied to the disposable restored snapshot."
+          if [[ "$REHEARSAL_MODE" == "current_staging_forward_only" ]]; then
+            echo "Forward-only rehearsal completed: ${applied} candidate migration applied to the disposable restored snapshot."
+          else
+            echo "Rehearsal completed: ${applied} in-scope migrations applied to the disposable restored snapshot."
+          fi
           echo "This result does not authorize or perform a hosted migration."
 
       - name: Remove temporary database files
