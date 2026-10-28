@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
+import { adalahPeranGuru } from '../navigasi.js';
 import { catatanKeCsv } from '../services/teacherWorkspace.js';
 import {
   hapusCatatanGuruDrive, muatCatatanGuruDrive, tambahCatatanGuruDrive,
@@ -78,7 +79,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
   const loadRequest = useRef(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const canUse = role === 'guru' && Boolean(user?.uid && tenantId);
+  const canUse = adalahPeranGuru(peranAktif) && Boolean(user?.uid && tenantId);
   const ownerKey = canUse ? `${tenantId}:${user.uid}` : '';
   const [koneksi, setKoneksi] = useState(() => sesiGoogleWorkspacePerPengguna(user?.uid));
   const [identitasVault, setIdentitasVault] = useState(() => identitasEnkripsiDriveDalamSesi(user?.uid));
