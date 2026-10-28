@@ -119,11 +119,12 @@ const AppShell = lazy(() => import('./components/AppShell.jsx'));
 function PrivateShell({ children }) {
   const { user, role, activeRole, passwordRecovery } = useAuth();
   const location = useLocation();
+  const selectedRole = activeRole || role;
 
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;
-  if ((activeRole || role) === 'demo') return <Navigate to="/trial" replace />;
-  if (!canOpenRolePath(activeRole || role, location.pathname)) {
+  if (selectedRole === 'demo') return <Navigate to="/trial" replace />;
+  if (!canOpenRolePath(selectedRole, location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }
   return (
