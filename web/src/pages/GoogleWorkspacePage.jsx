@@ -106,6 +106,125 @@ export default function GoogleWorkspacePage() {
     }
   }
 
+  async function buatKunciVault() {
+    setBusy('vault-key');
+    setError('');
+    setStatus('');
+    try {
+      const identity = await buatIdentitasEnkripsiDrive();
+      setIdentitasDraft(identity);
+      setKodePemulihan(identity.recoveryCode);
+      setKodeKonfirmasi('');
+    } catch (err) {
+      console.error('[workspace] Gagal membuat kunci vault:', err);
+      setError(err?.message || 'Kunci vault tidak dapat dibuat.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function simpanKunciVault() {
+    if (!tokenAktif || !identitasDraft || kodeKonfirmasi !== identitasDraft.recoveryCode) {
+      setError('Masukkan kembali kode pemulihan dengan tepat sebelum menyimpan kunci.');
+      return;
+    }
+    setBusy('vault-key');
+    setError('');
+    setStatus('');
+    try {
+      await simpanCadanganKunciDrive(tokenAktif, identitasDraft.encryptedPrivateKeyBackup);
+      await simpanKunciPublikPengguna(ownerId, identitasDraft);
+      simpanIdentitasEnkripsiDriveDalamSesi(ownerId, identitasDraft);
+      setIdentitasVault(identitasEnkripsiDriveDalamSesi(ownerId));
+      setIdentitasDraft(null);
+      setKodePemulihan('');
+      setKodeKonfirmasi('');
+      await muatVault(tokenAktif);
+      setStatus('Kunci pemulihan terenkripsi tersimpan di Google Drive. Kode pemulihan hanya tersedia bagi Anda.');
+    } catch (err) {
+      console.error('[workspace] Gagal menyimpan cadangan kunci vault:', err);
+      setError(err?.message || 'Cadangan kunci tidak dapat disimpan ke Drive.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function pulihkanKunciVault() {
+    if (!tokenAktif || !cadanganTerpilih || !kodePemulihan.trim()) {
+      setError('Pilih cadangan kunci Drive dan masukkan kode pemulihan.');
+      return;
+    }
+    setBusy('vault-key');
+    setError('');
+    setStatus('');
+    try {
+      const backup = await pulihkanCadanganKunciDariDrive(tokenAktif, cadanganTerpilih);
+      const identity = await pulihkanIdentitasEnkripsiDrive(backup, kodePemulihan.trim());
+      simpanIdentitasEnkripsiDriveDalamSesi(ownerId, identity);
+      await simpanKunciPublikPengguna(ownerId, identity);
+      setIdentitasVault(identitasEnkripsiDriveDalamSesi(ownerId));
+      setKodePemulihan('');
+      setStatus('Kunci pemulihan berhasil dibuka hanya di memori sesi ini.');
+    } catch (err) {
+      console.error('[workspace] Gagal memulihkan kunci vault:', err);
+      setError(err?.message || 'Kunci tidak dapat dipulihkan. Periksa kode dan cadangan.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function unggahKeVault(event) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const berkas = formElement.elements.berkasVault.files?.[0];
+    if (!tokenAktif || !identitasVault || !ownerId) {
+      setError('Hubungkan Drive dan buka kunci vault terlebih dahulu.');
+      return;
+    }
+    setBusy('vault-file');
+    setError('');
+    setStatus('');
+    try {
+      await unggahBerkasTerenkripsiDrive(tokenAktif, ownerId, identitasVault, berkas);
+      await muatVault(tokenAktif);
+      setStatus('Berkas terenkripsi berhasil disimpan ke Drive. Nama dan isi berkas tidak dikirim sebagai metadata terbuka.');
+      formElement.reset();
+    } catch (err) {
+      console.error('[workspace] Gagal menyimpan berkas vault:', err);
+      setError(err?.message || 'Berkas terenkripsi tidak dapat disimpan.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function unduhDariVault(berkas) {
+    if (!tokenAktif || !identitasVault) return;
+    setBusy(`vault-download-${berkas.id}`);
+    setError('');
+    setStatus('');
+    try {
+      const hasil = await unduhBerkasTerenkripsiDrive(tokenAktif, berkas, identitasVault);
+      let url;
+      try {
+        url = URL.createObjectURL(new Blob([hasil.bytes], { type: hasil.mimeType }));
+      } finally {
+        hasil.bytes.fill(0);
+      }
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = hasil.name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setNamaBerkasVault(hasil.name);
+      setStatus(`Berkas ${hasil.name} berhasil didekripsi di perangkat ini.`);
+    } catch (err) {
+      console.error('[workspace] Gagal membuka berkas vault:', err);
+      setError(err?.message || 'Berkas vault tidak dapat dibuka.');
+    } finally {
+      setBusy('');
+    }
+  }
+
   async function unggah(event) {
     event.preventDefault();
     const formElement = event.currentTarget;
@@ -115,124 +234,6 @@ export default function GoogleWorkspacePage() {
       return;
     }
 
-    async function buatKunciVault() {
-      setBusy('vault-key');
-      setError('');
-      setStatus('');
-      try {
-        const identity = await buatIdentitasEnkripsiDrive();
-        setIdentitasDraft(identity);
-        setKodePemulihan(identity.recoveryCode);
-        setKodeKonfirmasi('');
-      } catch (err) {
-        console.error('[workspace] Gagal membuat kunci vault:', err);
-        setError(err?.message || 'Kunci vault tidak dapat dibuat.');
-      } finally {
-        setBusy('');
-      }
-    }
-
-    async function simpanKunciVault() {
-      if (!tokenAktif || !identitasDraft || kodeKonfirmasi !== identitasDraft.recoveryCode) {
-        setError('Masukkan kembali kode pemulihan dengan tepat sebelum menyimpan kunci.');
-        return;
-      }
-      setBusy('vault-key');
-      setError('');
-      setStatus('');
-      try {
-        await simpanCadanganKunciDrive(tokenAktif, identitasDraft.encryptedPrivateKeyBackup);
-        await simpanKunciPublikPengguna(ownerId, identitasDraft);
-        simpanIdentitasEnkripsiDriveDalamSesi(ownerId, identitasDraft);
-        setIdentitasVault(identitasEnkripsiDriveDalamSesi(ownerId));
-        setIdentitasDraft(null);
-        setKodePemulihan('');
-        setKodeKonfirmasi('');
-        await muatVault(tokenAktif);
-        setStatus('Kunci pemulihan terenkripsi tersimpan di Google Drive. Kode pemulihan hanya tersedia bagi Anda.');
-      } catch (err) {
-        console.error('[workspace] Gagal menyimpan cadangan kunci vault:', err);
-        setError(err?.message || 'Cadangan kunci tidak dapat disimpan ke Drive.');
-      } finally {
-        setBusy('');
-      }
-    }
-
-    async function pulihkanKunciVault() {
-      if (!tokenAktif || !cadanganTerpilih || !kodePemulihan.trim()) {
-        setError('Pilih cadangan kunci Drive dan masukkan kode pemulihan.');
-        return;
-      }
-      setBusy('vault-key');
-      setError('');
-      setStatus('');
-      try {
-        const backup = await pulihkanCadanganKunciDariDrive(tokenAktif, cadanganTerpilih);
-        const identity = await pulihkanIdentitasEnkripsiDrive(backup, kodePemulihan.trim());
-        simpanIdentitasEnkripsiDriveDalamSesi(ownerId, identity);
-        await simpanKunciPublikPengguna(ownerId, identity);
-        setIdentitasVault(identitasEnkripsiDriveDalamSesi(ownerId));
-        setKodePemulihan('');
-        setStatus('Kunci pemulihan berhasil dibuka hanya di memori sesi ini.');
-      } catch (err) {
-        console.error('[workspace] Gagal memulihkan kunci vault:', err);
-        setError(err?.message || 'Kunci tidak dapat dipulihkan. Periksa kode dan cadangan.');
-      } finally {
-        setBusy('');
-      }
-    }
-
-    async function unggahKeVault(event) {
-      event.preventDefault();
-      const formElement = event.currentTarget;
-      const berkas = formElement.elements.berkasVault.files?.[0];
-      if (!tokenAktif || !identitasVault || !ownerId) {
-        setError('Hubungkan Drive dan buka kunci vault terlebih dahulu.');
-        return;
-      }
-      setBusy('vault-file');
-      setError('');
-      setStatus('');
-      try {
-        await unggahBerkasTerenkripsiDrive(tokenAktif, ownerId, identitasVault, berkas);
-        await muatVault(tokenAktif);
-        setStatus('Berkas terenkripsi berhasil disimpan ke Drive. Nama dan isi berkas tidak dikirim sebagai metadata terbuka.');
-        formElement.reset();
-      } catch (err) {
-        console.error('[workspace] Gagal menyimpan berkas vault:', err);
-        setError(err?.message || 'Berkas terenkripsi tidak dapat disimpan.');
-      } finally {
-        setBusy('');
-      }
-    }
-
-    async function unduhDariVault(berkas) {
-      if (!tokenAktif || !identitasVault) return;
-      setBusy(`vault-download-${berkas.id}`);
-      setError('');
-      setStatus('');
-      try {
-        const hasil = await unduhBerkasTerenkripsiDrive(tokenAktif, berkas, identitasVault);
-        let url;
-        try {
-          url = URL.createObjectURL(new Blob([hasil.bytes], { type: hasil.mimeType }));
-        } finally {
-          hasil.bytes.fill(0);
-        }
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = hasil.name;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        setNamaBerkasVault(hasil.name);
-        setStatus(`Berkas ${hasil.name} berhasil didekripsi di perangkat ini.`);
-      } catch (err) {
-        console.error('[workspace] Gagal membuka berkas vault:', err);
-        setError(err?.message || 'Berkas vault tidak dapat dibuka.');
-      } finally {
-        setBusy('');
-      }
-    }
     setBusy('drive');
     setError('');
     setStatus('');
