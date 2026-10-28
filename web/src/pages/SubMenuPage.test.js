@@ -127,6 +127,20 @@ describe('submenu platform superadmin', () => {
       expect(html).toContain('Buat catatan kerja');
       expect(html).not.toContain('Halaman tidak ditemukan');
     });
+
+    it.each(['guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'])(
+      'menyediakan ruang kerja untuk peran aktif %s',
+      (role) => {
+        auth.role = 'guru';
+        auth.activeRole = role;
+        const html = renderSubmenu('/pelaksanaan/jurnal');
+
+        expect(html).toContain('<h1>Jurnal Mengajar Harian</h1>');
+        expect(html).toContain('Buat catatan kerja');
+        expect(html).not.toContain('hanya tersedia bagi guru');
+        expect(html).not.toContain('Halaman tidak ditemukan');
+      },
+    );
   });
 
   const itemsPlatform = MENU_SUPERADMIN
