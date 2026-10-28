@@ -14,6 +14,22 @@
 			],
 			"isBackground": false,
 			"problemMatcher": []
+		},
+		{
+			"label": "Create and verify encrypted Staging backup (local)",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".\\scripts\\backupProductionLocal.ps1",
+				"-Target",
+				"Staging"
+			],
+			"isBackground": false,
+			"problemMatcher": []
 		}
 	]
 }

@@ -1,13 +1,23 @@
+param(
+  [ValidateSet('Production', 'Staging')]
+  [string]$Target = 'Production'
+)
+
 $ErrorActionPreference = 'Stop'
 
-$projectRef = 'jvcrmzmuxgyuetkjqady'
-$backupRoot = Join-Path $env:LOCALAPPDATA 'AI_nnoe\production-backups'
+$projectRefs = @{
+  Production = 'jvcrmzmuxgyuetkjqady'
+  Staging = 'samszhfyhbjuculrcffg'
+}
+$projectRef = $projectRefs[$Target]
+$targetSlug = $Target.ToLowerInvariant()
+$backupRoot = Join-Path $env:LOCALAPPDATA "AI_nnoe\$targetSlug-backups"
 $image = 'supabase/postgres:17.11.0.007@sha256:b0463b9ab930a3535478d529b915d37def49d5a8fb0cb1927929e96af992b519'
-$containerName = "ale-prod-restore-$([Guid]::NewGuid().ToString('N'))"
+$containerName = "ale-$targetSlug-restore-$([Guid]::NewGuid().ToString('N'))"
 $containerStarted = $false
 $encryptedPath = $null
 $backupKey = $null
-$productionPassword = $null
+$databasePassword = $null
 $connectionString = $null
 $safeConnectionString = $null
 $pgPassLine = $null
@@ -49,7 +59,7 @@ function ConvertTo-SecureUri([string]$connectionString) {
   try {
     $uri = [Uri]$connectionString
   } catch {
-    throw 'Connection URI Production tidak valid.'
+    throw "Connection URI $Target tidak valid."
   }
 
   if ($uri.Scheme -notin @('postgres', 'postgresql') -or
@@ -63,14 +73,14 @@ function ConvertTo-SecureUri([string]$connectionString) {
     throw 'URI harus menyertakan username dan password.'
   }
   $username = $userInfo.Substring(0, $separator)
-  $script:productionPassword = $userInfo.Substring($separator + 1)
+  $script:databasePassword = $userInfo.Substring($separator + 1)
 
   $directHost = "db.$projectRef.supabase.co"
-  $directProduction = $uri.Host -eq $directHost -and $username -eq 'postgres'
-  $poolerProduction = $uri.Host -match '^aws-\d+-[a-z0-9-]+\.pooler\.supabase\.com$' -and
+  $directProject = $uri.Host -eq $directHost -and $username -eq 'postgres'
+  $poolerProject = $uri.Host -match '^aws-\d+-[a-z0-9-]+\.pooler\.supabase\.com$' -and
     $username -eq "postgres.$projectRef"
-  if (-not $directProduction -and -not $poolerProduction) {
-    throw 'URI ditolak: target harus database Production project yang telah diverifikasi.'
+  if (-not $directProject -and -not $poolerProject) {
+    throw "URI ditolak: target harus database project $Target yang telah diverifikasi."
   }
 
   $builder = New-Object System.UriBuilder -ArgumentList $uri
@@ -179,8 +189,8 @@ try {
   if ($productionPassword -match '[\r\n]') {
     throw 'Password URI tidak boleh berisi baris baru.'
   }
-  $pgPassLine = "$($parsedUri.Host):$($parsedUri.Port):postgres:${decodedUser}:$(Escape-PgPassField $productionPassword)"
-  $productionPassword = $null
+  $pgPassLine = "$($parsedUri.Host):$($parsedUri.Port):postgres:${decodedUser}:$(Escape-PgPassField $databasePassword)"
+  $databasePassword = $null
 
   $containerPassword = [Guid]::NewGuid().ToString('N')
   $dockerPath = (Get-Command docker).Source
@@ -238,7 +248,7 @@ try {
   if ($credentialExitCode -ne 0) { throw 'Credential passfile sementara tidak dapat dibuat di tmpfs.' }
 
   $timestamp = [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssZ')
-  $encryptedPath = Join-Path $backupRoot "production-$timestamp-$([Guid]::NewGuid().ToString('N')).aeb"
+  $encryptedPath = Join-Path $backupRoot "$($targetSlug)-$timestamp-$([Guid]::NewGuid().ToString('N')).aeb"
   $nodePath = (Get-Command node).Source
 
   $dumpStart = New-ProcessStartInfo $dockerPath @(
@@ -318,7 +328,7 @@ try {
     throw 'Restore selesai tetapi tidak menemukan tabel pengguna.'
   }
 
-  Write-Host "Backup Production terenkripsi tersimpan: $encryptedPath"
+  Write-Host "Backup $Target terenkripsi tersimpan: $encryptedPath"
   Write-Host "Restore lokal disposable berhasil; tabel pengguna dipulihkan: $($tableCount | Select-Object -Last 1)"
   Write-Host 'Dump plaintext dialirkan; data restore berada di database tmpfs disposable.'
 } catch {
@@ -335,7 +345,7 @@ try {
     }
   }
   $backupKey = $null
-  $productionPassword = $null
+  $databasePassword = $null
   $connectionString = $null
   $safeConnectionString = $null
   $pgPassLine = $null

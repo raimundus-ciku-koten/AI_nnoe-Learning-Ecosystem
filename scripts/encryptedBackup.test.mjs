@@ -239,8 +239,13 @@ test('local Production backup is target-bound and does not persist plaintext dum
     new URL('./backupProductionLocal.ps1', import.meta.url),
     'utf8',
   );
+  const tasks = JSON.parse(await readFile(new URL('../.vscode/tasks.json', import.meta.url), 'utf8'));
 
+  assert.match(script, /Production = 'jvcrmzmuxgyuetkjqady'/);
+  assert.match(script, /Staging = 'samszhfyhbjuculrcffg'/);
+  assert.match(script, /ValidateSet\('Production', 'Staging'\)/);
   assert.match(script, /jvcrmzmuxgyuetkjqady/);
+  assert.match(script, /samszhfyhbjuculrcffg/);
   assert.match(script, /db\.\$projectRef\.supabase\.co/);
   assert.match(script, /postgres\.\$projectRef/);
   assert.match(script, /'encrypt-stdin'/);
@@ -253,4 +258,9 @@ test('local Production backup is target-bound and does not persist plaintext dum
   assert.match(script, /--no-password/);
   assert.doesNotMatch(script, /--file/);
   assert.match(script, /Set-PrivateAcl/);
+  assert.equal(
+    tasks.tasks.find((task) => task.label.includes('Production backup'))?.args.includes('-Target'),
+    false,
+  );
+  assert.equal(tasks.tasks.find((task) => task.label.includes('Staging backup'))?.args.slice(-2).join(' '), '-Target Staging');
 });
