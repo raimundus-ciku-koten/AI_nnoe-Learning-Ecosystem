@@ -4,6 +4,9 @@
 .platform-tenants-heading h1 { color: #18233d; font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.2; }
 .platform-tenants-heading > p:last-child { max-width: 75ch; color: #59677d; line-height: 1.6; }
 .platform-tenants-card { display: grid; gap: 1rem; min-width: 0; padding: clamp(1rem, 2.5vw, 1.4rem); border: 1px solid #e1e8f0; border-radius: 1rem; background: #fff; box-shadow: 0 8px 24px rgb(20 36 72 / .045); }
+.platform-tenants-create-form { display: flex; align-items: end; gap: .8rem; flex-wrap: wrap; }
+.platform-tenants-create-form .platform-tenants-search { flex: 1 1 18rem; }
+.platform-tenants-notice { padding: .8rem 1rem; border: 1px solid #a7f3d0; border-radius: .7rem; background: #ecfdf5; color: #047857; overflow-wrap: anywhere; }
 .platform-tenants-toolbar { display: flex; align-items: end; gap: .8rem; flex-wrap: wrap; }
 .platform-tenants-toolbar > div { margin-right: auto; }
 .platform-tenants-toolbar h2 { color: #24334b; font-size: 1rem; }

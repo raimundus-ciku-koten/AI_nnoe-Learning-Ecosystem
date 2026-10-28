@@ -119,15 +119,16 @@ const AppShell = lazy(() => import('./components/AppShell.jsx'));
 function PrivateShell({ children }) {
   const { user, role, activeRole, passwordRecovery } = useAuth();
   const location = useLocation();
+  const selectedRole = activeRole || role;
 
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;
-  if ((activeRole || role) === 'demo') return <Navigate to="/trial" replace />;
-  if (!canOpenRolePath(activeRole || role, location.pathname)) {
+  if (selectedRole === 'demo') return <Navigate to="/trial" replace />;
+  if (!canOpenRolePath(selectedRole, location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }
   return (
-    <PrivilegedMfaGate role={role} userId={user.uid}>
+    <PrivilegedMfaGate role={selectedRole} userId={user.uid}>
       <MaintenanceGuard>
         <AppShell path={location.pathname} search={location.search}>{children}</AppShell>
       </MaintenanceGuard>
@@ -198,7 +199,9 @@ function RouteWrapper() {
         <Route path="/siswa/nilai" element={<PrivateShell><HalamanNilaiUjianSiswa /></PrivateShell>} />
         <Route path="/admin/perencanaan/paket/:id?/:jenis?" element={<PrivateShell><HalamanPerencanaan /></PrivateShell>} />
         <Route path="/platform/tenant/sekolah" element={<PrivateShell><HalamanTenantPlatform /></PrivateShell>} />
+        <Route path="/platform/tenant/tambah" element={<PrivateShell><HalamanTenantPlatform mode="create" /></PrivateShell>} />
         <Route path="/platform/pengguna/admin-sekolah" element={<PrivateShell><HalamanPenggunaPlatform /></PrivateShell>} />
+        <Route path="/platform/pengguna/superadmin" element={<PrivateShell><HalamanPenggunaPlatform mode="superadmin" /></PrivateShell>} />
         <Route path="/platform/*" element={<PrivateShell><HalamanOperasiPlatform /></PrivateShell>} />
         
         <Route path="/datadasar" element={<Navigate to="/datadasar/profil" replace />} /> {/*[cite: 9] */}

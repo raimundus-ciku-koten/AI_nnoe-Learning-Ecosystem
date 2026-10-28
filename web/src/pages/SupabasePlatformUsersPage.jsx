@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase.ts';
+import { provisionPlatformSuperadmin } from '../services/platformAdminApi.js';
 import '../styles/supabase-platform-users.css';
 
 const ROLES = [
@@ -66,11 +67,18 @@ function formatAuthError(error) {
   return error?.message || 'Permintaan tidak berhasil. Silakan coba kembali.';
 }
 
-export default function SupabasePlatformUsersPage() {
+export default function SupabasePlatformUsersPage({ mode = 'manage' }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [tenants, setTenants] = useState([]);
   const [users, setUsers] = useState([]);
+  const [totpFactors, setTotpFactors] = useState([]);
+  const [selectedTotpFactor, setSelectedTotpFactor] = useState('');
+  const [totpLoading, setTotpLoading] = useState(false);
+  const [totpCode, setTotpCode] = useState('');
+  const [superadminEmail, setSuperadminEmail] = useState('');
+  const [superadminName, setSuperadminName] = useState('');
+  const [provisioningSuperadmin, setProvisioningSuperadmin] = useState(false);
   const [supportsRoleAssignments, setSupportsRoleAssignments] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editing, setEditing] = useState(false);
@@ -81,6 +89,8 @@ export default function SupabasePlatformUsersPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [totpError, setTotpError] = useState('');
+  const [totpNotice, setTotpNotice] = useState('');
 
   const loadDirectory = useCallback(async (userId) => {
     setLoading(true);
@@ -206,6 +216,42 @@ export default function SupabasePlatformUsersPage() {
     }
   }, [loadDirectory, session?.user?.id]);
 
+  useEffect(() => {
+    let mounted = true;
+    if (mode !== 'superadmin' || profile?.role !== 'superadmin' || profile.active !== true) {
+      setTotpFactors([]);
+      setSelectedTotpFactor('');
+      setTotpLoading(false);
+      return () => { mounted = false; };
+    }
+
+    setTotpLoading(true);
+    setTotpError('');
+    void supabase.auth.mfa.listFactors().then(({ data, error: factorError }) => {
+      if (!mounted) return;
+      if (factorError) {
+        console.error('[supabase-platform-users] Gagal memuat faktor TOTP:', factorError);
+        setTotpError('Faktor autentikasi tidak dapat diperiksa. Coba muat ulang halaman.');
+        return;
+      }
+      const verified = (data?.totp || []).filter((factor) => factor.status === 'verified');
+      setTotpFactors(verified);
+      setSelectedTotpFactor((current) =>
+        verified.some((factor) => factor.id === current) ? current : (verified[0]?.id || ''));
+      if (!verified.length) {
+        setTotpError('Tidak ada Authenticator TOTP terverifikasi. Siapkan MFA Super Admin sebelum membuat akun baru.');
+      }
+    }).catch((factorError) => {
+      if (!mounted) return;
+      console.error('[supabase-platform-users] Gagal memeriksa faktor TOTP:', factorError);
+      setTotpError('Faktor autentikasi tidak dapat diperiksa. Coba muat ulang halaman.');
+    }).finally(() => {
+      if (mounted) setTotpLoading(false);
+    });
+
+    return () => { mounted = false; };
+  }, [mode, profile?.active, profile?.role]);
+
   const filteredUsers = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('id');
     if (!term) return users;
@@ -308,6 +354,44 @@ export default function SupabasePlatformUsersPage() {
         setNotice(`Profil ${request.p_email} berhasil diperbarui. Perubahan hak akses berlaku pada token sesi baru pengguna.`);
       }
 
+      async function saveSuperadmin(event) {
+        event.preventDefault();
+        if (provisioningSuperadmin || !profile || !selectedTotpFactor) return;
+        if (!/^\d{6,8}$/.test(totpCode.trim())) {
+          setTotpError('Masukkan kode terbaru dari aplikasi Authenticator.');
+          return;
+        }
+        setProvisioningSuperadmin(true);
+        setTotpError('');
+        setTotpNotice('');
+        try {
+          const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
+            factorId: selectedTotpFactor,
+            code: totpCode.trim(),
+          });
+          if (verifyError) throw verifyError;
+
+          const result = await provisionPlatformSuperadmin({
+            email: superadminEmail,
+            nama: superadminName,
+          });
+          setSuperadminEmail('');
+          setSuperadminName('');
+          setTotpCode('');
+          setTotpNotice(result.invitation_required
+            ? `Allowlist Super Admin disimpan untuk ${result.email}. Buat/undang akun melalui Supabase Auth setelah ini, lalu pastikan email dikonfirmasi sebelum akses digunakan.`
+            : `Akun ${result.email} kini memiliki peran Super Admin. Perubahan akses berlaku pada token sesi baru.`);
+          await loadDirectory(session.user.id);
+        } catch (provisionError) {
+          console.error('[supabase-platform-users] Gagal membuat Super Admin:', provisionError);
+          setTotpError(provisionError?.message === 'mfa-step-up-required'
+            ? 'Verifikasi MFA kedaluwarsa. Masukkan kode TOTP terbaru lalu coba lagi.'
+            : formatAuthError(provisionError));
+        } finally {
+          setProvisioningSuperadmin(false);
+        }
+      }
+
       setForm(EMPTY_FORM);
       setEditing(false);
       await loadDirectory(session.user.id);
@@ -375,7 +459,7 @@ export default function SupabasePlatformUsersPage() {
 
           <section className="supabase-platform-users__card" aria-labelledby="supabase-user-form-title">
             <h2 id="supabase-user-form-title">{editing ? 'Ubah akses pengguna' : 'Tambahkan pengguna'}</h2>
-            <p>Peran superadmin tidak dapat diberikan melalui formulir ini. Akun baru hanya dimasukkan ke allowlist; identitas Auth harus dibuat dan dikonfirmasi sebelum akses aktif.</p>
+            <p>Peran sekolah yang didukung dapat dimasukkan ke allowlist. Akun baru perlu dibuat melalui Supabase Auth dan emailnya dikonfirmasi sebelum akses aktif. Super Admin hanya dapat dibuat melalui alur MFA khusus.</p>
             <form className="supabase-platform-users__form" onSubmit={saveUser}>
               <label>
                 Nama lengkap
@@ -493,6 +577,73 @@ export default function SupabasePlatformUsersPage() {
               </div>
             </form>
           </section>
+
+          {mode === 'superadmin' && (
+            <section className="supabase-platform-users__card" aria-labelledby="supabase-superadmin-form-title">
+              <h2 id="supabase-superadmin-form-title">Tambah Super Admin</h2>
+              <p>
+                Alur khusus ini meminta kode TOTP baru setiap kali disimpan. Server memeriksa
+                sesi Super Admin aktif, level MFA AAL2, dan waktu verifikasi maksimal 10 menit.
+                Akun ini tidak dapat ditambahkan dari formulir peran sekolah biasa.
+              </p>
+              {totpLoading && <p role="status">Memeriksa Authenticator…</p>}
+              {totpFactors.length > 0 && (
+                <form className="supabase-platform-users__form" onSubmit={saveSuperadmin}>
+                  <label>
+                    Nama lengkap
+                    <input
+                      required minLength={2} maxLength={120}
+                      value={superadminName}
+                      onChange={(event) => setSuperadminName(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Email Super Admin
+                    <input
+                      required type="email" maxLength={254}
+                      value={superadminEmail}
+                      onChange={(event) => setSuperadminEmail(event.target.value)}
+                    />
+                  </label>
+                  {totpFactors.length > 1 && (
+                    <label>
+                      Authenticator
+                      <select
+                        required
+                        value={selectedTotpFactor}
+                        onChange={(event) => setSelectedTotpFactor(event.target.value)}
+                      >
+                        {totpFactors.map((factor, index) => (
+                          <option key={factor.id} value={factor.id}>
+                            {factor.friendly_name || `Authenticator ${index + 1}`}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <label>
+                    Kode sekali pakai TOTP
+                    <input
+                      required type="text" inputMode="numeric" autoComplete="one-time-code"
+                      pattern="[0-9]{6,8}" minLength={6} maxLength={8}
+                      value={totpCode}
+                      onChange={(event) => setTotpCode(event.target.value.replace(/\D/g, '').slice(0, 8))}
+                    />
+                  </label>
+                  {totpError && <p className="supabase-platform-users__message is-error" role="alert">{totpError}</p>}
+                  {totpNotice && <p className="supabase-platform-users__message is-notice" role="status">{totpNotice}</p>}
+                  <button type="submit" disabled={provisioningSuperadmin || totpLoading}>
+                    {provisioningSuperadmin ? 'Memverifikasi dan menyimpan…' : 'Verifikasi MFA dan tambah Super Admin'}
+                  </button>
+                </form>
+              )}
+              {totpFactors.length === 0 && !totpLoading && (
+                <p className="supabase-platform-users__message is-error" role="alert">
+                  {totpError || 'Daftarkan Authenticator TOTP untuk akun Super Admin ini sebelum melanjutkan.'}
+                </p>
+              )}
+            </section>
+          )}
 
           <section className="supabase-platform-users__card">
             <div className="supabase-platform-users__toolbar">

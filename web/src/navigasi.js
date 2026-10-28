@@ -2,6 +2,11 @@ const tautan = (label, path, ikon, search = '') => ({ label, path, ikon, search 
 const perencanaan = (label, jenis, ikon) =>
   tautan(label, '/perencanaan', ikon, `?jenis=${jenis}`);
 
+export function adalahPeranGuru(role) {
+  return ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']
+    .includes(String(role || '').trim().toLowerCase());
+}
+
 export const GRUP_MENU = [
   {
     id: 'beranda', label: 'Dashboard', ikon: 'home',
@@ -287,6 +292,7 @@ export const MENU_SUPERADMIN = [
   ]),
   grup('platform-tenant', 'Manajemen Tenant', 'database', [
     tautan('Daftar Sekolah', '/platform/tenant/sekolah', 'users'),
+    tautan('Tambah Tenant', '/platform/tenant/tambah', 'users'),
     tautan('Langganan', '/platform/tenant/langganan', 'file'),
     tautan('Paket', '/platform/tenant/paket', 'book'),
   ]),
@@ -297,6 +303,7 @@ export const MENU_SUPERADMIN = [
   ]),
   grup('platform-pengguna', 'Manajemen Pengguna Global', 'users', [
     tautan('Akun Pengguna', '/platform/pengguna/admin-sekolah', 'users'),
+    tautan('Tambah Super Admin', '/platform/pengguna/superadmin', 'users'),
     tautan('Pengguna Supabase', '/platform/supabase-users', 'users'),
     tautan('Peran Global', '/platform/pengguna/peran', 'settings'),
   ]),
@@ -354,7 +361,7 @@ export function menuUntukPeran(role) {
   if (peran === 'operator') return MENU_OPERATOR;
   if (peran === 'demo') return MENU_DEMO;
   if (['kepala_sekolah', 'wali_kelas'].includes(peran)) return MENU_KONTEKS_TERBATAS;
-  if (['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(peran)) return GRUP_MENU;
+  if (adalahPeranGuru(peran)) return GRUP_MENU;
   return MENU_TANPA_PERAN;
 }
 
