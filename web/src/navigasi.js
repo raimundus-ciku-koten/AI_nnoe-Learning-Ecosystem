@@ -53,6 +53,7 @@ export const GRUP_MENU = [
     id: 'pelaksanaan', label: 'Pelaksanaan Pembelajaran', ikon: 'book',
     item: [
       tautan('Jurnal Mengajar Harian', '/pelaksanaan/jurnal', 'file'),
+      tautan('Jadwal & Materi untuk Siswa', '/pelaksanaan/ruang-siswa', 'book'),
       tautan('Presensi Siswa', '/pelaksanaan/presensi', 'check'),
       tautan('Program BK & Kegiatan', '/program-kegiatan', 'file'),
       tautan('Realisasi terhadap Rencana', '/pelaksanaan/realisasi', 'chart'),
@@ -151,7 +152,7 @@ const MENU_SISWA = [
     tautan('Dashboard', '/dashboard', 'home'),
   ]),
   grup('siswa-belajar', 'Ruang Belajar', 'book', [
-    tautan('Jadwal dan Tugas', '/siswa/jadwal', 'calendar'),
+    tautan('Jadwal Kelas', '/siswa/jadwal', 'calendar'),
     tautan('Materi', '/siswa/materi', 'book'),
     tautan('Ujian Saya', '/siswa/ujian', 'check'),
     tautan('Nilai Saya', '/siswa/nilai', 'chart'),

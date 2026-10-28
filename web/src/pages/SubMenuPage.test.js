@@ -74,6 +74,12 @@ describe('submenu platform superadmin', () => {
     expect(renderSubmenu('/orang-tua/anak')).toContain('menautkan akun orang tua secara resmi');
   });
 
+  it('menjelaskan batas data sesuai peran aktif siswa', () => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = 'siswa';
+    expect(renderSubmenu('/siswa/materi')).toContain('menautkan data akademik ke akun siswa');
+  });
+
   describe('submenu ruang kerja guru', () => {
     beforeEach(() => {
       auth.role = 'guru';

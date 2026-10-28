@@ -348,6 +348,8 @@ from unnest(array[
   'online_exams',
   'online_exam_items',
   'online_exam_attempts',
+  'student_class_schedule',
+  'student_learning_materials',
   'trial_registrations'
 ]) as feature(name)
 

@@ -31,6 +31,8 @@ with expected_feature_relations(name) as (
     ('online_exams'),
     ('online_exam_items'),
     ('online_exam_attempts'),
+    ('student_class_schedule'),
+    ('student_learning_materials'),
     ('trial_registrations')
 ),
 public_tables as (

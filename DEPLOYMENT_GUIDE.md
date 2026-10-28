@@ -210,4 +210,11 @@ A signed APK candidate already exists at `android-apk/app/build/outputs/apk/rele
 
 ---
 
+12) Student class schedule and learning materials (source only)
+
+- Teachers can create, edit, and remove class schedule entries and HTTPS learning-resource links from `/pelaksanaan/ruang-siswa`. The student routes `/siswa/jadwal` and `/siswa/materi` read only data matching the class and tenant on the authenticated student's school-linked roster.
+- The new tables are protected by RLS. Student reads are exposed only through role-checked server RPCs and are filtered by the linked student's tenant/class plus the teacher's active class and subject assignments. Teacher writes require an active teacher role, matching class/subject assignments, an active tenant entitlement, and ownership of the row. External file permissions remain controlled by the linked provider; teachers must verify that the intended students can open each shared URL.
+- Migration `supabase/migrations/20261020000100_student_learning_space.sql` is source-only and has not been applied to any hosted database. Do not run it in Staging or Production until the backup, restore, schema provenance, and explicit-approval gates in section 3 are satisfied. Run the staging release audit after applying it in a verified disposable/staging environment.
+- Assignments/submission workflows, file uploads, and integration with the existing private Google Drive timetable are not included in this module and must not be advertised as available.
+
 Never send passwords, API keys, or other secrets in chat. Configure them directly in the provider dashboards or as deployment secrets.

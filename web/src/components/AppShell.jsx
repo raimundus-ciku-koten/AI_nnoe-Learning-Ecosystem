@@ -35,10 +35,11 @@ function useDesktop() {
 
 export default function AppShell({ path, search = '', judulHalaman, children }) {
   const { user, profile, role, activeRole, roles = [], logout, switchRole } = useAuth();
+  const peranAktif = activeRole || role;
   const hematData = isEconomyMode();
   const desktop = useDesktop();
-  const daftarMenu = menuUntukPeran(role);
-  const menu = cariMenu(path, search, role);
+  const daftarMenu = menuUntukPeran(peranAktif);
+  const menu = cariMenu(path, search, peranAktif);
   const judulAktif = judulHalaman || menu?.item.label || 'Halaman';
 
   const [sideTutup, setSideTutup] = useState(sideTutupTersimpan);
@@ -157,7 +158,6 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   }
 
   const nama = user?.displayName || 'Pengguna';
-  const peranAktif = activeRole || role;
   const peran = LABEL_PERAN[peranAktif] || (peranAktif ? peranAktif : 'Pengguna');
   const subNama = profile?.sekolah || peran;
   const menuTerbuka = desktop ? !sideTutup : mobileBuka;

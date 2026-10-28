@@ -4,6 +4,21 @@ import { menuUntuk } from '../src/menu.js';
 import { cariMenu } from '../src/navigasi.js';
 
 describe('rute menu guru, staf pengajar, dan superadmin', () => {
+  it('mencocokkan setiap tautan guru dan siswa dengan submenu yang aktif', () => {
+    for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'siswa']) {
+      const groups = menuUntuk(role);
+      const items = groups.flatMap((group) => group.items);
+
+      assert.ok(items.length > 0, `${role} tidak memiliki item menu`);
+      for (const item of items) {
+        const [path, query = ''] = item.href.slice(1).split('?');
+        const match = cariMenu(path, query ? `?${query}` : '', role);
+        assert.ok(match, `${role}: ${item.judul} tidak cocok dengan rute ${item.href}`);
+        assert.equal(match.item.label, item.judul, `${role}: label rute ${item.href} berbeda`);
+      }
+    }
+  });
+
   for (const role of ['guru', 'operator', 'demo', 'superadmin']) {
     it(`setiap item ${role} memiliki tujuan yang dapat dibuka`, () => {
       const groups = menuUntuk(role);

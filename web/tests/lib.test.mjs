@@ -321,6 +321,8 @@ test('hosted schema audit script contains read-only SQL only', () => {
     'online_exams',
     'online_exam_items',
     'online_exam_attempts',
+    'student_class_schedule',
+    'student_learning_materials',
     'trial_registrations',
   ];
   for (const featureRelation of featureRelations) {
