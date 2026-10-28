@@ -1,0 +1,119 @@
+import { spawnSync } from 'node:child_process';
+import { readFile, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  buildSchemaAuditQuery,
+  getExpectedRelationNames,
+} from './auditStagingSchema.mjs';
+
+export function getOrderedMigrationFiles(files) {
+  const migrations = files.filter((file) => file.endsWith('.sql')).sort();
+  const versions = migrations.map((file) => {
+    const match = /^(\d{14})_[a-z0-9_]+\.sql$/i.exec(file);
+    if (!match) {
+      throw new Error(`Migration filename does not use the expected version format: ${file}`);
+    }
+    return match[1];
+  });
+  if (migrations.length === 0 || new Set(versions).size !== versions.length) {
+    throw new Error('Migration chain is empty or contains duplicate versions.');
+  }
+  return migrations;
+}
+
+function buildLocalDatabaseEnvironment(environment) {
+  const allowed = environment.PGHOST === '127.0.0.1'
+    && environment.PGPORT === '5432'
+    && environment.PGUSER === 'supabase_admin'
+    && environment.PGDATABASE === 'postgres';
+  if (!allowed) {
+    throw new Error('Migration-chain validation is restricted to the clean disposable Supabase database.');
+  }
+
+  const psqlEnvironment = { ...environment, PGAPPNAME: 'migration-chain-validation' };
+  delete psqlEnvironment.SUPABASE_DB_URL;
+  delete psqlEnvironment.BACKUP_ENCRYPTION_KEY;
+  return psqlEnvironment;
+}
+
+export async function validateMigrationChain({
+  migrationDirectory,
+  migrationFiles,
+  auditSql,
+  environment = process.env,
+  runCommand = spawnSync,
+}) {
+  const psqlEnvironment = buildLocalDatabaseEnvironment(environment);
+  const orderedMigrationFiles = getOrderedMigrationFiles(
+    migrationFiles ?? await readdir(migrationDirectory),
+  );
+  const relationAuditSql = auditSql ?? await readFile(
+    new URL('../supabase/audit_hosted_schema.sql', import.meta.url),
+    'utf8',
+  );
+  for (const file of orderedMigrationFiles) {
+    const result = runCommand(
+      'psql',
+      [
+        '--no-psqlrc',
+        '--set=ON_ERROR_STOP=1',
+        '--single-transaction',
+        '--file',
+        join(migrationDirectory, file),
+      ],
+      { encoding: 'utf8', env: psqlEnvironment },
+    );
+    if (result.error || result.status !== 0) {
+      throw new Error(`Migration-chain validation failed at ${file}; only a disposable local database was targeted.`);
+    }
+  }
+
+  const expectedRelations = getExpectedRelationNames(relationAuditSql);
+  const schemaResult = runCommand(
+    'psql',
+    [
+      '--no-psqlrc',
+      '--set=ON_ERROR_STOP=1',
+      '--tuples-only',
+      '--no-align',
+      '--command',
+      buildSchemaAuditQuery(expectedRelations),
+    ],
+    { encoding: 'utf8', env: psqlEnvironment },
+  );
+  if (schemaResult.error || schemaResult.status !== 0) {
+    throw new Error('Expected-schema validation failed on the disposable local database.');
+  }
+
+  let schemaReport;
+  try {
+    schemaReport = JSON.parse(schemaResult.stdout.trim());
+  } catch {
+    throw new Error('Expected-schema validation returned invalid JSON.');
+  }
+  if (!schemaReport?.relations || typeof schemaReport.relations !== 'object' ||
+      Array.isArray(schemaReport.relations)) {
+    throw new Error('Expected-schema validation returned an invalid relation inventory.');
+  }
+  const missingRelations = expectedRelations.filter((name) => schemaReport.relations[name] !== true);
+  if (missingRelations.length > 0) {
+    throw new Error(`Expected-schema validation found missing relations: ${missingRelations.join(', ')}.`);
+  }
+
+  return `Validated ${orderedMigrationFiles.length} migrations and all ${expectedRelations.length} expected feature relations on the clean disposable Supabase database.`;
+}
+
+async function main() {
+  const result = await validateMigrationChain({
+    migrationDirectory: fileURLToPath(new URL('../supabase/migrations/', import.meta.url)),
+  });
+  process.stdout.write(`${result}\n`);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(`[migration-chain-validation] ${error.message}`);
+    process.exitCode = 1;
+  });
+}

@@ -1,25 +1,40 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isSchoolAdminRole } from '../services/roleAccess.js';
 import { supabase } from '../lib/supabase.ts';
 import '../styles/admin-users.css';
 
 const UKURAN_HALAMAN = 50;
 const LABEL_PERAN = {
+  admin: 'Admin sekolah',
   admin_sekolah: 'Admin sekolah',
   operator: 'Operator',
+  demo: 'Akun demo',
   guru: 'Guru',
+  guru_bk: 'Guru BK',
+  guru_kokurikuler: 'Guru Kokurikuler',
+  guru_ekstrakurikuler: 'Guru Ekstrakurikuler',
   siswa: 'Siswa',
   ortu: 'Orang tua',
   orang_tua: 'Orang tua',
-  demo: 'Akun demo',
 };
 const KATEGORI = {
-  guru: { judul: 'Guru', roles: ['guru', 'operator', 'demo'] },
+  guru: { judul: 'Guru', roles: ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'] },
   siswa: { judul: 'Siswa', roles: ['siswa'] },
   'orang-tua': { judul: 'Orang tua', roles: ['ortu', 'orang_tua'] },
-  admin: { judul: 'Admin sekolah', roles: ['admin_sekolah'] },
+  admin: { judul: 'Admin sekolah', roles: ['admin', 'admin_sekolah'] },
+  operator: { judul: 'Operator', roles: ['operator'] },
 };
+
+export function peranKategoriPengguna(sub) {
+  return KATEGORI[sub]?.roles || [];
+}
+
+export function penggunaMemilikiKategori(user, roles) {
+  const assignedRoles = new Set([user.role, ...(Array.isArray(user.roles) ? user.roles : [])]);
+  return roles.some((role) => assignedRoles.has(role));
+}
 
 function namaPengguna(data) {
   return String(data.nama || data.displayName || data.email || 'Nama belum tersedia').trim();
@@ -33,10 +48,11 @@ function statusPengguna(data) {
 
 export default function AdminUsersPage() {
   const { pathname } = useLocation();
-  const { role, tenantId } = useAuth();
+  const { role, activeRole, tenantId } = useAuth();
+  const currentRole = activeRole || role;
   const sub = pathname.split('/').filter(Boolean).at(-1);
   const kategori = KATEGORI[sub];
-  const pengelola = role === 'admin_sekolah';
+  const pengelola = isSchoolAdminRole(currentRole);
   const [users, setUsers] = useState([]);
   const [lastId, setLastId] = useState(null);
   const [search, setSearch] = useState('');
@@ -51,9 +67,9 @@ export default function AdminUsersPage() {
     try {
       let request = supabase
         .from('profiles')
-        .select('id,email,nama,role,tenant_id,active')
+        .select('id,email,nama,role,roles,tenant_id,active')
         .eq('tenant_id', tenantId)
-        .in('role', kategori.roles)
+        .or(`role.in.(${kategori.roles.join(',')}),roles.ov.{${kategori.roles.join(',')}}`)
         .order('id')
         .limit(UKURAN_HALAMAN + 1);
       if (cursor) request = request.gt('id', cursor);
@@ -65,6 +81,7 @@ export default function AdminUsersPage() {
         const halaman = docs.map((item) => ({
           uid: item.id,
           ...item,
+          roles: Array.isArray(item.roles) ? item.roles : [],
           aktif: item.active,
         }));
         return reset ? halaman : [...current, ...halaman];
@@ -93,7 +110,7 @@ export default function AdminUsersPage() {
     if (!kategori) return [];
     const needle = search.trim().toLocaleLowerCase('id');
     return users
-      .filter((user) => kategori.roles.includes(user.role))
+      .filter((user) => penggunaMemilikiKategori(user, kategori.roles))
       .filter((user) => !needle || [namaPengguna(user), user.email || '', LABEL_PERAN[user.role] || user.role]
         .some((value) => String(value).toLocaleLowerCase('id').includes(needle)))
       .sort((a, b) => namaPengguna(a).localeCompare(namaPengguna(b), 'id'));
@@ -135,6 +152,7 @@ export default function AdminUsersPage() {
                 <tr><th scope="row">Guru</th><td>Mengakses kegiatan mengajar dan data yang terkait dengan penugasan.</td></tr>
                 <tr><th scope="row">Siswa</th><td>Mengakses ruang belajar dan data belajar milik sendiri.</td></tr>
                 <tr><th scope="row">Orang tua</th><td>Melihat informasi anak yang telah ditautkan secara resmi.</td></tr>
+                <tr><th scope="row">Demo</th><td>Akun uji coba dikelola di luar direktori pengguna sekolah.</td></tr>
               </tbody>
             </table>
           </div>
@@ -186,11 +204,13 @@ export default function AdminUsersPage() {
               <tbody>
                 {daftar.map((user) => {
                   const status = statusPengguna(user);
+                  const matchingRoles = [...new Set([user.role, ...user.roles])]
+                    .filter((assignedRole) => kategori.roles.includes(assignedRole));
                   return (
                     <tr key={user.uid}>
                       <th scope="row">{namaPengguna(user)}</th>
                       <td>{user.email || 'Email belum dicatat'}</td>
-                      <td>{LABEL_PERAN[user.role] || 'Peran belum dicatat'}</td>
+                      <td>{matchingRoles.map((assignedRole) => LABEL_PERAN[assignedRole] || assignedRole).join(', ') || 'Peran belum dicatat'}</td>
                       <td><span className={`ale-admin-users-status ${status.className}`}>{status.label}</span></td>
                     </tr>
                   );

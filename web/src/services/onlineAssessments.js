@@ -37,10 +37,19 @@ function validasiPaketUjian(exam) {
 }
 
 export async function muatUjianSiswa() {
-  const { data, error } = await supabase.rpc('student_online_exams');
+  const [{ data, error }, { data: categories, error: categoryError }] = await Promise.all([
+    supabase.rpc('student_online_exams'),
+    supabase.rpc('student_online_exam_categories'),
+  ]);
   if (error) throw error;
+  if (categoryError) throw categoryError;
   if (!Array.isArray(data)) throw new Error('Daftar ujian siswa tidak valid.');
-  return data;
+  if (!Array.isArray(categories)) throw new Error('Kategori ujian siswa tidak valid.');
+  const categoriesByExam = new Map(categories.map((item) => [item.exam_id, item.assessment_type]));
+  return data.map((exam) => ({
+    ...exam,
+    assessment_type: categoriesByExam.get(exam.exam_id) || 'umum',
+  }));
 }
 
 export async function muatRosterBelumTertaut() {
@@ -104,6 +113,13 @@ export async function muatRingkasanUjianGuru() {
   return data;
 }
 
+export async function muatKategoriUjianGuru() {
+  const { data, error } = await supabase.rpc('teacher_online_exam_categories');
+  if (error) throw error;
+  if (!Array.isArray(data)) throw new Error('Kategori ujian guru tidak valid.');
+  return data;
+}
+
 export async function muatHasilUjianGuru() {
   const { data, error } = await supabase.rpc('teacher_online_exam_results');
   if (error) throw error;
@@ -142,7 +158,7 @@ export async function nilaiJawabanUraian(attemptId, essayScore) {
 }
 
 export async function buatUjianOnline({
-  title, kelas, startsAt, endsAt, durationMinutes, questionIds,
+  title, kelas, startsAt, endsAt, durationMinutes, questionIds, assessmentType = 'umum',
 }) {
   wajibText(title, 'Judul ujian');
   wajibText(kelas, 'Kelas');
@@ -150,20 +166,22 @@ export async function buatUjianOnline({
   wajibText(endsAt, 'Waktu selesai');
   if (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 300 ||
       !Array.isArray(questionIds) || questionIds.length < 1 || questionIds.length > 100 ||
-      new Set(questionIds).size !== questionIds.length) {
+      new Set(questionIds).size !== questionIds.length ||
+      !['umum', 'diagnostik', 'formatif', 'sumatif'].includes(assessmentType)) {
     throw new TypeError('Durasi atau daftar soal tidak valid.');
   }
   if (Date.parse(endsAt) <= Date.parse(startsAt)) {
     throw new TypeError('Waktu selesai harus setelah waktu mulai.');
   }
 
-  const { data, error } = await supabase.rpc('create_online_exam', {
+  const { data, error } = await supabase.rpc('create_typed_online_exam', {
     p_title: title.trim(),
     p_kelas: kelas.trim(),
     p_starts_at: startsAt,
     p_ends_at: endsAt,
     p_duration_minutes: durationMinutes,
     p_question_ids: questionIds,
+    p_assessment_type: assessmentType,
   });
   if (error) throw error;
   wajibText(data, 'ID ujian');

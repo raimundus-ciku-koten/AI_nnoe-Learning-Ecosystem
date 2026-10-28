@@ -4,8 +4,10 @@ import { test } from 'node:test';
 import {
   bukaPemilihPdfCapaianDrive,
   bukaPemilihPaketDrive,
+  buatAcaraGoogleCalendar,
   buatRuangGoogleMeet,
   buatSpreadsheetDenganData,
+  buatTugasGoogleTasks,
   buatTautanGoogleCalendar,
   daftarPaketPerencanaanTerenkripsiDrive,
   simpanFotoProfilDiDrive,
@@ -36,6 +38,55 @@ test('Google Calendar menolak waktu atau judul acara yang tidak valid', () => {
     }),
     /waktu selesai setelah waktu mulai/,
   );
+});
+
+test('Google Calendar membuat acara dengan token yang diberikan dan memvalidasi tautannya', async () => {
+  const previousFetch = globalThis.fetch;
+  let request;
+  globalThis.fetch = async (url, options) => {
+    request = { url: String(url), options };
+    return Response.json({ id: 'event-1', htmlLink: 'https://calendar.google.com/calendar/event?eid=event-1' });
+  };
+  try {
+    const event = await buatAcaraGoogleCalendar('calendar-token', {
+      judul: 'Rapat kelas',
+      mulai: '2026-10-18T09:00',
+      selesai: '2026-10-18T10:00',
+    });
+    assert.equal(event.id, 'event-1');
+    assert.match(request.url, /calendar\/v3\/calendars\/primary\/events$/);
+    assert.equal(request.options.method, 'POST');
+    assert.equal(request.options.headers.Authorization, 'Bearer calendar-token');
+    assert.equal(JSON.parse(request.options.body).summary, 'Rapat kelas');
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test('Google Tasks memilih daftar pertama dan membuat tugas sesuai input', async () => {
+  const previousFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url, options = {}) => {
+    requests.push({ url: String(url), options });
+    if (requests.length === 1) {
+      return Response.json({ items: [{ id: 'list-1', title: 'Tugas Saya' }] });
+    }
+    return Response.json({ id: 'task-1', title: 'Buat RPP', due: '2026-10-30T00:00:00.000Z' });
+  };
+  try {
+    const task = await buatTugasGoogleTasks('tasks-token', {
+      judul: 'Buat RPP',
+      catatan: 'Untuk kelas 5',
+      jatuhTempo: '2026-10-30',
+    });
+    assert.equal(task.id, 'task-1');
+    assert.match(requests[0].url, /tasks\/v1\/users\/@me\/lists/);
+    assert.match(requests[1].url, /lists\/list-1\/tasks$/);
+    assert.equal(JSON.parse(requests[1].options.body).title, 'Buat RPP');
+    assert.equal(JSON.parse(requests[1].options.body).due, '2026-10-30T00:00:00.000Z');
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
 });
 
 test('Google Meet membuat ruang dan hanya mengembalikan tautan Meet HTTPS', async () => {

@@ -1,5 +1,6 @@
 {
     "recommendations": [
-        "laurent00tt.deepseek-v4-vscode-chat"
+        "laurent00tt.deepseek-v4-vscode-chat",
+        "github.vscode-github-actions"
     ]
 }

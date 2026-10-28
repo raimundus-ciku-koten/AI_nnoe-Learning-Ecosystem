@@ -5,7 +5,18 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { usePlatformControls } from '../context/PlatformControlContext.jsx';
 import { GRUP_MENU, MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN, menuUntukPeran } from '../navigasi.js';
 import { setPlatformControl } from '../services/platformAdminApi.js';
-import PRICING from '../../../functions/shared/pricing.json';
+import {
+  loadManageableUsers,
+  loadUserMenuRestrictions,
+  saveUserMenuRestrictions,
+} from '../services/userMenuAccess.js';
+import {
+  formatRupiah,
+  hargaEkuivalenBulanan,
+  KELOMPOK_PAKET,
+  NOMOR_WHATSAPP_OWNER,
+  tautanWhatsApp,
+} from '../services/publicPricing.js';
 import '../styles/platform-tenants.css';
 
 const PERAN_MENU = [
@@ -36,11 +47,11 @@ const INFO_MODUL = {
     status: 'Audit operasi backend',
     tindakan: 'Log hanya mencakup operasi yang tercatat backend; bukan audit seluruh aktivitas pengguna.',
   },
-  '/platform/tenant/langganan': {
-    judul: 'Langganan Tenant',
-    ringkasan: 'Status langganan sekolah tersedia pada dokumen tenant dan dapat ditinjau di direktori sekolah.',
+  '/platform/tenant/status': {
+    judul: 'Status Tenant',
+    ringkasan: 'Status aktif atau nonaktif sekolah dapat ditinjau di direktori tenant.',
     status: 'Baca-saja tersedia',
-    tindakan: 'Status dihitung dari langganan. Perubahan langganan hanya boleh melalui webhook atau layanan backend tepercaya.',
+    tindakan: 'Halaman ini hanya menampilkan status operasional tenant secara baca-saja.',
     link: { href: '#/platform/tenant/sekolah', label: 'Buka daftar sekolah' },
   },
   '/platform/pengguna/peran': {
@@ -99,7 +110,7 @@ const INFO_MODUL = {
   },
   '/platform/laporan/biaya': {
     judul: 'Biaya Platform',
-    ringkasan: 'Data biaya billing tidak tersedia pada aplikasi ini.',
+    ringkasan: 'Data biaya operasional belum tersedia pada aplikasi ini.',
     status: 'Metrik tidak tersedia',
   },
   '/platform/pengaturan/konfigurasi': {
@@ -116,15 +127,20 @@ const INFO_MODUL = {
   },
   '/platform/pengaturan/cadangan': {
     judul: 'Cadangan Platform',
-    ringkasan: 'Jadwal dan hasil backup database tidak dicatat dalam aplikasi.',
-    status: 'Pemeriksaan server diperlukan',
-    tindakan: 'Konfigurasikan dan verifikasi backup database melalui provider yang digunakan.',
+    ringkasan: 'Belum ada jadwal backup berkala atau pemulihan produksi di dalam aplikasi. Repository menyediakan workflow manual untuk backup terenkripsi Staging dan uji restore ke database disposable.',
+    status: 'Workflow manual Staging tersedia',
+    tindakan: 'Workflow hanya berjalan setelah dijalankan manual dari branch main dan secret GitHub Actions dikonfigurasi. Target database divalidasi agar hanya Staging; artefak terenkripsi disimpan satu hari dan diuji restore ke database sementara. Ini bukan jadwal backup, bukti eksekusi terbaru, atau prosedur pemulihan Production.',
+    link: {
+      href: 'https://github.com/raimundus-ciku-koten/ale-web/actions/workflows/supabase-backup.yml',
+      label: 'Buka workflow backup Staging di GitHub Actions',
+      external: true,
+    },
   },
   '/platform/pengaturan/pemeliharaan': {
     judul: 'Mode Pemeliharaan',
-    ringkasan: 'Hentikan akses aplikasi bagi pengguna non-superadmin. Keadaan diperiksa langsung oleh UI dan endpoint AI/pembayaran.',
+    ringkasan: 'Hentikan akses aplikasi bagi pengguna non-superadmin. Keadaan diperiksa langsung oleh UI dan endpoint AI.',
     status: 'Dikelola server dan diaudit',
-    tindakan: 'Mengaktifkan mode ini akan memblokir area aplikasi dan endpoint AI serta checkout; superadmin tetap dapat mengakses konsol.',
+    tindakan: 'Mengaktifkan mode ini akan memblokir area aplikasi dan endpoint AI; superadmin tetap dapat mengakses konsol.',
   },
   '/platform/konten/template': {
     judul: 'Template Perangkat',
@@ -146,13 +162,6 @@ const INFO_MODUL = {
   },
 };
 
-const paket = [
-  ...PRICING.school.map((item) => ({ ...item, kelompok: 'Sekolah' })),
-  ...PRICING.student.map((item) => ({ ...item, kelompok: 'Siswa' })),
-  ...PRICING.teacherSd.map((item) => ({ ...item, kelompok: 'Guru kelas SD' })),
-  ...PRICING.teacherSubject.map((item) => ({ ...item, kelompok: 'Guru mapel' })),
-];
-
 function KartuInfo({ info }) {
   return (
     <>
@@ -164,37 +173,44 @@ function KartuInfo({ info }) {
       <section className="platform-tenants-card">
         <span className="platform-tenants-status is-unknown">{info.status}</span>
         <p>{info.tindakan}</p>
-        {info.link && <a className="platform-tenants-button platform-ops-console" href={info.link.href}>{info.link.label}</a>}
+        {info.link && (
+          <a
+            className="platform-tenants-button platform-ops-console"
+            href={info.link.href}
+            target={info.link.external ? '_blank' : undefined}
+            rel={info.link.external ? 'noopener noreferrer' : undefined}
+          >
+            {info.link.label}
+          </a>
+        )}
       </section>
     </>
   );
 }
 
 function DaftarPaket() {
-  const formatHarga = (nominal) => new Intl.NumberFormat('id-ID', {
-    style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
-  }).format(nominal);
-
   return (
     <>
       <header className="platform-tenants-heading">
         <p className="platform-tenants-kicker">Manajemen tenant · katalog</p>
         <h1>Paket</h1>
-        <p>Katalog harga aplikasi dari konfigurasi paket. Katalog ini tidak membuat langganan atau mengubah entitlement.</p>
+        <p>Harga informatif bersumber dari katalog. Hubungi owner untuk bertanya tentang ketentuan paket.</p>
       </header>
       <section className="platform-tenants-card">
         <div className="platform-package-grid">
-          {paket.map((item) => (
-            <article className="platform-package" key={item.id}>
-              <p>{item.kelompok}</p>
-              <h2>{item.name}</h2>
-              <strong>{formatHarga(item.annualPrice)}<small> / tahun</small></strong>
-              <span>{item.features}</span>
-              <code>{item.id}</code>
+          {KELOMPOK_PAKET.flatMap((group) => group.plans.map((plan) => (
+            <article className="platform-package" key={plan.id}>
+              <p>{group.label}</p>
+              <h2>{plan.name}</h2>
+              <strong>{formatRupiah(plan.annualPrice)}<small> / tahun</small></strong>
+              <span>{formatRupiah(hargaEkuivalenBulanan(plan.annualPrice))} / bulan, ekuivalen katalog tahunan</span>
+              <a href={tautanWhatsApp(plan.name)} target="_blank" rel="noopener noreferrer">
+                Tanya melalui WhatsApp (+{NOMOR_WHATSAPP_OWNER})
+              </a>
             </article>
-          ))}
+          )))}
         </div>
-        <p className="platform-ops-note">Pembayaran dan status langganan diproses backend/webhook; tidak ada aksi perubahan paket pada halaman katalog.</p>
+        <p className="platform-ops-note">Harga bulanan merupakan ekuivalen katalog tahunan dibagi 10, bukan opsi penagihan.</p>
       </section>
     </>
   );
@@ -207,6 +223,97 @@ function DaftarPeran({ mode }) {
     role,
     grup: menuUntukPeran(role),
   }));
+  const [users, setUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedMenuRole, setSelectedMenuRole] = useState('');
+  const [disabledKeys, setDisabledKeys] = useState(() => new Set());
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingRestrictions, setLoadingRestrictions] = useState(false);
+  const [savingRestrictions, setSavingRestrictions] = useState(false);
+  const [menuError, setMenuError] = useState('');
+  const [menuNotice, setMenuNotice] = useState('');
+
+  useEffect(() => {
+    if (mode !== 'menu') return undefined;
+    let current = true;
+    setLoadingUsers(true);
+    setMenuError('');
+    loadManageableUsers()
+      .then((rows) => {
+        if (!current) return;
+        setUsers(rows);
+        setSelectedUserId((selected) =>
+          rows.some((user) => user.id === selected) ? selected : (rows[0]?.id || ''));
+      })
+      .catch((error) => {
+        console.error('[platform-menu] Gagal memuat daftar akun:', error);
+        if (current) setMenuError(error?.message || 'Daftar akun tidak dapat dimuat.');
+      })
+      .finally(() => { if (current) setLoadingUsers(false); });
+    return () => { current = false; };
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== 'menu' || !selectedUserId) {
+      setDisabledKeys(new Set());
+      return undefined;
+    }
+    let current = true;
+    setLoadingRestrictions(true);
+    setDisabledKeys(new Set());
+    setMenuError('');
+    setMenuNotice('');
+    loadUserMenuRestrictions(selectedUserId)
+      .then((keys) => { if (current) setDisabledKeys(keys); })
+      .catch((error) => {
+        console.error('[platform-menu] Gagal memuat pembatasan akun:', error);
+        if (current) {
+          setDisabledKeys(new Set());
+          setMenuError(error?.message || 'Pembatasan menu tidak dapat dimuat.');
+        }
+      })
+      .finally(() => { if (current) setLoadingRestrictions(false); });
+    return () => { current = false; };
+  }, [mode, selectedUserId]);
+
+  const selectedUser = users.find((user) => user.id === selectedUserId);
+  const assignedRoles = selectedUser?.roles?.length
+    ? selectedUser.roles
+    : (selectedUser?.role ? [selectedUser.role] : []);
+  const activeMenuRole = assignedRoles.includes(selectedMenuRole)
+    ? selectedMenuRole
+    : (assignedRoles[0] || '');
+  const userMenuGroups = activeMenuRole ? menuUntukPeran(activeMenuRole) : [];
+
+  useEffect(() => {
+    setSelectedMenuRole(assignedRoles[0] || '');
+  }, [selectedUserId, users]);
+
+  function setMenuDisabled(key, disabled) {
+    setDisabledKeys((current) => {
+      const next = new Set(current);
+      if (disabled) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+    setMenuNotice('');
+  }
+
+  async function saveRestrictions() {
+    if (!selectedUserId || savingRestrictions) return;
+    setSavingRestrictions(true);
+    setMenuError('');
+    setMenuNotice('');
+    try {
+      await saveUserMenuRestrictions(selectedUserId, [...disabledKeys]);
+      setMenuNotice('Pembatasan menu berhasil disimpan dan dicatat di audit platform.');
+    } catch (error) {
+      console.error('[platform-menu] Gagal menyimpan pembatasan akun:', error);
+      setMenuError(error?.message || 'Pembatasan menu gagal disimpan.');
+    } finally {
+      setSavingRestrictions(false);
+    }
+  }
 
   return (
     <>
@@ -221,14 +328,97 @@ function DaftarPeran({ mode }) {
       </header>
       <section className="platform-tenants-card">
         {mode === 'menu' ? (
-          <div className="platform-ops-menu-list">
-            {semuaGrup.map((group) => (
-              <article key={group.id}>
-                <h2>{group.label}</h2>
-                <ul>{group.item.map((item) => <li key={item.path}><a href={`#${item.path}${item.search || ''}`}>{item.label}</a></li>)}</ul>
-              </article>
-            ))}
-          </div>
+          <>
+            <div className="platform-ops-menu-list">
+              {semuaGrup.map((group) => (
+                <article key={group.id}>
+                  <h2>{group.label}</h2>
+                  <ul>{group.item.map((item) => <li key={`${item.path}${item.search || ''}`}><a href={`#${item.path}${item.search || ''}`}>{item.label}</a></li>)}</ul>
+                </article>
+              ))}
+            </div>
+            <section aria-labelledby="platform-menu-account-heading">
+              <h2 id="platform-menu-account-heading">Pembatasan menu per akun</h2>
+              <p>Pilih akun dan peran aktif akun tersebut, lalu batasi grup atau submenu. Pembatasan diterapkan ke navigasi dan akses URL langsung.</p>
+              {loadingUsers ? <p role="status">Memuat akun…</p> : (
+                <label>
+                  Akun pengguna
+                  <select
+                    value={selectedUserId}
+                    onChange={(event) => setSelectedUserId(event.target.value)}
+                    disabled={!users.length || loadingRestrictions || savingRestrictions}
+                  >
+                    {!users.length && <option value="">Tidak ada akun aktif yang dapat dikelola</option>}
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.nama || user.email || user.id} · {user.role}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {menuError && <p role="alert">{menuError}</p>}
+              {menuNotice && <p role="status">{menuNotice}</p>}
+              {loadingRestrictions ? <p role="status">Memuat konfigurasi menu akun…</p> : selectedUser && (
+                <>
+                  {assignedRoles.length > 1 && (
+                    <label>
+                      Peran yang diatur
+                      <select
+                        aria-label="Peran untuk pembatasan menu"
+                        value={activeMenuRole}
+                        onChange={(event) => setSelectedMenuRole(event.target.value)}
+                        disabled={savingRestrictions}
+                      >
+                        {assignedRoles.map((role) => (
+                          <option key={role} value={role}>{role}</option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  <div className="platform-ops-menu-list">
+                    {userMenuGroups.map((group) => (
+                      <article key={group.id}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={disabledKeys.has(`group:${group.id}`)}
+                            onChange={(event) => setMenuDisabled(`group:${group.id}`, event.target.checked)}
+                            disabled={savingRestrictions}
+                          />
+                          Batasi seluruh grup: {group.label}
+                        </label>
+                        <ul>
+                          {group.item.map((item) => (
+                            <li key={`${item.path}${item.search || ''}`}>
+                              <label>
+                                <input
+                                  type="checkbox"
+                                  checked={disabledKeys.has(`path:${item.path}`)}
+                                  onChange={(event) => setMenuDisabled(`path:${item.path}`, event.target.checked)}
+                                  disabled={savingRestrictions}
+                                />
+                                Batasi submenu: {item.label}
+                              </label>
+                            </li>
+                          ))}
+                        </ul>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
+              {selectedUser && (
+                <button
+                  type="button"
+                  onClick={() => void saveRestrictions()}
+                  disabled={loadingRestrictions || savingRestrictions || Boolean(menuError)}
+                >
+                  {savingRestrictions ? 'Menyimpan…' : 'Simpan pembatasan menu'}
+                </button>
+              )}
+            </section>
+          </>
         ) : (
           <div className="platform-tenants-table-wrap">
             <table className="platform-tenants-table">
@@ -327,7 +517,7 @@ function KontrolPlatform({ maintenance = false }) {
         <p className="platform-tenants-kicker">{maintenance ? 'Pengaturan platform · kontrol akses' : 'Manajemen fitur · kontrol server'}</p>
         <h1>{maintenance ? 'Mode Pemeliharaan' : 'Feature Flags'}</h1>
         <p>{maintenance
-          ? 'Tutup akses antarmuka bagi seluruh peran selain superadmin dan hentikan endpoint AI serta checkout.'
+          ? 'Tutup akses antarmuka bagi seluruh peran selain superadmin dan hentikan endpoint AI.'
           : 'Aktif/nonaktifkan kemampuan AI yang diperiksa kembali oleh backend Supabase. Perubahan dicatat di audit.'}</p>
       </header>
       {controls.error && <p className="platform-tenants-error" role="alert">{controls.error}</p>}
@@ -335,7 +525,7 @@ function KontrolPlatform({ maintenance = false }) {
         {maintenance ? (
           <KontrolToggle
             label="Mode pemeliharaan global"
-            description="Pengguna selain superadmin dialihkan ke halaman pemeliharaan. Endpoint AI dan checkout juga menolak permintaan baru."
+            description="Pengguna selain superadmin dialihkan ke halaman pemeliharaan. Endpoint AI juga menolak permintaan baru."
             enabled={maintenanceAktif}
             danger
             setting={(enabled) => ({ setting: 'maintenance', enabled })}
@@ -373,15 +563,19 @@ function labelKontrol(target) {
   return target || 'Kontrol platform';
 }
 
-function nilaiAudit(value) {
-  if (typeof value === 'boolean') return value ? 'Aktif' : 'Nonaktif';
-  return String(value ?? '—');
-}
-
 export function aktivitasAudit(data) {
   if (data.action === 'platform.user.created') return 'Akun pengguna dibuat';
   if (data.action === 'platform.user.provisioned') return 'Akses pengguna diprovisikan';
+  if (data.action === 'platform.user_menu_access.updated') return 'Pembatasan menu akun diperbarui';
+  if (data.action === 'user.integration_consent.saved') return 'Persetujuan integrasi diperbarui';
   return labelKontrol(data.target);
+}
+
+function nilaiAudit(value) {
+  if (typeof value === 'boolean') return value ? 'Aktif' : 'Nonaktif';
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  return JSON.stringify(value) ?? '—';
 }
 
 export function rincianAudit(data) {
@@ -394,6 +588,16 @@ export function rincianAudit(data) {
     const role = PERAN_MENU.find(([, id]) => id === (data.role || profile.role))?.[0]
       || data.role || profile.role || 'Peran tidak diketahui';
     return `${role} · tenant ${data.tenantId || profile.tenant_id || '—'} · ${data.target || profile.email || '—'}`;
+  }
+  if (data.action === 'platform.user_menu_access.updated') {
+    const disabledKeys = Array.isArray(data.after_value) ? data.after_value : [];
+    return `UID ${data.target || '—'} · ${disabledKeys.length
+      ? `menu dibatasi: ${disabledKeys.join(', ')}`
+      : 'seluruh pembatasan menu dihapus'}`;
+  }
+  if (data.action === 'user.integration_consent.saved') {
+    const value = data.after_value || {};
+    return `UID ${data.target || '—'} · versi persetujuan ${value.version || '—'}`;
   }
   return `${nilaiAudit(data.before_value ?? data.before)} → ${nilaiAudit(data.after_value ?? data.after)}`;
 }
@@ -556,7 +760,8 @@ function RingkasanPenggunaan({ role, judul = 'Penggunaan Platform' }) {
 
 export default function PlatformOperationsPage() {
   const { pathname } = useLocation();
-  const { role } = useAuth();
+  const { role: baseRole, activeRole } = useAuth();
+  const role = activeRole || baseRole;
   const info = INFO_MODUL[pathname];
   const mode = pathname === '/platform/tenant/paket' ? 'paket'
     : pathname === '/platform/pengguna/peran' || pathname === '/platform/fitur/izin' ? 'peran'

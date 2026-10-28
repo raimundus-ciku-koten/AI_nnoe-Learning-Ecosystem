@@ -104,11 +104,17 @@ export async function ambilSiswa(ctx, paksa = false) {
   const uid = ctx?.user?.uid;
   if (!uid) throw new Error('Pengguna belum masuk');
   const cache = (ctx.cache ??= {});
+  const tenantCacheKey = ctx.tenantId || '';
+  if (cache.siswaTenantKey !== tenantCacheKey) {
+    delete cache.siswa;
+    delete cache.siswaJanji;
+    cache.siswaTenantKey = tenantCacheKey;
+  }
 
   if (!paksa && cache.siswa) return cache.siswa;
   if (!paksa && cache.siswaJanji) return cache.siswaJanji;
 
-  const janji = muatDaftarSiswa(uid)
+  const janji = muatDaftarSiswa(uid, ctx.tenantId)
     .then((students) => (cache.siswa = students))
     .finally(() => { if (cache.siswaJanji === janji) delete cache.siswaJanji; });
   cache.siswaJanji = janji;

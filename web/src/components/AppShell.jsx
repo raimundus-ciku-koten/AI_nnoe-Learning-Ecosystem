@@ -6,12 +6,27 @@
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '../styles/dashboard.css';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useUserMenuAccess } from '../context/UserMenuAccessContext.jsx';
+import { useUserIntegrationConsent } from '../context/UserIntegrationConsentContext.jsx';
 import { menuUntukPeran, cariMenu } from '../navigasi.js';
 import { NAMA_APLIKASI } from '../config.js';
 import { LABEL_PERAN, inisial, sideTutupTersimpan, terapkanSideTutup, toast } from '../ui.js';
 import Ikon from './Ikon.jsx';
 import { urlFotoAman } from '../services/protectedMedia.js';
 import { isEconomyMode } from '../services/economyMode.js';
+import { canOpenRolePath, isTeacherRole } from '../services/roleAccess.js';
+import { isMenuPathDisabled } from '../services/menuAccessPolicy.js';
+import {
+  bacaPreferensiGuru,
+  dengarkanPreferensiGuru,
+} from '../services/teacherPreferences.js';
+import {
+  aturAudioNotifikasi,
+  audioNotifikasiAktif,
+  pantauSuaraIndonesia,
+  suaraIndonesiaTersedia,
+} from '../services/announcementAudio.js';
+import { fokusAwalDrawer, tahanFokusDrawer } from '../services/mobileDrawerFocus.js';
 import '../styles/economy-mode.css';
 
 const MQ_DESKTOP = '(min-width: 961px)';
@@ -35,15 +50,32 @@ function useDesktop() {
 
 export default function AppShell({ path, search = '', judulHalaman, children }) {
   const { user, profile, role, activeRole, roles = [], logout, switchRole } = useAuth();
+  const { disabledKeys } = useUserMenuAccess();
+  const { openPreferences: openIntegrationPreferences } = useUserIntegrationConsent();
   const hematData = isEconomyMode();
   const desktop = useDesktop();
-  const daftarMenu = menuUntukPeran(role);
-  const menu = cariMenu(path, search, role);
+  const peranAktif = activeRole || role;
+  const bolehBukaKelas = canOpenRolePath(peranAktif, '/datadasar/kelas')
+    && !isMenuPathDisabled(disabledKeys, peranAktif, '/datadasar/kelas');
+  const bolehBukaAi = canOpenRolePath(peranAktif, '/pengaturan/api-ai')
+    && !isMenuPathDisabled(disabledKeys, peranAktif, '/pengaturan/api-ai');
+  const bolehBukaGoogle = canOpenRolePath(peranAktif, '/pengaturan/google')
+    && !isMenuPathDisabled(disabledKeys, peranAktif, '/pengaturan/google');
+  const daftarMenu = menuUntukPeran(peranAktif)
+    .filter((group) => !disabledKeys.has(`group:${group.id}`))
+    .map((group) => ({
+      ...group,
+      item: group.item.filter((item) => !disabledKeys.has(`path:${item.path}`)),
+    }))
+    .filter((group) => group.item.length > 0);
+  const menu = cariMenu(path, search, peranAktif);
   const judulAktif = judulHalaman || menu?.item.label || 'Halaman';
 
-  const [sideTutup, setSideTutup] = useState(sideTutupTersimpan);
+  const [sideTutup, setSideTutup] = useState(false);
   const [mobileBuka, setMobileBuka] = useState(false);
+  const [suaraIdTersedia, setSuaraIdTersedia] = useState(suaraIndonesiaTersedia);
   const [profilBuka, setProfilBuka] = useState(false);
+  const [suaraAktif, setSuaraAktif] = useState(audioNotifikasiAktif);
   const [keluar, setKeluar] = useState(false);
   const [menggantiPeran, setMenggantiPeran] = useState(false);
   const [aksiProfil, setAksiProfil] = useState('');
@@ -51,6 +83,49 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   const profilRef = useRef(null);
   const profilBtnRef = useRef(null);
   const avatarRef = useRef(null);
+  const menuBtnRef = useRef(null);
+  const sidebarRef = useRef(null);
+  const kontenRef = useRef(null);
+  const previousPathRef = useRef(path);
+
+  useEffect(() => {
+    const savedPreference = sideTutupTersimpan(user?.uid, peranAktif);
+    setSideTutup(savedPreference);
+    terapkanSideTutup(savedPreference, user?.uid, peranAktif);
+  }, [peranAktif, user?.uid]);
+
+  useEffect(() => pantauSuaraIndonesia(setSuaraIdTersedia), []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const terapkan = (preferences) => {
+      root.dataset.aleTextSize = preferences.textSize;
+      root.dataset.aleMotion = preferences.motion;
+    };
+    const bersihkan = () => {
+      delete root.dataset.aleTextSize;
+      delete root.dataset.aleMotion;
+    };
+    if (!user?.uid || !isTeacherRole(peranAktif)) {
+      bersihkan();
+      return undefined;
+    }
+    try {
+      terapkan(bacaPreferensiGuru(user.uid, peranAktif));
+    } catch (error) {
+      console.error('[app-shell] Gagal menerapkan preferensi tampilan guru:', error);
+      terapkan({ textSize: 'normal', motion: 'system' });
+    }
+    const stopListening = dengarkanPreferensiGuru((change) => {
+      if (change?.userId === user.uid && change?.role === peranAktif) {
+        terapkan(change.preferences);
+      }
+    });
+    return () => {
+      stopListening();
+      bersihkan();
+    };
+  }, [peranAktif, user?.uid]);
 
   useEffect(() => {
     const judulSebelumnya = document.title;
@@ -69,8 +144,19 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
     return undefined;
   }, [hematData, user?.uid, user?.photoURL]);
 
-  // Tutup panel mobile & popover saat pindah halaman.
-  useEffect(() => { setMobileBuka(false); setProfilBuka(false); }, [path]);
+  // Pindah fokus ke konten setelah navigasi menutup drawer mobile.
+  useEffect(() => {
+    const pathBerubah = previousPathRef.current !== path;
+    previousPathRef.current = path;
+    setProfilBuka(false);
+    if (pathBerubah && mobileBuka) {
+      setMobileBuka(false);
+      window.requestAnimationFrame(() => kontenRef.current?.focus());
+    }
+  }, [mobileBuka, path]);
+  useEffect(() => {
+    if (!desktop && mobileBuka) fokusAwalDrawer(sidebarRef.current);
+  }, [desktop, mobileBuka]);
   useEffect(() => {
     if (menu?.grup.id) setGrupBuka((groups) => new Set(groups).add(menu.grup.id));
   }, [menu?.grup.id]);
@@ -81,9 +167,16 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   useEffect(() => {
     if (!profilBuka && !mobileBuka) return undefined;
     const onKey = (e) => {
+      if (e.key === 'Tab' && !desktop && mobileBuka) {
+        tahanFokusDrawer(e, sidebarRef.current);
+        return;
+      }
       if (e.key !== 'Escape') return;
       if (profilBuka) { setProfilBuka(false); profilBtnRef.current?.focus(); }
-      else setMobileBuka(false);
+      else {
+        setMobileBuka(false);
+        menuBtnRef.current?.focus();
+      }
     };
     const onKlik = (e) => {
       if (profilBuka && profilRef.current && !profilRef.current.contains(e.target)) setProfilBuka(false);
@@ -94,17 +187,17 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('mousedown', onKlik);
     };
-  }, [profilBuka, mobileBuka]);
+  }, [desktop, profilBuka, mobileBuka]);
 
   const toggleMenu = useCallback(() => {
     if (desktop) {
       const baru = !sideTutup;
       setSideTutup(baru);
-      terapkanSideTutup(baru);
+      terapkanSideTutup(baru, user?.uid, peranAktif);
     } else {
       setMobileBuka((v) => !v);
     }
-  }, [desktop, sideTutup]);
+  }, [desktop, peranAktif, sideTutup, user?.uid]);
 
   const toggleGrup = (id) =>
     setGrupBuka((lama) => {
@@ -150,14 +243,13 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
       await jalankanAksi(aksi);
     } catch (error) {
       console.error(`[profil] Gagal menjalankan aksi ${aksi}:`, error);
-      toast('Menu profil gagal dijalankan. Muat ulang halaman lalu coba lagi.', 'error');
+      toast(error?.message || 'Menu profil gagal dijalankan. Muat ulang halaman lalu coba lagi.', 'error');
     } finally {
       setAksiProfil('');
     }
   }
 
   const nama = user?.displayName || 'Pengguna';
-  const peranAktif = activeRole || role;
   const peran = LABEL_PERAN[peranAktif] || (peranAktif ? peranAktif : 'Pengguna');
   const subNama = profile?.sekolah || peran;
   const menuTerbuka = desktop ? !sideTutup : mobileBuka;
@@ -173,7 +265,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
       <header className="site-header ale-topbar">
         <div className="ale-topbar-inner">
           <div className="ale-topbar-kiri">
-            <button type="button" className="ale-menu-btn" onClick={toggleMenu}
+            <button type="button" ref={menuBtnRef} className="ale-menu-btn" onClick={toggleMenu}
                     aria-label={menuTerbuka ? 'Sembunyikan menu' : 'Tampilkan menu'}
                     aria-controls="ale-side" aria-expanded={menuTerbuka}>
               <svg className="ale-menu-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -183,8 +275,14 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
               </svg>
             </button>
             <a className="ale-topbar-brand" href="#/dashboard" aria-label={`${NAMA_APLIKASI} — ke dashboard`}>
-              <img className="ale-topbar-brand-logo" src="/logo-ale-mark.png"
-                   alt="" width="52" height="36" />
+              <img
+                className="ale-topbar-brand-logo"
+                src="/logo-ale-mark-1x.png"
+                srcSet="/logo-ale-mark-2x.png 2x"
+                alt=""
+                width="52"
+                height="36"
+              />
               <span className="ale-topbar-brand-teks">
                 <strong>AI_nnoe</strong>
                 <small>Learning Ecosystem</small>
@@ -198,11 +296,27 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
           </div>
 
           <div className="ale-topbar-aksi">
-            {profile?.langganan && (
-              <span className="ale-langganan">
-                <Ikon nama="badge" /> Langganan aktif
-              </span>
-            )}
+            <button
+              type="button"
+              className="ale-topbar-audio"
+              aria-pressed={suaraAktif}
+              aria-label={suaraAktif
+                ? `Matikan suara pemberitahuan Bahasa Indonesia${suaraIdTersedia ? '' : '. Suara Bahasa Indonesia belum tersedia di perangkat'}`
+                : 'Aktifkan suara pemberitahuan Bahasa Indonesia'}
+              title={suaraAktif
+                ? suaraIdTersedia
+                  ? 'Suara Bahasa Indonesia aktif'
+                  : 'Suara Bahasa Indonesia belum tersedia di perangkat ini. Pasang atau aktifkan suara Bahasa Indonesia di pengaturan sistem.'
+                : 'Suara Bahasa Indonesia nonaktif'}
+              onClick={() => {
+                const berikutnya = !suaraAktif;
+                const status = aturAudioNotifikasi(berikutnya);
+                setSuaraIdTersedia(status.hasIndonesianVoice);
+                setSuaraAktif(berikutnya);
+              }}
+            >{suaraAktif
+              ? suaraIdTersedia ? 'Suara aktif' : 'Suara ID tidak tersedia'
+              : 'Suara nonaktif'}</button>
             {!hematData && profile?.logoSekolah && (
               <img className="ale-logo-sekolah" src={profile.logoSekolah} alt="Logo sekolah"
                    referrerPolicy="no-referrer" width="40" height="40" />
@@ -246,30 +360,32 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
                   </label>
                 )}
                 <hr className="ale-pop-sekat" />
-                <button type="button" className="ale-pop-item ale-pw-sky"
-                        onClick={() => handleAksiProfil('foto-tambah')} disabled={!!aksiProfil}>
-                  <Ikon nama="user" /> Ubah foto profil
-                </button>
                 <button type="button" className="ale-pop-item ale-pw-amber"
                         onClick={() => handleAksiProfil('notif')} disabled={!!aksiProfil}>
                   <Ikon nama="badge" /> Aktifkan notifikasi
                 </button>
-                <button type="button" className="ale-pop-item ale-pw-rose"
-                        onClick={() => handleAksiProfil('foto-hapus')} disabled={!!aksiProfil}>
-                  <Ikon nama="user" /> Hapus foto profil
-                </button>
                 <hr className="ale-pop-sekat" />
-                <a className="ale-pop-item ale-pw-sky" href="#/datadasar/kelas"
-                   onClick={() => setProfilBuka(false)}>
-                  <Ikon nama="school" /> Kelas &amp; mapel saya
-                </a>
-                <button type="button" className="ale-pop-item ale-pw-cyan"
-                        onClick={() => handleAksiProfil('api-key')} disabled={!!aksiProfil}>
-                  <Ikon nama="settings" /> AI &amp; Layanan
-                </button>
+                {bolehBukaKelas && (
+                  <a className="ale-pop-item ale-pw-sky" href="#/datadasar/kelas"
+                     onClick={() => setProfilBuka(false)}>
+                    <Ikon nama="school" /> Kelas &amp; mapel saya
+                  </a>
+                )}
+                {bolehBukaAi && (
+                  <a className="ale-pop-item ale-pw-cyan" href="#/pengaturan/api-ai"
+                     onClick={() => setProfilBuka(false)}>
+                    <Ikon nama="settings" /> AI &amp; Layanan
+                  </a>
+                )}
+                {bolehBukaGoogle && (
+                  <a className="ale-pop-item ale-pw-indigo" href="#/pengaturan/google"
+                     onClick={() => setProfilBuka(false)}>
+                    <Ikon nama="external" /> Hubungkan Google
+                  </a>
+                )}
                 <button type="button" className="ale-pop-item ale-pw-indigo"
-                        onClick={() => handleAksiProfil('google')} disabled={!!aksiProfil}>
-                  <Ikon nama="external" /> Hubungkan Google
+                        onClick={() => { setProfilBuka(false); openIntegrationPreferences(); }}>
+                  <Ikon nama="settings" /> Persetujuan Integrasi
                 </button>
                 <hr className="ale-pop-sekat" />
                 <button type="button" className="ale-pop-item ale-pw-sky"
@@ -289,7 +405,13 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
 
       {/* ============ SIDEBAR + KONTEN ============ */}
       <div className="app">
-        <aside id="ale-side" className={`ale-side${mobileBuka ? ' is-open' : ''}`} aria-label="Menu utama">
+        <aside
+          ref={sidebarRef}
+          id="ale-side"
+          className={`ale-side${mobileBuka ? ' is-open' : ''}`}
+          aria-label="Menu utama"
+          tabIndex={-1}
+        >
           <nav className="ale-nav" aria-label="Navigasi">
             {daftarMenu.map((grup) => {
               const terbuka = grupBuka.has(grup.id);
@@ -359,9 +481,17 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
           </div>
         </aside>
 
-        <div className="ale-tirai" hidden={!mobileBuka} onClick={() => setMobileBuka(false)} aria-hidden="true" />
+        <div
+          className="ale-tirai"
+          hidden={!mobileBuka}
+          onClick={() => {
+            setMobileBuka(false);
+            menuBtnRef.current?.focus();
+          }}
+          aria-hidden="true"
+        />
 
-        <main id="ale-konten" className="ale-main" tabIndex={-1}>
+        <main ref={kontenRef} id="ale-konten" className="ale-main" tabIndex={-1}>
           {hematData && (
             <p className="ale-economy-notice" role="status">
               Mode hemat data aktif. Gambar profil eksternal dimatikan dan aktivitas online diperbarui lebih jarang.

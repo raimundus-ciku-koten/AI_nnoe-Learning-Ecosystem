@@ -24,6 +24,8 @@ function makeQuery(response) {
 const row = {
   id: 'school-1',
   name: 'SMA Contoh',
+  address: 'Jl. Pendidikan No. 1, Tanjung Bunga',
+  education_level: 'sma',
   npsn: '12345678',
   headmaster_name: 'Kepala Sekolah',
   headmaster_nip: '123 456',
@@ -41,6 +43,8 @@ describe('Supabase tenant settings', () => {
     await expect(muatPengaturanTenant('school-1')).resolves.toEqual({
       tenantId: 'school-1',
       nama: 'SMA Contoh',
+      alamat: 'Jl. Pendidikan No. 1, Tanjung Bunga',
+      jenjang: 'sma',
       npsn: '12345678',
       kepalaSekolah: 'Kepala Sekolah',
       nipKepalaSekolah: '123 456',
@@ -57,6 +61,7 @@ describe('Supabase tenant settings', () => {
 
     await simpanProfilTenant('school-1', 'user-1', {
       nama: ' SMA Contoh ',
+      alamat: ' Jl. Pendidikan No. 1, Tanjung Bunga ',
       npsn: '12345678',
       kepalaSekolah: 'Kepala Sekolah',
       nipKepalaSekolah: '123 456',
@@ -64,6 +69,7 @@ describe('Supabase tenant settings', () => {
 
     expect(query.update).toHaveBeenCalledWith({
       name: 'SMA Contoh',
+      address: 'Jl. Pendidikan No. 1, Tanjung Bunga',
       npsn: '12345678',
       headmaster_name: 'Kepala Sekolah',
       headmaster_nip: '123 456',
@@ -95,5 +101,39 @@ describe('Supabase tenant settings', () => {
 
     supabase.from.mockReturnValueOnce(makeQuery({ data: null, error: null }));
     await expect(muatPengaturanTenant('school-1')).rejects.toThrow('Data sekolah tidak ditemukan');
+  });
+
+  it('does not invent a semester when the school has not configured one', async () => {
+    const query = makeQuery({ data: { ...row, semester: null }, error: null });
+    supabase.from.mockReturnValueOnce(query);
+    await expect(muatPengaturanTenant('school-1')).resolves.toMatchObject({
+      tahunAjaran: '2026/2027',
+      semester: '',
+    });
+  });
+
+  it('keeps the school address optional and writes it with the school profile', async () => {
+    const query = makeQuery({ data: row, error: null });
+    supabase.from.mockReturnValueOnce(query);
+    await simpanProfilTenant('school-1', 'user-1', {
+      nama: 'SMA Contoh',
+      alamat: 'Jl. Pendidikan No. 1',
+      jenjang: 'sma',
+    });
+    expect(query.update).toHaveBeenCalledWith(expect.objectContaining({
+      address: 'Jl. Pendidikan No. 1',
+      education_level: 'sma',
+      updated_by: 'user-1',
+    }));
+  });
+
+  it('maps aliases to supported school levels and rejects unknown selections', async () => {
+    const query = makeQuery({ data: { ...row, education_level: 'PAUD' }, error: null });
+    supabase.from.mockReturnValueOnce(query);
+    await expect(muatPengaturanTenant('school-1')).resolves.toMatchObject({ jenjang: 'tk' });
+    await expect(simpanProfilTenant('school-1', 'user-1', {
+      nama: 'Sekolah Contoh',
+      jenjang: 'smk',
+    })).rejects.toThrow('Jenjang sekolah tidak valid');
   });
 });

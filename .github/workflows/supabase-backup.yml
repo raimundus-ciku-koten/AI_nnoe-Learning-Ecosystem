@@ -37,10 +37,14 @@ jobs:
           BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
-            echo "::error::Run this workflow from main only."
-            exit 1
-          fi
+          case "$GITHUB_REF" in
+            refs/heads/main|refs/heads/fix/staging-pinned-supabase-image)
+              ;;
+            *)
+              echo "::error::Run this workflow from main or the approved Staging validation branch only."
+              exit 1
+              ;;
+          esac
           if [[ -z "$SUPABASE_DB_URL" || -z "$BACKUP_ENCRYPTION_KEY" ]]; then
             echo "::error::Add SUPABASE_DB_URL and BACKUP_ENCRYPTION_KEY in GitHub Actions secrets."
             exit 1
@@ -58,6 +62,15 @@ jobs:
           sudo apt-get install --yes postgresql-client-17
           /usr/lib/postgresql/17/bin/pg_dump --version
           /usr/lib/postgresql/17/bin/pg_restore --version
+      - name: Audit Staging schema metadata (read-only)
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          node scripts/auditStagingSchema.mjs \
+            | tee "${RUNNER_TEMP}/staging-schema-audit.md" \
+            >> "$GITHUB_STEP_SUMMARY"
       - name: Create and encrypt database dump
         shell: bash
         env:
@@ -68,24 +81,9 @@ jobs:
           umask 077
           dump="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.dump"
           encrypted="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.aeb"
-          restore_db="backup_restore_validation"
           /usr/lib/postgresql/17/bin/pg_dump --format=custom --no-owner --no-acl --file "$dump" "$SUPABASE_DB_URL"
           test -s "$dump"
           /usr/lib/postgresql/17/bin/pg_restore --list "$dump" > /dev/null
-          PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/createdb \
-            --host 127.0.0.1 --username supabase_admin "$restore_db"
-          PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/pg_restore \
-            --exit-on-error --no-owner --no-acl \
-            --host 127.0.0.1 --username supabase_admin --dbname "$restore_db" "$dump"
-          table_count=$(PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/psql \
-            --host 127.0.0.1 --username supabase_admin --dbname "$restore_db" \
-            --tuples-only --no-align \
-            --command "SELECT count(*) FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')")
-          if (( table_count < 1 )); then
-            echo "::error::Disposable restore completed without any user tables."
-            exit 1
-          fi
-          echo "Disposable restore validated ($table_count user tables)."
           node scripts/encryptedBackup.mjs encrypt "$dump" "$encrypted"
           test -s "$encrypted"
           size=$(stat --format=%s "$encrypted")
@@ -94,7 +92,6 @@ jobs:
             echo "::error::Encrypted backup exceeds the 400 MiB free-storage safety cap."
             exit 1
           fi
-          echo "BACKUP_PATH=$encrypted" >> "$GITHUB_ENV"
       - name: Upload encrypted backup artifact
         uses: actions/upload-artifact@v4
         with:
@@ -103,9 +100,91 @@ jobs:
           if-no-files-found: error
           retention-days: 1
           compression-level: 0
+      - name: Download encrypted backup artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: supabase-staging-encrypted-${{ github.run_id }}
+          path: ${{ runner.temp }}/supabase-staging-artifact-${{ github.run_id }}
+      - name: Decrypt and restore uploaded artifact to disposable database
+        shell: bash
+        env:
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          dump="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.dump"
+          artifact="${RUNNER_TEMP}/supabase-staging-artifact-${GITHUB_RUN_ID}/supabase-staging-${GITHUB_RUN_ID}.aeb"
+          restored_dump="${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}-restored.dump"
+          restore_db="backup_restore_validation"
+          test -s "$artifact"
+          node scripts/encryptedBackup.mjs decrypt "$artifact" "$restored_dump"
+          test -s "$restored_dump"
+          cmp --silent "$dump" "$restored_dump"
+          /usr/lib/postgresql/17/bin/pg_restore --list "$restored_dump" > /dev/null
+          PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/createdb \
+            --host 127.0.0.1 --username supabase_admin "$restore_db"
+          PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/pg_restore \
+            --exit-on-error --no-owner --no-acl \
+            --host 127.0.0.1 --username supabase_admin --dbname "$restore_db" "$restored_dump"
+          table_count=$(PGPASSWORD=restore-validation-only /usr/lib/postgresql/17/bin/psql \
+            --host 127.0.0.1 --username supabase_admin --dbname "$restore_db" \
+            --tuples-only --no-align \
+            --command "SELECT count(*) FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')")
+          if (( table_count < 1 )); then
+            echo "::error::Encrypted artifact restore completed without any user tables."
+            exit 1
+          fi
+          echo "Uploaded encrypted artifact decrypted and restored successfully ($table_count user tables)."
+      - name: Prepare auth helpers on the disposable Supabase baseline
+        shell: bash
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: supabase_admin
+          PGPASSWORD: restore-validation-only
+          PGDATABASE: postgres
+          PGSSLMODE: disable
+        run: |
+          psql --no-psqlrc --set=ON_ERROR_STOP=1 <<'SQL'
+          ALTER TABLE auth.users
+            ADD COLUMN IF NOT EXISTS email_confirmed_at timestamptz;
+          CREATE OR REPLACE FUNCTION auth.jwt()
+          RETURNS jsonb
+          LANGUAGE sql
+          STABLE
+          SET search_path = ''
+          AS $$ SELECT '{}'::jsonb $$;
+          SQL
+      - name: Validate migrations and expected feature schema on a clean disposable Supabase database
+        shell: bash
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: '5432'
+          PGUSER: supabase_admin
+          PGPASSWORD: restore-validation-only
+          PGDATABASE: postgres
+          PGSSLMODE: disable
+        run: node scripts/validateMigrationChain.mjs
+      - name: Require expected Staging relation and ledger inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          audit="${RUNNER_TEMP}/staging-schema-audit.md"
+          if ! grep -Fq -- "- Relation/history inventory readiness: READY" "$audit"; then
+            echo "::error::Encrypted backup recovery and clean migration replay completed, but Staging relation or migration-ledger inventory is blocked. Review the read-only schema audit above; no Staging schema changes were made."
+            exit 1
+          fi
+          echo "Expected Staging relation and migration-ledger inventory is complete. Definition-level parity still requires review before hosted changes."
       - name: Remove temporary database files
         if: always()
         shell: bash
         run: |
+          rm -f "${RUNNER_TEMP}/staging-schema-audit.md"
           rm -f "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.dump"
+          rm -f "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}-restored.dump"
           rm -f "${RUNNER_TEMP}/supabase-staging-${GITHUB_RUN_ID}.aeb"
+          rm -f "${RUNNER_TEMP}/supabase-staging-artifact-${GITHUB_RUN_ID}/supabase-staging-${GITHUB_RUN_ID}.aeb"
+          artifact_directory="${RUNNER_TEMP}/supabase-staging-artifact-${GITHUB_RUN_ID}"
+          if [[ -d "$artifact_directory" ]]; then
+            rmdir "$artifact_directory"
+          fi

@@ -1,0 +1,15 @@
+# AI_nnoe Learning Ecosystem
+
+> Ruang kerja digital untuk pembelajaran dan administrasi sekolah di Indonesia.
+
+## Halaman publik
+
+- [Masuk](https://ainnoe-le.vercel.app/#/login): akses bagi pengguna yang telah memiliki akun.
+- [Kebijakan privasi](https://ainnoe-le.vercel.app/#/privacy): informasi privasi aplikasi.
+
+## Batasan informasi
+
+- Pendaftaran publik, pembayaran dalam aplikasi, dan iklan tidak tersedia pada halaman aktif.
+- Modul yang dapat digunakan bergantung pada akun, peran, tenant sekolah, konfigurasi, dan ketersediaan skema layanan.
+- Keberadaan fitur dalam sumber aplikasi bukan bukti bahwa fitur tersebut telah diterapkan atau diverifikasi di lingkungan hosted.
+- Jangan menganggap aplikasi sebagai sistem rapor resmi atau sumber hukum; sekolah perlu memeriksa panduan dan peraturan pemerintah yang berlaku.

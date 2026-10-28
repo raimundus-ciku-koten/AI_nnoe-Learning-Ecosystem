@@ -101,7 +101,13 @@ export default function TrialDemoPage() {
     <main className="trial-page">
       <header className="trial-header">
         <a className="trial-brand" href="#/trial" aria-label="AI_nnoe Learning Ecosystem">
-          <img src="/logo-ale-mark.png" alt="" width="46" height="34" />
+          <img
+            src="/logo-ale-mark-1x.png"
+            srcSet="/logo-ale-mark-2x.png 2x"
+            alt=""
+            width="46"
+            height="34"
+          />
           <span><strong>AI_nnoe</strong><small>Learning Ecosystem</small></span>
         </a>
         <button className="trial-button trial-button-secondary" type="button" onClick={keluar}>Keluar</button>
@@ -146,7 +152,7 @@ export default function TrialDemoPage() {
         {error && <p className="trial-error" role="alert">{error}</p>}
         <ul className="trial-limits">
           <li>Tidak terhubung ke data tenant/sekolah nyata atau menu administratif.</li>
-          <li>AI eksternal, pembayaran, unggah berkas, dan integrasi Google tidak tersedia.</li>
+          <li>AI eksternal, unggah berkas, dan integrasi Google tidak tersedia.</li>
           <li>Uji coba hanya satu kali per alamat email terverifikasi dan berakhir otomatis setelah 72 jam.</li>
         </ul>
       </section>

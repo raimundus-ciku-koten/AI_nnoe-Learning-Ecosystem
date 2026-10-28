@@ -11,6 +11,7 @@ import {
   muatAkunSiswaTertaut,
   daftarDraftUjian,
   muatHasilUjianGuru,
+  muatKategoriUjianGuru,
   hapusDraftUjian,
   kirimJawabanUjian,
   muatDraftUjian,
@@ -79,6 +80,25 @@ describe('online assessment service', () => {
     await expect(mulaiUjianOnline('exam-1')).rejects.toThrow('tidak valid');
   });
 
+  it('shows student-facing assessment categories from the authorized server list', async () => {
+    supabase.rpc
+      .mockResolvedValueOnce({
+        data: [{ exam_id: 'exam-1', title: 'Kuis', kelas: 'X', starts_at: '2026-10-18T01:00:00Z' }],
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [{ exam_id: 'exam-1', assessment_type: 'formatif' }],
+        error: null,
+      });
+    await expect(muatUjianSiswa()).resolves.toMatchObject([
+      { exam_id: 'exam-1', assessment_type: 'formatif' },
+    ]);
+    expect(supabase.rpc.mock.calls.map(([name]) => name)).toEqual([
+      'student_online_exams',
+      'student_online_exam_categories',
+    ]);
+  });
+
   it('creates exams with bounded fields and unique question IDs', async () => {
     supabase.rpc.mockResolvedValueOnce({ data: 'exam-1', error: null });
     await expect(buatUjianOnline({
@@ -89,10 +109,11 @@ describe('online assessment service', () => {
       durationMinutes: 60,
       questionIds: ['question-1'],
     })).resolves.toBe('exam-1');
-    expect(supabase.rpc).toHaveBeenCalledWith('create_online_exam', expect.objectContaining({
+    expect(supabase.rpc).toHaveBeenCalledWith('create_typed_online_exam', expect.objectContaining({
       p_title: 'Ujian',
       p_kelas: 'X',
       p_question_ids: ['question-1'],
+      p_assessment_type: 'umum',
     }));
 
     await expect(buatUjianOnline({
@@ -102,6 +123,31 @@ describe('online assessment service', () => {
       endsAt: '2026-10-18T02:00:00Z',
       durationMinutes: 60,
       questionIds: ['question-1', 'question-1'],
+    })).rejects.toThrow('tidak valid');
+  });
+
+  it('stores an explicit specialized assessment category and rejects unsupported categories', async () => {
+    supabase.rpc.mockResolvedValueOnce({ data: 'exam-2', error: null });
+    await expect(buatUjianOnline({
+      title: 'Asesmen formatif',
+      kelas: 'X',
+      startsAt: '2026-10-18T01:00:00Z',
+      endsAt: '2026-10-18T02:00:00Z',
+      durationMinutes: 45,
+      questionIds: ['question-1'],
+      assessmentType: 'formatif',
+    })).resolves.toBe('exam-2');
+    expect(supabase.rpc).toHaveBeenCalledWith('create_typed_online_exam', expect.objectContaining({
+      p_assessment_type: 'formatif',
+    }));
+    await expect(buatUjianOnline({
+      title: 'Asesmen',
+      kelas: 'X',
+      startsAt: '2026-10-18T01:00:00Z',
+      endsAt: '2026-10-18T02:00:00Z',
+      durationMinutes: 45,
+      questionIds: ['question-1'],
+      assessmentType: 'rubrik',
     })).rejects.toThrow('tidak valid');
   });
 
@@ -132,6 +178,7 @@ describe('online assessment service', () => {
       .mockResolvedValueOnce({ data: [], error: null })
       .mockResolvedValueOnce({ data: [], error: null })
       .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
       .mockResolvedValueOnce({ data: 85, error: null });
     await expect(muatRosterBelumTertaut()).resolves.toHaveLength(1);
     await expect(muatAkunSiswaBelumTertaut()).resolves.toHaveLength(1);
@@ -139,6 +186,7 @@ describe('online assessment service', () => {
     await expect(tautkanAkunSiswa('student-1', 'user-1')).resolves.toBeUndefined();
     await expect(lepasTautanAkunSiswa('student-2')).resolves.toBeUndefined();
     await expect(muatRingkasanUjianGuru()).resolves.toEqual([]);
+    await expect(muatKategoriUjianGuru()).resolves.toEqual([]);
     await expect(muatJawabanUraianGuru()).resolves.toEqual([]);
     await expect(muatHasilUjianGuru()).resolves.toEqual([]);
     await expect(muatNilaiUjianSiswa()).resolves.toEqual([]);
@@ -150,6 +198,7 @@ describe('online assessment service', () => {
       'link_student_account',
       'unlink_student_account',
       'teacher_online_exam_overview',
+      'teacher_online_exam_categories',
       'teacher_online_exam_essay_reviews',
       'teacher_online_exam_results',
       'student_online_exam_results',
@@ -182,6 +231,7 @@ describe('online assessment service', () => {
 
   it('surfaces RPC and storage validation errors', async () => {
     supabase.rpc.mockResolvedValueOnce({ data: null, error: new Error('denied') });
+    supabase.rpc.mockResolvedValueOnce({ data: [], error: null });
     await expect(muatUjianSiswa()).rejects.toThrow('denied');
     expect(() => simpanDraftUjian('student-1', {
       ...exam,

@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase.ts';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isTeacherRole } from '../services/roleAccess.js';
 import Ikon from '../components/Ikon.jsx';
 import '../styles/attendance.css';
 
-const PERAN_PENDIDIK = new Set(['admin_sekolah', 'operator', 'guru', 'demo']);
+const PERAN_PENGELOLA = new Set(['admin_sekolah', 'operator', 'demo']);
+const bolehAksesPresensi = (role) => PERAN_PENGELOLA.has(role) || isTeacherRole(role);
 
 function AttendanceAccessDenied() {
   return (
@@ -17,7 +19,8 @@ function AttendanceAccessDenied() {
 }
 
 export default function AttendancePage() {
-  const { user, role } = useAuth();
+  const { user, role: baseRole, activeRole } = useAuth();
+  const role = activeRole || baseRole;
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,7 +29,7 @@ export default function AttendancePage() {
   const [cari, setCari] = useState('');
 
   useEffect(() => {
-    if (!user?.uid || !PERAN_PENDIDIK.has(role)) {
+    if (!user?.uid || !bolehAksesPresensi(role)) {
       setRecords([]);
       setLoading(false);
       return undefined;
@@ -77,7 +80,7 @@ export default function AttendancePage() {
     );
   }, [records, tanggal, kelas, cari]);
 
-  if (!PERAN_PENDIDIK.has(role)) return <AttendanceAccessDenied />;
+  if (!bolehAksesPresensi(role)) return <AttendanceAccessDenied />;
 
   return (
     <div className="attendance-page">

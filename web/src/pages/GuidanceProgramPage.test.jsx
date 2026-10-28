@@ -28,7 +28,6 @@ describe('GuidanceProgramPage', () => {
       expect(html).toContain('name="tema"');
       expect(html).toContain('list="guidance-topic-suggestions"');
       expect(html).toContain('<datalist id="guidance-topic-suggestions">');
-      expect(html).toContain('Menjelajahi pilihan jenjang dan karier');
       expect(html).toContain('Tema bebas dapat diketik');
     }
   });
@@ -40,6 +39,41 @@ describe('GuidanceProgramPage', () => {
     expect(html).toContain('role="alert"');
     expect(html).toContain('Hak akses mengikuti peran yang diberikan server.');
     expect(html).not.toContain('<form');
+  });
+
+  it('uses the active specialist teacher role for program planning', () => {
+    for (const [activeRole, program] of [
+      ['guru_bk', 'bk'],
+      ['guru_kokurikuler', 'kokurikuler'],
+      ['guru_ekstrakurikuler', 'ekstrakurikuler'],
+    ]) {
+      useAuthMock.mockReturnValue({ role: 'admin_sekolah', activeRole });
+      const html = renderPage();
+      expect(html).toContain(`value="${program}"`);
+      expect(html).not.toContain('Hak akses mengikuti peran yang diberikan server.');
+    }
+  });
+
+  it('limits specialist program choices and provides non-sensitive BK guidance', () => {
+    const cases = [
+      ['guru_bk', 'bk', 'Ruang kerja BK non-sensitif', 'bukan sistem rujukan atau catatan konseling'],
+      ['guru_kokurikuler', 'kokurikuler', 'Kokurikuler', 'belum menjadi persetujuan kegiatan sekolah'],
+      ['guru_ekstrakurikuler', 'ekstrakurikuler', 'Ekstrakurikuler', 'belum menjadi persetujuan kegiatan sekolah'],
+    ];
+    for (const [role, allowedProgram, notice, caution] of cases) {
+      useAuthMock.mockReturnValue({ role });
+      const html = renderPage();
+      expect(html, role).toContain(`value="${allowedProgram}"`);
+      expect(html, role).toContain(notice);
+      expect(html, role).toContain(caution);
+      for (const disallowedProgram of ['bk', 'kokurikuler', 'ekstrakurikuler']) {
+        if (disallowedProgram !== allowedProgram) {
+          expect(html, `${role}: ${disallowedProgram}`).not.toContain(
+            `<option value="${disallowedProgram}">`,
+          );
+        }
+      }
+    }
   });
 
   it('identifies imported subject CP as intrakurikuler and distinguishes the three activity types', () => {

@@ -31,6 +31,8 @@ import { perbaruiHeader } from '../components/sidebar.js';
 import { esc, LABEL_PERAN, namaDariUser, ambilProfil } from '../ui.js';
 import { bersih, galat, ik, muatPenugasan, toast } from './dataDasar/umum.js';
 import { muatPengaturanTenant, simpanProfilTenant, simpanSiklusTenant } from '../services/tenantSettings.js';
+import { hapusKopSekolah, muatKopSekolah, simpanKopSekolah } from '../services/schoolLetterhead.js';
+import { muatTenantRuangKelas } from '../services/learningClassrooms.js';
 import { tabSiswa }  from './dataDasar/tabSiswa.js';
 import { tabJadwal } from './dataDasar/tabJadwal.js';
 import { tabDenah }  from './dataDasar/tabDenah.js';
@@ -158,7 +160,8 @@ export async function halamanDataDasar(wadah) {
     } else if (sub === 'kelas') {
       await tabKelas(panelEl, o);
     } else if (sub === 'siswa') {
-      await lanjut(tabSiswa, panelEl, ctx, muatPenugasanSekali);
+      if (role === 'superadmin') await tabSiswa(panelEl, ctx);
+      else await lanjut(tabSiswa, panelEl, ctx, muatPenugasanSekali);
     } else if (sub === 'jadwal') {
       await lanjut(tabJadwal, panelEl, ctx, muatPenugasanSekali);
     } else if (sub === 'denah') {
@@ -268,7 +271,25 @@ async function tabBarcodeOpsional(panelEl, ctx, muatPenugasanSekali) {
  * SUB: Profil Guru & Sekolah
  * =================================================================== */
 async function tabProfil(el, o) {
-  const { d, gagal } = await muatConfigAman(o);
+  let tenantIdKop = o.tenantId || '';
+  let daftarTenant = [];
+  let d = {};
+  let gagal = null;
+  if (o.role === 'superadmin') {
+    try {
+      daftarTenant = await muatTenantRuangKelas();
+      if (tenantIdKop && !daftarTenant.some((tenant) => tenant.id === tenantIdKop)) tenantIdKop = '';
+      if (!tenantIdKop) tenantIdKop = daftarTenant[0]?.id || '';
+      if (tenantIdKop) d = await muatPengaturanTenant(tenantIdKop);
+    } catch (err) {
+      console.error('[DataDasar] profil sekolah superadmin:', err);
+      gagal = err;
+    }
+  } else {
+    const hasil = await muatConfigAman(o);
+    d = hasil.d;
+    gagal = hasil.gagal;
+  }
   if (gagal) {
     o = {
       ...o, bisaEdit: false, kunci: 'disabled',
@@ -294,12 +315,35 @@ async function tabProfil(el, o) {
         <h2 class="ale-kartu-judul">${ik('gedung')} Profil Instansi & Kepala Sekolah</h2>
         ${o.chipAkses}
       </div>
+      ${o.role === 'superadmin' ? `
+        <div class="field">
+          <label for="profilTenant">Sekolah yang dikelola</label>
+          <select id="profilTenant" class="input">
+            <option value="">Pilih sekolah</option>
+            ${daftarTenant.map((tenant) => `<option value="${esc(tenant.id)}" ${tenant.id === tenantIdKop ? 'selected' : ''}>${esc(tenant.nama)}</option>`).join('')}
+          </select>
+        </div>` : ''}
       <form id="formProfil" class="ale-form" novalidate>
         <div class="ale-form-grid">
           <div class="field">
             <label for="inNama">Nama instansi / sekolah</label>
             <input type="text" id="inNama" class="input" maxlength="150"
                    ${o.kunci} value="${esc(d.nama || '')}">
+          </div>
+          <div class="field">
+            <label for="inAlamat">Alamat instansi / sekolah</label>
+            <input type="text" id="inAlamat" class="input" maxlength="500"
+                   ${o.kunci} value="${esc(d.alamat || '')}">
+          </div>
+          <div class="field">
+            <label for="inJenjang">Jenjang pendidikan</label>
+            <select id="inJenjang" class="input" ${o.kunci}>
+              <option value="">Pilih jenjang</option>
+              <option value="tk" ${d.jenjang === 'tk' ? 'selected' : ''}>TK / PAUD</option>
+              <option value="sd" ${d.jenjang === 'sd' ? 'selected' : ''}>SD</option>
+              <option value="smp" ${d.jenjang === 'smp' ? 'selected' : ''}>SMP</option>
+              <option value="sma" ${d.jenjang === 'sma' ? 'selected' : ''}>SMA</option>
+            </select>
           </div>
           <div class="field">
             <label for="inNpsn">NPSN</label>
@@ -323,7 +367,120 @@ async function tabProfil(el, o) {
       </form>
     </section>`;
 
+  const bolehUnggahKop = [
+    'superadmin', 'admin', 'admin_sekolah', 'operator', 'guru',
+    'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',
+  ].includes(o.role);
+  el.insertAdjacentHTML('beforeend', `
+    <section class="ale-kartu card" style="margin-top:1rem">
+      <div class="ale-kartu-kepala">
+        <h2 class="ale-kartu-judul">${ik('file')} Kop Sekolah untuk Dokumen</h2>
+      </div>
+      <p class="ale-info-teks">Unggah gambar kop yang akan tampil pada RPE, CP, ATP, Prota, Prosem, KKTP, dan Modul Ajar. Format PNG, JPG, atau WebP; gambar akan disesuaikan otomatis.</p>
+      <img id="kopSekolahPreview" alt="Pratinjau kop sekolah" hidden>
+      ${bolehUnggahKop ? `
+        <div class="field">
+          <label for="kopSekolahBerkas">Gambar kop sekolah</label>
+          <input type="file" id="kopSekolahBerkas" class="input" accept="image/png,image/jpeg,image/webp">
+        </div>
+        <div class="ale-form-aksi">
+          <button type="button" class="btn btn-primary" id="kopSekolahSimpan" disabled>Simpan Kop Sekolah</button>
+          <button type="button" class="btn btn-outline" id="kopSekolahHapus" hidden>Hapus Kop Sekolah</button>
+        </div>` : '<p class="ale-info-teks">Unggah kop sekolah dikelola oleh guru dan administrator sekolah.</p>'}
+      <p id="kopSekolahStatus" class="ale-info-teks" role="status" aria-live="polite"></p>
+    </section>`);
+
   pasangUlang(el, o.ulang);
+
+  const previewKop = el.querySelector('#kopSekolahPreview');
+  const statusKop = el.querySelector('#kopSekolahStatus');
+  const tombolSimpanKop = el.querySelector('#kopSekolahSimpan');
+  const tombolHapusKop = el.querySelector('#kopSekolahHapus');
+  let kopBerkasTerpilih = null;
+  const tampilkanKop = (dataUrl) => {
+    previewKop.src = dataUrl || '';
+    previewKop.hidden = !dataUrl;
+    if (tombolHapusKop) tombolHapusKop.hidden = !dataUrl;
+  };
+  const muatKopAktif = async () => {
+    if (!tenantIdKop) {
+      tampilkanKop('');
+      statusKop.textContent = 'Pilih sekolah untuk mengelola kop.';
+      return;
+    }
+    try {
+      tampilkanKop(await muatKopSekolah(tenantIdKop));
+      statusKop.textContent = '';
+    } catch (err) {
+      console.error('[DataDasar] gagal memuat kop sekolah:', err);
+      statusKop.textContent = 'Kop sekolah belum dapat dimuat. Pastikan migrasi kop sekolah sudah diterapkan dan coba lagi.';
+    }
+  };
+  if (bolehUnggahKop) void muatKopAktif();
+
+  const pilihanTenant = el.querySelector('#profilTenant');
+  if (pilihanTenant) {
+    pilihanTenant.addEventListener('change', async () => {
+      tenantIdKop = pilihanTenant.value;
+      kopBerkasTerpilih = null;
+      if (tombolSimpanKop) tombolSimpanKop.disabled = true;
+      try {
+        d = tenantIdKop ? await muatPengaturanTenant(tenantIdKop) : {};
+        el.querySelector('#inNama').value = d.nama || '';
+        el.querySelector('#inAlamat').value = d.alamat || '';
+        el.querySelector('#inJenjang').value = d.jenjang || '';
+        el.querySelector('#inNpsn').value = d.npsn || '';
+        el.querySelector('#inKepsek').value = d.kepalaSekolah || '';
+        el.querySelector('#inNip').value = d.nipKepalaSekolah || '';
+        await muatKopAktif();
+      } catch (err) {
+        console.error('[DataDasar] gagal memuat sekolah terpilih:', err);
+        galat(err, 'Gagal memuat sekolah terpilih');
+      }
+    });
+  }
+
+  if (tombolSimpanKop) {
+    const inputKop = el.querySelector('#kopSekolahBerkas');
+    inputKop.addEventListener('change', () => {
+      kopBerkasTerpilih = inputKop.files?.[0] || null;
+      tombolSimpanKop.disabled = !kopBerkasTerpilih || !tenantIdKop;
+      statusKop.textContent = kopBerkasTerpilih ? `Siap diproses: ${kopBerkasTerpilih.name}` : '';
+    });
+    tombolSimpanKop.addEventListener('click', async () => {
+      if (!kopBerkasTerpilih || !tenantIdKop) return;
+      tombolSimpanKop.disabled = true;
+      statusKop.textContent = 'Memproses dan menyimpan gambar kop…';
+      try {
+        const imageDataUrl = await buatDataKopSekolah(kopBerkasTerpilih);
+        tampilkanKop(await simpanKopSekolah(tenantIdKop, o.user.id || o.user.uid, imageDataUrl));
+        statusKop.textContent = 'Kop sekolah tersimpan dan siap digunakan pada dokumen perencanaan.';
+        kopBerkasTerpilih = null;
+        inputKop.value = '';
+      } catch (err) {
+        console.error('[DataDasar] gagal menyimpan kop sekolah:', err);
+        statusKop.textContent = err.message || 'Kop sekolah gagal disimpan.';
+        galat(err, 'Gagal menyimpan kop sekolah');
+      } finally {
+        tombolSimpanKop.disabled = !kopBerkasTerpilih;
+      }
+    });
+    tombolHapusKop.addEventListener('click', async () => {
+      if (!tenantIdKop || !window.confirm('Hapus kop sekolah ini dari dokumen perencanaan?')) return;
+      tombolHapusKop.disabled = true;
+      try {
+        await hapusKopSekolah(tenantIdKop);
+        tampilkanKop('');
+        statusKop.textContent = 'Kop sekolah berhasil dihapus.';
+      } catch (err) {
+        console.error('[DataDasar] gagal menghapus kop sekolah:', err);
+        galat(err, 'Gagal menghapus kop sekolah');
+      } finally {
+        tombolHapusKop.disabled = false;
+      }
+    });
+  }
+
   if (!o.bisaEdit) return;
 
   el.querySelector('#formProfil').onsubmit = async (e) => {
@@ -332,9 +489,11 @@ async function tabProfil(el, o) {
     tombol.disabled = true;
     try {
       const nama = bersih(el.querySelector('#inNama').value, 150);
-      if (!o.tenantId) throw new Error('Akun belum terhubung ke sekolah.');
-      await simpanProfilTenant(o.tenantId, o.user.id || o.user.uid, {
+      if (!tenantIdKop) throw new Error('Akun belum terhubung ke sekolah.');
+      await simpanProfilTenant(tenantIdKop, o.user.id || o.user.uid, {
         nama,
+        alamat: bersih(el.querySelector('#inAlamat').value, 500),
+        jenjang: el.querySelector('#inJenjang').value,
         npsn: bersih(el.querySelector('#inNpsn').value, 12).replace(/\D/g, ''),
         kepalaSekolah: bersih(el.querySelector('#inKepsek').value, 150),
         nipKepalaSekolah: bersih(el.querySelector('#inNip').value, 25).replace(/[^\d\s]/g, ''),
@@ -348,6 +507,36 @@ async function tabProfil(el, o) {
       tombol.disabled = false;
     }
   };
+}
+
+async function buatDataKopSekolah(file) {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+    throw new Error('Pilih gambar PNG, JPG, atau WebP.');
+  }
+  if (file.size > 5_000_000) throw new Error('Gambar sumber maksimal 5 MB.');
+  const image = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, 1600 / image.width, 420 / image.height);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Peramban tidak dapat memproses gambar kop.');
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.86));
+    if (!blob) throw new Error('Gambar kop tidak dapat dikonversi.');
+    if (blob.size > 350_000) throw new Error('Hasil gambar kop melebihi 350 KB.');
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Gambar kop tidak dapat dibaca.'));
+      reader.readAsDataURL(blob);
+    });
+  } finally {
+    image.close();
+  }
 }
 
 /* =====================================================================

@@ -15,6 +15,7 @@ import './perencanaan/perencanaan.css';
  *     topbar; sekarang keduanya sudah di shell.
  */
 import { getState } from '../state.js';
+import { isSchoolAdminRole, isTeacherRole } from '../services/roleAccess.js';
 import {
   hubungkanGoogleDriveUntukPengguna,
   sesiGoogleWorkspacePerPengguna,
@@ -29,9 +30,6 @@ import {
 } from './perencanaan/services/repository.js';
 import { daftarGuruPerencanaan } from './perencanaan/services/directory.js';
 import { BATAS, JENIS } from './perencanaan/constants.js';
-
-const PERAN_BOLEH = new Set(['guru', 'admin_sekolah']);
-const PERAN_ADMIN = new Set(['admin_sekolah']);
 
 // ============================================================================
 // FALLBACK — bila modul perencanaan belum siap
@@ -68,15 +66,18 @@ function modulSiap() {
 export function halamanPerencanaan(wadah, arg = {}) {
   const params = arg.params || arg;
   const jenisQuery = new URLSearchParams(arg.search || '').get('jenis');
+  const canGenerateAi = arg.aiGenerationEnabled === true;
 
   if (!modulSiap()) {
     return halamanPlaceholder(wadah);
   }
 
-  const { user, role, tenantId } = getState();
+  const { user, role, activeRole, tenantId } = getState();
+  const currentRole = activeRole || role;
 
   // Guard peran/tenant
-  if (!PERAN_BOLEH.has(role) || (role !== 'superadmin' && !tenantId) || !user?.uid) {
+  if ((!isTeacherRole(currentRole) && !isSchoolAdminRole(currentRole))
+    || !tenantId || !user?.uid) {
     wadah.append(
       h('p', { class: 'kotak kotak-galat', role: 'alert' }, t('hub.peranTidakBoleh'))
     );
@@ -121,8 +122,8 @@ export function halamanPerencanaan(wadah, arg = {}) {
     return () => {};
   }
 
-  if (PERAN_ADMIN.has(role)) {
-    return halamanPerencanaanAdmin(wadah, arg, { role, tenantId });
+  if (isSchoolAdminRole(currentRole)) {
+    return halamanPerencanaanAdmin(wadah, arg, { role: currentRole, tenantId, canGenerateAi });
   }
 
   return halamanHub(wadah, arg, {
@@ -132,10 +133,11 @@ export function halamanPerencanaan(wadah, arg = {}) {
     guruNama: user.displayName ?? '',
     baseRoute: '#/perencanaan',
     jenisQuery,
+    canGenerateAi,
   });
 }
 
-function halamanPerencanaanAdmin(wadah, arg, { role, tenantId }) {
+function halamanPerencanaanAdmin(wadah, arg, { role, tenantId, canGenerateAi }) {
   let aktif = true;
   let cleanup = () => {};
   const params = arg.params || {};
@@ -143,7 +145,7 @@ function halamanPerencanaanAdmin(wadah, arg, { role, tenantId }) {
   const baseRoute = '#/admin/perencanaan/paket';
   wadah.append(h('p', { class: 'memuat', role: 'status' }, t('umum.memuat')));
 
-  daftarGuruPerencanaan(role === 'admin_sekolah' ? tenantId : '').then((guru) => {
+  daftarGuruPerencanaan(isSchoolAdminRole(role) ? tenantId : '').then((guru) => {
     if (!aktif) return;
     if (!guruUid) {
       const daftar = h('ul', { class: 'grid daftar-paket', role: 'list' },
@@ -182,6 +184,7 @@ function halamanPerencanaanAdmin(wadah, arg, { role, tenantId }) {
       guruUid,
       jenisQuery,
       params,
+      canGenerateAi,
     });
   }).catch((error) => {
     if (!aktif) return;
@@ -195,7 +198,10 @@ function halamanPerencanaanAdmin(wadah, arg, { role, tenantId }) {
   };
 }
 
-function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, guruUid = '', jenisQuery = '', params = arg.params || arg }) {
+function halamanHub(wadah, arg, {
+  uid, tenantId, admin, guruNama, baseRoute, guruUid = '', jenisQuery = '',
+  canGenerateAi = false, params = arg.params || arg,
+}) {
   const queryGuru = guruUid ? `?guru=${encodeURIComponent(guruUid)}` : '';
   const jenisPilihan = Object.values(JENIS).includes(jenisQuery) ? jenisQuery : '';
   const tautanPaket = (id = '', jenis = '') =>
@@ -211,6 +217,7 @@ function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, gur
       search: arg.search,
       canEditPackage: !admin,
       canGenerateDocuments: !admin,
+      canGenerateAi: !admin && canGenerateAi,
       routeBase: baseRoute,
       guruUid,
     });
@@ -243,7 +250,7 @@ function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, gur
   const kartu = (p) => h('li', { class: 'kartu kartu-paket' },
     h('h3', null, p.mapel),
     h('p', { class: 'meta' },
-      `${t('umum.kelas')} ${p.kelas} · ${t('umum.fase')} ${p.fase} · ${p.tahunAjaran}`),
+      `${p.jenjang ? `${p.jenjang.toUpperCase()} · ` : ''}${t('umum.kelas')} ${p.kelas} · ${t('umum.fase')} ${p.fase} · ${p.tahunAjaran}`),
     h('div', { class: 'bilah-aksi' },
       h('a', {
         class: 'tombol',

@@ -39,6 +39,7 @@
 import { esc } from '../../ui.js';
 import {
   tambahBanyakSiswa, tambahSiswa, ubahSiswa, hapusBanyakSiswa,
+  muatGuruPemilikRoster, muatSiswa as muatDaftarSiswa,
 } from '../../services/students.js';
 import {
   ambilSiswa, bekukanKodeSiswa, bersih, buatKodeSiswa, urlScanKode,
@@ -50,6 +51,8 @@ import {
 } from './siswa/csv.js';
 import { denganBatas, tungguTulis } from './siswa/tulis.js';
 import { pasangGaya } from './siswa/gaya.js';
+import { bacaExcelSiswa } from './siswa/excel.js';
+import { muatTenantRuangKelas } from '../../services/learningClassrooms.js';
 
 /** Kompatibel dengan versi lama: `uraiImpor(teks, { kelas, nisnAda, namaDiKelas })`. */
 export const uraiImpor = (teks, konteks) => uraiImporMurni(teks, { bersih, ...konteks });
@@ -115,6 +118,10 @@ export async function tabSiswa(el, ctx) {
   }
 
   pasangGaya();
+  const superadmin = ctx.role === 'superadmin';
+  const pengelolaRoster = ['admin', 'admin_sekolah', 'operator', 'superadmin'].includes(ctx.role);
+  let tenantIdTarget = ctx.tenantId || '';
+  let ownerIdTarget = pengelolaRoster ? '' : uid;
   const kelasCtx = () => (Array.isArray(ctx.kelas) ? ctx.kelas : []);
 
   /* ---------------- Status ---------------- */
@@ -158,6 +165,18 @@ export async function tabSiswa(el, ctx) {
         </div>
       </div>
 
+      ${superadmin ? `
+        <div class="field">
+          <label for="sisTenant">Sekolah tujuan impor</label>
+          <select id="sisTenant" class="input"><option value="">Memuat sekolah…</option></select>
+        </div>` : ''}
+
+      ${pengelolaRoster ? `
+        <div class="field">
+          <label for="sisGuru">Guru pemilik roster</label>
+          <select id="sisGuru" class="input"><option value="">Pilih sekolah terlebih dahulu</option></select>
+        </div>` : ''}
+
       <div class="ale-toolbar">
         <div class="field">
           <label for="sisCari">Cari nama / NISN / kode</label>
@@ -168,8 +187,8 @@ export async function tabSiswa(el, ctx) {
           <select id="sisFilter" class="input"></select>
         </div>
         <div class="ale-toolbar-aksi">
-          <button type="button" class="btn btn-primary" id="sisTambah">Tambah Siswa</button>
-          <button type="button" class="btn btn-outline" id="sisImpor">Impor dari Excel</button>
+          <button type="button" class="btn btn-primary" id="sisTambah" ${pengelolaRoster ? 'disabled' : ''}>Tambah Siswa</button>
+          <button type="button" class="btn btn-outline" id="sisImpor" ${pengelolaRoster ? 'disabled' : ''}>Impor dari Excel</button>
           <button type="button" class="btn btn-outline" id="sisEkspor">Ekspor CSV</button>
           <a class="btn btn-outline" href="#/datadasar/barcode">Cetak Kartu Barcode</a>
         </div>
@@ -222,7 +241,7 @@ export async function tabSiswa(el, ctx) {
       <form id="sisImporForm" class="ale-panel-form" hidden novalidate>
         <h3 class="ale-sub-judul">Impor Banyak Siswa</h3>
         <p class="ale-info-teks">
-          Salin kolom dari Excel lalu tempel di bawah, atau pilih berkas CSV/TXT.
+          Salin kolom dari Excel lalu tempel di bawah, atau pilih berkas .xlsx, CSV, atau TXT.
           Urutan kolom: <strong>Nama</strong>, <strong>NISN</strong>, <strong>L/P</strong>
           (dipisah tab, titik koma, atau koma). Baris judul (Nama, NISN, L/P) dikenali otomatis,
           urutan kolomnya boleh berbeda. Maksimal ${MAKS_IMPOR} baris sekali impor.
@@ -233,8 +252,8 @@ export async function tabSiswa(el, ctx) {
           <input type="text" id="impKelas" class="input" maxlength="30" list="sisKelasList" required autocomplete="off">
         </div>
         <div class="field">
-          <label for="impBerkas">Berkas CSV/TXT (opsional)</label>
-          <input type="file" id="impBerkas" class="input" accept=".csv,.tsv,.txt,text/csv,text/plain">
+          <label for="impBerkas">Berkas Excel .xlsx / CSV / TXT (opsional)</label>
+          <input type="file" id="impBerkas" class="input" accept=".xlsx,.csv,.tsv,.txt,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/plain">
         </div>
         <div class="field">
           <label for="impTeks">Data siswa</label>
@@ -295,6 +314,47 @@ export async function tabSiswa(el, ctx) {
   /** False bila tab sudah ditinggalkan (el diisi ulang oleh router). */
   const hidup = () => akar.isConnected;
   const semuaKelas = () => urutUnik([...kelasCtx(), ...daftar.map((s) => s.kelas)]);
+  let urutanGuru = 0;
+
+  function aturTombolTarget() {
+    if (!pengelolaRoster) return;
+    const siap = Boolean(tenantIdTarget && ownerIdTarget);
+    q('#sisTambah').disabled = !siap;
+    q('#sisImpor').disabled = !siap;
+  }
+
+  async function muatGuruRoster(tenantId) {
+    const nomor = ++urutanGuru;
+    ownerIdTarget = '';
+    const select = q('#sisGuru');
+    select.disabled = true;
+    select.innerHTML = `<option value="">${tenantId ? 'Memuat guru…' : 'Pilih sekolah terlebih dahulu'}</option>`;
+    aturTombolTarget();
+    if (!tenantId) return false;
+    try {
+      const teachers = await muatGuruPemilikRoster(tenantId);
+      if (!hidup() || nomor !== urutanGuru || tenantId !== tenantIdTarget) return false;
+      if (!teachers.length) {
+        select.innerHTML = '<option value="">Tidak ada guru aktif</option>';
+        q('#sisPeringatan').hidden = false;
+        q('#sisPeringatan').querySelector('strong').textContent = 'Tidak ada guru aktif pada sekolah ini.';
+        q('#sisPeringatan').querySelector('span').textContent = 'Tambahkan atau aktifkan akun guru sebelum mengimpor roster.';
+        return false;
+      }
+      select.innerHTML = '<option value="">Pilih guru pemilik roster</option>' +
+        teachers.map((teacher) => `<option value="${esc(teacher.id)}">${esc(teacher.nama)}</option>`).join('');
+      select.disabled = false;
+      return true;
+    } catch (err) {
+      console.error('[tabSiswa] gagal memuat daftar guru pemilik roster:', err);
+      if (!hidup() || nomor !== urutanGuru) return false;
+      select.innerHTML = '<option value="">Daftar guru tidak tersedia</option>';
+      q('#sisPeringatan').hidden = false;
+      q('#sisPeringatan').querySelector('strong').textContent = 'Daftar guru pemilik roster tidak dapat dimuat.';
+      q('#sisPeringatan').querySelector('span').textContent = err?.message || 'Periksa koneksi dan hak akses, lalu coba lagi.';
+      return false;
+    }
+  }
 
   /* ---------------- Dialog konfirmasi ---------------- */
   function konfirmasi({ judul, pesan, aksi = 'Hapus', bahaya = true }) {
@@ -413,10 +473,27 @@ export async function tabSiswa(el, ctx) {
    * Hasil yang kedaluwarsa (ada muatan yang lebih baru) dibuang.
    */
   async function segarkan() {
+    if (!tenantIdTarget || !ownerIdTarget) {
+      setDaftar([]);
+      q('#sisPeringatan').hidden = false;
+      if (!tenantIdTarget) {
+        q('#sisPeringatan').querySelector('strong').textContent = 'Pilih sekolah aktif terlebih dahulu.';
+        q('#sisPeringatan').querySelector('span').textContent = 'Data siswa hanya dapat dimuat dan diimpor setelah sekolah tujuan dipilih.';
+      } else {
+        q('#sisPeringatan').querySelector('strong').textContent = 'Pilih guru pemilik roster.';
+        q('#sisPeringatan').querySelector('span').textContent = 'Impor dan perubahan akan tercatat pada roster guru yang dipilih.';
+      }
+      isiOpsiKelas();
+      gambar();
+      return false;
+    }
     const nomor = ++urutanMuat;
     let sukses = true;
     try {
-      const baru = await denganBatas(ambilSiswa(ctx, true), BATAS_MUAT_MS, 'Memuat data terlalu lama');
+      const permintaan = ownerIdTarget === uid
+        ? ambilSiswa(ctx, true)
+        : muatDaftarSiswa(ownerIdTarget, tenantIdTarget);
+      const baru = await denganBatas(permintaan, BATAS_MUAT_MS, 'Memuat data terlalu lama');
       if (!hidup() || nomor !== urutanMuat) return true;
       setDaftar(terapkanTertunda(Array.isArray(baru) ? baru : []));
       q('#sisPeringatan').hidden = true;
@@ -681,7 +758,9 @@ export async function tabSiswa(el, ctx) {
       return;
     }
     try {
-      const isi = (await berkas.text()).replace(/^\uFEFF/, '');
+      const isi = /\.xlsx$/i.test(berkas.name)
+        ? await bacaExcelSiswa(berkas)
+        : (await berkas.text()).replace(/^\uFEFF/, '');
       if (!hidup()) return;
       q('#impTeks').value = isi;
       resetPratinjau();
@@ -699,6 +778,51 @@ export async function tabSiswa(el, ctx) {
     pewaktuCari = setTimeout(() => { if (hidup()) { cari = nilai; gambar(); } }, 120);
   };
   q('#sisFilter').onchange = (e) => { filter = e.target.value; gambar(); };
+  if (superadmin) {
+    q('#sisTenant').addEventListener('change', async (e) => {
+      if (sedangKirim || !q('#sisForm').hidden || !q('#sisImporForm').hidden) {
+        e.currentTarget.value = tenantIdTarget;
+        toast('Selesaikan atau batalkan form siswa sebelum mengganti sekolah.', 'info');
+        return;
+      }
+      tenantIdTarget = e.currentTarget.value;
+      ctx.tenantId = tenantIdTarget;
+      ownerIdTarget = '';
+      aturTombolTarget();
+      ctx.cache.siswa = null;
+      ctx.cache.siswaJanji = null;
+      setDaftar([]);
+      pilih.clear();
+      filter = '';
+      const teachersReady = await muatGuruRoster(tenantIdTarget);
+      if (!hidup()) return;
+      if (!tenantIdTarget) {
+        await segarkan();
+        return;
+      }
+      if (!teachersReady) {
+        isiOpsiKelas();
+        gambar();
+        return;
+      }
+      await segarkan();
+    });
+  }
+  if (pengelolaRoster) {
+    q('#sisGuru').addEventListener('change', async (e) => {
+      if (sedangKirim || !q('#sisForm').hidden || !q('#sisImporForm').hidden) {
+        e.currentTarget.value = ownerIdTarget;
+        toast('Selesaikan atau batalkan form siswa sebelum mengganti guru pemilik.', 'info');
+        return;
+      }
+      ownerIdTarget = e.currentTarget.value;
+      aturTombolTarget();
+      setDaftar([]);
+      pilih.clear();
+      filter = '';
+      await segarkan();
+    });
+  }
   q('#sisTambah').onclick = (e) => bukaForm(null, e.currentTarget);
   q('#sisBatal').onclick = () => tutupForm();
   q('#sisUlang').onclick = async (e) => {
@@ -792,7 +916,7 @@ export async function tabSiswa(el, ctx) {
       const lokal = { id, nama, nisn, jk, kelas, kodeUnik };
       if (idEdit) {
         lokal.urlScan = urlScan;
-        await selesaikan(ubahSiswa(uid, id, { nama, nisn, jk, kelas }), {
+        await selesaikan(ubahSiswa(ownerIdTarget, id, { nama, nisn, jk, kelas }), {
           pesanOk: 'Data siswa diperbarui.',
           judulGalat: 'Gagal menyimpan siswa',
           lokal: { simpan: [lokal] },
@@ -806,8 +930,8 @@ export async function tabSiswa(el, ctx) {
         lokal.urlScan = urlScan;
         const janji = tambahSiswa({
           ...lokal,
-          tenantId: ctx.tenantId,
-          ownerId: uid,
+          tenantId: tenantIdTarget,
+          ownerId: ownerIdTarget,
         }).then((saved) => {
           lokal.id = saved.id;
           lokal.urlScan = saved.urlScan;
@@ -855,7 +979,7 @@ export async function tabSiswa(el, ctx) {
       const id = idUuidSiswa();
       const kodeUnik = buatKodeSiswa({ id, nama: b.nama, nisn: b.nisn, kelas });
       return {
-        id, ownerId: uid, tenantId: ctx.tenantId,
+        id, ownerId: ownerIdTarget, tenantId: tenantIdTarget,
         nama: b.nama, nisn: b.nisn, jk: b.jk, kelas, kodeUnik,
         urlScan: urlScanKode(kodeUnik),
       };
@@ -944,7 +1068,7 @@ export async function tabSiswa(el, ctx) {
 
     tombol.disabled = true;
     try {
-      await selesaikan(hapusBanyakSiswa(uid, daftarId), {
+      await selesaikan(hapusBanyakSiswa(ownerIdTarget, daftarId), {
         pesanOk: `${daftarId.length} siswa dihapus.`,
         judulGalat: 'Gagal menghapus siswa',
         lokal: { hapus: daftarId },
@@ -974,7 +1098,7 @@ export async function tabSiswa(el, ctx) {
 
       tombol.disabled = true;
       try {
-        await selesaikan(hapusBanyakSiswa(uid, [s.id]), {
+        await selesaikan(hapusBanyakSiswa(ownerIdTarget, [s.id]), {
           pesanOk: 'Siswa dihapus.',
           judulGalat: 'Gagal menghapus siswa',
           lokal: { hapus: [s.id] },
@@ -989,5 +1113,43 @@ export async function tabSiswa(el, ctx) {
   /* ---------------- Mulai ---------------- */
   isiOpsiKelas();
   gambar();
+  if (superadmin) {
+    try {
+      const tenants = await muatTenantRuangKelas();
+      if (!hidup()) return;
+      const tenantSelect = q('#sisTenant');
+      tenantSelect.innerHTML = '<option value="">Pilih sekolah</option>' +
+        tenants.map((tenant) => `<option value="${esc(tenant.id)}">${esc(tenant.nama)}</option>`).join('');
+      if (tenantIdTarget && tenants.some((tenant) => tenant.id === tenantIdTarget)) {
+        tenantSelect.value = tenantIdTarget;
+      } else if (tenants.length === 1) {
+        tenantSelect.value = tenants[0].id;
+        tenantIdTarget = tenants[0].id;
+        ctx.tenantId = tenantIdTarget;
+      }
+      aturTombolTarget();
+      if (!tenantSelect.value) {
+        q('#sisPeringatan').hidden = false;
+        q('#sisPeringatan').querySelector('strong').textContent = 'Pilih sekolah tujuan.';
+        q('#sisPeringatan').querySelector('span').textContent = 'Pilih sekolah aktif sebelum memuat atau mengimpor data siswa.';
+      }
+    } catch (err) {
+      console.error('[tabSiswa] gagal memuat daftar sekolah:', err);
+      q('#sisPeringatan').hidden = false;
+      q('#sisPeringatan').querySelector('strong').textContent = 'Daftar sekolah tidak dapat dimuat.';
+      q('#sisPeringatan').querySelector('span').textContent = 'Periksa koneksi dan hak akses platform, lalu muat ulang halaman.';
+      return;
+    }
+  }
+  if (pengelolaRoster && tenantIdTarget) {
+    const teachersReady = await muatGuruRoster(tenantIdTarget);
+    if (teachersReady) await segarkan();
+    else {
+      setDaftar([]);
+      isiOpsiKelas();
+      gambar();
+    }
+    return;
+  }
   await segarkan();
 }

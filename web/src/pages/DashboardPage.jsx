@@ -1,7 +1,7 @@
 // web/src/pages/DashboardPage.jsx
 import React, { useMemo } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
-import { LINK_PERENCANAAN_AKTIF } from '../config.js';
+import { canOpenRolePath } from '../services/roleAccess.js';
 import { LABEL_PERAN, salam } from '../ui.js';
 import Ikon from '../components/Ikon.jsx';
 
@@ -39,9 +39,17 @@ function Aksi({ href, warna, ikon, judul, ket, luar }) {
 }
 
 export default function DashboardPage() {
-  const { user, profile, role, isDemo } = useAuth();
+  const { user, profile, role, activeRole, isDemo } = useAuth();
+  const currentRole = activeRole || role;
   const sekarang = useMemo(() => new Date(), []);
   const namaDepan = (user?.displayName || 'Pengguna').split(' ')[0];
+  const quickActions = [
+    { path: '/perencanaan', href: '#/perencanaan', warna: 'teal', ikon: 'clipboard', judul: 'Perencanaan pembelajaran', ket: 'Susun dan simpan dokumen pembelajaran' },
+    { path: '/datadasar/jadwal', href: '#/datadasar/jadwal', warna: 'indigo', ikon: 'calendar', judul: 'Jadwal mengajar', ket: 'Kelola jadwal mingguan' },
+    { path: '/asesmen/ujian-online', href: '#/asesmen/ujian-online', warna: 'amber', ikon: 'check', judul: 'Ujian online', ket: 'Buat dan kelola asesmen' },
+    { path: '/asesmen/bank-soal', href: '#/asesmen/bank-soal', warna: 'sky', ikon: 'clipboard', judul: 'Bank soal', ket: 'Kelola kumpulan soal' },
+  ].filter(({ path }) => canOpenRolePath(currentRole, path));
+  const canOpenSchedule = canOpenRolePath(currentRole, '/datadasar/jadwal');
 
   return (
     <>
@@ -62,27 +70,23 @@ export default function DashboardPage() {
 
       <section className="ale-stat-grid" aria-label="Ringkasan akun" style={{ marginBottom: '1.25rem' }}>
         <Statistik warna="sky" ikon="user" label="Peran"
-                   nilai={LABEL_PERAN[role] || role || '—'}
+                   nilai={LABEL_PERAN[currentRole] || currentRole || '—'}
                    ket={isDemo ? 'Mode demonstrasi' : undefined} />
         <Statistik warna="grape" ikon="school" label="Sekolah"
                    nilai={profile?.sekolah || 'Belum diisi'}
                    ket={profile?.sekolah ? undefined : 'Dilengkapi oleh administrator'} />
-        <Statistik warna="mint" ikon="badge" label="Langganan"
-                   nilai={profile?.langganan ? 'Aktif' : 'Belum aktif'} />
       </section>
 
-      <section className="ale-akses" aria-labelledby="ale-akses-judul">
+      {quickActions.length > 0 && <section className="ale-akses" aria-labelledby="ale-akses-judul">
         <h2 id="ale-akses-judul" className="ale-sub-judul">Akses cepat</h2>
         <div className="ale-aksi-grid">
-          <Aksi href={LINK_PERENCANAAN_AKTIF} luar warna="teal" ikon="clipboard"
-                judul="Perencanaan pembelajaran"
-                ket={LINK_PERENCANAAN_AKTIF ? 'Buka aplikasi perencanaan di tab baru' : 'Tautan belum diatur di config.js'} />
-          <Aksi ikon="calendar" judul="Jadwal mengajar" ket="Segera hadir" />
-          <Aksi ikon="check" judul="Asesmen" ket="Segera hadir" />
+          {quickActions.map((action) => (
+            <Aksi key={action.path} {...action} />
+          ))}
         </div>
-      </section>
+      </section>}
 
-      <div className="ale-grid">
+      {canOpenSchedule && <div className="ale-grid">
         <div className="ale-kolom">
           <section className="ale-kartu ale-aksen-teal ale-jadwal-utama" aria-labelledby="ale-jadwal-judul">
             <div className="ale-kartu-kepala">
@@ -92,7 +96,8 @@ export default function DashboardPage() {
             </div>
             <div className="ale-kosong">
               <Ikon nama="calendar" />
-              <p>Belum ada jadwal yang terhubung. Jadwal mengajar akan tampil di sini.</p>
+              <p>Jadwal tersedia pada halaman Data Dasar. Hubungkan Google Drive untuk menyimpannya secara terenkripsi.</p>
+              <a className="ale-tautan" href="#/datadasar/jadwal">Buka jadwal mengajar</a>
             </div>
           </section>
         </div>
@@ -110,7 +115,7 @@ export default function DashboardPage() {
             </div>
           </section>
         </div>
-      </div>
+      </div>}
     </>
   );
 }

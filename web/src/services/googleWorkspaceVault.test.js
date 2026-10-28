@@ -42,6 +42,7 @@ test('mengunggah ciphertext dengan nama Drive generik dan manifest tanpa nama as
     let savedMetadata;
     let savedCiphertext;
     let uploadRequest;
+    let listRequestUrl;
     globalThis.fetch = async (url, options) => {
       const requestUrl = String(url);
       if (options.method === 'POST') {
@@ -54,6 +55,7 @@ test('mengunggah ciphertext dengan nama Drive generik dan manifest tanpa nama as
         });
       }
       if (requestUrl.includes('/files?')) {
+        listRequestUrl = requestUrl;
         assert.match(requestUrl, /aleCategory/);
         return Response.json({
           files: [{
@@ -79,9 +81,12 @@ test('mengunggah ciphertext dengan nama Drive generik dan manifest tanpa nama as
       const decrypted = await daftarCatatanKerjaTerenkripsiDrive(
         'google-access-token',
         identity,
+        '',
+        5,
       );
 
       assert.equal(uploaded.id, 'drive-workspace-entry');
+      assert.equal(new URL(listRequestUrl).searchParams.get('pageSize'), '5');
       assert.equal(savedMetadata.appProperties.aleCategory, 'teacher-workspace');
       assert.match(savedMetadata.name, /^ALE-Encrypted-/);
       assert.equal(Buffer.from(savedCiphertext).includes(Buffer.from(entry.isi)), false);
@@ -92,6 +97,10 @@ test('mengunggah ciphertext dengan nama Drive generik dan manifest tanpa nama as
         ciphertextSha256: JSON.parse(savedMetadata.description).ciphertextSha256,
       }]);
       assert.equal(decrypted.nextPageToken, null);
+      await assert.rejects(
+        daftarCatatanKerjaTerenkripsiDrive('google-access-token', identity, '', 0),
+        /Batas halaman catatan Drive harus antara 1 dan 50/,
+      );
     } finally {
       globalThis.fetch = fetchSebelumnya;
     }

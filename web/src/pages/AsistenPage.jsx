@@ -11,7 +11,13 @@ const SARAN = [
   'Susun pertanyaan refleksi untuk siswa setelah belajar.',
 ];
 const MAKS_RIWAYAT_TAMPIL = 100;
-const NAMA_PROVIDER = { gemini: 'Gemini', deepseek: 'DeepSeek', groq: 'Groq', cerebras: 'Cerebras' };
+const NAMA_PROVIDER = {
+  'local-qwen': 'Qwen 2.5 7B (lokal)',
+  'local-qwen-small': 'Qwen 2.5 1.5B (lokal)',
+  gemini: 'Gemini',
+  deepseek: 'DeepSeek',
+  groq: 'Groq',
+};
 
 export default function AsistenPage() {
   const { features } = usePlatformControls();
@@ -115,7 +121,7 @@ export default function AsistenPage() {
       <div className="ai-chat-card">
         <div className="ai-chat-meta">
           <span className="ai-status"><span aria-hidden="true" /> {aiEnabled ? 'Siap membantu' : 'Layanan dinonaktifkan'}</span>
-          <span>Provider mengikuti pilihan akun: Gemini, DeepSeek, atau Groq</span>
+          <span>Chat selalu menggunakan AI_nnoe lokal; API provider eksternal tidak dipakai di sini.</span>
         </div>
 
         {!aiEnabled && (

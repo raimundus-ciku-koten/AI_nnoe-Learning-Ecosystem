@@ -7,6 +7,13 @@ const migrationPath = new URL(
   import.meta.url,
 );
 const migration = await readFile(migrationPath, 'utf8');
+const activeRolesMigration = await readFile(
+  new URL(
+    '../../supabase/migrations/20261025000700_school_announcement_active_roles.sql',
+    import.meta.url,
+  ),
+  'utf8',
+);
 
 test('defines tenant-scoped announcement fields with bounded title and body', () => {
   assert.match(migration, /create table if not exists public\.school_announcements/);
@@ -35,4 +42,13 @@ test('restricts columns so clients cannot change tenant, author or creation time
   assert.match(migration, /grant update \(title, body\)/);
   assert.doesNotMatch(migration, /grant insert \([^)]*created_at/);
   assert.doesNotMatch(migration, /grant update \([^)]*tenant_id|grant update \([^)]*author_id/);
+});
+
+test('keeps announcements tenant-scoped while supporting active app role aliases', () => {
+  assert.match(activeRolesMigration, /public\.current_user_is_active\(\)/);
+  assert.match(activeRolesMigration, /'admin', 'admin_sekolah', 'operator'/);
+  assert.match(activeRolesMigration, /'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'/);
+  assert.match(activeRolesMigration, /tenant_id = \(select public\.current_tenant_id\(\)\)/);
+  assert.match(activeRolesMigration, /entitlement\.status in \('trial', 'active'\)/);
+  assert.match(activeRolesMigration, /create policy "Active school members and superadmins read announcements"/);
 });

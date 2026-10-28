@@ -30,7 +30,7 @@ export function kodeCadangan(s) {
 
 export const kodeTersimpan = (s) => String(s?.kodeUnik ?? '').trim();
 
-/** Format yang boleh disimpan ke Firestore (juga dicek oleh firestore.rules). */
+/** Format kode yang layak disimpan pada catatan siswa. */
 export const kodeLayakSimpan = (k) => /^[A-Za-z0-9._-]{4,64}$/.test(String(k ?? ''));
 
 /**

@@ -9,7 +9,8 @@
 //   rute    : halaman yang sudah ada (href "#/rute")
 //   gulir   : bagian di halaman Dasbor (menggulir ke kartu terkait)
 //   gas     : fitur yang masih berjalan di aplikasi perencanaan lama (Apps Script)
-//   segera  : belum dibangun (tampil redup, tidak bisa diklik)
+//   segera  : entri katalog lama yang belum dibangun; tidak dipakai adapter runtime.
+// Katalog aktif runtime berasal dari navigasi.js agar item tidak berbeda antar-sidebar.
 //
 // Catatan:
 //   - Grup "Dasbor" hanya punya 1 item → dirender sebagai link tunggal oleh
@@ -26,6 +27,7 @@
 // ---------------------------------------------------------------------------
 import {
   GRUP_MENU as MENU_NAV_GURU,
+  MENU_ADMIN_SEKOLAH as MENU_NAV_ADMIN,
   MENU_OPERATOR as MENU_NAV_OPERATOR,
   MENU_SUPERADMIN as MENU_NAV_SUPERADMIN,
   menuUntukPeran,
@@ -47,6 +49,12 @@ export const MENU_GURU = [
     id: 'dasbor', judul: 'Dashboard', ikon: 'speedometer2',
     items: [
       r('Dashboard', '#/dashboard', 'house'),
+    ],
+  },
+  {
+    id: 'ruang-kelas', judul: 'Ruang Kelas', ikon: 'book',
+    items: [
+      r('Ruang Kelas', '#/ruang-kelas', 'book'),
     ],
   },
   {
@@ -168,6 +176,7 @@ const GRUP_UTAMA = {
   id: 'utama', judul: 'Utama', ikon: 'speedometer2',
   items: [
     r('Dashboard', '#/dashboard', 'house'),
+    r('Ruang Kelas', '#/ruang-kelas', 'book'),
     r('Chat',      '#/chat',      'chat-dots'),
   ],
 };
@@ -180,7 +189,6 @@ export const MENU_ADMIN = [
       s('Instansi',   'building'),
       s('Pengguna',   'people'),
       s('Template',   'file-earmark-text'),
-      s('Pembayaran', 'credit-card'),
     ],
   },
 ];
@@ -284,14 +292,6 @@ const TAMBAHAN = {
         s('Tambah Admin Sekolah',       'person-plus'),
         s('Kelola Super Admin',         'shield-check'),
         s('Kuota Pengguna per Sekolah', 'speedometer2'),
-      ],
-    },
-    {
-      id: 'x-bayar', judul: 'Pembayaran dan Langganan', ikon: 'cash-coin',
-      items: [
-        s('Paket Purchase',         'box'),
-        s('Tagihan dan Pembayaran', 'receipt'),
-        s('Status Langganan',       'credit-card-2-front'),
       ],
     },
     {
@@ -433,7 +433,9 @@ export function gabungMenu(role, dasar) {
 
 export function menuUntuk(role) {
   const bersih = String(role || '').toLowerCase().trim();
-  if (bersih === 'admin_sekolah' || bersih === 'admin') return gabungMenu('admin_sekolah', MENU_ADMIN);
+  if (bersih === 'admin_sekolah' || bersih === 'admin') {
+    return dariNavigasi(MENU_NAV_ADMIN);
+  }
   if (bersih === 'superadmin') return dariNavigasi(MENU_NAV_SUPERADMIN);
   if (['siswa', 'ortu', 'orang_tua'].includes(bersih)) {
     return dariNavigasi(menuUntukPeran(bersih));

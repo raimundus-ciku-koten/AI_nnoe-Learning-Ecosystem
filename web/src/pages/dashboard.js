@@ -5,16 +5,23 @@
  * Struktur konten (post-migrasi shell):
  *   Hero → Jadwal hari ini (timeline) → Akses cepat → Grid 2 kolom:
  *     kiri  : Ringkasan status, Riwayat terbaru
- *     kanan : Percakapan terbaru, Tugas tertunda
+ *     kanan : Percakapan dan tugas terbaru
  *
  * Shell (sidebar + topbar + #slot-halaman) dibangun oleh router.js;
  * halaman ini hanya mengisi `wadah` (#slot-halaman) dan mengembalikan
  * cleanup (di sini no-op karena tidak ada listener global).
  */
+import {
+  muatDaftarRuangKelas,
+  muatHasilKuisGuru,
+  muatTugasUntukDasbor,
+  ringkasNilaiKuis,
+} from '../services/learningClassrooms.js';
 import { muatPercakapanTerbaruDasbor } from '../services/dashboard.js';
 import { sesiGoogleWorkspacePerPengguna } from '../services/googleWorkspaceAuth.js';
 import { identitasEnkripsiDriveDalamSesi } from '../services/driveEncryption.js';
 import { muatJadwalGuruDrive } from '../services/teacherScheduleDrive.js';
+import { muatCatatanGuruDrive } from '../services/teacherWorkspaceDrive.js';
 import { getState } from '../state.js';
 import { perbaruiHeader } from '../components/sidebar.js';
 import { LINK_PERENCANAAN } from '../config.js';
@@ -53,12 +60,19 @@ function aksiCepat() {
   const item = [
     { href: '#/chat', ikon: 'chat', warna: 'teal', judul: 'Chat',
       ket: 'Percakapan realtime dengan guru dan orang tua' },
-    linkLuarAman(LINK_PERENCANAAN) && {
-      href: LINK_PERENCANAAN, luar: true, ikon: 'buku', warna: 'indigo',
-      judul: 'Perencanaan pembelajaran', ket: 'ATP, Prota, Prosem, dan Modul Ajar',
-    },
-    { segera: true, ikon: 'ujian',    judul: 'Ujian online',      ket: 'Segera hadir' },
-    { segera: true, ikon: 'otomatis', judul: 'Generator soal AI', ket: 'Segera hadir' },
+    linkLuarAman(LINK_PERENCANAAN)
+      ? {
+        href: LINK_PERENCANAAN, luar: true, ikon: 'buku', warna: 'indigo',
+        judul: 'Perencanaan pembelajaran', ket: 'ATP, Prota, Prosem, dan Modul Ajar',
+      }
+      : {
+        href: '#/perencanaan', ikon: 'buku', warna: 'indigo',
+        judul: 'Perencanaan pembelajaran', ket: 'ATP, Prota, Prosem, dan Modul Ajar',
+      },
+    { href: '#/asesmen/ujian-online', ikon: 'ujian', warna: 'amber',
+      judul: 'Ujian online', ket: 'Buat dan kelola asesmen' },
+    { href: '#/asesmen/bank-soal', ikon: 'otomatis', warna: 'sky',
+      judul: 'Bank soal', ket: 'Kelola kumpulan soal' },
   ].filter(Boolean);
 
   return item.map((a) => {
@@ -68,9 +82,6 @@ function aksiCepat() {
         <strong>${esc(a.judul)}</strong><small>${esc(a.ket)}</small>
       </span>`;
 
-    if (a.segera) {
-      return `<div class="ale-aksi is-soon" aria-disabled="true">${isi}</div>`;
-    }
     return a.luar
       ? `<a class="ale-aksi ale-aksi-${a.warna}" href="${esc(a.href)}"
              target="_blank" rel="noopener noreferrer">${isi}
@@ -130,8 +141,8 @@ function tampilan({ sapa, nama, peran, subjudul, sekarang }) {
           </div>
           <div class="ale-stat-grid">
             ${tileStat('aleStJadwal',  'ale-stat-sky',   'kalender', 'Jadwal hari ini',  false)}
-            ${tileStat('aleStTugas',   'ale-stat-grape', 'tugas',    'Tugas tertunda',   false)}
-            ${tileStat('aleStProgres', 'ale-stat-mint',  'progres',  'Progres semester', true)}
+            ${tileStat('aleStTugas',   'ale-stat-grape', 'tugas',    'Tugas terbaru',    false)}
+            ${tileStat('aleStProgres', 'ale-stat-mint',  'progres',  'Nilai kuis', true)}
           </div>
         </section>
 
@@ -157,66 +168,62 @@ function tampilan({ sapa, nama, peran, subjudul, sekarang }) {
 
         <section class="ale-kartu ale-aksen-emerald" id="aleKartuTugas" aria-labelledby="hTugas">
           <div class="ale-kartu-kepala">
-            <h2 class="ale-kartu-judul" id="hTugas">${ikon('tugas')}Tugas tertunda</h2>
+            <h2 class="ale-kartu-judul" id="hTugas">${ikon('tugas')}Tugas terbaru</h2>
           </div>
-          <div data-isi><p class="ale-kosong">Tugas belum tersedia di penyimpanan Supabase.</p></div>
+          <div data-isi><p class="ale-kosong">Memuat tugas terbaru dari Ruang Kelas…</p></div>
         </section>
 
       </div>
     </div>`;
 }
 
-const AKSI_ADMIN_SEKOLAH = [
+export const AKSI_ADMIN_SEKOLAH = [
   {
     href: '#/admin/pengguna/guru', ikon: 'pengguna', judul: 'Pengguna sekolah',
-    ket: 'Guru, siswa, orang tua, dan persetujuan akun',
+    ket: 'Tinjau akun guru, siswa, dan orang tua dalam tenant',
   },
   {
-    href: '#/admin/akademik/kelas', ikon: 'buku', judul: 'Akademik',
-    ket: 'Kelas, mata pelajaran, jadwal, dan penugasan',
+    href: '#/ruang-kelas', ikon: 'buku', judul: 'Ruang Kelas',
+    ket: 'Kelola kelas belajar dan aktivitas LMS',
   },
   {
-    href: '#/admin/perencanaan/monitoring', ikon: 'berkas', judul: 'Perangkat ajar',
-    ket: 'Pantau dokumen guru dan alur persetujuan',
+    href: '#/laporan/arsip-perencanaan', ikon: 'berkas', judul: 'Arsip perencanaan',
+    ket: 'Buka dokumen perencanaan yang tersimpan',
   },
   {
-    href: '#/admin/asesmen/monitoring', ikon: 'ujian', judul: 'Asesmen sekolah',
-    ket: 'Paket ujian, status peserta, dan analisis',
+    href: '#/asesmen/bank-soal', ikon: 'ujian', judul: 'Bank soal',
+    ket: 'Tinjau kumpulan soal tenant sekolah',
   },
   {
-    href: '#/admin/komunikasi/pengumuman', ikon: 'chat', judul: 'Komunikasi resmi',
-    ket: 'Pengumuman, kanal, dan broadcast sekolah',
-  },
-  {
-    href: '#/admin/laporan/akademik', ikon: 'progres', judul: 'Laporan sekolah',
-    ket: 'Analitik akademik, keuangan, dan kinerja',
+    href: '#/chat', ikon: 'chat', judul: 'Komunikasi sekolah',
+    ket: 'Buka percakapan dan grup sekolah',
   },
 ];
 
-const AKSI_SUPERADMIN = [
+export const AKSI_SUPERADMIN = [
   {
-    href: '#/platform/tenant/sekolah', ikon: 'gedung', judul: 'Tenant dan langganan',
-    ket: 'Sekolah, paket, dan status layanan',
+    href: '#/platform/tenant/sekolah', ikon: 'gedung', judul: 'Daftar tenant',
+    ket: 'Tinjau daftar sekolah dan status tenant',
   },
   {
     href: '#/platform/fitur/flags', ikon: 'saklar', judul: 'Fitur platform',
     ket: 'Feature flags, menu, dan izin peran',
   },
   {
-    href: '#/platform/ai/monitoring', ikon: 'otomatis', judul: 'AI global',
-    ket: 'Template prompt dan pemantauan pemakaian',
+    href: '#/platform/tenant/paket', ikon: 'badge', judul: 'Harga paket',
+    ket: 'Tinjau katalog harga informatif tanpa transaksi',
   },
   {
     href: '#/platform/supabase-users', ikon: 'database', judul: 'Pengguna Supabase',
     ket: 'Identitas, tenant, dan peran terverifikasi',
   },
   {
-    href: '#/platform/keamanan/audit', ikon: 'perisai', judul: 'Keamanan dan audit',
-    ket: 'Audit log, Security Rules, dan App Check',
+    href: '#/platform/keamanan/audit', ikon: 'perisai', judul: 'Audit platform',
+    ket: 'Tinjau perubahan kontrol yang dicatat server',
   },
   {
-    href: '#/platform/laporan/biaya', ikon: 'progres', judul: 'Analitik global',
-    ket: 'Penggunaan, performa, dan biaya platform',
+    href: '#/platform/dashboard/statistik', ikon: 'progres', judul: 'Statistik global',
+    ket: 'Tinjau snapshot agregat platform yang tersedia',
   },
 ];
 
@@ -280,18 +287,18 @@ function tampilanAdmin({ role, nama, sekolah }) {
         </div>
         <div class="ale-admin-prinsip-grid">
           ${superadmin
-            ? `<p><strong>Direktori platform.</strong> Tinjau sekolah dan admin sekolah secara baca-saja; perubahan langganan dan peran harus melalui backend tepercaya.</p>
+            ? `<p><strong>Direktori platform.</strong> Tinjau sekolah dan admin sekolah secara baca-saja; perubahan tenant dan peran harus melalui backend tepercaya.</p>
                <p><strong>Rahasia dan infrastruktur.</strong> API key AI dikelola di server. Jangan memasukkan rahasia layanan ke aplikasi browser.</p>
                <p><strong>Statistik dan audit.</strong> Gunakan laporan sesuai sumber dan rentang data; ringkasan bukan telemetry historis atau metrik biaya.</p>`
             : `<p><strong>Akun sesuai kewenangan.</strong> Kelola guru, siswa, dan orang tua dalam tenant sekolah; persetujuan serta perubahan akun mengikuti alur resmi.</p>
-               <p><strong>Dokumen dan asesmen.</strong> Tinjau status perangkat ajar yang diunggah serta monitoring ujian untuk kebutuhan operasional sekolah.</p>
+               <p><strong>Dokumen dan asesmen.</strong> Tinjau arsip perencanaan dan bank soal sesuai akses sekolah.</p>
                <p><strong>Privasi komunikasi.</strong> Gunakan ringkasan agregat dan laporan; isi percakapan pribadi bukan untuk dipantau bebas.</p>`}
         </div>
       </section>
     </div>`;
 }
 
-function tampilanPortal({ role, nama }) {
+export function tampilanPortal({ role, nama }) {
   const peran = LABEL_PERAN[role] || role || 'Pengguna';
   const ringkasan = role === 'siswa'
     ? 'Akses jadwal, materi, ujian, nilai, dan komunikasi yang disediakan sekolah untuk akun Anda.'
@@ -301,7 +308,7 @@ function tampilanPortal({ role, nama }) {
         ? 'Buka area kerja operasional sesuai peran dan ruang lingkup sekolah Anda.'
         : 'Pilih menu yang tersedia untuk akun Anda. Setiap tautan membuka halaman sesuai peran.';
   const catatan = role === 'siswa'
-    ? 'Jadwal, materi, tugas, ujian, dan nilai akan tampil setelah sekolah menautkan data akademik ke akun Anda. Halaman yang belum terhubung hanya menampilkan panduan.'
+    ? 'Jadwal yang diterbitkan guru, materi, tugas, kuis, presensi, ujian, dan nilai tersedia sesuai kelas serta data yang ditautkan sekolah. Jadwal pribadi guru tidak dibagikan ke siswa.'
     : ['ortu', 'orang_tua'].includes(role)
       ? 'Informasi anak hanya dapat ditampilkan setelah sekolah menautkan akun orang tua secara resmi. Halaman yang belum terhubung hanya menampilkan panduan.'
       : role === 'operator'
@@ -481,13 +488,75 @@ export async function halamanDashboard(wadah) {
     },
 
     async tugas() {
-      isiStat(st.tugas, '—', 'tidak tersedia');
-      kosong(isi.tugas, 'Data tugas belum tersedia di Supabase.');
+      const { tenantId } = getState();
+      if (!tenantId) {
+        isiStat(st.tugas, '—', 'sekolah belum terhubung');
+        kosong(isi.tugas, 'Akun belum terhubung ke sekolah aktif.');
+        return;
+      }
+      const rooms = await muatDaftarRuangKelas(tenantId);
+      const roomNames = new Map(rooms.map((room) => [room.id, room.nama]));
+      const assignments = (await muatTugasUntukDasbor(
+        tenantId,
+        rooms.map((room) => room.id),
+      )).map((assignment) => ({
+        ...assignment,
+        namaKelas: roomNames.get(assignment.classroomId) || 'Ruang Kelas',
+      }));
+      isiStat(st.tugas, String(assignments.length), 'tugas terbaru');
+      if (!assignments.length) {
+        kosong(isi.tugas, 'Belum ada tugas di kelas yang ditetapkan kepada Anda.');
+        isi.tugas.insertAdjacentHTML(
+          'beforeend',
+          '<p><a class="ale-tautan" href="#/ruang-kelas">Buka Ruang Kelas</a></p>',
+        );
+        return;
+      }
+      isi.tugas.innerHTML = `
+        <ul class="ale-daftar">${assignments.map((assignment) => `
+          <li>
+            <a class="ale-chat-baris" href="#/ruang-kelas?kelas=${encodeURIComponent(assignment.classroomId)}&tugas=${encodeURIComponent(assignment.id)}">
+              <span class="ale-chat-isi">
+                <strong>${esc(assignment.judul)}</strong>
+                <span>${esc(assignment.namaKelas)} · tenggat ${esc(assignment.tenggat
+                  ? new Intl.DateTimeFormat('id-ID', {
+                    dateStyle: 'medium', timeStyle: 'short',
+                  }).format(new Date(assignment.tenggat))
+                  : 'tanpa tenggat')}</span>
+              </span>
+            </a>
+          </li>`).join('')}
+        </ul>
+        <a class="ale-tautan" href="#/ruang-kelas">Lihat semua tugas${ikon('panah')}</a>`;
     },
 
     async progres() {
-      isiStat(st.progres, '—', 'menunggu migrasi');
-      isiBar(st.progres, null);
+      const { tenantId } = getState();
+      if (!tenantId) {
+        isiStat(st.progres, '—', 'sekolah belum terhubung');
+        isiBar(st.progres, null);
+        return;
+      }
+      const rooms = await muatDaftarRuangKelas(tenantId);
+      const sampledRooms = rooms.slice(0, 5);
+      const resultsByRoom = await Promise.all(
+        sampledRooms.map((room) => muatHasilKuisGuru(room.id)),
+      );
+      const summary = ringkasNilaiKuis(resultsByRoom.flat());
+      if (summary.rataRata === null) {
+        isiStat(st.progres, '—', 'belum ada hasil kuis');
+        isiBar(st.progres, null);
+        return;
+      }
+      const roomScope = rooms.length > sampledRooms.length
+        ? `${sampledRooms.length} kelas terbaru`
+        : `${sampledRooms.length} kelas`;
+      isiStat(
+        st.progres,
+        String(summary.rataRata),
+        `rata-rata ${summary.jumlahHasil} hasil · ${roomScope}`,
+      );
+      isiBar(st.progres, summary.rataRata);
     },
 
     async chat() {
@@ -522,7 +591,51 @@ export async function halamanDashboard(wadah) {
     },
 
     async riwayat() {
-      kosong(isi.riwayat, 'Metadata dokumen belum dimigrasikan ke indeks Drive terenkripsi.');
+      if (peran !== 'guru') {
+        kosong(isi.riwayat, 'Riwayat catatan kerja tersedia pada dasbor akun guru.');
+        return;
+      }
+      const sesiGoogle = sesiGoogleWorkspacePerPengguna(uid);
+      const identitas = identitasEnkripsiDriveDalamSesi(uid);
+      if (!sesiGoogle || !identitas) {
+        kosong(isi.riwayat, 'Hubungkan Google Drive dan buka kunci vault untuk melihat catatan terbaru.');
+        isi.riwayat.insertAdjacentHTML(
+          'beforeend',
+          '<p><a class="ale-tautan" href="#/pengaturan/google">Buka Google Workspace</a></p>',
+        );
+        return;
+      }
+
+      const { entries } = await muatCatatanGuruDrive(
+        sesiGoogle.accessToken,
+        identitas,
+        '',
+        5,
+      );
+      const terbaru = entries
+        .slice()
+        .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
+      if (!terbaru.length) {
+        kosong(isi.riwayat, 'Belum ada catatan kerja terenkripsi yang tersimpan.');
+        isi.riwayat.insertAdjacentHTML(
+          'beforeend',
+          '<p><a class="ale-tautan" href="#/refleksi/pembelajaran">Buat catatan kerja</a></p>',
+        );
+        return;
+      }
+
+      isi.riwayat.innerHTML = `
+        <ul class="ale-daftar">${terbaru.map((entry) => `
+          <li>
+            <a class="ale-chat-baris" href="#${escapeAttr(entry.modulePath)}">
+              <span class="ale-chat-isi">
+                <strong>${esc(entry.judul)}</strong>
+                <span>${esc(entry.moduleLabel)} · diperbarui ${esc(formatWaktu(Date.parse(entry.updatedAt)))}</span>
+              </span>
+            </a>
+          </li>`).join('')}
+        </ul>
+        <p><a class="ale-tautan" href="#/pengaturan/google">Kelola catatan terenkripsi di ruang kerja modul</a></p>`;
     },
   };
 

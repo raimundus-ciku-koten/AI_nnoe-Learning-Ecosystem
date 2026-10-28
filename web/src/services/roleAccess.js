@@ -1,7 +1,69 @@
-const DASHBOARD_ONLY_ROLES = new Set(['kepala_sekolah', 'wali_kelas']);
+import { menuUntukPeran } from '../navigasi.js';
+
+const LIMITED_SCOPE_PATHS = new Map([
+  ['kepala_sekolah', new Set(['/kepala-sekolah/ringkasan'])],
+  ['wali_kelas', new Set(['/wali-kelas/pemantauan'])],
+]);
+const KNOWN_ROLES = new Set([
+  ...LIMITED_SCOPE_PATHS.keys(),
+  'admin',
+  'admin_sekolah',
+  'guru',
+  'guru_bk',
+  'guru_ekstrakurikuler',
+  'guru_kokurikuler',
+  'ortu',
+  'orang_tua',
+  'siswa',
+  'operator',
+  'superadmin',
+  'demo',
+]);
+
+export function isKnownRole(role) {
+  return KNOWN_ROLES.has(String(role || '').trim().toLowerCase());
+}
+
+export function getAssignedRoleChoices(roles) {
+  if (!Array.isArray(roles)) return [];
+  return [...new Set(roles
+    .filter((role) => typeof role === 'string')
+    .map((role) => role.trim().toLowerCase())
+    .filter((role) => KNOWN_ROLES.has(role)))];
+}
+
+export function getRoleAssignmentFormState(user, allowedRoles) {
+  const allowed = new Set(allowedRoles);
+  const role = allowed.has(user?.role) ? user.role : '';
+  const roles = Array.isArray(user?.roles)
+    ? [...new Set(user.roles.filter((assignedRole) => allowed.has(assignedRole)))]
+    : [];
+  if (!roles.length && role) roles.push(role);
+  return { role, roles };
+}
+
+export function isSchoolAdminRole(role) {
+  return ['admin', 'admin_sekolah'].includes(String(role || '').trim().toLowerCase());
+}
+
+export function isTeacherRole(role) {
+  return ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']
+    .includes(String(role || '').trim().toLowerCase());
+}
+
+export function isParentRole(role) {
+  return ['ortu', 'orang_tua'].includes(String(role || '').trim().toLowerCase());
+}
 
 export function canOpenRolePath(role, path) {
-  if (role === 'demo') return path === '/trial';
-  if (DASHBOARD_ONLY_ROLES.has(role)) return path === '/dashboard';
-  return true;
+  const normalizedRole = String(role || '').trim().toLowerCase();
+  if (normalizedRole === 'demo') return path === '/trial';
+  if (!KNOWN_ROLES.has(normalizedRole)) return path === '/dashboard';
+  if (LIMITED_SCOPE_PATHS.has(normalizedRole)) {
+    return path === '/dashboard' || LIMITED_SCOPE_PATHS.get(normalizedRole).has(path);
+  }
+
+  return menuUntukPeran(normalizedRole)
+    .flatMap((group) => group.item)
+    .some((item) => path === item.path || path.startsWith(`${item.path}/`));
 }

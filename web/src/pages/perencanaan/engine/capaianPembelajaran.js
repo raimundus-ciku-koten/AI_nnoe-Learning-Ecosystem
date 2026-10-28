@@ -35,14 +35,14 @@ function temukanBagianMapel(teks, mapel, fileName) {
   const namaMapel = String(mapel).toLocaleLowerCase('id-ID')
     .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
   if (namaFile === namaMapel) {
-    const phaseHeader = /Fase\s+[A-F]\s*\(\s*Umumnya\b/iu.exec(teks);
+    const phaseHeader = /^[ \t]*Fase\s+(?:Fondasi|[A-F])\b/im.exec(teks);
     if (phaseHeader) return [{ awal: 0, akhir: teks.length }];
   }
   throw new Error(`Bagian CP untuk mata pelajaran "${mapel}" tidak ditemukan di ${fileName || 'PDF sumber'}.`);
 }
 
 function phasePattern() {
-  return /Fase\s+([A-F])\s*\(\s*Umumnya\b[\s\S]{0,240}?\)/giu;
+  return /^[ \t]*Fase\s+(Fondasi|[A-F])\b[^\r\n]{0,260}/gim;
 }
 
 function splitLongText(value, maxLength = MAX_TEXT_LENGTH) {
@@ -100,8 +100,11 @@ export function parseCapaianPembelajaranText({
   fileName,
   sourceFileId = '',
 }) {
-  if (!['A', 'B', 'C', 'D', 'E', 'F'].includes(fase)) {
-    throw new TypeError('Fase CP harus A sampai F.');
+  const requestedPhase = String(fase ?? '').trim().toLocaleUpperCase('id-ID') === 'FONDASI'
+    ? 'Fondasi'
+    : String(fase ?? '').trim().toLocaleUpperCase('id-ID');
+  if (!['Fondasi', 'A', 'B', 'C', 'D', 'E', 'F'].includes(requestedPhase)) {
+    throw new TypeError('Fase CP harus Fondasi atau A sampai F.');
   }
   if (typeof rawText !== 'string' || rawText.length > 250_000) {
     throw new TypeError('Teks PDF CP kosong atau melebihi batas aman 250.000 karakter.');
@@ -111,17 +114,18 @@ export function parseCapaianPembelajaranText({
   for (const section of sections) {
     const source = text.slice(section.awal, section.akhir);
     const headers = [...source.matchAll(phasePattern())];
-    const selected = headers.find((header) => header[1].toUpperCase() === fase);
+    const selected = headers.find((header) =>
+      (header[1].toLocaleUpperCase('id-ID') === 'FONDASI' ? 'Fondasi' : header[1].toUpperCase()) === requestedPhase);
     if (!selected) continue;
     const nextHeader = headers.find((header) => header.index > selected.index);
     const end = nextHeader?.index ?? source.length;
     const rest = source.slice(selected.index + selected[0].length, end);
-    const outcome = new RegExp(`Pada\\s+akhir\\s+Fase\\s+${fase}\\b[\\s\\S]{0,240}?berikut\\s*[:.]?`, 'iu').exec(rest);
+    const outcome = new RegExp(`Pada\\s+akhir\\s+Fase\\s+${requestedPhase}\\b[\\s\\S]{0,240}?berikut\\s*[:.]?`, 'iu').exec(rest);
     const body = outcome ? rest.slice(outcome.index + outcome[0].length) : rest;
-    const cp = elemenDariFase(body, fase);
+    const cp = elemenDariFase(body, requestedPhase);
     return {
       mapel: String(mapel).trim(),
-      fase,
+      fase: requestedPhase,
       cp,
       source: {
         fileName: String(fileName ?? '').trim(),

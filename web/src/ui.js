@@ -18,26 +18,35 @@ export { toast };
 
 const KUNCI_SIDE_TUTUP = 'ale-side-tutup';
 
-export function sideTutupTersimpan() {
+function kunciSideTutup(userId, role) {
+  if (!userId || !role) return '';
+  return `${KUNCI_SIDE_TUTUP}:${encodeURIComponent(userId)}:${encodeURIComponent(role)}`;
+}
+
+export function sideTutupTersimpan(userId, role) {
+  const key = kunciSideTutup(userId, role);
+  if (!key) return false;
   try {
-    return localStorage.getItem(KUNCI_SIDE_TUTUP) === 'true';
+    return localStorage.getItem(key) === 'true';
   } catch (err) {
     console.warn('[ui] Preferensi sidebar tidak dapat dibaca:', err);
     return false;
   }
 }
 
-export function terapkanSideTutup(tutup) {
+export function terapkanSideTutup(tutup, userId, role) {
   document.documentElement.classList.toggle('ale-side-tutup', Boolean(tutup));
+  const key = kunciSideTutup(userId, role);
+  if (!key) return;
   try {
-    localStorage.setItem(KUNCI_SIDE_TUTUP, String(Boolean(tutup)));
+    localStorage.setItem(key, String(Boolean(tutup)));
   } catch (err) {
     console.warn('[ui] Preferensi sidebar tidak dapat disimpan:', err);
   }
 }
 
-export function pulihkanSideTutup() {
-  terapkanSideTutup(sideTutupTersimpan());
+export function pulihkanSideTutup(userId, role) {
+  terapkanSideTutup(sideTutupTersimpan(userId, role), userId, role);
 }
 
 /* ============================================================

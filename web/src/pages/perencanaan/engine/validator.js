@@ -8,6 +8,12 @@ import { BATAS } from '../constants.js';
 import { urai, selisihHari } from './tanggal.js';
 import { normalisasiHari } from './rpe.js';
 import { normKode } from './prota.js';
+import {
+  faseUntukKelas,
+  jenjangUntukFase,
+  normalisasiFase,
+  normalisasiJenjang,
+} from './jenjangPembelajaran.js';
 
 /** Buang karakter kontrol, rapikan spasi, potong ke panjang maksimum. */
 export function bersihkanTeks(nilai, maks = BATAS.TEKS_SEDANG) {
@@ -33,11 +39,17 @@ const bilanganOpsional = (v) => {
 export function validasiKonteks(mentah) {
   const galat = {};
   const t = (k, maks = BATAS.TEKS_SEDANG) => bersihkanTeks(mentah[k], maks);
+  const fase = normalisasiFase(mentah.fase);
+  const jenjangProvided = typeof mentah.jenjang === 'string' && mentah.jenjang.trim() !== '';
+  const jenjang = jenjangProvided
+    ? normalisasiJenjang(mentah.jenjang)
+    : jenjangUntukFase(fase);
 
   const nilai = {
     mapel: t('mapel', BATAS.TEKS_PENDEK),
+    jenjang,
     kelas: t('kelas', 20),
-    fase: t('fase', 4).toUpperCase(),
+    fase,
     tahunAjaran: t('tahunAjaran', 9),
     jpPerPekan: bilanganOpsional(mentah.jpPerPekan),
     totalJP: bilanganOpsional(mentah.totalJP),
@@ -57,7 +69,15 @@ export function validasiKonteks(mentah) {
 
   if (!nilai.mapel) galat.mapel = 'WAJIB';
   if (!nilai.kelas) galat.kelas = 'WAJIB';
-  if (!/^[A-F]$/.test(nilai.fase)) galat.fase = 'FASE_TIDAK_VALID';
+  if (!nilai.fase) galat.fase = 'FASE_TIDAK_VALID';
+  if (!nilai.jenjang || (jenjangProvided && !normalisasiJenjang(mentah.jenjang))) {
+    galat.jenjang = 'JENJANG_TIDAK_VALID';
+  }
+  if (nilai.fase && nilai.jenjang &&
+      (jenjangUntukFase(nilai.fase) !== nilai.jenjang ||
+        (faseUntukKelas(nilai.jenjang, nilai.kelas) && faseUntukKelas(nilai.jenjang, nilai.kelas) !== nilai.fase))) {
+    galat.fase = 'KELAS_FASE_TIDAK_COCOK';
+  }
   if (!/^\d{4}\/\d{4}$/.test(nilai.tahunAjaran)) galat.tahunAjaran = 'FORMAT_TAHUN_AJARAN';
   else {
     const [a, b] = nilai.tahunAjaran.split('/').map(Number);

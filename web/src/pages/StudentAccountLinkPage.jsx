@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { isSchoolAdminRole } from '../services/roleAccess.js';
 import {
   muatAkunSiswaBelumTertaut,
   muatAkunSiswaTertaut,
@@ -10,7 +11,8 @@ import {
 import '../styles/online-assessments.css';
 
 export default function StudentAccountLinkPage() {
-  const { role } = useAuth();
+  const { role, activeRole } = useAuth();
+  const currentRole = activeRole || role;
   const [roster, setRoster] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [linked, setLinked] = useState([]);
@@ -32,9 +34,9 @@ export default function StudentAccountLinkPage() {
   }, []);
 
   useEffect(() => {
-    if (role !== 'admin_sekolah') return;
+    if (!isSchoolAdminRole(currentRole)) return;
     refresh().catch((loadError) => setError(loadError.message));
-  }, [refresh, role]);
+  }, [refresh, currentRole]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -72,7 +74,7 @@ export default function StudentAccountLinkPage() {
     }
   };
 
-  if (role !== 'admin_sekolah') {
+  if (!isSchoolAdminRole(currentRole)) {
     return (
       <section className="ale-exam-card" role="alert">
         <h2>Tautkan akun siswa</h2>

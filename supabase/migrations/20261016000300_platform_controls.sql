@@ -1,7 +1,7 @@
 create table if not exists public.platform_control (
   id text primary key check (id = 'global'),
   maintenance boolean not null default false,
-  features jsonb not null default '{"aiAssistant":true,"aiGeneration":true}'::jsonb
+  features jsonb not null default '{"aiAssistant":false,"aiGeneration":false}'::jsonb
     check (
       jsonb_typeof(features) = 'object'
       and features ?& array['aiAssistant', 'aiGeneration']
@@ -19,7 +19,7 @@ create table if not exists public.platform_control (
 create table if not exists public.platform_public_config (
   id text primary key check (id = 'platform'),
   maintenance boolean not null default false,
-  features jsonb not null default '{"aiAssistant":true,"aiGeneration":true}'::jsonb
+  features jsonb not null default '{"aiAssistant":false,"aiGeneration":false}'::jsonb
     check (
       jsonb_typeof(features) = 'object'
       and features ?& array['aiAssistant', 'aiGeneration']

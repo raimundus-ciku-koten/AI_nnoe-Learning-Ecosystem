@@ -14,4 +14,6 @@ export {
   pilihPaketAdminDrive,
   simpanDokumen,
   simpanModul,
+  simpanTinjauanDokumen,
+  simpanTinjauanModul,
 } from './planningDriveRepository.js';

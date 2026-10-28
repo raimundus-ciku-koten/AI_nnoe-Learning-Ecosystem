@@ -11,6 +11,7 @@ import {
   sesiGoogleWorkspacePerPengguna,
 } from '../services/googleWorkspaceAuth.js';
 import { identitasEnkripsiDriveDalamSesi } from '../services/driveEncryption.js';
+import { isTeacherRole } from '../services/roleAccess.js';
 import '../styles/teacher-workspace.css';
 
 function tanggalHariIni() {
@@ -46,7 +47,7 @@ const formKosong = (path, label) => ({
 
 function pesanKesalahan(err, aksi) {
   if (['permission-denied', '42501'].includes(err?.code)) {
-    return `Akun ini tidak diizinkan ${aksi} catatan. Pastikan akun guru terdaftar dan langganan tenant aktif.`;
+    return `Akun ini tidak diizinkan ${aksi} catatan. Pastikan akun guru terdaftar dan akses Google Drive aktif.`;
   }
   return `Catatan tidak dapat ${aksi}. Periksa koneksi, lalu coba lagi.`;
 }
@@ -64,7 +65,8 @@ function unduhCsv(items, namaFile) {
 }
 
 export default function TeacherWorkspacePage({ grup, item }) {
-  const { user, role, tenantId } = useAuth();
+  const { user, role: baseRole, activeRole, tenantId } = useAuth();
+  const role = activeRole || baseRole;
   const [catatan, setCatatan] = useState([]);
   const [form, setForm] = useState(() => formKosong(item.path, item.label));
   const [editId, setEditId] = useState('');
@@ -78,7 +80,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
   const loadRequest = useRef(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const canUse = role === 'guru' && Boolean(user?.uid && tenantId);
+  const canUse = isTeacherRole(role) && Boolean(user?.uid && tenantId);
   const ownerKey = canUse ? `${tenantId}:${user.uid}` : '';
   const [koneksi, setKoneksi] = useState(() => sesiGoogleWorkspacePerPengguna(user?.uid));
   const [identitasVault, setIdentitasVault] = useState(() => identitasEnkripsiDriveDalamSesi(user?.uid));
@@ -122,7 +124,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
       if (requestId !== loadRequest.current) return;
       console.error('[teacher-workspace] Gagal memuat catatan guru:', err);
       setError(['permission-denied', '42501'].includes(err?.code)
-        ? 'Akses catatan pribadi ditolak. Pastikan akun guru terdaftar pada tenant dengan langganan aktif.'
+        ? 'Akses catatan pribadi ditolak. Pastikan akun guru terdaftar dan izin Google Drive tersedia.'
         : 'Catatan belum dapat dimuat. Periksa koneksi, lalu coba lagi.');
     } finally {
       if (requestId === loadRequest.current) {
@@ -279,6 +281,11 @@ export default function TeacherWorkspacePage({ grup, item }) {
         <a className="teacher-workspace-related" href="#/dashboard">
           <Ikon nama="home" /> Kembali ke Dashboard
         </a>
+        <nav className="teacher-workspace-nav" aria-label="Modul pembelajaran terkait">
+          <a className="teacher-workspace-related" href="#/pelaksanaan/jurnal">Jurnal Mengajar</a>
+          <a className="teacher-workspace-related" href="#/laporan/harian-bulanan">Laporan Aktivitas Kelas</a>
+          <a className="teacher-workspace-related" href="#/ruang-kelas">Ruang Kelas</a>
+        </nav>
         <button type="button" onClick={hubungkanDrive} disabled={connecting || !canUse}>
           <Ikon nama="external" />
           {connecting ? 'Menghubungkan…' : tokenAktif ? `Google Drive: ${koneksi.email}` : 'Hubungkan Google Drive'}
@@ -289,7 +296,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
         <Ikon nama="shield" />
         <p>
           Isi catatan dienkripsi di browser sebelum disimpan ke Google Drive pribadi Anda.
-          Supabase hanya dipakai untuk memeriksa status langganan; tidak menerima isi catatan.
+          Catatan disimpan terenkripsi di Google Drive akun guru dan tidak diunggah ke Supabase.
           Catatan Firestore lama belum diimpor dan tidak akan muncul di daftar ini sampai migrasi terenkripsi selesai.
         </p>
       </aside>
@@ -301,6 +308,12 @@ export default function TeacherWorkspacePage({ grup, item }) {
           laporan resmi, atau komunikasi dengan siswa/orang tua. Hindari memasukkan nama,
           nomor identitas, maupun informasi pribadi siswa.
         </p>
+        {role === 'guru_bk' && (
+          <p>
+            Untuk Guru BK, ruang ini hanya untuk perencanaan umum. Jangan simpan catatan
+            konseling, diagnosis, atau detail kasus siswa di sini.
+          </p>
+        )}
       </aside>
 
       <div className="teacher-workspace-grid">

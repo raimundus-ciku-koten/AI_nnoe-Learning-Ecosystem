@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { decryptBackup, encryptBackup } from './encryptedBackup.mjs';
 
 const temporary = () => mkdtemp(resolve(tmpdir(), 'ale-backup-test-'));
@@ -22,6 +24,36 @@ test('encrypted backup round-trips arbitrary dump bytes', async () => {
     assert.notDeepEqual(await readFile(encrypted), original);
     await decryptBackup(encrypted, restored, key);
     assert.deepEqual(await readFile(restored), original);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('encrypted backup CLI runs on the current platform', async () => {
+  const directory = await temporary();
+  const key = randomBytes(32).toString('base64');
+  const source = resolve(directory, 'dump.sql');
+  const encrypted = resolve(directory, 'dump.aeb');
+  const restored = resolve(directory, 'restored.sql');
+  const cli = fileURLToPath(new URL('./encryptedBackup.mjs', import.meta.url));
+  const env = { ...process.env, BACKUP_ENCRYPTION_KEY: key };
+
+  try {
+    await writeFile(source, randomBytes(128));
+    const encrypt = spawnSync(process.execPath, [cli, 'encrypt', source, encrypted], {
+      encoding: 'utf8',
+      env,
+    });
+    assert.equal(encrypt.status, 0, encrypt.stderr);
+    assert.match(encrypt.stdout, /Operasi encrypt berhasil/);
+
+    const decrypt = spawnSync(process.execPath, [cli, 'decrypt', encrypted, restored], {
+      encoding: 'utf8',
+      env,
+    });
+    assert.equal(decrypt.status, 0, decrypt.stderr);
+    assert.match(decrypt.stdout, /Operasi decrypt berhasil/);
+    assert.deepEqual(await readFile(restored), await readFile(source));
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -99,6 +131,18 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   const upload = workflow.match(
     /      - name: Upload encrypted backup artifact([\s\S]*?)(?=      - name:|$)/,
   )?.[1];
+  const download = workflow.match(
+    /      - name: Download encrypted backup artifact([\s\S]*?)(?=      - name:|$)/,
+  )?.[1];
+  const restore = workflow.match(
+    /      - name: Decrypt and restore uploaded artifact to disposable database([\s\S]*?)(?=      - name:|$)/,
+  )?.[1];
+  const readiness = workflow.match(
+    /      - name: Require expected Staging relation and ledger inventory([\s\S]*?)(?=      - name:|$)/,
+  )?.[1];
+  const cleanup = workflow.match(
+    /      - name: Remove temporary database files([\s\S]*?)(?=      - name:|$)/,
+  )?.[1];
 
   assert.doesNotMatch(workflow, /^    env:/m);
   assert.doesNotMatch(workflow, /^  schedule:/m);
@@ -106,12 +150,26 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.ok(validate);
   assert.ok(create);
   assert.ok(upload);
+  assert.ok(download);
+  assert.ok(restore);
+  assert.ok(readiness);
+  assert.ok(cleanup);
   assert.match(workflow, /workflow_dispatch:/);
-  assert.match(workflow, /Run this workflow from main only/);
+  assert.match(
+    validate,
+    /case "\$GITHUB_REF" in\s+refs\/heads\/main\|refs\/heads\/fix\/staging-pinned-supabase-image\)/,
+  );
+  assert.match(validate, /Run this workflow from main or the approved Staging validation branch only/);
+  assert.doesNotMatch(validate, /refs\/heads\/\*/);
   assert.match(validate, /validateStagingBackupTarget\.mjs/);
   assert.match(targetValidator, /samszhfyhbjuculrcffg/);
   assert.match(targetValidator, /sessionPoolerStaging/);
   assert.match(workflow, /Install PostgreSQL 17 client/);
+  assert.match(workflow, /Audit Staging schema metadata \(read-only\)/);
+  assert.match(
+    workflow,
+    /node scripts\/auditStagingSchema\.mjs\s*\\\r?\n\s*\| tee "\$\{RUNNER_TEMP\}\/staging-schema-audit\.md"\s*\\\r?\n\s*>> "\$GITHUB_STEP_SUMMARY"/,
+  );
   assert.match(workflow, /postgresql-client-17/);
   assert.match(
     workflow,
@@ -122,18 +180,8 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.match(workflow, /5432:5432/);
   assert.match(create, /\/usr\/lib\/postgresql\/17\/bin\/pg_dump --format=custom/);
   assert.match(create, /\/usr\/lib\/postgresql\/17\/bin\/pg_restore --list "\$dump" > \/dev\/null/);
-  assert.match(
-    create,
-    /createdb \\\r?\n\s+--host 127\.0\.0\.1 --username supabase_admin "\$restore_db"/,
-  );
-  assert.match(create, /--exit-on-error --no-owner --no-acl/);
-  assert.match(create, /--dbname "\$restore_db" "\$dump"/);
-  assert.match(create, /pg_catalog\.pg_tables/);
-  assert.match(create, /Disposable restore completed without any user tables/);
-  assert.ok(
-    create.indexOf('pg_restore \\\n            --exit-on-error') <
-      create.indexOf('node scripts/encryptedBackup.mjs encrypt'),
-  );
+  assert.match(create, /node scripts\/encryptedBackup\.mjs encrypt "\$dump" "\$encrypted"/);
+  assert.doesNotMatch(create, /createdb|pg_restore \\\r?\n\s+--exit-on-error/);
   assert.doesNotMatch(create, /export PGPASSWORD=/);
   assert.match(create, /test -s "\$dump"/);
   assert.match(create, /test -s "\$encrypted"/);
@@ -143,9 +191,44 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.match(create, /SUPABASE_DB_URL:/);
   assert.match(create, /BACKUP_ENCRYPTION_KEY:/);
   assert.match(upload, /actions\/upload-artifact@v4/);
+  assert.match(download, /actions\/download-artifact@v4/);
+  assert.match(download, /supabase-staging-encrypted-\$\{\{ github\.run_id \}\}/);
   assert.match(upload, /retention-days: 1/);
   assert.match(upload, /compression-level: 0/);
   assert.match(upload, /if-no-files-found: error/);
   assert.doesNotMatch(upload, /SUPABASE_DB_URL:/);
   assert.doesNotMatch(upload, /BACKUP_ENCRYPTION_KEY:/);
+  assert.ok(
+    workflow.indexOf('- name: Upload encrypted backup artifact') <
+      workflow.indexOf('- name: Download encrypted backup artifact'),
+  );
+  assert.ok(
+    workflow.indexOf('- name: Download encrypted backup artifact') <
+      workflow.indexOf('- name: Decrypt and restore uploaded artifact to disposable database'),
+  );
+  assert.match(restore, /node scripts\/encryptedBackup\.mjs decrypt "\$artifact" "\$restored_dump"/);
+  assert.match(restore, /cmp --silent "\$dump" "\$restored_dump"/);
+  assert.match(restore, /--exit-on-error --no-owner --no-acl/);
+  assert.match(restore, /--dbname "\$restore_db" "\$restored_dump"/);
+  assert.match(restore, /pg_catalog\.pg_tables/);
+  assert.match(restore, /Encrypted artifact restore completed without any user tables/);
+  assert.match(restore, /BACKUP_ENCRYPTION_KEY:/);
+  assert.doesNotMatch(restore, /SUPABASE_DB_URL:/);
+  assert.match(
+    workflow,
+    /node scripts\/auditStagingSchema\.mjs\s*\\\r?\n\s*\| tee "\$\{RUNNER_TEMP\}\/staging-schema-audit\.md"/,
+  );
+  assert.match(readiness, /Relation\/history inventory readiness: READY/);
+  assert.match(readiness, /Definition-level parity still requires review/);
+  assert.match(readiness, /no Staging schema changes were made/);
+  assert.match(readiness, /exit 1/);
+  assert.ok(
+    workflow.indexOf('- name: Decrypt and restore uploaded artifact to disposable database') <
+      workflow.indexOf('- name: Require expected Staging relation and ledger inventory'),
+  );
+  assert.ok(
+    workflow.indexOf('- name: Validate migrations and expected feature schema on a clean disposable Supabase database') <
+      workflow.indexOf('- name: Require expected Staging relation and ledger inventory'),
+  );
+  assert.match(cleanup, /staging-schema-audit\.md/);
 });

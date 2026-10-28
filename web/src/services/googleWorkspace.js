@@ -7,6 +7,8 @@ const BASE_DRIVE = 'https://www.googleapis.com/drive/v3';
 const BASE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
 const BASE_MEET = 'https://meet.googleapis.com/v2';
 const BASE_SHEETS = 'https://sheets.googleapis.com/v4';
+const BASE_CALENDAR = 'https://www.googleapis.com/calendar/v3';
+const BASE_TASKS = 'https://tasks.googleapis.com/tasks/v1';
 const GOOGLE_API_SCRIPT_URL = 'https://apis.google.com/js/api.js';
 const BATAS_BERKAS = 10 * 1024 * 1024;
 const BATAS_CIPHERTEXT = 10 * 1024 * 1024 + 4096;
@@ -544,9 +546,17 @@ export async function daftarBerkasTerenkripsiDrive(accessToken) {
   }));
 }
 
-export async function daftarCatatanKerjaTerenkripsiDrive(accessToken, identity, pageToken = '') {
+export async function daftarCatatanKerjaTerenkripsiDrive(
+  accessToken,
+  identity,
+  pageToken = '',
+  pageSize = 50,
+) {
   if (pageToken && (typeof pageToken !== 'string' || pageToken.length > 2048)) {
     throw new TypeError('Penanda halaman Drive tidak valid.');
+  }
+  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 50) {
+    throw new TypeError('Batas halaman catatan Drive harus antara 1 dan 50.');
   }
   const filters = [
     `appProperties has { key='aleKind' and value='${VAULT_KIND}' }`,
@@ -555,7 +565,7 @@ export async function daftarCatatanKerjaTerenkripsiDrive(accessToken, identity, 
   ];
   const parameters = new URLSearchParams({
     q: filters.join(' and '),
-    pageSize: '50',
+    pageSize: String(pageSize),
     orderBy: 'modifiedTime desc',
     fields: 'files(id,name,description,createdTime,size,appProperties),nextPageToken',
   });
@@ -1144,6 +1154,82 @@ export async function buatRuangGoogleMeet(accessToken) {
     throw new Error('Google Meet mengembalikan tautan rapat yang tidak aman.');
   }
   return { ...ruang, meetingUri: meetingUrl.href };
+}
+
+export async function buatAcaraGoogleCalendar(
+  accessToken,
+  { judul, mulai, selesai, deskripsi = '' } = {},
+) {
+  const title = typeof judul === 'string' ? judul.trim() : '';
+  const start = new Date(mulai);
+  const end = new Date(selesai);
+  if (!title || title.length > 120 || Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) || end <= start ||
+      typeof deskripsi !== 'string' || deskripsi.length > 2000) {
+    throw new TypeError('Isi judul acara, waktu valid, dan pastikan selesai setelah mulai.');
+  }
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const event = await requestGoogle(`${BASE_CALENDAR}/calendars/primary/events`, accessToken, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      summary: title,
+      description: deskripsi.trim(),
+      start: { dateTime: start.toISOString(), timeZone },
+      end: { dateTime: end.toISOString(), timeZone },
+    }),
+  });
+  let eventUrl;
+  try {
+    eventUrl = new URL(event.htmlLink);
+  } catch (error) {
+    throw new Error('Google Calendar tidak mengembalikan tautan acara yang valid.', { cause: error });
+  }
+  if (eventUrl.origin !== 'https://calendar.google.com' || !eventUrl.pathname.startsWith('/calendar/')) {
+    throw new Error('Google Calendar mengembalikan tautan acara yang tidak aman.');
+  }
+  if (typeof event.id !== 'string' || !event.id) {
+    throw new Error('Google Calendar tidak mengembalikan identitas acara yang valid.');
+  }
+  return { id: event.id, htmlLink: eventUrl.href };
+}
+
+export async function buatTugasGoogleTasks(
+  accessToken,
+  { judul, catatan = '', jatuhTempo = '' } = {},
+) {
+  const title = typeof judul === 'string' ? judul.trim() : '';
+  if (!title || title.length > 1024 || typeof catatan !== 'string' || catatan.length > 8192) {
+    throw new TypeError('Judul tugas harus diisi dan catatan tidak boleh melebihi 8.192 karakter.');
+  }
+  const taskLists = await requestGoogle(`${BASE_TASKS}/users/@me/lists?maxResults=100`, accessToken);
+  const defaultList = taskLists.items?.find((list) =>
+    typeof list.id === 'string' && list.id && list.title === 'My Tasks');
+  const targetList = defaultList || taskLists.items?.find((list) =>
+    typeof list.id === 'string' && list.id);
+  if (!targetList) throw new Error('Google Tasks tidak memiliki daftar tugas yang dapat digunakan.');
+
+  const payload = { title, notes: catatan.trim() };
+  if (jatuhTempo) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(jatuhTempo) ||
+        Number.isNaN(Date.parse(`${jatuhTempo}T00:00:00.000Z`))) {
+      throw new TypeError('Tanggal jatuh tempo tugas tidak valid.');
+    }
+    payload.due = `${jatuhTempo}T00:00:00.000Z`;
+  }
+  const task = await requestGoogle(
+    `${BASE_TASKS}/lists/${encodeURIComponent(targetList.id)}/tasks`,
+    accessToken,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  );
+  if (typeof task.id !== 'string' || !task.id || typeof task.title !== 'string') {
+    throw new Error('Google Tasks tidak mengembalikan identitas tugas yang valid.');
+  }
+  return { id: task.id, title: task.title, due: task.due || '' };
 }
 
 export async function buatSpreadsheetDenganData(accessToken, { judul, values }) {

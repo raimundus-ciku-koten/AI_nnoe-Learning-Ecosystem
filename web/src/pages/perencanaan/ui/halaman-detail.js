@@ -2,7 +2,8 @@
  * @file Halaman detail satu paket perencanaan: tab RPE → CP → ATP → Prota → Prosem → KKTP → Modul.
  *
  * Prinsip:
- *  - Dokumen mesin dihitung di peramban; dokumen AI memerlukan provider eksternal.
+ *  - Dokumen mesin dihitung di peramban; draf AI memakai model lokal atau provider eksternal
+ *    setelah persetujuan eksplisit dan tetap harus ditinjau guru.
  *    Dokumen turunan otomatis ditandai "usang" bila induknya berubah (rev).
  *  - Tidak ada innerHTML. Semua isi paket dienkripsi sebelum ditulis ke Google Drive.
  *  - Tab mengikuti pola WAI-ARIA (panah kiri/kanan, Home/End).
@@ -12,15 +13,18 @@ import { h, kosongkan, toast, konfirmasi } from './dom.js';
 import { t } from '../i18n/index.js';
 import { JENIS, URUTAN_DOKUMEN, PRASYARAT, STATUS, SUMBER, DOKUMEN_AI } from '../constants.js';
 import { hitungRpe } from '../engine/rpe.js';
-import { hitungProta, hitungAnggaran, normKode } from '../engine/prota.js';
+import { hitungProta, hitungAnggaran, normKode, ratakanTp, selaraskanJpAtp } from '../engine/prota.js';
 import { hitungProsem } from '../engine/prosem.js';
 import { validasiAtp } from '../engine/validator.js';
 import { parsePlanningOutput } from '../../../services/planningAiSchema.js';
+import { generateBrowserPlanning } from '../../../services/browserAi.js';
+import { promptAtp, promptKktp, promptModul } from '../../../services/planningAiPrompts.js';
 import {
   berikanAksesPaket, cabutAksesPaket, dengarPaket, dengarDokumen, dengarModul,
-  simpanDokumen, simpanModul, perbaruiPaket
+  simpanDokumen, simpanModul, simpanTinjauanDokumen, simpanTinjauanModul, perbaruiPaket
 } from '../services/repository.js';
 import { daftarAdminKunciTenant } from '../../../services/encryptionKeyDirectory.js';
+import { muatKopSekolah } from '../../../services/schoolLetterhead.js';
 import { getState } from '../../../state.js';
 import { renderRpe } from './render/rpe.js';
 import { renderCp } from './render/cp.js';
@@ -54,7 +58,7 @@ const kodeGalat = (e) => e?.kode
  */
 export function halamanDetail(wadah, {
   uid, tenantId, paketId, jenis: tabAwal, search = '', canEditPackage = false,
-  canGenerateDocuments = true, routeBase = '#/perencanaan', guruUid = ''
+  canGenerateDocuments = true, canGenerateAi = false, routeBase = '#/perencanaan', guruUid = ''
 }) {
   const queryGuru = guruUid ? `guru=${encodeURIComponent(guruUid)}` : '';
   const urlPaket = (jenis, query = '') => {
@@ -63,6 +67,7 @@ export function halamanDetail(wadah, {
   };
   const urlDaftar = `${routeBase}${guruUid ? `?guru=${encodeURIComponent(guruUid)}` : ''}`;
   /** @type {any} */ let paket = null;
+  let kopDataUrl = '';
   let dokumen = {};
   let modul = {};
   let tab = URUTAN_DOKUMEN.includes(tabAwal) ? tabAwal : JENIS.RPE;
@@ -74,9 +79,16 @@ export function halamanDetail(wadah, {
   let editor = null;       // { el, ambil } untuk ATP, KKTP, atau Modul Ajar
   let editorJenis = null;
   let editorKotor = false;
+  let tinjauKey = '';
+  let tinjauDraf = null;
   let dimuat = { paket: false, dokumen: false, modul: false };
   let adminTenant = null;
   const pemilikPaket = getState().user?.uid === uid;
+
+  const konteksDenganKop = (value) => value ? {
+    ...value,
+    identitas: { ...(value.identitas || {}), kopDataUrl },
+  } : value;
 
   const akar = h('div', { class: 'perencanaan-detail' });
   wadah.append(akar);
@@ -131,6 +143,7 @@ export function halamanDetail(wadah, {
     gambar();
     try { await fn(); } catch (e) {
       if (e?.name === 'AbortError') toast(t('umum.dibatalkan'));
+      else if (String(kunci).startsWith('ai:')) toast(e?.message || t(`galat.${kodeGalat(e)}`), 'galat');
       else toast(t(`galat.${kodeGalat(e)}`), 'galat');
     } finally { sibuk.delete(kunci); gambar(); }
   };
@@ -203,6 +216,121 @@ export function halamanDetail(wadah, {
     }),
 
   };
+
+  function promptPerencanaan(jenis, unit) {
+    const konteks = {
+      jenjang: paket.jenjang,
+      mapel: paket.mapel,
+      kelas: paket.kelas,
+      fase: paket.fase,
+    };
+    if (jenis === JENIS.ATP) {
+      const rpe = dokumen[JENIS.RPE].payload;
+      return promptAtp({
+        ...konteks,
+        cp: dokumen[JENIS.CP].payload.cp,
+        totalJP: rpe.totalJP,
+        jpPerPekan: rpe.jpPerPekan,
+      });
+    }
+    if (jenis === JENIS.KKTP) {
+      return promptKktp({
+        ...konteks,
+        tps: ratakanTp(dokumen[JENIS.ATP].payload),
+      });
+    }
+    const alokasi = dokumen[JENIS.PROTA].payload.program?.[unit.semester]?.modul
+      ?.find((entry) => entry.no === unit.no);
+    const jumlahHari = Math.max(1, paket.hariPembelajaran?.length ?? 1);
+    return promptModul({
+      ...konteks,
+      unit,
+      jpUnit: alokasi?.jp ?? unit.tp.reduce((total, tp) => total + tp.jp, 0),
+      jpPerPertemuan: Math.max(1, Math.round(paket.jpPerPekan / jumlahHari)),
+    });
+  }
+
+  async function buatDrafAi(jenis, mode = 'ai-nnoe', unit = null) {
+    return tandaiSibuk(`ai:${jenis}`, async () => {
+      if (!canGenerateAi) throw new Error('Generator AI dinonaktifkan oleh administrator platform.');
+      const existing = jenis === JENIS.MODUL ? modul[String(unit?.no)] : dokumen[jenis];
+      if (existing && !(await konfirmasi(
+        jenis === JENIS.MODUL
+          ? 'Timpa draf Modul Ajar untuk unit ini?'
+          : t('umum.konfirmasiTimpa'),
+        { ya: t('umum.timpa'), bahaya: true },
+      ))) return;
+      if (mode === 'ai-eksternal' &&
+          !(await konfirmasi(
+            'Konteks kurikulum dan CP yang Anda impor akan dikirim ke provider API pilihan. Provider dapat mengenakan biaya sesuai kebijakan mereka. Jangan lanjutkan jika paket memuat data pribadi.',
+            { ya: 'Kirim ke AI eksternal', bahaya: true },
+          ))) return;
+
+      const result = await generateBrowserPlanning({
+        uid,
+        paketId,
+        jenis,
+        noUnit: unit?.no,
+        prompt: promptPerencanaan(jenis, unit),
+        maxTokens: 3000,
+        mode,
+        externalAcknowledged: mode === 'ai-eksternal',
+      });
+
+      if (jenis === JENIS.ATP) {
+        const cp = dokumen[JENIS.CP].payload.cp;
+        const payload = parsePlanningOutput('atp', result.answer, { cp });
+        const validasi = validasiAtp(payload);
+        if (!validasi.ok) throw new Error(`Draf ATP tidak valid: ${validasi.galat.slice(0, 3).join(', ')}.`);
+        const rpe = dokumen[JENIS.RPE].payload;
+        const selaras = selaraskanJpAtp(payload, rpe.totalJP, rpe.jpPerPekan, rpe.hari.length);
+        if (!selaras.ok) throw new Error(`Draf ATP tidak dapat diselaraskan: ${selaras.alasan}.`);
+        await simpan(JENIS.ATP, {
+          ...selaras.atp,
+          anggaran: {
+            jpPertemuan: selaras.anggaran.jpPertemuan,
+            uhTotal: selaras.anggaran.uhTotal,
+            sisaTP: selaras.anggaran.sisaTP,
+          },
+          totalJP: rpe.totalJP,
+        }, SUMBER.AI);
+      } else if (jenis === JENIS.KKTP) {
+        const codes = ratakanTp(dokumen[JENIS.ATP].payload).map((tp) => normKode(tp.kode));
+        const payload = parsePlanningOutput('kktp', result.answer, { kodeTp: codes });
+        await simpan(JENIS.KKTP, payload, SUMBER.AI);
+      } else {
+        const codes = unit.tp.map((tp) => normKode(tp.kode));
+        const payload = parsePlanningOutput('modul', result.answer, { kodeTp: codes });
+        await simpanModul({
+          uid,
+          tenantId,
+          paketId,
+          noUnit: unit.no,
+          payload,
+          sumber: SUMBER.AI,
+          sumberRev: depRev(JENIS.MODUL),
+          revDasar: modul[String(unit.no)]?.rev ?? 0,
+        });
+      }
+      toast(t('detail.aiBerhasil'), 'sukses');
+    });
+  }
+
+  function tombolAi(jenis, unit = null) {
+    return h('div', { class: 'bilah-aksi no-print' },
+      h('button', {
+        type: 'button',
+        class: 'tombol',
+        disabled: sibuk.size > 0 || !canGenerateAi,
+        onClick: () => buatDrafAi(jenis, 'ai-nnoe', unit),
+      }, t('detail.aiLokal')),
+      h('button', {
+        type: 'button',
+        class: 'tombol tombol-sekunder',
+        disabled: sibuk.size > 0 || !canGenerateAi,
+        onClick: () => buatDrafAi(jenis, 'ai-eksternal', unit),
+      }, t('detail.aiEksternal')));
+  }
 
   async function simpanAtpManual() {
     const draft = editor.ambil();
@@ -391,7 +519,97 @@ export function halamanDetail(wadah, {
     document.head.append(gaya);
     const bersih = () => { gaya.remove(); window.removeEventListener('afterprint', bersih); };
     window.addEventListener('afterprint', bersih);
+    toast('Pilih “Simpan sebagai PDF” untuk mengunduh tanpa watermark. PDF tidak dapat dijamin kebal konversi pihak ketiga.', 'info');
     window.print();
+  }
+
+  function elemenTinjauan(root) {
+    const urutan = new Map();
+    return [...root.querySelectorAll('h1,h2,h3,p,li,td,th,caption')]
+      .filter((el) => !el.closest('[data-review-locked="true"]') && el.textContent.trim())
+      .map((el) => {
+        const tag = el.tagName.toLowerCase();
+        const no = urutan.get(tag) || 0;
+        urutan.set(tag, no + 1);
+        const key = `${tag}:${no}`;
+        el.dataset.reviewKey = key;
+        return [key, el];
+      });
+  }
+
+  function terapkanTinjauan(root, record, key) {
+    if (!root || !record) return root;
+    const edits = tinjauKey === key && tinjauDraf
+      ? tinjauDraf
+      : (record.reviewEdits || {});
+    const elements = elemenTinjauan(root);
+    elements.forEach(([id, el]) => {
+      if (Object.hasOwn(edits, id)) {
+        el.textContent = edits[id];
+        el.classList.add('teks-tinjauan');
+      }
+      if (tinjauKey === key) {
+        el.contentEditable = 'true';
+        el.classList.add('review-editable');
+      }
+    });
+    if (tinjauKey === key) {
+      root.addEventListener('input', () => {
+        tinjauDraf = Object.fromEntries(elements.map(([id, el]) => [id, el.innerText]));
+      });
+    }
+    return root;
+  }
+
+  function kontrolTinjauan(record, jenis, noUnit) {
+    if (!record || !canGenerateDocuments) return null;
+    const key = noUnit ? `modul:${noUnit}` : jenis;
+    if (tinjauKey !== key) {
+      return h('button', {
+        type: 'button',
+        class: 'tombol tombol-sekunder',
+        disabled: sibuk.size > 0,
+        onClick: () => {
+          tinjauKey = key;
+          tinjauDraf = { ...(record.reviewEdits || {}) };
+          gambar();
+        },
+      }, 'Tinjau dan edit');
+    }
+    return h('div', { class: 'bilah-aksi no-print' },
+      h('button', {
+        type: 'button',
+        class: 'tombol',
+        disabled: sibuk.size > 0,
+        onClick: async () => {
+          const reviewEdits = tinjauDraf || {};
+          await tandaiSibuk(`review:${key}`, async () => {
+            if (noUnit) {
+              await simpanTinjauanModul({
+                uid, tenantId, paketId, noUnit, reviewEdits, revDasar: record.rev,
+              });
+            } else {
+              await simpanTinjauanDokumen({
+                uid, tenantId, paketId, jenis, reviewEdits, revDasar: record.rev,
+              });
+            }
+            record.reviewEdits = reviewEdits;
+            tinjauKey = '';
+            tinjauDraf = null;
+            toast('Tinjauan dokumen berhasil disimpan.', 'sukses');
+          });
+        },
+      }, 'Simpan tinjauan'),
+      h('button', {
+        type: 'button',
+        class: 'tombol tombol-sekunder',
+        disabled: sibuk.size > 0,
+        onClick: () => {
+          tinjauKey = '';
+          tinjauDraf = null;
+          gambar();
+        },
+      }, 'Batalkan'));
   }
 
   /* ------------------------------ Tampilan ------------------------------ */
@@ -424,7 +642,8 @@ export function halamanDetail(wadah, {
       canGenerateDocuments && !DOKUMEN_AI.includes(jenis) ? tombolAksi(jenis) : null,
       canGenerateDocuments && jenis === JENIS.ATP && dok && status !== STATUS.BELUM && !editor
         ? h('button', { type: 'button', class: 'tombol tombol-sekunder', disabled: sibuk.size > 0, onClick: () => { mulaiEditorAtp(); gambar(); } }, t('atpEditor.mulai')) : null,
-      dok ? h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: cetak }, t('umum.cetak')) : null,
+      kontrolTinjauan(dok, jenis),
+      dok ? h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: cetak }, 'Unduh PDF') : null,
       dok ? h('span', { class: 'meta' }, t('detail.sumber', { sumber: t(`sumber.${dok.sumber}`) })) : null);
 
     return h('div', null,
@@ -433,7 +652,8 @@ export function halamanDetail(wadah, {
       DOKUMEN_AI.includes(jenis) ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.aiNonaktif')) : null,
       kurang.length ? peringatan(t('detail.prasyarat', { daftar: kurang.map((k) => t(`dok.${k}`)).join(', ') })) : null,
       status === STATUS.USANG && dok ? peringatan(t('detail.usang')) : null,
-      dok ? isiDokumen : (kurang.length ? null : kosong ?? h('p', { class: 'kosong' }, t('detail.belumAda'))));
+      dok ? terapkanTinjauan(isiDokumen, dok, jenis)
+        : (kurang.length ? null : kosong ?? h('p', { class: 'kosong' }, t('detail.belumAda'))));
   }
 
   function mulaiEditorAtp() {
@@ -471,6 +691,9 @@ export function halamanDetail(wadah, {
     const kurang = prasyaratKurang(JENIS.ATP);
     return h('div', null,
       !canGenerateDocuments ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.dokumenKhususGuru')) : null,
+      canGenerateDocuments && canGenerateAi ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.aiTinjau')) : null,
+      canGenerateDocuments && canGenerateAi && !kurang.length ? tombolAi(JENIS.ATP) : null,
+      canGenerateDocuments && !canGenerateAi ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.aiDiblokir')) : null,
       h('div', { class: 'bilah-aksi no-print' },
         canGenerateDocuments ? h('button', {
           type: 'button',
@@ -478,18 +701,31 @@ export function halamanDetail(wadah, {
           disabled: kurang.length > 0 || sibuk.size > 0,
           onClick: aksi[JENIS.ATP],
         }, dok ? t('atpEditor.mulai') : t('atpEditor.susun')) : null,
-        dok ? h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: cetak }, t('umum.cetak')) : null,
+        kontrolTinjauan(dok, JENIS.ATP),
+        dok ? h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: cetak }, 'Unduh PDF') : null,
         dok ? h('span', { class: 'meta' }, t('detail.sumber', { sumber: t(`sumber.${dok.sumber}`) })) : null),
       kurang.length ? peringatan(t('detail.prasyarat', { daftar: kurang.map((k) => t(`dok.${k}`)).join(', ') })) : null,
       statusDok(JENIS.ATP) === STATUS.USANG && dok ? peringatan(t('detail.usang')) : null,
-      dok ? renderAtp(dok.payload, paket)
+      dok ? terapkanTinjauan(renderAtp(dok.payload, paket), dok, JENIS.ATP)
         : kurang.length ? null : h('p', { class: 'kosong' }, t('atpEditor.drafKosong')));
   }
 
   function panelCp() {
     const intro = h('div', null,
       h('p', { class: 'kotak kotak-info' }, t('cp.pilihSumber')),
-      h('p', { class: 'kotak kotak-info', role: 'note' }, t('cp.peringatan')));
+      h('p', { class: 'kotak kotak-info', role: 'note' }, t('cp.peringatan')),
+      h('p', { class: 'hint' }, t('cp.panduanResmi')),
+      h('ul', { class: 'tautan-rujukan-kalender' },
+        h('li', null, h('a', {
+          href: 'https://kurikulum.kemendikdasmen.go.id/rujukan',
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        }, 'Rujukan resmi kurikulum')),
+        h('li', null, h('a', {
+          href: 'https://kurikulum.kemendikdasmen.go.id/panduan-mapel',
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        }, 'Panduan Mata Pelajaran'))));
     const dok = dokumen[JENIS.CP];
     return panelUmum(
       JENIS.CP,
@@ -508,17 +744,20 @@ export function halamanDetail(wadah, {
     }
     return h('div', null,
       !canGenerateDocuments ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.dokumenKhususGuru')) : null,
-      h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.manualGratis')),
+      h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t(canGenerateAi ? 'detail.aiTinjau' : 'detail.manualGratis')),
+      canGenerateDocuments && canGenerateAi && !kurang.length ? tombolAi(JENIS.KKTP) : null,
+      canGenerateDocuments && !canGenerateAi ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.aiDiblokir')) : null,
       h('div', { class: 'bilah-aksi no-print' },
         canGenerateDocuments && !kurang.length ? h('button', {
           type: 'button', class: 'tombol', disabled: sibuk.size > 0,
           onClick: () => { mulaiEditorKktp(); gambar(); },
         }, dok ? t('atpEditor.mulai') : t('atpEditor.susun')) : null,
-        dok ? h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: cetak }, t('umum.cetak')) : null,
+        kontrolTinjauan(dok, JENIS.KKTP),
+        dok ? h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: cetak }, 'Unduh PDF') : null,
         dok ? h('span', { class: 'meta' }, t('detail.sumber', { sumber: t(`sumber.${dok.sumber}`) })) : null),
       kurang.length ? peringatan(t('detail.prasyarat', { daftar: kurang.map((k) => t(`dok.${k}`)).join(', ') })) : null,
       statusDok(JENIS.KKTP) === STATUS.USANG && dok ? peringatan(t('detail.usang')) : null,
-      dok && dokumen[JENIS.ATP] ? renderKktp(dok.payload, dokumen[JENIS.ATP].payload, paket)
+      dok && dokumen[JENIS.ATP] ? terapkanTinjauan(renderKktp(dok.payload, dokumen[JENIS.ATP].payload, paket), dok, JENIS.KKTP)
         : kurang.length ? null : h('p', { class: 'kosong' }, t('detail.belumAda')));
   }
 
@@ -533,7 +772,8 @@ export function halamanDetail(wadah, {
     if (kurang.length) {
       return h('div', null,
         !canGenerateDocuments ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.dokumenKhususGuru')) : null,
-        h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.manualGratis')),
+        h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t(canGenerateAi ? 'detail.aiTinjau' : 'detail.manualGratis')),
+        canGenerateDocuments && !canGenerateAi ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.aiDiblokir')) : null,
         bilah,
         peringatan(t('detail.prasyarat', { daftar: kurang.map((k) => t(`dok.${k}`)).join(', ') }))
       );
@@ -545,7 +785,7 @@ export function halamanDetail(wadah, {
       const st = !d ? STATUS.BELUM : Object.entries(dep).every(([k, v]) => d.sumberRev?.[k] === v) ? STATUS.SIAP : STATUS.USANG;
       return h('li', null, h('button', {
         type: 'button', class: `unit-tombol ${u.no === unitModulAktif ? 'aktif' : ''}`, 'aria-current': u.no === unitModulAktif ? 'true' : null,
-        disabled: editorJenis === JENIS.MODUL,
+        disabled: editorJenis === JENIS.MODUL || tinjauKey.startsWith('modul:'),
         onClick: () => {
           unitModulAktif = u.no;
           history.replaceState(null, '', urlPaket(JENIS.MODUL, `unit=${u.no}`));
@@ -566,19 +806,22 @@ export function halamanDetail(wadah, {
               type: 'button', class: 'tombol', disabled: sibuk.size > 0,
               onClick: () => { mulaiEditorModul(u); gambar(); },
             }, d ? t('atpEditor.mulai') : t('atpEditor.susun')) : null,
-            d ? h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: cetak }, t('umum.cetak')) : null),
-          d ? renderModul(
+            canGenerateDocuments && canGenerateAi ? tombolAi(JENIS.MODUL, u) : null,
+            kontrolTinjauan(d, JENIS.MODUL, u.no),
+            d ? h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: cetak }, 'Unduh PDF') : null),
+          d ? terapkanTinjauan(renderModul(
             d.payload,
             u,
             paket,
             dokumen[JENIS.ATP]?.payload,
             dokumen[JENIS.PROTA]?.payload,
             dokumen[JENIS.PROSEM]?.payload,
-          ) : h('p', { class: 'kosong' }, t('detail.belumAda')))) : null;
+          ), d, `modul:${u.no}`) : h('p', { class: 'kosong' }, t('detail.belumAda')))) : null;
 
     return h('div', null,
       !canGenerateDocuments ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.dokumenKhususGuru')) : null,
-      h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.manualGratis')),
+      h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t(canGenerateAi ? 'detail.aiTinjau' : 'detail.manualGratis')),
+      canGenerateDocuments && !canGenerateAi ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.aiDiblokir')) : null,
       bilah, h('div', { class: 'modul-tata' }, daftar, rincian));
   }
 
@@ -618,8 +861,10 @@ export function halamanDetail(wadah, {
 
   async function pindahTab(j, fokus = false) {
     if (j === tab) return;
+    if (tinjauKey && !(await konfirmasi('Perubahan tinjauan belum disimpan. Batalkan perubahan?', { bahaya: true }))) return;
     if (editor && editorKotor && !(await konfirmasi(t('atpEditor.buangPerubahan'), { bahaya: true }))) return;
     editor = null; editorJenis = null; editorKotor = false;
+    tinjauKey = ''; tinjauDraf = null;
     tab = j;
     const unit = j === JENIS.MODUL ? `?unit=${unitModulAktif}` : '';
     history.replaceState(null, '', urlPaket(j, unit));
@@ -643,25 +888,34 @@ export function halamanDetail(wadah, {
       h('div', { class: 'detail-kepala no-print' },
         h('a', { href: urlDaftar, class: 'tautan-kembali' }, `← ${t('detail.kembali')}`),
         h('h2', null, paket.mapel),
-        h('p', { class: 'meta' }, `${t('umum.kelas')} ${paket.kelas} · ${t('umum.fase')} ${paket.fase} · ${paket.tahunAjaran} · ${paket.jpPerPekan} JP/${t('umum.pekan')}`),
+        h('p', { class: 'meta' }, `${paket.jenjang ? `${paket.jenjang.toUpperCase()} · ` : ''}${t('umum.kelas')} ${paket.kelas} · ${t('umum.fase')} ${paket.fase} · ${paket.tahunAjaran} · ${paket.jpPerPekan} JP/${t('umum.pekan')}`),
         canEditPackage ? h('button', { type: 'button', class: 'tombol tombol-sekunder tombol-kecil', onClick: ubahKonteks }, t('detail.ubahKonteks')) : null),
       panelAkses(), barisTab(), konten);
     if (fokusAktif && fokusAktif.startsWith('tab-')) document.getElementById(fokusAktif)?.focus();
   }
 
-  /* ------------------------------ Langganan ------------------------------ */
+  const galatAksesDokumen = (e) => { toast(t(`galat.${e?.code === 'permission-denied' ? 'AKSES_DITOLAK' : 'UMUM'}`), 'galat'); };
 
-  const galatLangganan = (e) => { toast(t(`galat.${e?.code === 'permission-denied' ? 'AKSES_DITOLAK' : 'UMUM'}`), 'galat'); };
+  if (tenantId) {
+    void muatKopSekolah(tenantId).then((imageDataUrl) => {
+      kopDataUrl = imageDataUrl;
+      paket = konteksDenganKop(paket);
+      muatUlang();
+    }).catch((error) => {
+      console.error('[perencanaan] gagal memuat kop sekolah:', error);
+      toast('Kop sekolah belum dapat dimuat. Periksa migrasi dan akses sekolah.', 'galat');
+    });
+  }
 
   const berhenti = [
     dengarPaket(uid, paketId, (p) => {
-      paket = p;
+      paket = konteksDenganKop(p);
       dimuat.paket = true;
       if (p && pemilikPaket && adminTenant === null) muatAdminTenant();
       muatUlang();
-    }, galatLangganan),
-    dengarDokumen(uid, tenantId, paketId, (d) => { dokumen = d; dimuat.dokumen = true; muatUlang(); }, galatLangganan),
-    dengarModul(uid, tenantId, paketId, (m) => { modul = m; dimuat.modul = true; muatUlang(); }, galatLangganan)
+    }, galatAksesDokumen),
+    dengarDokumen(uid, tenantId, paketId, (d) => { dokumen = d; dimuat.dokumen = true; muatUlang(); }, galatAksesDokumen),
+    dengarModul(uid, tenantId, paketId, (m) => { modul = m; dimuat.modul = true; muatUlang(); }, galatAksesDokumen)
   ];
 
   /** Jangan menimpa penyunting ATP yang sedang dikerjakan saat data masuk. */

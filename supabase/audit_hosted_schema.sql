@@ -238,7 +238,7 @@ select
   'default_grant',
   coalesce(namespace.nspname, 'ALL SCHEMAS') || '.' ||
     pg_get_userbyid(default_acl.defaclrole) || '.' ||
-    default_acl.defaclobjtype || '.' ||
+    default_acl.defaclobjtype::text || '.' ||
     case when grant_info.grantee = 0 then 'PUBLIC'
          else pg_get_userbyid(grant_info.grantee) end || '.' ||
     grant_info.privilege_type,
@@ -301,11 +301,90 @@ where namespace.nspname in ('public', 'auth')
 union all
 
 select
+  'owner',
+  namespace.nspname || '.' || relation.relname,
+  jsonb_build_object(
+    'relation_kind', relation.relkind,
+    'owner', pg_get_userbyid(relation.relowner)
+  )
+from pg_class as relation
+join pg_namespace as namespace
+  on namespace.oid = relation.relnamespace
+where namespace.nspname = 'public'
+  and relation.relkind in ('r', 'p', 'v', 'm', 'f', 'S')
+
+union all
+
+select
+  'owner',
+  namespace.nspname || '.' || routine_info.proname || '(' ||
+    pg_get_function_identity_arguments(routine_info.oid) || ')',
+  jsonb_build_object(
+    'routine_kind', routine_info.prokind,
+    'owner', pg_get_userbyid(routine_info.proowner)
+  )
+from pg_proc as routine_info
+join pg_namespace as namespace
+  on namespace.oid = routine_info.pronamespace
+where namespace.nspname = 'public'
+
+union all
+
+select
+  'owner',
+  namespace.nspname || '.' || type_info.typname,
+  jsonb_build_object('owner', pg_get_userbyid(type_info.typowner))
+from pg_type as type_info
+join pg_namespace as namespace
+  on namespace.oid = type_info.typnamespace
+where namespace.nspname = 'public'
+  and type_info.typtype in ('d', 'e', 'r', 'm')
+
+union all
+
+select
+  'owner',
+  'schema.' || namespace.nspname,
+  jsonb_build_object('owner', pg_get_userbyid(namespace.nspowner))
+from pg_namespace as namespace
+where namespace.nspname = 'public'
+
+union all
+
+select
+  'extension',
+  extension.extname,
+  jsonb_build_object(
+    'version', extension.extversion,
+    'schema', namespace.nspname,
+    'owner', pg_get_userbyid(extension.extowner)
+  )
+from pg_extension as extension
+left join pg_namespace as namespace
+  on namespace.oid = extension.extnamespace
+
+union all
+
+select
   'migration_history',
   'supabase_migrations.schema_migrations',
   jsonb_build_object(
     'exists',
-    to_regclass('supabase_migrations.schema_migrations') is not null
+    to_regclass('supabase_migrations.schema_migrations') is not null,
+    'columns',
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'name', column_info.column_name,
+          'type', column_info.data_type,
+          'nullable', column_info.is_nullable = 'YES'
+        )
+        order by column_info.ordinal_position
+      )
+      from information_schema.columns as column_info
+      where column_info.table_schema = 'supabase_migrations'
+        and column_info.table_name = 'schema_migrations'
+    ), '[]'::jsonb)
   )
 
 union all
@@ -319,36 +398,67 @@ select
     order by feature.name
   )
 from unnest(array[
-  'school_access_index',
-  'user_encryption_keys',
-  'drive_file_index',
-  'drive_file_access',
-  'drive_file_key_envelopes',
-  'security_audit',
-  'tenant_entitlements',
-  'students',
   'attendance_records',
-  'testimonials',
-  'school_announcements',
-  'chat_conversations',
-  'chat_messages',
-  'chat_read_receipts',
-  'chat_inbox',
-  'chat_contacts',
-  'chat_presence',
   'billing_plans',
-  'personal_entitlements',
-  'payment_orders',
-  'testimonial_submissions',
-  'question_bank',
-  'web_push_subscriptions',
+  'chat_contacts',
+  'chat_conversations',
+  'chat_inbox',
+  'chat_messages',
+  'chat_presence',
   'chat_push_dispatches',
-  'student_account_links',
-  'student_account_link_audit',
-  'online_exams',
-  'online_exam_items',
+  'chat_read_receipts',
+  'classroom_members',
+  'classroom_rubric_versions',
+  'classroom_rubrics',
+  'drive_file_access',
+  'drive_file_index',
+  'drive_file_key_envelopes',
+  'learning_classroom_assignments',
+  'learning_classroom_attendance',
+  'learning_classroom_attendance_sessions',
+  'learning_classroom_homerooms',
+  'learning_classroom_journals',
+  'learning_classroom_materials',
+  'learning_classroom_schedules',
+  'learning_classroom_quiz_questions',
+  'learning_classroom_quiz_submissions',
+  'learning_classroom_quizzes',
+  'learning_classroom_report_card_audit',
+  'learning_classroom_report_cards',
+  'learning_classroom_submissions',
+  'learning_classrooms',
+  'learning_school_report_card_portfolio_audit',
+  'learning_school_report_card_portfolios',
   'online_exam_attempts',
-  'trial_registrations'
+  'online_exam_items',
+  'online_exams',
+  'payment_orders',
+  'personal_entitlements',
+  'platform_audit',
+  'platform_control',
+  'platform_public_config',
+  'private_workspace_records',
+  'profiles',
+  'question_bank',
+  'school_access_index',
+  'school_announcements',
+  'school_letterheads',
+  'security_audit',
+  'student_account_link_audit',
+  'student_account_links',
+  'student_guardian_link_audit',
+  'student_guardian_links',
+  'students',
+  'tenant_entitlements',
+  'tenants',
+  'testimonial_submissions',
+  'testimonials',
+  'trial_registrations',
+  'user_allowlist',
+  'user_encryption_keys',
+  'user_integration_consents',
+  'user_menu_access',
+  'web_push_subscriptions'
 ]) as feature(name)
 
 order by object_type, object_name;

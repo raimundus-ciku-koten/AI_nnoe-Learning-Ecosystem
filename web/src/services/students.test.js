@@ -1,13 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { supabase, queries } = vi.hoisted(() => ({
-  supabase: { from: vi.fn() },
+  supabase: { from: vi.fn(), rpc: vi.fn() },
   queries: [],
 }));
 
 vi.mock('../lib/supabase.ts', () => ({ supabase }));
 
-import { muatSiswa, tambahBanyakSiswa, tambahSiswa, ubahSiswa } from './students.js';
+import {
+  muatGuruPemilikRoster,
+  muatSiswa,
+  tambahBanyakSiswa,
+  tambahSiswa,
+  ubahSiswa,
+} from './students.js';
 
 function queryWith(response) {
   const calls = [];
@@ -46,6 +52,16 @@ beforeEach(() => {
 });
 
 describe('Supabase student service', () => {
+  it('scopes a roster query to the selected tenant when one is provided', async () => {
+    const query = queryWith({ data: [row('12345678-1234-1234-1234-123456789012')], error: null });
+    supabase.from.mockReturnValueOnce(query);
+
+    const students = await muatSiswa('owner-1', 'school-1');
+
+    expect(students).toHaveLength(1);
+    expect(query.eq.mock.calls).toEqual([['owner_id', 'owner-1'], ['tenant_id', 'school-1']]);
+  });
+
   it('loads the owner roster and maps Supabase fields to the UI model', async () => {
     supabase.from.mockImplementationOnce(() => queryWith({ data: [row('12345678-1234-1234-1234-123456789012')], error: null }));
 
@@ -58,6 +74,27 @@ describe('Supabase student service', () => {
       kodeUnik: 'ALE-7A-123456-0000',
       urlScan: 'https://ainnoe.app/#/scan/ALE-7A-123456-0000',
     });
+  });
+
+  it('loads only active teacher candidates through the tenant-scoped RPC', async () => {
+    supabase.rpc.mockResolvedValueOnce({
+      data: [{ id: 'teacher-1', nama: 'Ayu', role: 'guru' }],
+      error: null,
+    });
+
+    await expect(muatGuruPemilikRoster('school-1')).resolves.toEqual([
+      { id: 'teacher-1', nama: 'Ayu', role: 'guru' },
+    ]);
+    expect(supabase.rpc).toHaveBeenCalledWith('student_roster_teacher_candidates', {
+      p_tenant_id: 'school-1',
+    });
+  });
+
+  it('rejects invalid teacher candidates and reports RPC errors', async () => {
+    supabase.rpc.mockResolvedValueOnce({ data: [{ id: 'user-1', nama: 'Siswa', role: 'siswa' }], error: null });
+    await expect(muatGuruPemilikRoster('school-1')).rejects.toThrow('daftar guru pemilik roster yang tidak valid');
+    supabase.rpc.mockResolvedValueOnce({ data: null, error: new Error('permission denied') });
+    await expect(muatGuruPemilikRoster('school-1')).rejects.toThrow('permission denied');
   });
 
   it('inserts a student using the active tenant and returns the database-generated ID', async () => {

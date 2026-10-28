@@ -73,11 +73,32 @@ test('rejects mismatched subjects, unsupported phases, and empty outcome section
     mapel: 'Matematika',
     fase: 'G',
     fileName: 'Matematika.pdf',
-  }), /Fase CP harus A sampai F/);
+  }), /Fase CP harus Fondasi atau A sampai F/);
   assert.throws(() => parseCapaianPembelajaranText({
     text: 'CAPAIAN PEMBELAJARAN MATEMATIKA\nFase A (Umumnya untuk Kelas I)',
     mapel: 'Matematika',
     fase: 'A',
     fileName: 'Matematika.pdf',
   }), /tidak ditemukan|kosong/);
+});
+
+test('imports the PAUD/TK Fase Fondasi outcome without relabeling it as A-F', () => {
+  const draft = parseCapaianPembelajaranText({
+    text: [
+      'CAPAIAN PEMBELAJARAN PAUD',
+      'Fase Fondasi (Umumnya untuk usia 5–6 tahun)',
+      'Pada akhir Fase Fondasi, anak menunjukkan kemampuan sebagai berikut.',
+      '1. Nilai Agama dan Budi Pekerti',
+      'Mengenal kebiasaan baik melalui pengalaman sehari-hari.',
+    ].join('\n'),
+    mapel: 'PAUD',
+    fase: 'Fondasi',
+    fileName: 'PAUD.pdf',
+  });
+
+  assert.equal(draft.fase, 'Fondasi');
+  assert.deepEqual(draft.cp, [{
+    elemen: 'Nilai Agama dan Budi Pekerti',
+    cp: 'Mengenal kebiasaan baik melalui pengalaman sehari-hari.',
+  }]);
 });

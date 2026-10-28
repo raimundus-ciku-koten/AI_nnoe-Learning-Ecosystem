@@ -14,6 +14,35 @@
   font-size: clamp(1.35rem, 3vw, 1.8rem);
 }
 
+.ale-exam-card h1 {
+  margin: 0 0 .6rem;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+}
+
+.school-assessment-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: .75rem;
+  margin: 1.25rem 0;
+}
+
+.school-assessment-summary div {
+  padding: .85rem 1rem;
+  border: 1px solid var(--border, #dce3ed);
+  border-radius: 12px;
+}
+
+.school-assessment-summary dt {
+  color: var(--text-secondary, #526078);
+  font-size: .9rem;
+}
+
+.school-assessment-summary dd {
+  margin: .3rem 0 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
 .ale-exam-kicker {
   margin: 0 0 .35rem;
   color: #3159a8;
@@ -52,6 +81,17 @@
   padding: 1rem;
   border: 1px solid var(--border, #dce3ed);
   border-radius: 12px;
+}
+
+.ale-exam-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.ale-exam-actions button:last-child {
+  color: #7d2525;
+  background: #fff0f0;
 }
 
 .ale-exam-list li div,

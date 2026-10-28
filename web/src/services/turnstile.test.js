@@ -10,6 +10,7 @@ test('Turnstile returns only verified tokens and resets or removes its widget', 
     render(container, options) {
       assert.equal(container.id, 'login-captcha');
       assert.equal(options.sitekey, 'public-site-key');
+      assert.equal(options.appearance, 'always');
       callbacks = options;
       return 'widget-1';
     },
@@ -22,11 +23,20 @@ test('Turnstile returns only verified tokens and resets or removes its widget', 
     assert.equal(widget.token(), '');
     callbacks.callback('verified-token');
     assert.equal(widget.token(), 'verified-token');
+    assert.equal(widget.errorCode(), '');
+    callbacks['error-callback']('110200');
+    assert.equal(widget.token(), '');
+    assert.equal(widget.errorCode(), '110200');
+    callbacks['error-callback']('unsafe-code');
+    assert.equal(widget.errorCode(), '');
+    callbacks['error-callback']('110200');
     callbacks['expired-callback']();
     assert.equal(widget.token(), '');
+    assert.equal(widget.errorCode(), '');
     callbacks.callback('another-token');
     widget.reset();
     assert.equal(widget.token(), '');
+    assert.equal(widget.errorCode(), '');
     widget.remove();
     assert.deepEqual(calls, [['reset', 'widget-1'], ['remove', 'widget-1']]);
   } finally {
