@@ -4,6 +4,7 @@ import { access, link, mkdtemp, open, rm, stat } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
+import { pathToFileURL } from 'node:url';
 
 const MAGIC = Buffer.from('ALEBKP01');
 const IV_LENGTH = 12;
@@ -37,23 +38,30 @@ async function writeAtomically(outputPath, readable) {
 }
 
 export async function encryptBackup(inputPath, outputPath, encodedKey) {
-  const key = readKey(encodedKey);
   const input = resolve(inputPath);
   const output = resolve(outputPath);
   if (input === output) throw new Error('Berkas sumber dan hasil harus berbeda.');
   const { size } = await stat(input);
   if (size < 1) throw new Error('Berkas dump database kosong.');
-  await access(dirname(output));
+  await encryptBackupStream(createReadStream(input), output, encodedKey);
+}
 
+export async function encryptBackupStream(readable, outputPath, encodedKey) {
+  const key = readKey(encodedKey);
+  const output = resolve(outputPath);
+  await access(dirname(output));
   const iv = randomBytes(IV_LENGTH);
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const header = Buffer.concat([MAGIC, Buffer.from([VERSION]), iv]);
+  let inputSize = 0;
   const encrypted = Readable.from((async function* () {
     yield header;
-    for await (const chunk of createReadStream(input)) {
+    for await (const chunk of readable) {
+      inputSize += chunk.length;
       const encryptedChunk = cipher.update(chunk);
       if (encryptedChunk.length > 0) yield encryptedChunk;
     }
+    if (inputSize === 0) throw new Error('Berkas dump database kosong.');
     const finalChunk = cipher.final();
     if (finalChunk.length > 0) yield finalChunk;
     yield cipher.getAuthTag();
@@ -61,11 +69,9 @@ export async function encryptBackup(inputPath, outputPath, encodedKey) {
   await writeAtomically(output, encrypted);
 }
 
-export async function decryptBackup(inputPath, outputPath, encodedKey) {
+export async function* decryptBackupStream(inputPath, encodedKey) {
   const key = readKey(encodedKey);
   const input = resolve(inputPath);
-  const output = resolve(outputPath);
-  if (input === output) throw new Error('Berkas sumber dan hasil harus berbeda.');
   const { size } = await stat(input);
   if (size <= HEADER_LENGTH + TAG_LENGTH) throw new Error('Berkas cadangan terenkripsi tidak lengkap.');
 
@@ -88,31 +94,47 @@ export async function decryptBackup(inputPath, outputPath, encodedKey) {
 
   const decipher = createDecipheriv('aes-256-gcm', key, header.subarray(MAGIC.length + 1));
   decipher.setAuthTag(tag);
-  const encrypted = Readable.from((async function* () {
-    for await (const chunk of createReadStream(input, {
-      start: HEADER_LENGTH,
-      end: size - TAG_LENGTH - 1,
-    })) {
-      const decryptedChunk = decipher.update(chunk);
-      if (decryptedChunk.length > 0) yield decryptedChunk;
-    }
-    const finalChunk = decipher.final();
-    if (finalChunk.length > 0) yield finalChunk;
-  }()));
-  await writeAtomically(output, encrypted);
+  for await (const chunk of createReadStream(input, {
+    start: HEADER_LENGTH,
+    end: size - TAG_LENGTH - 1,
+  })) {
+    const decryptedChunk = decipher.update(chunk);
+    if (decryptedChunk.length > 0) yield decryptedChunk;
+  }
+  const finalChunk = decipher.final();
+  if (finalChunk.length > 0) yield finalChunk;
+}
+
+export async function decryptBackup(inputPath, outputPath, encodedKey) {
+  const input = resolve(inputPath);
+  const output = resolve(outputPath);
+  if (input === output) throw new Error('Berkas sumber dan hasil harus berbeda.');
+  await writeAtomically(output, Readable.from(decryptBackupStream(input, encodedKey)));
 }
 
 async function main(args) {
   const [operation, input, output] = args;
+  if (operation === 'encrypt-stdin' && input && !output && args.length === 2) {
+    await encryptBackupStream(process.stdin, input);
+    console.error(`Operasi encrypt-stdin berhasil: ${basename(resolve(input))}`);
+    return;
+  }
+  if (operation === 'decrypt-stdout' && input && !output && args.length === 2) {
+    await pipeline(Readable.from(decryptBackupStream(input)), process.stdout);
+    return;
+  }
   if (!['encrypt', 'decrypt'].includes(operation) || !input || !output || args.length !== 3) {
-    throw new Error('Pemakaian: node scripts/encryptedBackup.mjs <encrypt|decrypt> <sumber> <hasil>');
+    throw new Error(
+      'Pemakaian: node scripts/encryptedBackup.mjs <encrypt|decrypt> <sumber> <hasil> | ' +
+      '<encrypt-stdin> <hasil> | <decrypt-stdout> <sumber>',
+    );
   }
   if (operation === 'encrypt') await encryptBackup(input, output);
   else await decryptBackup(input, output);
   console.log(`Operasi ${operation} berhasil: ${basename(resolve(output))}`);
 }
 
-if (import.meta.url === new URL(process.argv[1], 'file:').href) {
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   main(process.argv.slice(2)).catch((error) => {
     console.error(`[encrypted-backup] ${error.message}`);
     process.exitCode = 1;

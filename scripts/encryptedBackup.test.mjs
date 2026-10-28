@@ -1,10 +1,18 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { Readable } from 'node:stream';
 import { test } from 'node:test';
-import { decryptBackup, encryptBackup } from './encryptedBackup.mjs';
+import { fileURLToPath } from 'node:url';
+import {
+  decryptBackup,
+  decryptBackupStream,
+  encryptBackup,
+  encryptBackupStream,
+} from './encryptedBackup.mjs';
 
 const temporary = () => mkdtemp(resolve(tmpdir(), 'ale-backup-test-'));
 
@@ -22,6 +30,67 @@ test('encrypted backup round-trips arbitrary dump bytes', async () => {
     assert.notDeepEqual(await readFile(encrypted), original);
     await decryptBackup(encrypted, restored, key);
     assert.deepEqual(await readFile(restored), original);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('encrypted backup streams round-trip bytes without a plaintext intermediate file', async () => {
+  const directory = await temporary();
+  const key = randomBytes(32).toString('base64');
+  const original = randomBytes(1024 * 64 + 3);
+  const encrypted = resolve(directory, 'dump.aeb');
+
+  try {
+    await encryptBackupStream(Readable.from([original]), encrypted, key);
+    const chunks = [];
+    for await (const chunk of decryptBackupStream(encrypted, key)) chunks.push(chunk);
+    const restored = Buffer.concat(chunks);
+    assert.deepEqual(restored, original);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('streaming encryption rejects empty input without leaving an artifact', async () => {
+  const directory = await temporary();
+  const encrypted = resolve(directory, 'empty.aeb');
+
+  try {
+    await assert.rejects(
+      encryptBackupStream(Readable.from([]), encrypted, randomBytes(32).toString('base64')),
+      /kosong/,
+    );
+    await assert.rejects(readFile(encrypted), { code: 'ENOENT' });
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('streaming backup CLI preserves binary stdin/stdout', async () => {
+  const directory = await temporary();
+  const key = randomBytes(32).toString('base64');
+  const original = randomBytes(1024 * 32 + 7);
+  const encrypted = resolve(directory, 'stream.aeb');
+  const script = fileURLToPath(new URL('./encryptedBackup.mjs', import.meta.url));
+  const env = { ...process.env, BACKUP_ENCRYPTION_KEY: key };
+
+  try {
+    const encrypt = spawnSync(
+      process.execPath,
+      [script, 'encrypt-stdin', encrypted],
+      { input: original, env, encoding: null },
+    );
+    assert.equal(encrypt.status, 0, encrypt.stderr.toString());
+
+    const decrypt = spawnSync(
+      process.execPath,
+      [script, 'decrypt-stdout', encrypted],
+      { env, encoding: null, maxBuffer: original.length * 2 },
+    );
+    assert.equal(decrypt.error, undefined, decrypt.error?.message);
+    assert.equal(decrypt.status, 0, decrypt.stderr.toString());
+    assert.deepEqual(decrypt.stdout, original);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -163,4 +232,25 @@ test('limits encrypted database backups to manually triggered Staging artifacts'
   assert.match(upload, /if-no-files-found: error/);
   assert.doesNotMatch(upload, /SUPABASE_DB_URL:/);
   assert.doesNotMatch(upload, /BACKUP_ENCRYPTION_KEY:/);
+});
+
+test('local Production backup is target-bound and does not persist plaintext dumps', async () => {
+  const script = await readFile(
+    new URL('./backupProductionLocal.ps1', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(script, /jvcrmzmuxgyuetkjqady/);
+  assert.match(script, /db\.\$projectRef\.supabase\.co/);
+  assert.match(script, /postgres\.\$projectRef/);
+  assert.match(script, /'encrypt-stdin'/);
+  assert.match(script, /'decrypt-stdout'/);
+  assert.match(script, /--tmpfs/);
+  assert.match(script, /\/var\/lib\/postgresql\/data:rw,noexec,nosuid/);
+  assert.match(script, /PGPASSFILE=\/run\/ale-backup\/pgpass\.conf/);
+  assert.doesNotMatch(script, /--mount|--publish/);
+  assert.match(script, /'exec', '--interactive'/);
+  assert.match(script, /--no-password/);
+  assert.doesNotMatch(script, /--file/);
+  assert.match(script, /Set-PrivateAcl/);
 });
