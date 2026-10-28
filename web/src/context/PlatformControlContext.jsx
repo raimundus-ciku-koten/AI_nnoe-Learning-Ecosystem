@@ -12,7 +12,8 @@ const DEFAULT_STATE = Object.freeze({
 const PlatformControlContext = createContext(DEFAULT_STATE);
 
 export function PlatformControlProvider({ children }) {
-  const { user, role } = useAuth();
+  const { user, role, activeRole } = useAuth();
+  const peranAktif = activeRole || role;
   const [state, setState] = useState(DEFAULT_STATE);
 
   useEffect(() => {
@@ -20,7 +21,7 @@ export function PlatformControlProvider({ children }) {
       setState(DEFAULT_STATE);
       return undefined;
     }
-    if (role === 'demo') {
+    if (peranAktif === 'demo') {
       setState({
         ...DEFAULT_STATE,
         features: { aiAssistant: false, aiGeneration: false },
@@ -67,7 +68,7 @@ export function PlatformControlProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [user?.uid, role]);
+  }, [user?.uid, peranAktif]);
 
   const value = useMemo(() => state, [state]);
   return (
@@ -82,10 +83,11 @@ export function usePlatformControls() {
 }
 
 export function MaintenanceGuard({ children }) {
-  const { role } = useAuth();
+  const { role, activeRole } = useAuth();
+  const peranAktif = activeRole || role;
   const { maintenance, error } = usePlatformControls();
 
-  if (maintenance && role !== 'superadmin') {
+  if (maintenance && peranAktif !== 'superadmin') {
     return (
       <main className="platform-maintenance" role="status">
         <section>

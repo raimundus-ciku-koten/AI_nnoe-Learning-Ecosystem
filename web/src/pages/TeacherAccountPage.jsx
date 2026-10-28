@@ -12,7 +12,8 @@ const NAMA_PERAN = {
 };
 
 export default function TeacherAccountPage() {
-  const { user, profile, role, updateProfil, resetPassword } = useAuth();
+  const { user, profile, role, activeRole, updateProfil, resetPassword } = useAuth();
+  const peranAktif = activeRole || role;
   const [nama, setNama] = useState(user?.displayName || profile?.nama || '');
   const [saving, setSaving] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
@@ -73,7 +74,7 @@ export default function TeacherAccountPage() {
           <h1>Akun &amp; Keamanan</h1>
           <p>Kelola nama profil dan akses pemulihan akun Anda.</p>
         </div>
-        <span className="teacher-workspace-status">{NAMA_PERAN[role] || 'Guru'}</span>
+        <span className="teacher-workspace-status">{NAMA_PERAN[peranAktif] || 'Guru'}</span>
       </header>
 
       <section className="ale-kartu teacher-account-card" aria-labelledby="teacher-account-title">

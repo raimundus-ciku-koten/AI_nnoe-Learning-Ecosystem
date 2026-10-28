@@ -151,7 +151,11 @@ test('admin sekolah dan superadmin mendapat menu sesuai ruang lingkupnya', () =>
   assert.equal(cariMenu('/siswa/nilai', '', 'siswa')?.item.label, 'Nilai Saya');
   assert.equal(cariMenu('/admin/perencanaan/paket', '', 'admin_sekolah')?.item.label, 'Paket Guru');
   assert.equal(cariMenu('/platform/tenant/sekolah', '', 'superadmin')?.grup.id, 'platform-tenant');
+  assert.equal(cariMenu('/platform/tenant/tambah', '', 'superadmin')?.item.label, 'Tambah Tenant');
+  assert.equal(cariMenu('/platform/pengguna/superadmin', '', 'superadmin')?.item.label, 'Tambah Super Admin');
   assert.equal(cariMenu('/platform/tenant/sekolah', '', 'admin_sekolah'), null);
+  assert.equal(cariMenu('/platform/tenant/tambah', '', 'guru'), null);
+  assert.equal(cariMenu('/platform/pengguna/superadmin', '', 'guru'), null);
   assert.equal(cariMenu('/admin/pengguna/guru', '', 'superadmin'), null);
   assert.equal(cariMenu('/chat', '', 'superadmin')?.grup.id, 'platform-chat');
   assert.equal(cariMenu('/chat/kontak', '', 'siswa')?.item.label, 'Kontak');

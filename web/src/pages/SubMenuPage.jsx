@@ -156,8 +156,9 @@ const ALUR = {
 
 export default function SubMenuPage() {
   const { pathname, search } = useLocation();
-  const { role } = useAuth();
-  const menu = cariMenu(pathname, search, role);
+  const { role, activeRole } = useAuth();
+  const peranAktif = activeRole || role;
+  const menu = cariMenu(pathname, search, peranAktif);
 
   if (!menu) {
     return (
@@ -171,19 +172,19 @@ export default function SubMenuPage() {
   }
 
   const { grup, item } = menu;
-  if (role === 'guru' && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
-  if (role === 'guru') return <TeacherWorkspacePage grup={grup} item={item} />;
+  if (peranAktif === 'guru' && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
+  if (peranAktif === 'guru') return <TeacherWorkspacePage grup={grup} item={item} />;
 
   const alur = ALUR[grup.id] || {
     ringkasan: 'Pilih aktivitas yang dibutuhkan dan lanjutkan ke modul terkait.',
     langkah: ['Pilih konteks kerja', 'Tinjau informasi yang tersedia', 'Lanjutkan ke aktivitas terkait'],
   };
   const terkait = grup.item.filter((sub) => sub !== item && sub.path);
-  const statusModul = role === 'siswa'
+  const statusModul = peranAktif === 'siswa'
     ? 'Data jadwal, materi, tugas, ujian, atau nilai hanya muncul setelah sekolah menautkan data akademik ke akun siswa. Halaman ini saat ini hanya panduan dan tidak mengubah data.'
-    : ['ortu', 'orang_tua'].includes(role)
+    : ['ortu', 'orang_tua'].includes(peranAktif)
       ? 'Informasi anak hanya tersedia setelah sekolah menautkan akun orang tua secara resmi. Halaman ini saat ini hanya panduan dan tidak menampilkan data anak yang belum ditautkan.'
-      : role === 'operator'
+      : peranAktif === 'operator'
         ? 'Akses data operasional tetap dibatasi oleh peran dan tenant sekolah. Halaman ini hanya panduan dan tidak mengubah data.'
         : `Tautan dan halaman menu tersedia. Fitur data khusus untuk modul ${item.label} belum diaktifkan, sehingga halaman ini tidak mengubah data. Gunakan modul terkait yang sudah tersedia, atau hubungi administrator untuk informasi peluncuran.`;
 

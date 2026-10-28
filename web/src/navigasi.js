@@ -287,6 +287,7 @@ export const MENU_SUPERADMIN = [
   ]),
   grup('platform-tenant', 'Manajemen Tenant', 'database', [
     tautan('Daftar Sekolah', '/platform/tenant/sekolah', 'users'),
+    tautan('Tambah Tenant', '/platform/tenant/tambah', 'users'),
     tautan('Langganan', '/platform/tenant/langganan', 'file'),
     tautan('Paket', '/platform/tenant/paket', 'book'),
   ]),
@@ -297,6 +298,7 @@ export const MENU_SUPERADMIN = [
   ]),
   grup('platform-pengguna', 'Manajemen Pengguna Global', 'users', [
     tautan('Akun Pengguna', '/platform/pengguna/admin-sekolah', 'users'),
+    tautan('Tambah Super Admin', '/platform/pengguna/superadmin', 'users'),
     tautan('Pengguna Supabase', '/platform/supabase-users', 'users'),
     tautan('Peran Global', '/platform/pengguna/peran', 'settings'),
   ]),

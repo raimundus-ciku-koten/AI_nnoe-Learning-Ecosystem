@@ -6,6 +6,7 @@ import { GRUP_MENU, MENU_SUPERADMIN } from '../navigasi.js';
 
 const auth = vi.hoisted(() => ({
   role: 'superadmin',
+  activeRole: undefined,
   user: { uid: 'guru-test' },
   tenantId: 'sekolah-test',
   profile: { nama: 'Guru Tes' },
@@ -24,7 +25,7 @@ vi.mock('../context/AuthContext.jsx', () => ({
 vi.mock('../context/PlatformControlContext.jsx', () => ({
   usePlatformControls: () => platformControls,
   MaintenanceGuard: ({ children }) => {
-    if (platformControls.maintenance && auth.role !== 'superadmin') {
+    if (platformControls.maintenance && (auth.activeRole || auth.role) !== 'superadmin') {
       return React.createElement('main', { role: 'status' }, 'Platform sedang dalam pemeliharaan');
     }
     return children;
@@ -63,6 +64,7 @@ function renderOperations(path) {
 describe('submenu platform superadmin', () => {
   beforeEach(() => {
     auth.role = 'superadmin';
+    auth.activeRole = undefined;
   });
 
   it('menjelaskan batas data untuk siswa dan orang tua', () => {
@@ -115,6 +117,16 @@ describe('submenu platform superadmin', () => {
       expect(html).toContain('Kirim tautan reset kata sandi');
       expect(html).toContain('Peran dan akses sekolah dikelola');
     });
+
+    it('mengikuti peran aktif saat akun berpindah dari peran utama admin ke guru', () => {
+      auth.role = 'admin_sekolah';
+      auth.activeRole = 'guru';
+      const html = renderSubmenu('/pelaksanaan/jurnal');
+
+      expect(html).toContain('<h1>Jurnal Mengajar Harian</h1>');
+      expect(html).toContain('Buat catatan kerja');
+      expect(html).not.toContain('Halaman tidak ditemukan');
+    });
   });
 
   const itemsPlatform = MENU_SUPERADMIN
@@ -122,7 +134,9 @@ describe('submenu platform superadmin', () => {
     .filter((item) => item.path.startsWith('/platform/')
       && ![
         '/platform/tenant/sekolah',
+        '/platform/tenant/tambah',
         '/platform/pengguna/admin-sekolah',
+        '/platform/pengguna/superadmin',
         '/platform/supabase-users',
       ].includes(item.path));
 
@@ -207,11 +221,16 @@ describe('submenu platform superadmin', () => {
     );
     platformControls.maintenance = true;
     auth.role = 'guru';
+    auth.activeRole = undefined;
     expect(render()).toContain('Platform sedang dalam pemeliharaan');
     expect(render()).not.toContain('Konten aplikasi');
 
     auth.role = 'superadmin';
     expect(render()).toContain('Konten aplikasi');
+    auth.role = 'guru';
+    auth.activeRole = 'superadmin';
+    expect(render()).toContain('Konten aplikasi');
+    auth.activeRole = undefined;
     platformControls.maintenance = false;
   });
 

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase.ts';
+import { createPlatformTenant } from '../services/platformAdminApi.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import '../styles/platform-tenants.css';
 
@@ -11,19 +12,24 @@ function statusTenant(active) {
     : { label: 'Nonaktif', className: 'is-inactive' };
 }
 
-export default function PlatformTenantsPage() {
-  const { role } = useAuth();
+export default function PlatformTenantsPage({ mode = 'list' }) {
+  const { role, activeRole } = useAuth();
+  const peranAktif = activeRole || role;
   const [tenants, setTenants] = useState([]);
+  const [tenantName, setTenantName] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState('');
+  const [createError, setCreateError] = useState('');
+  const [notice, setNotice] = useState('');
   const cursor = useRef(null);
   const busy = useRef(false);
 
   const muat = useCallback(async (berikutnya = false) => {
-    if (role !== 'superadmin' || busy.current) return;
+    if (peranAktif !== 'superadmin' || busy.current) return;
     busy.current = true;
     setLoading(!berikutnya);
     setLoadingMore(berikutnya);
@@ -58,11 +64,11 @@ export default function PlatformTenantsPage() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [role]);
+  }, [peranAktif]);
 
   useEffect(() => {
-    if (role === 'superadmin') void muat();
-  }, [muat, role]);
+    if (peranAktif === 'superadmin') void muat();
+  }, [muat, peranAktif]);
 
   const terlihat = useMemo(() => {
     const kata = search.trim().toLocaleLowerCase('id');
@@ -72,7 +78,28 @@ export default function PlatformTenantsPage() {
         String(nilai || '').toLocaleLowerCase('id').includes(kata)));
   }, [search, tenants]);
 
-  if (role !== 'superadmin') {
+  async function tambahTenant(event) {
+    event.preventDefault();
+    if (creating) return;
+    setCreating(true);
+    setCreateError('');
+    setNotice('');
+    try {
+      const tenant = await createPlatformTenant(tenantName);
+      setTenantName('');
+      setNotice(`Tenant berhasil dibuat. ID tenant: ${tenant.id}`);
+      await muat();
+    } catch (createError) {
+      console.error('[platform-tenants] Gagal membuat tenant:', createError);
+      setCreateError(createError?.code === '42501'
+        ? 'Pembuatan tenant ditolak. Pastikan sesi superadmin aktif dan migrasi manajemen tenant sudah diterapkan.'
+        : 'Tenant tidak dapat dibuat. Periksa input dan koneksi, lalu coba lagi.');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  if (peranAktif !== 'superadmin') {
     return (
       <main className="platform-tenants">
         <section className="platform-tenants-card" role="alert">
@@ -87,9 +114,33 @@ export default function PlatformTenantsPage() {
     <main className="platform-tenants">
       <header className="platform-tenants-heading">
         <p className="platform-tenants-kicker">Manajemen tenant · platform</p>
-        <h1>Daftar sekolah</h1>
-        <p>Daftar tenant Supabase ditampilkan secara baca-saja. Status langganan dan perubahan tenant dikelola melalui alur backend berizin.</p>
+        <h1>{mode === 'create' ? 'Tambah tenant' : 'Daftar sekolah'}</h1>
+        <p>Buat tenant sekolah melalui fungsi database yang memeriksa hak superadmin dan mencatat perubahan pada audit platform.</p>
       </header>
+
+      <section className="platform-tenants-card" aria-labelledby="platform-tenant-create-title">
+        <div>
+          <h2 id="platform-tenant-create-title">Tenant baru</h2>
+          <p>ID tenant dibuat otomatis dan digunakan saat menghubungkan pengguna ke sekolah.</p>
+        </div>
+        <form className="platform-tenants-create-form" onSubmit={tambahTenant}>
+          <label className="platform-tenants-search">
+            Nama sekolah / tenant
+            <input
+              required minLength={2} maxLength={160}
+              value={tenantName}
+              onChange={(event) => setTenantName(event.target.value)}
+              placeholder="Contoh: SMP Negeri 1"
+            />
+          </label>
+          <button className="platform-tenants-button" type="submit" disabled={creating}>
+            {creating ? 'Membuat tenant…' : 'Tambahkan tenant'}
+          </button>
+        </form>
+        {createError && <p className="platform-tenants-error" role="alert">{createError}</p>}
+        {notice && <p className="platform-tenants-notice" role="status">{notice}</p>}
+        {mode === 'create' && <a href="#/platform/tenant/sekolah">Kembali ke daftar tenant</a>}
+      </section>
 
       <section className="platform-tenants-card" aria-labelledby="platform-tenants-title">
         <div className="platform-tenants-toolbar">

@@ -8,6 +8,7 @@ Current release gate update ? 2026-10-28
 
 - Production deployment for `main` commit `4aff47b` is Ready. This confirms deployment health, not readiness of every feature for public release.
 - The latest Staging inventory found no migration ledger, 29 of 30 expected feature relations missing, and all audited chat relations missing. Structural RLS checks do not prove tenant isolation.
+- Super Admin tenant creation, MFA-stepped Super Admin provisioning, and active-role navigation updates are implemented locally with migration `20261028000100_platform_tenant_and_superadmin_provisioning.sql`; they are not deployed. The current Staging schema has only eight public tables and no migration ledger, so do not apply this migration in isolation or promote the UI to Production.
 - A manual, main-only Staging migration rehearsal is being added. It takes a fresh Staging dump, restores it only to a disposable Supabase Postgres service, then replays in-scope migrations there. It never writes to hosted Staging or Production, does not create/stamp a migration ledger, and withholds database error output from Actions logs.
 - The rehearsal excludes Midtrans/billing catalog and public demo/trial migrations. Public signup, payment checkout, and ads remain out of release scope and must stay disabled.
 - A successful rehearsal is not authorization to migrate hosted databases and does not establish migration provenance, semantic RLS safety, or role UAT. Keep Production schema changes blocked until those gates, a verified recovery point, and authorized UAT are complete.
