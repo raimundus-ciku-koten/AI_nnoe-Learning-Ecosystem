@@ -228,6 +228,9 @@ function RouteWrapper() {
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
         <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanIntegrasiAI /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
+        <Route path="/asesmen/diagnostik" element={<PrivateShell><HalamanUjianOnline assessmentType="diagnostik" /></PrivateShell>} />
+        <Route path="/asesmen/formatif" element={<PrivateShell><HalamanUjianOnline assessmentType="formatif" /></PrivateShell>} />
+        <Route path="/asesmen/sumatif" element={<PrivateShell><HalamanUjianOnline assessmentType="sumatif" /></PrivateShell>} />
         <Route path="/asesmen/generator-ai" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/ujian" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />

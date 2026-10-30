@@ -41,6 +41,7 @@ import QuestionBankPage from './QuestionBankPage.jsx';
 import PlanningCoverPage from './PlanningCoverPage.jsx';
 import AdminAssessmentPage from './AdminAssessmentPage.jsx';
 import AdminSchoolUnitsPage from './AdminSchoolUnitsPage.jsx';
+import OnlineAssessmentPage from './OnlineAssessmentPage.jsx';
 import PlatformTenantsPage from './PlatformTenantsPage.jsx';
 import PlatformUsersPage from './PlatformUsersPage.jsx';
 import PlatformOperationsPage, { aktivitasAudit, rincianAudit } from './PlatformOperationsPage.jsx';
@@ -398,6 +399,36 @@ describe('generator soal AI', () => {
     expect(html).toContain('<h1>Generator Soal AI</h1>');
     expect(html).toContain('Buat draf dengan AI');
     expect(html).toContain('Simpan soal');
+  });
+});
+
+describe('mode asesmen guru', () => {
+  it.each([
+    ['diagnostik', 'Asesmen Diagnostik'],
+    ['formatif', 'Asesmen Formatif'],
+    ['sumatif', 'Asesmen Sumatif'],
+  ])('membuka builder %s melalui mesin ujian yang sama', (assessmentType, label) => {
+    auth.role = 'guru';
+    auth.activeRole = null;
+    auth.tenantId = 'sekolah-test';
+    const html = renderToStaticMarkup(
+      React.createElement(OnlineAssessmentPage, { assessmentType }),
+    );
+
+    expect(html).toContain(`<h2 id="exam-create-title">Jadwalkan ${label}</h2>`);
+    expect(html).toContain('Pilih soal');
+    expect(html).toContain('Kunci jawaban hanya digunakan di server');
+  });
+
+  it('menggunakan peran guru aktif spesialis saat peran utama admin', () => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = 'guru_bk';
+    const html = renderToStaticMarkup(
+      React.createElement(OnlineAssessmentPage, { assessmentType: 'formatif' }),
+    );
+
+    expect(html).toContain('Jadwalkan Asesmen Formatif');
+    expect(html).not.toContain('Modul ini tersedia untuk akun guru dan siswa aktif');
   });
 });
 

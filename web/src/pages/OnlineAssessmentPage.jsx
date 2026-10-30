@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { adalahPeranGuru } from '../navigasi.js';
 import { buatSpreadsheetDenganData } from '../services/googleWorkspace.js';
 import { hubungkanGoogleSheetsUntukPengguna } from '../services/googleWorkspaceAuth.js';
 import {
@@ -21,6 +22,13 @@ import {
   simpanDraftUjian,
 } from '../services/onlineAssessments.js';
 import '../styles/online-assessments.css';
+
+const ASSESSMENT_TYPES = {
+  online: 'Ujian Online',
+  diagnostik: 'Asesmen Diagnostik',
+  formatif: 'Asesmen Formatif',
+  sumatif: 'Asesmen Sumatif',
+};
 
 function formatWaktu(value) {
   return new Date(value).toLocaleString('id-ID', {
@@ -321,7 +329,7 @@ function StudentAssessments({ userId }) {
   );
 }
 
-function TeacherAssessments({ tenantId, userId, user }) {
+function TeacherAssessments({ tenantId, userId, user, assessmentType }) {
   const [questions, setQuestions] = useState([]);
   const [exams, setExams] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -338,6 +346,7 @@ function TeacherAssessments({ tenantId, userId, user }) {
   const [notice, setNotice] = useState('');
   const [exportExamId, setExportExamId] = useState('all');
   const [spreadsheetUrl, setSpreadsheetUrl] = useState('');
+  const assessmentLabel = ASSESSMENT_TYPES[assessmentType] || ASSESSMENT_TYPES.online;
 
   const refreshTeacherData = async () => {
     const [examRows, essayRows, resultRows] = await Promise.all([
@@ -383,7 +392,7 @@ function TeacherAssessments({ tenantId, userId, user }) {
     setNotice('');
     try {
       const examId = await buatUjianOnline({
-        title,
+        title: assessmentType === 'online' ? title : `${assessmentLabel}: ${title}`.slice(0, 160),
         kelas,
         startsAt: new Date(startsAt).toISOString(),
         endsAt: new Date(endsAt).toISOString(),
@@ -466,7 +475,7 @@ function TeacherAssessments({ tenantId, userId, user }) {
   return (
     <section className="ale-exam-card" aria-labelledby="exam-create-title">
       <p className="ale-exam-kicker">Asesmen dan penilaian</p>
-      <h2 id="exam-create-title">Jadwalkan Ujian Online</h2>
+      <h2 id="exam-create-title">Jadwalkan {assessmentLabel}</h2>
       <p className="ale-exam-intro">Soal disalin sebagai snapshot saat ujian dibuat. Kunci jawaban hanya digunakan di server untuk penilaian.</p>
       {!questions.length && !error && <p>Bank soal milik Anda masih kosong.</p>}
       <form className="ale-exam-form" onSubmit={createExam}>
@@ -640,11 +649,14 @@ function TeacherAssessments({ tenantId, userId, user }) {
   );
 }
 
-export default function OnlineAssessmentPage() {
-  const { role, tenantId, user } = useAuth();
+export default function OnlineAssessmentPage({ assessmentType = 'online' }) {
+  const { role, activeRole, tenantId, user } = useAuth();
+  const roleAktif = activeRole || role;
 
-  if (role === 'siswa') return <StudentAssessments userId={user.uid} />;
-  if (role === 'guru') return <TeacherAssessments tenantId={tenantId} userId={user.uid} user={user} />;
+  if (roleAktif === 'siswa') return <StudentAssessments userId={user.uid} />;
+  if (adalahPeranGuru(roleAktif)) {
+    return <TeacherAssessments tenantId={tenantId} userId={user.uid} user={user} assessmentType={assessmentType} />;
+  }
   return (
     <section className="ale-exam-card">
       <h2>Ujian Online</h2>
