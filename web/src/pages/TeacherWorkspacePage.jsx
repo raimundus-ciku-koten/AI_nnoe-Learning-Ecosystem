@@ -2,7 +2,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
 import { adalahPeranGuru } from '../navigasi.js';
-import { catatanKeCsv } from '../services/teacherWorkspace.js';
+import {
+  catatanKeCsv,
+  kosongkanRefleksi,
+  susunIsiRefleksi,
+  tampilkanIsiRefleksi,
+  uraikanIsiRefleksi,
+} from '../services/teacherWorkspace.js';
 import {
   hapusCatatanGuruDrive, muatCatatanGuruDrive, tambahCatatanGuruDrive,
   ubahCatatanGuruDrive,
@@ -33,6 +39,14 @@ function waktuTampil(nilai) {
     ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(waktu)
     : 'Baru saja';
 }
+
+const REFLECTION_PATH = '/refleksi/pembelajaran';
+const REFLECTION_FIELDS = [
+  { key: 'berhasil', label: 'Apa yang berjalan baik?', placeholder: 'Catat strategi atau momen belajar yang efektif.' },
+  { key: 'bukti', label: 'Bukti belajar yang terlihat', placeholder: 'Tuliskan bukti umum tanpa nama atau identitas siswa.' },
+  { key: 'tantangan', label: 'Apa yang perlu ditingkatkan?', placeholder: 'Catat tantangan pembelajaran atau hal yang belum tercapai.' },
+  { key: 'langkahBerikutnya', label: 'Langkah berikutnya', placeholder: 'Tentukan satu tindak lanjut yang dapat dilakukan.' },
+];
 
 const formKosong = (path, label) => ({
   modulePath: path,
@@ -66,8 +80,10 @@ function unduhCsv(items, namaFile) {
 
 export default function TeacherWorkspacePage({ grup, item }) {
   const { user, role, activeRole, tenantId } = useAuth();
+  const isReflection = item.path === REFLECTION_PATH;
   const [catatan, setCatatan] = useState([]);
   const [form, setForm] = useState(() => formKosong(item.path, item.label));
+  const [refleksi, setRefleksi] = useState(kosongkanRefleksi);
   const [editId, setEditId] = useState('');
   const [cari, setCari] = useState('');
   const [loading, setLoading] = useState(true);
@@ -86,6 +102,10 @@ export default function TeacherWorkspacePage({ grup, item }) {
   const tokenAktif = koneksi?.expiresAt > Date.now() ? koneksi.accessToken : '';
   const vaultSiap = Boolean(tokenAktif && identitasVault);
   const [catatanOwnerKey, setCatatanOwnerKey] = useState('');
+  const jumlahKarakterRefleksi = REFLECTION_FIELDS.reduce(
+    (total, field) => total + refleksi[field.key].length,
+    0,
+  );
 
   const muat = useCallback(async ({ berikutnya = false } = {}) => {
     const requestId = ++loadRequest.current;
@@ -146,6 +166,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
 
   useEffect(() => {
     setForm(formKosong(item.path, item.label));
+    setRefleksi(kosongkanRefleksi());
     setEditId('');
     setError('');
     setNotice('');
@@ -190,6 +211,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
       isi: entry.isi,
       status: entry.status,
     });
+    setRefleksi(isReflection ? uraikanIsiRefleksi(entry.isi) : kosongkanRefleksi());
     setEditId(entry.id);
     setError('');
     setNotice('');
@@ -197,6 +219,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
 
   function batalEdit() {
     setForm(formKosong(item.path, item.label));
+    setRefleksi(kosongkanRefleksi());
     setEditId('');
     setError('');
   }
@@ -208,6 +231,10 @@ export default function TeacherWorkspacePage({ grup, item }) {
     setError('');
     setNotice('');
     try {
+      const payload = {
+        ...form,
+        isi: isReflection ? susunIsiRefleksi(refleksi) : form.isi,
+      };
       if (editId) {
         const existing = catatan.find((entry) => entry.id === editId);
         if (!existing) throw new Error('Catatan yang akan diperbarui tidak tersedia pada halaman ini.');
@@ -217,16 +244,17 @@ export default function TeacherWorkspacePage({ grup, item }) {
           user.uid,
           identitasVault,
           editId,
-          form,
+          payload,
           existing.createdAt,
           existing.ciphertextSha256,
         );
         setNotice('Catatan berhasil diperbarui.');
       } else {
-        await tambahCatatanGuruDrive(tokenAktif, tenantId, user.uid, identitasVault, form);
+        await tambahCatatanGuruDrive(tokenAktif, tenantId, user.uid, identitasVault, payload);
         setNotice('Catatan berhasil disimpan.');
       }
       setForm(formKosong(item.path, item.label));
+      setRefleksi(kosongkanRefleksi());
       setEditId('');
       await muat();
     } catch (err) {
@@ -257,7 +285,10 @@ export default function TeacherWorkspacePage({ grup, item }) {
 
   function ekspor() {
     const nama = item.path.split('/').filter(Boolean).join('-');
-    unduhCsv(catatanModul, `catatan-${nama}.csv`);
+    const items = isReflection
+      ? catatanModul.map((entry) => ({ ...entry, isi: tampilkanIsiRefleksi(entry.isi) }))
+      : catatanModul;
+    unduhCsv(items, `catatan-${nama}.csv`);
   }
 
   if (!canUse) {
@@ -275,7 +306,9 @@ export default function TeacherWorkspacePage({ grup, item }) {
         <div>
           <p className="teacher-workspace-kicker"><Ikon nama={grup.ikon} /> {grup.label}</p>
           <h1>{item.label}</h1>
-          <p>Simpan dan kelola catatan kerja pribadi untuk modul ini.</p>
+          <p>{isReflection
+            ? 'Tinjau praktik mengajar dengan bukti belajar dan rencana tindak lanjut yang jelas.'
+            : 'Simpan dan kelola catatan kerja pribadi untuk modul ini.'}</p>
         </div>
         <a className="teacher-workspace-related" href="#/dashboard">
           <Ikon nama="home" /> Kembali ke Dashboard
@@ -308,8 +341,8 @@ export default function TeacherWorkspacePage({ grup, item }) {
         <section className="ale-kartu teacher-workspace-form" aria-labelledby="teacher-workspace-form-title">
           <div className="teacher-workspace-section-head">
             <div>
-              <p className="teacher-workspace-eyebrow">{editId ? 'Perbarui catatan' : 'Catatan baru'}</p>
-              <h2 id="teacher-workspace-form-title">{editId ? 'Edit catatan kerja' : 'Buat catatan kerja'}</h2>
+              <p className="teacher-workspace-eyebrow">{editId ? 'Perbarui catatan' : isReflection ? 'Refleksi baru' : 'Catatan baru'}</p>
+              <h2 id="teacher-workspace-form-title">{editId ? 'Edit catatan kerja' : isReflection ? 'Refleksi pembelajaran' : 'Buat catatan kerja'}</h2>
             </div>
             <span className="teacher-workspace-status">{editId ? 'Mengedit' : 'Pribadi'}</span>
           </div>
@@ -320,7 +353,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
               <input
                 required maxLength={120} value={form.judul} disabled={!vaultSiap || saving}
                 onChange={(event) => ubahForm('judul', event.target.value)}
-                placeholder="Contoh: Refleksi pembelajaran pekan ini"
+                placeholder={isReflection ? 'Contoh: Refleksi pembelajaran pekan ini' : 'Beri judul catatan'}
               />
             </label>
             <div className="teacher-workspace-form-row">
@@ -355,15 +388,33 @@ export default function TeacherWorkspacePage({ grup, item }) {
                   placeholder="Contoh: Matematika" />
               </label>
             </div>
-            <label>
-              Catatan kerja
-              <textarea
-                required maxLength={6000} rows={7} value={form.isi} disabled={!vaultSiap || saving}
-                onChange={(event) => ubahForm('isi', event.target.value)}
-                placeholder="Tuliskan rencana, refleksi, atau tindak lanjut pribadi..."
-              />
-              <small>{form.isi.length}/6000 karakter</small>
-            </label>
+            {isReflection ? (
+              <div className="teacher-workspace-reflection-fields" aria-label="Bagian refleksi">
+                {REFLECTION_FIELDS.map((field) => (
+                  <label key={field.key}>
+                    {field.label}
+                    <textarea
+                      maxLength={1400} rows={4} value={refleksi[field.key]} disabled={!vaultSiap || saving}
+                      onChange={(event) => setRefleksi((current) => ({
+                        ...current, [field.key]: event.target.value,
+                      }))}
+                      placeholder={field.placeholder}
+                    />
+                  </label>
+                ))}
+                <small>{jumlahKarakterRefleksi}/5600 karakter. Isi setidaknya satu bagian.</small>
+              </div>
+            ) : (
+              <label>
+                Catatan kerja
+                <textarea
+                  required maxLength={6000} rows={7} value={form.isi} disabled={!vaultSiap || saving}
+                  onChange={(event) => ubahForm('isi', event.target.value)}
+                  placeholder="Tuliskan rencana, refleksi, atau tindak lanjut pribadi..."
+                />
+                <small>{form.isi.length}/6000 karakter</small>
+              </label>
+            )}
             {error && <p className="teacher-workspace-error" role="alert">{error}</p>}
             {notice && <p className="teacher-workspace-notice" role="status">{notice}</p>}
             <div className="teacher-workspace-actions">
@@ -435,7 +486,9 @@ export default function TeacherWorkspacePage({ grup, item }) {
                     {[entry.kelas, entry.mapel].filter(Boolean).join(' · ')}
                   </p>
                 )}
-                <p className="teacher-workspace-entry-body">{entry.isi}</p>
+                <p className="teacher-workspace-entry-body">
+                  {isReflection ? tampilkanIsiRefleksi(entry.isi) : entry.isi}
+                </p>
                 <div className="teacher-workspace-entry-footer">
                   <small>Diperbarui {waktuTampil(entry.updatedAt)}</small>
                   <div>

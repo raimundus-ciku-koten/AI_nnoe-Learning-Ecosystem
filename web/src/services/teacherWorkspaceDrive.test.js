@@ -17,6 +17,11 @@ import {
   tambahCatatanGuruDrive,
   ubahCatatanGuruDrive,
 } from './teacherWorkspaceDrive.js';
+import {
+  susunIsiRefleksi,
+  tampilkanIsiRefleksi,
+  uraikanIsiRefleksi,
+} from './teacherWorkspace.js';
 
 const OWNER_ID = '11111111-1111-4111-8111-111111111111';
 const ENTRY_ID = 'drive-record_1';
@@ -36,6 +41,38 @@ const NOTE = {
   isi: 'Catatan pribadi yang wajib dienkripsi.',
   status: 'draf',
 };
+
+describe('refleksi pembelajaran terstruktur', () => {
+  it('menyimpan empat bagian sebagai payload berversi dan menyajikannya dengan label', () => {
+    const reflection = {
+      berhasil: 'Diskusi kelompok berjalan aktif.',
+      bukti: 'Sebagian besar siswa menjelaskan strategi.',
+      tantangan: 'Waktu presentasi belum cukup.',
+      langkahBerikutnya: 'Siapkan giliran bicara yang lebih singkat.',
+    };
+    const isi = susunIsiRefleksi(reflection);
+
+    expect(uraikanIsiRefleksi(isi)).toEqual({ ...reflection, legacy: false });
+    expect(tampilkanIsiRefleksi(isi)).toContain('Bukti belajar:\nSebagian besar siswa menjelaskan strategi.');
+    expect(isi).toMatch(/^ale-reflection-v1:/);
+  });
+
+  it('mempertahankan catatan lama dan menolak refleksi kosong atau bagian terlalu panjang', () => {
+    expect(uraikanIsiRefleksi('Catatan naratif sebelumnya')).toMatchObject({
+      berhasil: 'Catatan naratif sebelumnya',
+      legacy: true,
+    });
+    expect(tampilkanIsiRefleksi('Catatan naratif sebelumnya')).toBe('Catatan naratif sebelumnya');
+    expect(() => susunIsiRefleksi({})).toThrow('Isi refleksi wajib diisi.');
+    expect(() => susunIsiRefleksi({ berhasil: 'x'.repeat(1401) }))
+      .toThrow('Bagian refleksi maksimal 1400 karakter.');
+  });
+
+  it('menjaga isi berversi yang rusak sebagai teks lama agar tidak hilang saat edit', () => {
+    const invalid = 'ale-reflection-v1:{broken';
+    expect(uraikanIsiRefleksi(invalid)).toMatchObject({ berhasil: invalid, legacy: true });
+  });
+});
 
 function queryResult(response) {
   const query = {

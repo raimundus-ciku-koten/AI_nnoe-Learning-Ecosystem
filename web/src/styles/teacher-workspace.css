@@ -80,6 +80,8 @@
   font-weight: 800;
 }
 .teacher-workspace-form form { display: grid; gap: .85rem; }
+.teacher-workspace-reflection-fields { display: grid; gap: .85rem; }
+.teacher-workspace-reflection-fields > small { justify-self: end; color: #78869a; font-size: .7rem; }
 .teacher-workspace-form label, .teacher-workspace-list-tools label {
   display: grid;
   gap: .35rem;

@@ -1,5 +1,7 @@
 const MODULE_PATH = /^\/(pelaksanaan|asesmen|pemantauan|refleksi|laporan|kolaborasi|pengaturan|perangkat)\/[a-z0-9-]+$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const REFLECTION_PREFIX = 'ale-reflection-v1:';
+const REFLECTION_FIELDS = Object.freeze(['berhasil', 'bukti', 'tantangan', 'langkahBerikutnya']);
 
 function boundedText(value, label, max, required = false) {
   const text = String(value ?? '').trim();
@@ -32,6 +34,55 @@ export function siapkanCatatanGuru(input) {
     isi: boundedText(input.isi, 'Isi catatan', 6000, true),
     status,
   };
+}
+
+export function kosongkanRefleksi() {
+  return Object.fromEntries(REFLECTION_FIELDS.map((field) => [field, '']));
+}
+
+export function susunIsiRefleksi(input) {
+  const reflection = Object.fromEntries(REFLECTION_FIELDS.map((field) => [
+    field,
+    boundedText(input?.[field], 'Bagian refleksi', 1400),
+  ]));
+  if (!Object.values(reflection).some(Boolean)) {
+    throw new Error('Isi refleksi wajib diisi.');
+  }
+  return `${REFLECTION_PREFIX}${JSON.stringify(reflection)}`;
+}
+
+export function uraikanIsiRefleksi(value) {
+  const isi = String(value ?? '');
+  if (!isi.startsWith(REFLECTION_PREFIX)) {
+    return { ...kosongkanRefleksi(), berhasil: isi, legacy: true };
+  }
+  try {
+    const parsed = JSON.parse(isi.slice(REFLECTION_PREFIX.length));
+    return {
+      ...Object.fromEntries(REFLECTION_FIELDS.map((field) => [
+        field,
+        typeof parsed?.[field] === 'string' ? parsed[field] : '',
+      ])),
+      legacy: false,
+    };
+  } catch {
+    return { ...kosongkanRefleksi(), berhasil: isi, legacy: true };
+  }
+}
+
+export function tampilkanIsiRefleksi(value) {
+  const reflection = uraikanIsiRefleksi(value);
+  if (reflection.legacy) return reflection.berhasil;
+  const labels = {
+    berhasil: 'Yang berjalan baik',
+    bukti: 'Bukti belajar',
+    tantangan: 'Yang perlu ditingkatkan',
+    langkahBerikutnya: 'Langkah berikutnya',
+  };
+  return REFLECTION_FIELDS
+    .filter((field) => reflection[field])
+    .map((field) => `${labels[field]}:\n${reflection[field]}`)
+    .join('\n\n');
 }
 
 function csvCell(value) {

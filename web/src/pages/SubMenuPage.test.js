@@ -106,8 +106,16 @@ describe('submenu platform superadmin', () => {
         expect(item, `menu ${path} tersedia`).toBeDefined();
         const html = renderSubmenu(path);
         expect(html, path).toContain(`<h1>${item.label.replaceAll('&', '&amp;')}</h1>`);
-        expect(html, path).toContain('Buat catatan kerja');
         expect(html, path).toContain('Hindari memasukkan nama');
+        if (path === '/refleksi/pembelajaran') {
+          expect(html).toContain('Refleksi pembelajaran</h2>');
+          expect(html).toContain('Apa yang berjalan baik?');
+          expect(html).toContain('Bukti belajar yang terlihat');
+          expect(html).toContain('Apa yang perlu ditingkatkan?');
+          expect(html).toContain('Langkah berikutnya');
+        } else {
+          expect(html, path).toContain('Buat catatan kerja');
+        }
         expect(html, path).not.toContain('Halaman informasi');
       }
     });
