@@ -27,6 +27,9 @@ test('setiap tautan menu aktif diizinkan oleh gerbang rute peran yang sama', () 
 
 test('menolak rute lintas-peran dan hanya memberi dashboard pada role tak dikenal', () => {
   assert.equal(canOpenRolePath('siswa', '/admin/pengguna/guru'), false);
+  assert.equal(canOpenRolePath('siswa', '/admin/komunikasi/broadcast'), false);
+  assert.equal(canOpenRolePath('guru', '/admin/komunikasi/broadcast'), false);
+  assert.equal(canOpenRolePath('admin_sekolah', '/admin/komunikasi/broadcast'), true);
   assert.equal(canOpenRolePath('guru', '/platform/tenant/sekolah'), false);
   assert.equal(canOpenRolePath('operator', '/perencanaan'), false);
   assert.equal(canOpenRolePath('peran-tidak-dikenal', '/admin/pengguna/guru'), false);

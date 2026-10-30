@@ -223,6 +223,7 @@ function RouteWrapper() {
         <Route path="/pelaksanaan/presensi" element={<PrivateShell><HalamanPresensi /></PrivateShell>} />
         <Route path="/program-kegiatan" element={<PrivateShell><HalamanProgramKegiatan /></PrivateShell>} />
         <Route path="/pengumuman" element={<PrivateShell><HalamanPengumumanSekolah /></PrivateShell>} />
+        <Route path="/admin/komunikasi/broadcast" element={<PrivateShell><Navigate to="/pengumuman" replace /></PrivateShell>} />
         <Route path="/perangkat/cover" element={<PrivateShell><HalamanCoverPerangkat /></PrivateShell>} />
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
         <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanIntegrasiAI /></PrivateShell>} />
