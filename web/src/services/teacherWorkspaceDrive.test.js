@@ -21,6 +21,7 @@ import {
   susunIsiJurnalMengajar,
   susunIsiCatatanObservasi,
   susunIsiPortofolioGuru,
+  susunIsiRencanaIntervensiKelas,
   susunIsiRencanaPerbaikan,
   susunIsiRencanaKompetensi,
   susunIsiRefleksi,
@@ -28,12 +29,14 @@ import {
   tampilkanIsiJurnalMengajar,
   tampilkanIsiCatatanObservasi,
   tampilkanIsiPortofolioGuru,
+  tampilkanIsiRencanaIntervensiKelas,
   tampilkanIsiRencanaPerbaikan,
   tampilkanIsiRencanaKompetensi,
   tampilkanIsiRefleksi,
   uraikanIsiJurnalMengajar,
   uraikanIsiCatatanObservasi,
   uraikanIsiPortofolioGuru,
+  uraikanIsiRencanaIntervensiKelas,
   uraikanIsiRencanaPerbaikan,
   uraikanIsiRencanaKompetensi,
   uraikanIsiRefleksi,
@@ -245,6 +248,32 @@ describe('portofolio guru privat', () => {
       legacy: true,
     });
     expect(tampilkanIsiPortofolioGuru('Portofolio naratif sebelumnya')).toBe('Portofolio naratif sebelumnya');
+  });
+});
+
+describe('rencana remedial dan pengayaan kelas', () => {
+  it('menyimpan kebutuhan kelas, dukungan, pengayaan, dan indikator tinjau ulang', () => {
+    const plan = {
+      kebutuhan: 'Perlu penguatan pemahaman pecahan.',
+      remedial: 'Latihan representasi dengan alat peraga.',
+      pengayaan: 'Tantangan soal kontekstual bertahap.',
+      indikator: 'Tinjau hasil latihan kelas pekan depan.',
+    };
+    const isi = susunIsiRencanaIntervensiKelas(plan);
+
+    expect(uraikanIsiRencanaIntervensiKelas(isi)).toEqual({ ...plan, legacy: false });
+    expect(tampilkanIsiRencanaIntervensiKelas(isi)).toContain('Rencana penguatan/remedial:\nLatihan representasi dengan alat peraga.');
+    expect(isi).toMatch(/^ale-class-intervention-v1:/);
+  });
+
+  it('mewajibkan kebutuhan kelas serta rencana remedial atau pengayaan', () => {
+    expect(() => susunIsiRencanaIntervensiKelas({})).toThrow('Kebutuhan kelas wajib diisi.');
+    expect(() => susunIsiRencanaIntervensiKelas({ kebutuhan: 'Penguatan operasi pecahan.' }))
+      .toThrow('Isi setidaknya satu rencana remedial atau pengayaan.');
+    expect(uraikanIsiRencanaIntervensiKelas('Catatan kelas sebelumnya')).toMatchObject({
+      kebutuhan: 'Catatan kelas sebelumnya',
+      legacy: true,
+    });
   });
 });
 

@@ -145,6 +145,13 @@ describe('submenu platform superadmin', () => {
           expect(html).toContain('Kompetensi terkait');
           expect(html).toContain('Tautan bukti HTTPS');
           expect(html).toContain('Berkas tidak diunggah');
+        } else if (path === '/asesmen/remedial') {
+          expect(html).toContain('Rencana remedial dan pengayaan</h2>');
+          expect(html).toContain('Kebutuhan belajar kelas');
+          expect(html).toContain('Rencana penguatan/remedial');
+          expect(html).toContain('Rencana pengayaan');
+          expect(html).toContain('Indikator tinjau ulang');
+          expect(html).toContain('bukan daftar kasus');
         } else if (path === '/refleksi/perbaikan') {
           expect(html).toContain('Rencana perbaikan</h2>');
           expect(html).toContain('Fokus perbaikan');

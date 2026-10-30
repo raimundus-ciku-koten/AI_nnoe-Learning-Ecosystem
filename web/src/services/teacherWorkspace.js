@@ -12,6 +12,8 @@ const OBSERVATION_PREFIX = 'ale-observation-v1:';
 const OBSERVATION_FIELDS = Object.freeze(['fokus', 'observasi', 'umpanBalik', 'tindakLanjut']);
 const PORTFOLIO_PREFIX = 'ale-portfolio-v1:';
 const PORTFOLIO_FIELDS = Object.freeze(['jenisKarya', 'deskripsi', 'kompetensi', 'tautan']);
+const INTERVENTION_PREFIX = 'ale-class-intervention-v1:';
+const INTERVENTION_FIELDS = Object.freeze(['kebutuhan', 'remedial', 'pengayaan', 'indikator']);
 
 function boundedText(value, label, max, required = false) {
   const text = String(value ?? '').trim();
@@ -350,6 +352,56 @@ export function tampilkanIsiPortofolioGuru(value) {
   return PORTFOLIO_FIELDS
     .filter((field) => portfolio[field])
     .map((field) => `${labels[field]}:\n${portfolio[field]}`)
+    .join('\n\n');
+}
+
+export function kosongkanRencanaIntervensiKelas() {
+  return Object.fromEntries(INTERVENTION_FIELDS.map((field) => [field, '']));
+}
+
+export function susunIsiRencanaIntervensiKelas(input) {
+  const plan = Object.fromEntries(INTERVENTION_FIELDS.map((field) => [
+    field,
+    boundedText(input?.[field], 'Bagian rencana kelas', 1400),
+  ]));
+  if (!plan.kebutuhan) throw new Error('Kebutuhan kelas wajib diisi.');
+  if (!plan.remedial && !plan.pengayaan) {
+    throw new Error('Isi setidaknya satu rencana remedial atau pengayaan.');
+  }
+  return `${INTERVENTION_PREFIX}${JSON.stringify(plan)}`;
+}
+
+export function uraikanIsiRencanaIntervensiKelas(value) {
+  const isi = String(value ?? '');
+  if (!isi.startsWith(INTERVENTION_PREFIX)) {
+    return { ...kosongkanRencanaIntervensiKelas(), kebutuhan: isi, legacy: true };
+  }
+  try {
+    const parsed = JSON.parse(isi.slice(INTERVENTION_PREFIX.length));
+    return {
+      ...Object.fromEntries(INTERVENTION_FIELDS.map((field) => [
+        field,
+        typeof parsed?.[field] === 'string' ? parsed[field] : '',
+      ])),
+      legacy: false,
+    };
+  } catch {
+    return { ...kosongkanRencanaIntervensiKelas(), kebutuhan: isi, legacy: true };
+  }
+}
+
+export function tampilkanIsiRencanaIntervensiKelas(value) {
+  const plan = uraikanIsiRencanaIntervensiKelas(value);
+  if (plan.legacy) return plan.kebutuhan;
+  const labels = {
+    kebutuhan: 'Kebutuhan belajar kelas',
+    remedial: 'Rencana penguatan/remedial',
+    pengayaan: 'Rencana pengayaan',
+    indikator: 'Indikator tinjau ulang',
+  };
+  return INTERVENTION_FIELDS
+    .filter((field) => plan[field])
+    .map((field) => `${labels[field]}:\n${plan[field]}`)
     .join('\n\n');
 }
 
