@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { menuUntukPeran } from '../navigasi.js';
 import { canOpenRolePath } from './roleAccess.js';
 
 test('Kepala Sekolah dan Wali Kelas hanya dapat membuka dashboard sampai ada izin terukur', () => {
@@ -11,11 +12,30 @@ test('Kepala Sekolah dan Wali Kelas hanya dapat membuka dashboard sampai ada izi
   }
 });
 
-test('peran lain tetap mengikuti otorisasi rute yang sudah ada', () => {
-  for (const role of ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'siswa', 'superadmin']) {
+test('setiap tautan menu aktif diizinkan oleh gerbang rute peran yang sama', () => {
+  const roles = [
+    'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'siswa',
+    'ortu', 'orang_tua', 'operator', 'admin_sekolah', 'admin', 'superadmin',
+  ];
+  for (const role of roles) {
     assert.equal(canOpenRolePath(role, '/dashboard'), true);
-    assert.equal(canOpenRolePath(role, '/perencanaan'), true);
+    for (const item of menuUntukPeran(role).flatMap((group) => group.item)) {
+      assert.equal(canOpenRolePath(role, item.path, item.search || ''), true, `${role}: ${item.label}`);
+    }
   }
+});
+
+test('menolak rute lintas-peran dan hanya memberi dashboard pada role tak dikenal', () => {
+  assert.equal(canOpenRolePath('siswa', '/admin/pengguna/guru'), false);
+  assert.equal(canOpenRolePath('guru', '/platform/tenant/sekolah'), false);
+  assert.equal(canOpenRolePath('operator', '/perencanaan'), false);
+  assert.equal(canOpenRolePath('peran-tidak-dikenal', '/admin/pengguna/guru'), false);
+  assert.equal(canOpenRolePath('peran-tidak-dikenal', '/dashboard'), false);
+});
+
+test('tautan lama menuju perencanaan tetap tersedia hanya untuk role guru', () => {
+  assert.equal(canOpenRolePath('guru', '/perencanaan/atp'), true);
+  assert.equal(canOpenRolePath('siswa', '/perencanaan/atp'), false);
 });
 
 test('peran demo hanya dapat membuka simulasi uji coba', () => {

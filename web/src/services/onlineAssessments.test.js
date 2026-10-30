@@ -22,6 +22,7 @@ import {
   muatNilaiUjianSiswa,
   muatJawabanUraianGuru,
   muatRingkasanUjianGuru,
+  muatRingkasanUjianSekolah,
   mulaiUjianOnline,
   nilaiJawabanUraian,
   simpanDraftUjian,
@@ -234,5 +235,48 @@ describe('online assessment service', () => {
       ...exam,
       questions: [{ ...exam.questions[0], jawaban: '2' }],
     }, {})).toThrow('tidak valid');
+  });
+
+  it('loads safe tenant-level exam counts for school administrators', async () => {
+    const row = {
+      exam_id: 'exam-1',
+      title: 'Ujian Matematika',
+      kelas: 'X-A',
+      starts_at: '2026-10-30T01:00:00.000Z',
+      ends_at: '2026-10-30T02:00:00.000Z',
+      duration_minutes: 60,
+      status: 'active',
+      teacher_name: 'Guru A',
+      participant_count: 28,
+      attempt_count: 20,
+      submitted_count: 18,
+      pending_review_count: 2,
+    };
+    supabase.rpc.mockResolvedValueOnce({ data: [row], error: null });
+
+    await expect(muatRingkasanUjianSekolah()).resolves.toEqual([row]);
+    expect(supabase.rpc).toHaveBeenCalledWith('school_admin_online_exam_overview');
+  });
+
+  it('rejects school overview rows containing student names or answer data', async () => {
+    supabase.rpc.mockResolvedValueOnce({
+      data: [{
+        exam_id: 'exam-1',
+        title: 'Ujian',
+        kelas: 'X-A',
+        starts_at: '2026-10-30T01:00:00.000Z',
+        ends_at: '2026-10-30T02:00:00.000Z',
+        duration_minutes: 60,
+        status: 'active',
+        teacher_name: 'Guru A',
+        participant_count: 1,
+        attempt_count: 1,
+        submitted_count: 1,
+        pending_review_count: 0,
+        student_name: 'Siswa',
+      }],
+      error: null,
+    });
+    await expect(muatRingkasanUjianSekolah()).rejects.toThrow('tidak valid');
   });
 });

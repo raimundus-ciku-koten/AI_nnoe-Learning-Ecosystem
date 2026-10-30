@@ -1,0 +1,257 @@
+.school-announcements {
+    display: grid;
+    gap: 1.25rem;
+    width: min(100%, 980px);
+    margin: 0 auto;
+    color: #17343a;
+}
+
+.school-announcements__header {
+    display: grid;
+    gap: .45rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid #d6e7e4;
+    border-radius: .8rem;
+    background: linear-gradient(120deg, #f1fbf8, #fff 72%);
+}
+
+.school-announcements__eyebrow {
+    color: #087f73;
+    font-size: .75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.school-announcements__header h1 {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    line-height: 1.15;
+}
+
+.school-announcements__header>p:last-child,
+.school-announcements__feed-head p {
+    color: #587077;
+    line-height: 1.5;
+}
+
+.school-announcements__editor,
+.school-announcements__feed {
+    min-width: 0;
+}
+
+.school-announcements__editor {
+    display: grid;
+    gap: 1rem;
+    padding: clamp(1rem, 2.5vw, 1.5rem);
+    border: 1px solid #dbe8e6;
+    border-radius: .75rem;
+    background: #fff;
+}
+
+.school-announcements__section-head,
+.school-announcements__feed-head,
+.school-announcement__meta,
+.school-announcement__actions,
+.school-announcements__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+}
+
+.school-announcements__section-head h2,
+.school-announcements__feed-head h2 {
+    margin-top: .2rem;
+    color: #17343a;
+    font-size: 1.1rem;
+}
+
+.school-announcements__section-head>span {
+    color: #087f73;
+    font-size: .78rem;
+    font-weight: 750;
+}
+
+.school-announcements__editor form {
+    display: grid;
+    gap: .55rem;
+}
+
+.school-announcements__editor label {
+    color: #38545a;
+    font-size: .82rem;
+    font-weight: 750;
+}
+
+.school-announcements__editor input,
+.school-announcements__editor textarea,
+.school-announcements__feed-head input {
+    width: 100%;
+    min-height: 2.7rem;
+    padding: .6rem .75rem;
+    border: 1px solid #c8d9d7;
+    border-radius: .45rem;
+    background: #fff;
+    color: #17343a;
+    font: inherit;
+}
+
+.school-announcements__editor textarea {
+    min-height: 9rem;
+    resize: vertical;
+    line-height: 1.55;
+}
+
+.school-announcements__editor input:focus-visible,
+.school-announcements__editor textarea:focus-visible,
+.school-announcements__feed-head input:focus-visible {
+    outline: 3px solid rgb(8 127 115 / 20%);
+    border-color: #087f73;
+}
+
+.school-announcements__privacy {
+    color: #61777c;
+    font-size: .78rem;
+    line-height: 1.5;
+}
+
+.school-announcements button {
+    min-height: 2.55rem;
+    padding: .55rem .85rem;
+    border: 1px solid #087f73;
+    border-radius: .45rem;
+    background: #087f73;
+    color: #fff;
+    font: inherit;
+    font-size: .82rem;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.school-announcements button.is-secondary {
+    border-color: #c8d9d7;
+    background: #fff;
+    color: #29484e;
+}
+
+.school-announcements button.is-danger {
+    border-color: #f0c3bd;
+    background: #fff;
+    color: #a53d2d;
+}
+
+.school-announcements button:disabled {
+    opacity: .58;
+    cursor: progress;
+}
+
+.school-announcements button:focus-visible {
+    outline: 3px solid rgb(8 127 115 / 24%);
+    outline-offset: 2px;
+}
+
+.school-announcements__actions {
+    justify-content: flex-end;
+    margin-top: .35rem;
+}
+
+.school-announcements__error,
+.school-announcements__notice,
+.school-announcements__empty {
+    padding: .8rem 1rem;
+    border-radius: .5rem;
+    line-height: 1.5;
+}
+
+.school-announcements__error {
+    border: 1px solid #f1c6c1;
+    background: #fff7f5;
+    color: #8d3429;
+}
+
+.school-announcements__notice {
+    border: 1px solid #b7dfd6;
+    background: #f0faf6;
+    color: #156353;
+}
+
+.school-announcements__feed {
+    display: grid;
+    gap: 1rem;
+    padding: .25rem 0 1.5rem;
+}
+
+.school-announcements__feed-head {
+    flex-wrap: wrap;
+    padding-bottom: .8rem;
+    border-bottom: 1px solid #dce8e6;
+}
+
+.school-announcements__feed-head>div {
+    margin-right: auto;
+}
+
+.school-announcements__feed-head label {
+    width: min(100%, 18rem);
+}
+
+.school-announcements__items {
+    display: grid;
+}
+
+.school-announcement {
+    padding: 1.1rem 0;
+    border-bottom: 1px solid #e3ecea;
+}
+
+.school-announcement__meta {
+    min-height: 2.3rem;
+    color: #61777c;
+    font-size: .78rem;
+}
+
+.school-announcement__actions {
+    justify-content: flex-end;
+}
+
+.school-announcement__actions button {
+    min-height: 2.1rem;
+    padding: .35rem .65rem;
+}
+
+.school-announcement h3 {
+    margin: .45rem 0;
+    color: #17343a;
+    font-size: 1rem;
+}
+
+.school-announcement>p {
+    color: #3e5a60;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.school-announcements__sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (max-width: 640px) {
+
+    .school-announcements__feed-head>div,
+    .school-announcements__feed-head label,
+    .school-announcements__feed-head button {
+        width: 100%;
+    }
+
+    .school-announcement__meta {
+        align-items: flex-start;
+    }
+}

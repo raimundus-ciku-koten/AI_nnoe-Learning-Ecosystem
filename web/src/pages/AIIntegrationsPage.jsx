@@ -115,11 +115,11 @@ export default function AIIntegrationsPage() {
       <header className="ai-integrations__header">
         <p className="ai-integrations__eyebrow"><Ikon nama="settings" /> Pengaturan akun</p>
         <h1 id="ai-integrations-title">AI &amp; Layanan</h1>
-        <p>Hubungkan provider AI dengan kunci pribadi Anda untuk membuat draf soal. Mode manual tetap tersedia tanpa AI.</p>
+        <p>Hubungkan provider AI dengan kunci pribadi Anda untuk membuat draf soal dan perangkat ajar. Penyusunan manual tetap tersedia.</p>
       </header>
       <p className="ai-integrations__message is-warning" role="note">
         {EXTERNAL_AI_PROVIDERS_ENABLED
-          ? 'Permintaan hanya dikirim setelah Anda mengaktifkan kunci dan menjalankan pembuatan draf. Isi topik, mata pelajaran, kelas, dan prompt akan dikirim langsung dari browser ke provider terpilih; satu permintaan tidak otomatis mencoba provider lain. Kuota, biaya, dan kebijakan penyimpanan mengikuti provider.'
+          ? 'Permintaan hanya dikirim setelah Anda mengaktifkan kunci dan menekan tombol pembuatan. Draf perencanaan mengirim konteks paket yang diperlukan (mata pelajaran, kelas, CP/TP, dan tahun ajaran) langsung dari browser ke provider terpilih. Jangan masukkan data pribadi siswa. Kuota, biaya, dan kebijakan penyimpanan mengikuti provider.'
           : 'Provider AI eksternal dinonaktifkan.'}
       </p>
       <p className="ai-integrations__message" role="note">
@@ -189,11 +189,12 @@ export default function AIIntegrationsPage() {
           <section className="ai-integrations__card" aria-labelledby="ai-preferences-title">
             <h2 id="ai-preferences-title">Preferensi per penggunaan</h2>
             <p>{EXTERNAL_AI_PROVIDERS_ENABLED
-              ? 'Pengaturan ini berlaku untuk pembuatan draf soal dan hanya bertahan selama sesi aplikasi. Otomatis memilih provider aktif pertama berdasarkan urutan Gemini, DeepSeek, Groq; jika gagal, permintaan berhenti tanpa fallback.'
+              ? 'Pengaturan berlaku untuk draf soal dan perangkat ajar selama sesi aplikasi. Otomatis memilih provider aktif pertama berdasarkan urutan Gemini, DeepSeek, Groq; jika gagal, permintaan berhenti tanpa fallback.'
               : 'Provider AI eksternal dinonaktifkan.'}</p>
             <div className="ai-integrations__preferences">
               {[
-                ['questions', 'Pembuatan draf soal']
+                ['questions', 'Pembuatan draf soal'],
+                ['planning', 'Perencanaan (KKTP dan Modul Ajar)'],
               ].map(([workflow, label]) => (
                 <label key={workflow}>
                   {label}
@@ -209,7 +210,7 @@ export default function AIIntegrationsPage() {
                 </label>
               ))}
             </div>
-            <p>AI perencanaan dan asisten percakapan belum diaktifkan. Perhitungan perencanaan deterministik dan penyuntingan manual tetap tersedia.</p>
+            <p>Asisten percakapan belum diaktifkan. RPE, Prota, dan Prosem tetap dihitung deterministik; ATP, KKTP, dan Modul Ajar dapat ditinjau serta disunting sebelum digunakan.</p>
           </section>
         </>
       )}

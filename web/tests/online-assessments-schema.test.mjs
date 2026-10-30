@@ -7,6 +7,10 @@ const migrationPath = new URL(
   import.meta.url,
 );
 const migration = await readFile(migrationPath, 'utf8');
+const schoolAdminOverviewMigration = await readFile(new URL(
+  '../../supabase/migrations/20261030000300_school_admin_exam_overview.sql',
+  import.meta.url,
+), 'utf8');
 const studentPagePath = new URL(
   '../src/pages/OnlineAssessmentPage.jsx',
   import.meta.url,
@@ -66,4 +70,15 @@ test('keeps a pending idempotent submission retryable after the client deadline'
   assert.match(studentPage, /disabled=\{busy \|\| \(expired && !active\.submissionId\)\}/);
   assert.match(studentPage, /retry jika pengumpulan sebelumnya sudah diterima/);
   assert.match(studentPage, /\{expired && !active\.submissionId && \(/);
+});
+
+test('exposes an admin-only tenant exam overview without student answers or identities', () => {
+  assert.match(schoolAdminOverviewMigration, /create or replace function public\.school_admin_online_exam_overview\(\)/);
+  assert.match(schoolAdminOverviewMigration, /public\.current_app_role\(\)\) <> 'admin_sekolah'/);
+  assert.match(schoolAdminOverviewMigration, /exam\.tenant_id = \(select public\.current_tenant_id\(\)\)/);
+  assert.match(schoolAdminOverviewMigration, /tenant\.active = true/);
+  assert.match(schoolAdminOverviewMigration, /count\(distinct link\.student_id\)::integer/);
+  assert.match(schoolAdminOverviewMigration, /attempt\.grade_pending/);
+  assert.match(schoolAdminOverviewMigration, /revoke all on function public\.school_admin_online_exam_overview\(\)[\s\S]*?from public, anon/);
+  assert.doesNotMatch(schoolAdminOverviewMigration, /student\.nama|student\.nisn|attempt\.answers|correct_answer|essay_responses/);
 });

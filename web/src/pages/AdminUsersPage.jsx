@@ -9,13 +9,19 @@ const LABEL_PERAN = {
   admin_sekolah: 'Admin sekolah',
   operator: 'Operator',
   guru: 'Guru',
+  guru_bk: 'Guru BK',
+  guru_kokurikuler: 'Guru kokurikuler',
+  guru_ekstrakurikuler: 'Guru ekstrakurikuler',
   siswa: 'Siswa',
   ortu: 'Orang tua',
   orang_tua: 'Orang tua',
   demo: 'Akun demo',
 };
-const KATEGORI = {
-  guru: { judul: 'Guru', roles: ['guru', 'operator', 'demo'] },
+export const KATEGORI = {
+  guru: {
+    judul: 'Guru',
+    roles: ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'operator', 'demo'],
+  },
   siswa: { judul: 'Siswa', roles: ['siswa'] },
   'orang-tua': { judul: 'Orang tua', roles: ['ortu', 'orang_tua'] },
   admin: { judul: 'Admin sekolah', roles: ['admin_sekolah'] },
@@ -182,7 +188,7 @@ export default function AdminUsersPage() {
         ) : (
           <div className="ale-admin-users-table-wrap">
             <table className="ale-admin-users-table">
-              <thead><tr><th scope="col">Nama</th><th scope="col">Email</th><th scope="col">Peran</th><th scope="col">Status</th></tr></thead>
+              <thead><tr><th scope="col">Nama</th><th scope="col">Email</th><th scope="col">Peran</th><th scope="col">Status</th>{sub === 'guru' ? <th scope="col">Penugasan</th> : null}</tr></thead>
               <tbody>
                 {daftar.map((user) => {
                   const status = statusPengguna(user);
@@ -192,6 +198,9 @@ export default function AdminUsersPage() {
                       <td>{user.email || 'Email belum dicatat'}</td>
                       <td>{LABEL_PERAN[user.role] || 'Peran belum dicatat'}</td>
                       <td><span className={`ale-admin-users-status ${status.className}`}>{status.label}</span></td>
+                      {sub === 'guru' ? (
+                        <td><a className="ale-admin-users-button secondary" href={`#/admin/akademik/kelas?guru=${encodeURIComponent(user.uid)}`}>Atur penugasan</a></td>
+                      ) : null}
                     </tr>
                   );
                 })}

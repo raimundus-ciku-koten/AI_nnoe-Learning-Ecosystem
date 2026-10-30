@@ -4,6 +4,7 @@
 
 import { getState } from '../../../state.js';
 import { generateBrowserPlanning } from '../../../services/browserAi.js';
+import { bacaInputAi } from './planningDriveRepository.js';
 
 export class AiError extends Error {
   /** @param {string} kode @param {string} [detail] */
@@ -20,7 +21,8 @@ export async function buatDenganAi({ paketId, jenis, noUnit, sinyal }) {
   const uid = getState().user?.uid;
   if (!uid) throw new AiError('AI_BELUM_LOGIN');
   try {
-    return await generateBrowserPlanning({ uid, paketId, jenis, noUnit, sinyal });
+    const input = await bacaInputAi({ uid, paketId, jenis, noUnit });
+    return await generateBrowserPlanning({ uid, jenis, input, sinyal });
   } catch (error) {
     if (error?.name === 'AbortError') throw error;
     throw new AiError('AI_GAGAL', error?.message || 'Generator AI tidak dapat menyelesaikan permintaan.');

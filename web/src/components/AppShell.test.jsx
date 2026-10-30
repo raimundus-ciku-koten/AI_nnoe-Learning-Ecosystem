@@ -48,5 +48,42 @@ describe('AppShell navigasi berdasarkan peran aktif', () => {
     expect(html).toContain('Pelaksanaan Pembelajaran');
     expect(html).toContain('Jurnal Mengajar Harian');
     expect(html).not.toContain('Operasional Sekolah');
+    expect(html).toContain('href="#/datadasar/kelas"');
+    expect(html).toContain('href="#/pengaturan/api-ai"');
+    expect(html).toContain('href="#/pengaturan/google"');
+  });
+
+  it('tidak menampilkan pintasan guru atau kontrol profil yang belum didukung kepada siswa', () => {
+    auth.activeRole = 'siswa';
+    const html = renderShell('/siswa/jadwal');
+
+    expect(html).not.toContain('href="#/datadasar/kelas"');
+    expect(html).not.toContain('href="#/pengaturan/api-ai"');
+    expect(html).not.toContain('href="#/pengaturan/google"');
+    expect(html).not.toContain('Ubah foto profil');
+    expect(html).not.toContain('Hapus foto profil');
+  });
+
+  it('menampilkan navigasi admin instansi tanpa menu platform atau siswa', () => {
+    auth.activeRole = 'admin_sekolah';
+    const html = renderShell('/admin/akademik/kelas');
+
+    expect(html).toContain('data-grup="admin-pengguna"');
+    expect(html).toContain('href="#/admin/akademik/kelas"');
+    expect(html).not.toContain('data-grup="platform-pengguna"');
+    expect(html).not.toContain('href="#/platform/supabase-users"');
+    expect(html).not.toContain('href="#/siswa/jadwal"');
+  });
+
+  it('menampilkan navigasi superadmin tanpa menu administrasi sekolah', () => {
+    auth.activeRole = 'superadmin';
+    const html = renderShell('/platform/tenant/sekolah');
+
+    expect(html).toContain('Dashboard Super Admin');
+    expect(html).toContain('href="#/platform/tenant/sekolah"');
+    expect(html).toContain('data-grup="platform-pengguna"');
+    expect(html).not.toContain('data-grup="admin-pengguna"');
+    expect(html).not.toContain('href="#/admin/pengguna/guru"');
+    expect(html).not.toContain('href="#/admin/akademik/kelas"');
   });
 });

@@ -35,6 +35,11 @@ vi.mock('../services/platformAdminApi.js', () => ({
 }));
 vi.mock('../lib/supabase.ts', () => ({ supabase: {} }));
 import SubMenuPage from './SubMenuPage.jsx';
+import { KATEGORI } from './AdminUsersPage.jsx';
+import SchoolAnnouncementsPage from './SchoolAnnouncementsPage.jsx';
+import QuestionBankPage from './QuestionBankPage.jsx';
+import PlanningCoverPage from './PlanningCoverPage.jsx';
+import AdminAssessmentPage from './AdminAssessmentPage.jsx';
 import PlatformTenantsPage from './PlatformTenantsPage.jsx';
 import PlatformUsersPage from './PlatformUsersPage.jsx';
 import PlatformOperationsPage, { aktivitasAudit, rincianAudit } from './PlatformOperationsPage.jsx';
@@ -256,5 +261,111 @@ describe('submenu platform superadmin', () => {
 
     auth.role = 'guru';
     expect(renderOperations('/platform/tenant/paket')).toContain('Akses platform dibatasi');
+  });
+});
+
+describe('admin sekolah: cakupan pengguna', () => {
+  it('memasukkan semua role guru spesialis ke direktori guru', () => {
+    expect(KATEGORI.guru.roles).toEqual(expect.arrayContaining([
+      'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'operator', 'demo',
+    ]));
+  });
+
+  it.each([
+    ['/admin/akademik/kelas', 'Kelas dan Rombel'],
+    ['/admin/akademik/mapel', 'Mata Pelajaran'],
+  ])('membuka editor penugasan nyata pada %s', (path, title) => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = null;
+    const html = renderSubmenu(path);
+
+    expect(html).toContain(`<h1>${title}</h1>`);
+    expect(html).toContain('Penugasan guru');
+    expect(html).not.toContain('Panduan · baca saja');
+  });
+
+  it('tidak mengarahkan submenu akademik yang belum didukung ke editor penugasan', () => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = null;
+    const html = renderSubmenu('/admin/akademik/jadwal');
+
+    expect(html).toContain('<h2>Jadwal</h2>');
+    expect(html).toContain('Panduan · baca saja');
+  });
+});
+
+describe('pengumuman tenant', () => {
+  it('menyediakan pembacaan untuk guru dan kontrol tulis hanya untuk staf sekolah', () => {
+    auth.role = 'guru';
+    auth.activeRole = null;
+    const guruHtml = renderToStaticMarkup(React.createElement(SchoolAnnouncementsPage));
+    expect(guruHtml).toContain('Pengumuman terbaru');
+    expect(guruHtml).not.toContain('Terbitkan pengumuman');
+
+    for (const role of ['admin_sekolah', 'operator']) {
+      auth.role = role;
+      const staffHtml = renderToStaticMarkup(React.createElement(SchoolAnnouncementsPage));
+      expect(staffHtml).toContain('Terbitkan pengumuman');
+      expect(staffHtml).toContain('Jangan sertakan nilai');
+    }
+  });
+});
+
+describe('generator soal AI', () => {
+  it('membuka halaman generator yang sama dengan fitur bank soal nyata', () => {
+    auth.role = 'guru';
+    auth.activeRole = null;
+    auth.tenantId = 'sekolah-test';
+    const html = renderToStaticMarkup(
+      React.createElement(
+        MemoryRouter,
+        { initialEntries: ['/asesmen/generator-ai'] },
+        React.createElement(QuestionBankPage),
+      ),
+    );
+
+    expect(html).toContain('<h1>Generator Soal AI</h1>');
+    expect(html).toContain('Buat draf dengan AI');
+    expect(html).toContain('Simpan soal');
+  });
+});
+
+describe('cover perangkat', () => {
+  it('menyediakan pratinjau cetak untuk guru', () => {
+    auth.role = 'guru';
+    auth.activeRole = null;
+    const html = renderToStaticMarkup(React.createElement(PlanningCoverPage));
+
+    expect(html).toContain('<h1>Cover Perangkat</h1>');
+    expect(html).toContain('Cetak / Simpan PDF');
+    expect(html).toContain('Pratinjau cover perangkat');
+  });
+
+  it('menolak role yang bukan guru', () => {
+    auth.role = 'siswa';
+    auth.activeRole = null;
+    const html = renderToStaticMarkup(React.createElement(PlanningCoverPage));
+
+    expect(html).toContain('Cover perangkat ajar hanya tersedia bagi akun guru');
+    expect(html).not.toContain('Cetak / Simpan PDF');
+  });
+});
+
+describe('admin monitoring asesmen', () => {
+  it.each([
+    ['/admin/asesmen/paket', 'Paket Ujian'],
+    ['/admin/asesmen/jadwal', 'Jadwal Ujian'],
+    ['/admin/asesmen/monitoring', 'Monitoring Ujian'],
+    ['/admin/asesmen/analisis', 'Analisis Hasil'],
+  ])('merender ringkasan tenant pada %s', (path, title) => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = null;
+    const html = renderToStaticMarkup(
+      React.createElement(MemoryRouter, { initialEntries: [path] }, React.createElement(AdminAssessmentPage)),
+    );
+
+    expect(html).toContain(`<h1>${title}</h1>`);
+    expect(html).toContain('Nama siswa, jawaban, kunci, dan nilai individual tidak ditampilkan.');
+    expect(html).toContain('Ringkasan ujian');
   });
 });

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
 import {
@@ -30,7 +31,7 @@ function siapkanSoal(form) {
     throw new Error('Mata pelajaran, kelas, dan pertanyaan wajib diisi.');
   }
   if (jenis === 'pilihan_ganda' &&
-      (pilihan.length < 2 || pilihan.length > 5 || new Set(pilihan).size !== pilihan.length)) {
+    (pilihan.length < 2 || pilihan.length > 5 || new Set(pilihan).size !== pilihan.length)) {
     throw new Error('Pilihan ganda harus memiliki 2–5 pilihan yang berbeda.');
   }
   if (!jawaban || (jenis === 'pilihan_ganda' && !pilihan.includes(jawaban))) {
@@ -57,6 +58,8 @@ function formatTanggal(value) {
 }
 
 export default function QuestionBankPage() {
+  const { pathname } = useLocation();
+  const generatorMode = pathname === '/asesmen/generator-ai';
   const { user, role, tenantId } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -257,8 +260,10 @@ export default function QuestionBankPage() {
     <main className="question-bank-page">
       <header className="question-bank-header">
         <p className="question-bank-kicker"><Ikon nama="clipboard" /> Asesmen dan Penilaian</p>
-        <h1>Bank Soal</h1>
-        <p>Simpan soal per mata pelajaran dan kelas. Kunci jawaban hanya dapat dilihat oleh staf yang berwenang.</p>
+        <h1>{generatorMode ? 'Generator Soal AI' : 'Bank Soal'}</h1>
+        <p>{generatorMode
+          ? 'Buat draf soal dengan provider yang Anda aktifkan, tinjau hasilnya, lalu simpan ke bank soal.'
+          : 'Simpan soal per mata pelajaran dan kelas. Kunci jawaban hanya dapat dilihat oleh staf yang berwenang.'}</p>
       </header>
 
       {error && <p className="question-bank-message is-error" role="alert">{error}</p>}

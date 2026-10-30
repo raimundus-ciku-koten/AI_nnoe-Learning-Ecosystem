@@ -98,6 +98,7 @@ const HalamanScan = lazy(() => import('./pages/scan.js').then(({ halamanScan }) 
 })));
 const HalamanSubMenu = lazy(() => import('./pages/SubMenuPage.jsx'));
 const HalamanArsipPerencanaan = lazy(() => import('./pages/PlanningArchivePage.jsx'));
+const HalamanCoverPerangkat = lazy(() => import('./pages/PlanningCoverPage.jsx'));
 const HalamanPurchase = lazy(() => import('./pages/PurchasePage.jsx'));
 const HalamanTestimoni = lazy(() => import('./pages/TestimonialPage.jsx'));
 const HalamanAdminPengguna = lazy(() => import('./pages/AdminUsersPage.jsx'));
@@ -106,10 +107,12 @@ const HalamanGoogleWorkspace = lazy(() => import('./pages/GoogleWorkspacePage.js
 const HalamanIntegrasiAI = lazy(() => import('./pages/AIIntegrationsPage.jsx'));
 const HalamanBankSoal = lazy(() => import('./pages/QuestionBankPage.jsx'));
 const HalamanUjianOnline = lazy(() => import('./pages/OnlineAssessmentPage.jsx'));
+const HalamanAdminAssessment = lazy(() => import('./pages/AdminAssessmentPage.jsx'));
 const HalamanNilaiUjianSiswa = lazy(() => import('./pages/OnlineAssessmentResultsPage.jsx'));
 const HalamanRuangBelajarSiswa = lazy(() => import('./pages/StudentLearningPage.jsx'));
 const HalamanKelolaRuangBelajar = lazy(() => import('./pages/TeacherStudentLearningPage.jsx'));
 const HalamanTautkanAkunSiswa = lazy(() => import('./pages/StudentAccountLinkPage.jsx'));
+const HalamanPengumumanSekolah = lazy(() => import('./pages/SchoolAnnouncementsPage.jsx'));
 const HalamanTenantPlatform = lazy(() => import('./pages/PlatformTenantsPage.jsx'));
 const HalamanPenggunaPlatform = lazy(() => import('./pages/PlatformUsersPage.jsx'));
 const HalamanOperasiPlatform = lazy(() => import('./pages/PlatformOperationsPage.jsx'));
@@ -141,7 +144,17 @@ function PrivateShell({ children }) {
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;
   if ((activeRole || role) === 'demo') return <Navigate to="/trial" replace />;
-  if (!canOpenRolePath(activeRole || role, location.pathname)) {
+  if (!canOpenRolePath(activeRole || role, location.pathname, location.search)) {
+    if (!canOpenRolePath(activeRole || role, '/dashboard')) {
+      return (
+        <main className="app-error-screen" role="alert">
+          <section className="app-error-card">
+            <h1>Peran belum memiliki akses</h1>
+            <p>Akun ini belum memiliki peran aplikasi yang dikenal. Hubungi administrator untuk memeriksa penetapan peran.</p>
+          </section>
+        </main>
+      );
+    }
     return <Navigate to="/dashboard" replace />;
   }
   return (
@@ -158,7 +171,7 @@ function RouteWrapper() {
   const { loading, user, role, activeRole, passwordRecovery } = useAuth();
   const userId = user?.uid;
   const selectedRole = activeRole || role;
-  
+
   // Tangani Legacy URL otomatis[cite: 10]
   useEffect(() => {
     const rawHash = window.location.hash;
@@ -200,17 +213,21 @@ function RouteWrapper() {
         <Route path="/platform/supabase-users" element={<HalamanPenggunaSupabase />} />
         <Route path="/scan/:kode" element={<HalamanScan />} />
         <Route path="/" element={<Navigate to={user ? (passwordRecovery ? '/login' : selectedRole === 'demo' ? '/trial' : '/dashboard') : '/login'} replace />} />
-        
+
         <Route path="/dashboard" element={<PrivateShell><HalamanDashboard /></PrivateShell>} />
         <Route path="/purchase" element={<PrivateShell><HalamanPurchase /></PrivateShell>} />
         <Route path="/testimoni" element={<PrivateShell><HalamanTestimoni /></PrivateShell>} />
         <Route path="/admin/pengguna/:sub" element={<PrivateShell><HalamanAdminPengguna /></PrivateShell>} />
+        <Route path="/admin/asesmen/:sub" element={<PrivateShell><HalamanAdminAssessment /></PrivateShell>} />
         <Route path="/admin/pengguna/tautkan-siswa" element={<PrivateShell><HalamanTautkanAkunSiswa /></PrivateShell>} />
         <Route path="/pelaksanaan/presensi" element={<PrivateShell><HalamanPresensi /></PrivateShell>} />
         <Route path="/program-kegiatan" element={<PrivateShell><HalamanProgramKegiatan /></PrivateShell>} />
+        <Route path="/pengumuman" element={<PrivateShell><HalamanPengumumanSekolah /></PrivateShell>} />
+        <Route path="/perangkat/cover" element={<PrivateShell><HalamanCoverPerangkat /></PrivateShell>} />
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
         <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanIntegrasiAI /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
+        <Route path="/asesmen/generator-ai" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/ujian" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/nilai" element={<PrivateShell><HalamanNilaiUjianSiswa /></PrivateShell>} />
@@ -221,22 +238,23 @@ function RouteWrapper() {
         <Route path="/platform/tenant/sekolah" element={<PrivateShell><HalamanTenantPlatform /></PrivateShell>} />
         <Route path="/platform/pengguna/admin-sekolah" element={<PrivateShell><HalamanPenggunaPlatform /></PrivateShell>} />
         <Route path="/platform/*" element={<PrivateShell><HalamanOperasiPlatform /></PrivateShell>} />
-        
+
         <Route path="/datadasar" element={<Navigate to="/datadasar/profil" replace />} /> {/*[cite: 9] */}
         <Route path="/datadasar/:sub" element={<PrivateShell><HalamanDataDasar /></PrivateShell>} />
-        
+
         {['rpe', 'atp', 'prota', 'prosem', 'kktp', 'modul'].map((jenis) => (
           <Route key={jenis} path={`/perencanaan/${jenis}`}
             element={<Navigate to={`/perencanaan?jenis=${jenis}`} replace />} />
         ))}
         <Route path="/perencanaan/cover" element={<Navigate to="/perangkat/cover" replace />} />
         <Route path="/perencanaan/modul-siswa" element={<Navigate to="/perangkat/modul-siswa" replace />} />
+        <Route path="/perangkat/modul-siswa" element={<Navigate to="/pelaksanaan/ruang-siswa" replace />} />
         <Route path="/perencanaan/banksoal" element={<Navigate to="/asesmen/bank-soal" replace />} />
         <Route path="/perencanaan/:id?/:jenis?" element={<PrivateShell><HalamanPerencanaan /></PrivateShell>} /> {/*[cite: 9] */}
 
         <Route path="/hasil/perencanaan" element={<PrivateShell><HalamanArsipPerencanaan /></PrivateShell>} />
         <Route path="/laporan/arsip-perencanaan" element={<PrivateShell><HalamanArsipPerencanaan /></PrivateShell>} />
-        
+
         {/* Chat Routes - URUTAN KRUSIAL[cite: 9] */}
         <Route path="/chat" element={<PrivateShell><HalamanChat /></PrivateShell>} />
         <Route path="/chat/baru" element={<PrivateShell><HalamanChat /></PrivateShell>} />
@@ -244,7 +262,7 @@ function RouteWrapper() {
         <Route path="/chat/grup" element={<PrivateShell><HalamanChat /></PrivateShell>} />
         <Route path="/chat/:chatId" element={<PrivateShell><HalamanChat /></PrivateShell>} /> {/*[cite: 9] */}
         <Route path="/asisten" element={<PrivateShell><HalamanAsisten /></PrivateShell>} />
-        
+
         <Route path="/profil" element={<Navigate to="/pengaturan/akun" replace />} />
         <Route path="*" element={user
           ? (passwordRecovery ? <Navigate to="/login" replace /> : selectedRole === 'demo' ? <Navigate to="/trial" replace /> : <PrivateShell><HalamanSubMenu /></PrivateShell>)

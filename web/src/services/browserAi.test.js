@@ -41,6 +41,90 @@ function providerQuestion(provider, jenis = 'pilihan_ganda') {
     : Response.json({ choices: [{ message: { content } }] });
 }
 
+function providerPlanning(provider, payload) {
+  const content = JSON.stringify(payload);
+  return provider === 'gemini'
+    ? Response.json({ candidates: [{ content: { parts: [{ text: content }] } }] })
+    : Response.json({ choices: [{ message: { content } }] });
+}
+
+const unit = {
+  no: 1,
+  nama: 'Persamaan Linear',
+  semester: 1,
+  tp: [{ kode: 'TP1.1', rumusan: 'Menyelesaikan persamaan linear.', materi: 'Persamaan linear' }],
+};
+
+const konteksPerencanaan = {
+  mapel: 'Matematika',
+  kelas: 'X',
+  fase: 'E',
+  tahunAjaran: '2026/2027',
+};
+
+const capaian = [{ elemen: 'Bilangan', cp: 'Peserta didik memahami bilangan dan operasi hitung.' }];
+
+const atp = {
+  cp: capaian,
+  unit: [
+    {
+      no: 1,
+      nama: 'Bilangan dan operasi',
+      elemen: 'Bilangan',
+      semester: 1,
+      tp: [{ kode: 'TP1.1', rumusan: 'Menyelesaikan operasi bilangan.', materi: 'Operasi hitung', jp: 12 }],
+    },
+    {
+      no: 2,
+      nama: 'Penerapan bilangan',
+      elemen: 'Bilangan',
+      semester: 2,
+      tp: [{ kode: 'TP2.1', rumusan: 'Menerapkan operasi bilangan.', materi: 'Masalah kontekstual', jp: 12 }],
+    },
+  ],
+};
+
+const kktp = {
+  ambang: 75,
+  items: [{
+    kode: 'TP1.1',
+    indikator: ['Menyelesaikan persamaan linear dengan langkah yang benar.'],
+    rubrik: {
+      perluBimbingan: 'Belum dapat menentukan langkah penyelesaian.',
+      cukup: 'Dapat menyelesaikan dengan beberapa arahan.',
+      baik: 'Menyelesaikan secara mandiri dengan benar.',
+      sangatBaik: 'Menjelaskan strategi dan memeriksa hasil secara mandiri.',
+    },
+  }],
+};
+
+const modul = {
+  tujuanKode: ['TP1.1'],
+  model: 'Pembelajaran kontekstual',
+  pemahamanBermakna: ['Persamaan membantu memodelkan situasi sehari-hari.'],
+  pertanyaanPemantik: ['Bagaimana menentukan nilai yang belum diketahui?'],
+  dimensiProfil: ['Bernalar kritis'],
+  sarpras: ['Papan tulis'],
+  pertemuan: [{
+    ke: 1,
+    judul: 'Menemukan nilai yang belum diketahui',
+    tujuan: 'Menyelesaikan persamaan linear satu variabel.',
+    menit: 90,
+    pendahuluan: ['Mengaitkan materi dengan situasi nyata.'],
+    inti: ['Menganalisis contoh dan menyelesaikan latihan bertahap.'],
+    penutup: ['Menyimpulkan strategi dan melakukan refleksi.'],
+  }],
+  asesmen: {
+    diagnostik: 'Mengidentifikasi pemahaman operasi bilangan.',
+    formatif: 'Memeriksa langkah penyelesaian latihan.',
+    sumatif: 'Menyelesaikan masalah persamaan linear.',
+  },
+  remedial: 'Latihan bertahap dengan contoh terpandu.',
+  pengayaan: 'Membuat model persamaan dari masalah kontekstual.',
+  refleksiGuru: ['Apakah dukungan bertahap sudah memadai?'],
+  refleksiSiswa: ['Strategi apa yang paling membantu?'],
+};
+
 describe('BYOK question generation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -124,9 +208,15 @@ describe('BYOK question generation', () => {
     fetch
       .mockResolvedValueOnce(providerList('gemini'))
       .mockResolvedValueOnce(Response.json({
-        candidates: [{ content: { parts: [{ text: JSON.stringify({
-          questions: [{ ...question, jawaban: '5' }],
-        }) }] } }],
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                questions: [{ ...question, jawaban: '5' }],
+              })
+            }]
+          }
+        }],
       }));
     await testAndSaveBrowserKey('teacher-1', 'gemini', 'valid-key');
     await expect(generateBrowserQuestion('teacher-1', {
@@ -134,19 +224,70 @@ describe('BYOK question generation', () => {
     })).rejects.toThrow('pilihan atau kunci jawaban');
   });
 
-  it('keeps planning and assistant requests disabled and clears keys on logout', async () => {
-    await expect(askBrowserAssistant('teacher-1', [])).rejects.toThrow('belum tersedia');
+  it('generates a validated KKTP from the selected provider', async () => {
+    fetch
+      .mockResolvedValueOnce(providerList('gemini'))
+      .mockResolvedValueOnce(providerPlanning('gemini', kktp));
+    await testAndSaveBrowserKey('teacher-1', 'gemini', 'planning-key');
+    setBrowserAiPreference('teacher-1', 'planning', 'gemini');
     await expect(generateBrowserPlanning({
-      uid: 'teacher-1', paketId: 'package-1', jenis: 'atp',
-      sinyal: new AbortController().signal,
-    })).rejects.toThrow('belum tersedia');
-    expect(fetch).not.toHaveBeenCalled();
+      uid: 'teacher-1',
+      jenis: 'kktp',
+      input: { ...konteksPerencanaan, unit: [unit] },
+    })).resolves.toEqual({ penyedia: 'gemini', payload: kktp });
+    const [url, options] = fetch.mock.calls[1];
+    expect(String(url)).not.toContain('planning-key');
+    expect(options.headers['x-goog-api-key']).toBe('planning-key');
+    expect(JSON.parse(options.body).contents[0].parts[0].text).toContain('DATA_JSON');
+    expect(JSON.parse(options.body).generationConfig.maxOutputTokens).toBe(3000);
+  });
 
-    fetch.mockResolvedValueOnce(providerList('gemini'));
-    await testAndSaveBrowserKey('teacher-1', 'gemini', 'valid-key');
+  it('generates ATP while preserving the selected CP verbatim', async () => {
+    fetch
+      .mockResolvedValueOnce(providerList('gemini'))
+      .mockResolvedValueOnce(providerPlanning('gemini', atp));
+    await testAndSaveBrowserKey('teacher-1', 'gemini', 'planning-key');
+    await expect(generateBrowserPlanning({
+      uid: 'teacher-1',
+      jenis: 'atp',
+      input: { ...konteksPerencanaan, cp: capaian, totalJP: 72, jpPerPekan: 4 },
+    })).resolves.toEqual({ penyedia: 'gemini', payload: atp });
+    const request = JSON.parse(fetch.mock.calls[1][1].body);
+    const prompt = request.contents[0].parts[0].text;
+    expect(prompt).toContain(capaian[0].cp);
+    expect(request.generationConfig.maxOutputTokens).toBe(8000);
+  });
+
+  it('rejects planning output with unknown ATP codes before persistence', async () => {
+    fetch
+      .mockResolvedValueOnce(providerList('gemini'))
+      .mockResolvedValueOnce(providerPlanning('gemini', {
+        ...kktp,
+        items: [{ ...kktp.items[0], kode: 'TP9.9' }],
+      }));
+    await testAndSaveBrowserKey('teacher-1', 'gemini', 'planning-key');
+    await expect(generateBrowserPlanning({
+      uid: 'teacher-1',
+      jenis: 'kktp',
+      input: { ...konteksPerencanaan, unit: [unit] },
+    })).rejects.toThrow('kode TP tidak sesuai');
+  });
+
+  it('generates a structured Modul Ajar and keeps assistant disabled', async () => {
+    fetch
+      .mockResolvedValueOnce(providerList('groq'))
+      .mockResolvedValueOnce(providerPlanning('groq', modul));
+    await testAndSaveBrowserKey('teacher-1', 'groq', 'planning-key');
+    await expect(generateBrowserPlanning({
+      uid: 'teacher-1',
+      jenis: 'modul',
+      input: { ...konteksPerencanaan, unit },
+    })).resolves.toEqual({ penyedia: 'groq', payload: modul });
+    await expect(askBrowserAssistant('teacher-1', [])).rejects.toThrow('belum tersedia');
     setBrowserAiPreference('teacher-1', 'questions', 'gemini');
     clearBrowserAiSession('teacher-1');
     expect(getBrowserAiConnections('teacher-1').providers.gemini.available).toBe(false);
+    expect(getBrowserAiConnections('teacher-1').preferences.planning).toBe('auto');
     expect(() => setBrowserAiPreference('teacher-1', 'assistant', 'gemini')).toThrow('tidak valid');
   });
 });

@@ -5,6 +5,7 @@ import { adalahPeranGuru, cariMenu } from '../navigasi.js';
 import Ikon from '../components/Ikon.jsx';
 import TeacherWorkspacePage from './TeacherWorkspacePage.jsx';
 import TeacherAccountPage from './TeacherAccountPage.jsx';
+import AdminAcademicPage from './AdminAcademicPage.jsx';
 import '../styles/submenu.css';
 
 const ALUR = {
@@ -174,6 +175,10 @@ export default function SubMenuPage() {
   const { grup, item } = menu;
   if (adalahPeranGuru(peranAktif) && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
   if (adalahPeranGuru(peranAktif)) return <TeacherWorkspacePage grup={grup} item={item} />;
+  if (peranAktif === 'admin_sekolah' &&
+    ['/admin/akademik/kelas', '/admin/akademik/mapel'].includes(item.path)) {
+    return <AdminAcademicPage />;
+  }
 
   const alur = ALUR[grup.id] || {
     ringkasan: 'Pilih aktivitas yang dibutuhkan dan lanjutkan ke modul terkait.',

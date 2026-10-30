@@ -60,6 +60,7 @@ export const GRUP_MENU = [
       tautan('Pembelajaran Berdiferensiasi', '/pelaksanaan/berdiferensiasi', 'users'),
       tautan('Kegiatan Kelas Khusus', '/pelaksanaan/kelas-khusus', 'users'),
       tautan('Catatan Kelas Cepat', '/pelaksanaan/catatan-cepat', 'file'),
+      tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
     ],
   },
   {
@@ -161,6 +162,7 @@ const MENU_SISWA = [
     tautan('Paket dan Langganan', '/purchase', 'badge'),
   ]),
   grup('siswa-chat', 'Komunikasi', 'chat', [
+    tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
     tautan('Grup', '/chat/grup', 'users'),
@@ -175,6 +177,7 @@ const MENU_ORTU = [
     tautan('Nilai dan Kehadiran', '/orang-tua/nilai-kehadiran', 'chart'),
   ]),
   grup('ortu-komunikasi', 'Komunikasi', 'chat', [
+    tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
   ]),
@@ -194,6 +197,7 @@ export const MENU_OPERATOR = [
     tautan('Presensi', '/pelaksanaan/presensi', 'check'),
   ]),
   grup('operator-komunikasi', 'Komunikasi', 'chat', [
+    tautan('Kanal Pengumuman', '/pengumuman', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
     tautan('Grup', '/chat/grup', 'users'),
@@ -210,9 +214,8 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Monitoring Chat', '/admin/dashboard/chat', 'chat'),
   ]),
   grup('admin-instansi', 'Manajemen Instansi', 'database', [
-    tautan('Profil Sekolah', '/admin/instansi/profil', 'user'),
-    tautan('Tahun Ajaran', '/admin/instansi/tahun-ajaran', 'calendar'),
-    tautan('Semester', '/admin/instansi/semester', 'calendar'),
+    tautan('Profil Sekolah', '/datadasar/profil', 'user'),
+    tautan('Tahun Ajaran & Semester', '/datadasar/ta', 'calendar'),
     tautan('Unit dan Jenjang', '/admin/instansi/unit', 'book'),
   ]),
   grup('admin-chat', 'Chat', 'chat', [
@@ -253,7 +256,7 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Perpustakaan Digital', '/admin/konten/perpustakaan', 'file'),
   ]),
   grup('admin-komunikasi', 'Manajemen Komunikasi', 'chat', [
-    tautan('Kanal Pengumuman', '/admin/komunikasi/pengumuman', 'file'),
+    tautan('Kanal Pengumuman', '/pengumuman', 'file'),
     tautan('Broadcast', '/admin/komunikasi/broadcast', 'users'),
     tautan('Monitoring Agregat', '/admin/komunikasi/monitoring', 'chart'),
     tautan('Moderasi Testimoni', '/testimoni', 'chat'),
@@ -312,7 +315,6 @@ export const MENU_SUPERADMIN = [
     tautan('Izin Peran', '/platform/fitur/izin', 'users'),
   ]),
   grup('platform-konten', 'Manajemen Konten Global', 'file', [
-    tautan('Paket Guru', '/admin/perencanaan/paket', 'users'),
     tautan('Template Perangkat', '/platform/konten/template', 'file'),
     tautan('Bank Soal Global', '/platform/konten/bank-soal', 'book'),
     tautan('Modul', '/platform/konten/modul', 'book'),

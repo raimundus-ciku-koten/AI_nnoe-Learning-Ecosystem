@@ -6,6 +6,10 @@ const migration = readFileSync(
   new URL('../../supabase/migrations/20261018001200_multi_role_identity.sql', import.meta.url),
   'utf8',
 );
+const schoolAssignmentsMigration = readFileSync(
+  new URL('../../supabase/migrations/20261030000100_school_admin_teacher_assignments.sql', import.meta.url),
+  'utf8',
+);
 
 test('peran tambahan diprovisikan dari allowlist dan profil, bukan input browser langsung', () => {
   assert.match(migration, /user_allowlist[\s\S]*?add column if not exists roles text\[\]/);
@@ -58,4 +62,15 @@ test('pemilih peran klien tidak dapat mengubah tenant atau peran tanpa RPC admin
   assert.match(userManagement, /user\.role === 'unprovisioned' \? '' : user\.role/);
   assert.match(userManagement, /supportsRoleAssignments\s*\?\s*\[\.\.\.new Set\(\[\.\.\.form\.roles, form\.role\]\)\]\s*:\s*\[form\.role\]/);
   assert.match(userManagement, /disabled=\{!supportsRoleAssignments && !LEGACY_ROLES\.has\(value\)\}/);
+});
+
+test('penugasan guru sekolah hanya dapat diubah admin tenant melalui RPC yang diaudit', () => {
+  assert.match(schoolAssignmentsMigration, /create or replace function public\.manage_school_teacher_assignments/);
+  assert.match(schoolAssignmentsMigration, /public\.current_app_role\(\) <> 'admin_sekolah'/);
+  assert.match(schoolAssignmentsMigration, /profile\.tenant_id = actor_tenant_id/);
+  assert.match(schoolAssignmentsMigration, /profile\.active/);
+  assert.match(schoolAssignmentsMigration, /'guru' = any\(profile\.roles\)/);
+  assert.match(schoolAssignmentsMigration, /insert into public\.platform_audit/);
+  assert.match(schoolAssignmentsMigration, /grant execute on function public\.manage_school_teacher_assignments\(uuid, text\[\], text\[\]\)\s+to authenticated/);
+  assert.doesNotMatch(schoolAssignmentsMigration, /set\s+role\s*=|set\s+roles\s*=/i);
 });

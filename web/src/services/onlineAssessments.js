@@ -10,26 +10,26 @@ function wajibText(value, label) {
 
 function validasiPaketUjian(exam) {
   if (!exam || typeof exam !== 'object' ||
-      typeof exam.examId !== 'string' ||
-      typeof exam.attemptId !== 'string' ||
-      typeof exam.title !== 'string' ||
-      !Number.isFinite(Date.parse(exam.deadline)) ||
-      !Array.isArray(exam.questions) || exam.questions.length === 0) {
+    typeof exam.examId !== 'string' ||
+    typeof exam.attemptId !== 'string' ||
+    typeof exam.title !== 'string' ||
+    !Number.isFinite(Date.parse(exam.deadline)) ||
+    !Array.isArray(exam.questions) || exam.questions.length === 0) {
     throw new Error('Paket ujian dari server tidak valid.');
   }
 
   for (const [index, question] of exam.questions.entries()) {
     if (!question || typeof question.id !== 'string' ||
-        !['pilihan_ganda', 'uraian'].includes(question.kind) ||
-        typeof question.prompt !== 'string' ||
-        !Array.isArray(question.choices) ||
-        typeof question.position !== 'number' ||
-        question.choices.some((choice) => typeof choice !== 'string' || choice.length > 300) ||
-        (question.kind === 'pilihan_ganda' &&
-          (question.choices.length < 2 || question.choices.length > 5)) ||
-        (question.kind === 'uraian' && question.choices.length !== 0) ||
-        Object.hasOwn(question, 'correct_answer') ||
-        Object.hasOwn(question, 'jawaban')) {
+      !['pilihan_ganda', 'uraian'].includes(question.kind) ||
+      typeof question.prompt !== 'string' ||
+      !Array.isArray(question.choices) ||
+      typeof question.position !== 'number' ||
+      question.choices.some((choice) => typeof choice !== 'string' || choice.length > 300) ||
+      (question.kind === 'pilihan_ganda' &&
+        (question.choices.length < 2 || question.choices.length > 5)) ||
+      (question.kind === 'uraian' && question.choices.length !== 0) ||
+      Object.hasOwn(question, 'correct_answer') ||
+      Object.hasOwn(question, 'jawaban')) {
       throw new Error(`Soal ujian nomor ${index + 1} tidak valid.`);
     }
   }
@@ -104,6 +104,29 @@ export async function muatRingkasanUjianGuru() {
   return data;
 }
 
+export async function muatRingkasanUjianSekolah() {
+  const { data, error } = await supabase.rpc('school_admin_online_exam_overview');
+  if (error) throw error;
+  const allowedFields = new Set([
+    'exam_id', 'title', 'kelas', 'starts_at', 'ends_at', 'duration_minutes',
+    'status', 'teacher_name', 'participant_count', 'attempt_count',
+    'submitted_count', 'pending_review_count',
+  ]);
+  if (!Array.isArray(data) || data.some((row) =>
+    !row || typeof row !== 'object' || Object.keys(row).some((field) => !allowedFields.has(field)) ||
+    typeof row.exam_id !== 'string' || typeof row.title !== 'string' ||
+    typeof row.kelas !== 'string' || typeof row.teacher_name !== 'string' ||
+    !['active', 'closed'].includes(row.status) ||
+    !Number.isInteger(row.duration_minutes) || row.duration_minutes < 1 || row.duration_minutes > 300 ||
+    !Number.isFinite(Date.parse(row.starts_at)) || !Number.isFinite(Date.parse(row.ends_at)) ||
+    Date.parse(row.ends_at) <= Date.parse(row.starts_at) ||
+    !['participant_count', 'attempt_count', 'submitted_count', 'pending_review_count']
+      .every((field) => Number.isInteger(row[field]) && row[field] >= 0))) {
+    throw new Error('Ringkasan ujian sekolah tidak valid.');
+  }
+  return data;
+}
+
 export async function muatHasilUjianGuru() {
   const { data, error } = await supabase.rpc('teacher_online_exam_results');
   if (error) throw error;
@@ -113,7 +136,7 @@ export async function muatHasilUjianGuru() {
 
 export function buatTautanUjianSiswa(examId, origin, pathname) {
   if (typeof examId !== 'string' ||
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(examId)) {
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(examId)) {
     throw new TypeError('ID ujian tidak valid untuk tautan siswa.');
   }
   if (typeof origin !== 'string' || typeof pathname !== 'string') {
@@ -139,15 +162,15 @@ export function buatDataEksporHasilUjian(results, examId = 'all') {
   }
   const rows = selected.map((result, index) => {
     if (!result || typeof result.exam_id !== 'string' ||
-        typeof result.student_name !== 'string' ||
-        typeof result.title !== 'string' ||
-        typeof result.kelas !== 'string' ||
-        typeof result.submitted_at !== 'string' ||
-        !Number.isFinite(Date.parse(result.submitted_at)) ||
-        !Number.isInteger(result.objective_correct) ||
-        !Number.isInteger(result.objective_total) ||
-        typeof result.grade_pending !== 'boolean' ||
-        (!result.grade_pending && result.score !== null && !Number.isFinite(Number(result.score)))) {
+      typeof result.student_name !== 'string' ||
+      typeof result.title !== 'string' ||
+      typeof result.kelas !== 'string' ||
+      typeof result.submitted_at !== 'string' ||
+      !Number.isFinite(Date.parse(result.submitted_at)) ||
+      !Number.isInteger(result.objective_correct) ||
+      !Number.isInteger(result.objective_total) ||
+      typeof result.grade_pending !== 'boolean' ||
+      (!result.grade_pending && result.score !== null && !Number.isFinite(Number(result.score)))) {
       throw new TypeError(`Data hasil ujian nomor ${index + 1} tidak valid untuk ekspor.`);
     }
     return [
@@ -205,8 +228,8 @@ export async function buatUjianOnline({
   wajibText(startsAt, 'Waktu mulai');
   wajibText(endsAt, 'Waktu selesai');
   if (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 300 ||
-      !Array.isArray(questionIds) || questionIds.length < 1 || questionIds.length > 100 ||
-      new Set(questionIds).size !== questionIds.length) {
+    !Array.isArray(questionIds) || questionIds.length < 1 || questionIds.length > 100 ||
+    new Set(questionIds).size !== questionIds.length) {
     throw new TypeError('Durasi atau daftar soal tidak valid.');
   }
   if (Date.parse(endsAt) <= Date.parse(startsAt)) {
@@ -293,7 +316,7 @@ export function muatDraftUjian(userId, examId) {
   }
   validasiPaketUjian(draft.exam);
   if (!draft.answers || typeof draft.answers !== 'object' || Array.isArray(draft.answers) ||
-      typeof draft.submissionId !== 'string') {
+    typeof draft.submissionId !== 'string') {
     throw new Error('Format draft ujian tersimpan tidak valid.');
   }
   return draft;
