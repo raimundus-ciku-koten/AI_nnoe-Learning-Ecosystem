@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
+import MathEquationInput from '../components/MathEquationInput.jsx';
 import {
   hapusSoalBank, muatBankSoal, tambahSoalBank, ubahSoalBank,
 } from '../services/questionBank.js';
@@ -20,14 +21,19 @@ const FORM_AWAL = {
 };
 
 const batasi = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+const batasiIsi = (value, max) => String(value ?? '')
+  .replace(/\r\n?/g, '\n')
+  .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '')
+  .trim()
+  .slice(0, max);
 
 function siapkanSoal(form) {
   const jenis = form.jenis === 'uraian' ? 'uraian' : 'pilihan_ganda';
   const pilihan = jenis === 'pilihan_ganda'
     ? form.pilihan.split(/\r?\n/).map((item) => batasi(item, 300)).filter(Boolean)
     : [];
-  const jawaban = batasi(form.jawaban, 1000);
-  if (!batasi(form.mapel, 80) || !batasi(form.kelas, 30) || !batasi(form.pertanyaan, 2000)) {
+  const jawaban = jenis === 'uraian' ? batasiIsi(form.jawaban, 1000) : batasi(form.jawaban, 1000);
+  if (!batasi(form.mapel, 80) || !batasi(form.kelas, 30) || !batasiIsi(form.pertanyaan, 2000)) {
     throw new Error('Mata pelajaran, kelas, dan pertanyaan wajib diisi.');
   }
   if (jenis === 'pilihan_ganda' &&
@@ -43,10 +49,10 @@ function siapkanSoal(form) {
     mapel: batasi(form.mapel, 80),
     kelas: batasi(form.kelas, 30),
     jenis,
-    pertanyaan: batasi(form.pertanyaan, 2000),
+    pertanyaan: batasiIsi(form.pertanyaan, 2000),
     pilihan,
     jawaban,
-    pembahasan: batasi(form.pembahasan, 2000),
+    pembahasan: batasiIsi(form.pembahasan, 2000),
   };
 }
 
@@ -300,10 +306,15 @@ export default function QuestionBankPage() {
                 {aiBusy ? 'Membuat draf…' : 'Buat draf dengan AI'}
               </button>
             </div>
-            <label className="question-bank-wide">
-              Pertanyaan
-              <textarea value={form.pertanyaan} maxLength={2000} rows={4} required onChange={(e) => setForm({ ...form, pertanyaan: e.target.value })} />
-            </label>
+            <div className="question-bank-wide">
+              <MathEquationInput
+                value={form.pertanyaan}
+                maxLength={2000}
+                label="Persamaan pada pertanyaan"
+                textLabel="Pertanyaan"
+                onChange={(value) => setForm((current) => ({ ...current, pertanyaan: value }))}
+              />
+            </div>
             {form.jenis === 'pilihan_ganda' && (
               <>
                 <label className="question-bank-wide">
@@ -320,10 +331,15 @@ export default function QuestionBankPage() {
               </>
             )}
             {form.jenis === 'uraian' && (
-              <label className="question-bank-wide">
-                Contoh jawaban / pedoman penilaian
-                <textarea value={form.jawaban} maxLength={1000} rows={3} required onChange={(e) => setForm({ ...form, jawaban: e.target.value })} />
-              </label>
+              <div className="question-bank-wide">
+                <MathEquationInput
+                  value={form.jawaban}
+                  maxLength={1000}
+                  label="Persamaan pada pedoman jawaban"
+                  textLabel="Contoh jawaban / pedoman penilaian"
+                  onChange={(value) => setForm((current) => ({ ...current, jawaban: value }))}
+                />
+              </div>
             )}
             <label className="question-bank-wide">
               Pembahasan (opsional)

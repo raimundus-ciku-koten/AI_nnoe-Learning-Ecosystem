@@ -10,6 +10,7 @@ import {
   buatDataEksporHasilUjian,
   buatTautanUjianSiswa,
   buatUjianOnline,
+  buatUjianSekolahOnline,
   muatAkunSiswaBelumTertaut,
   muatAkunSiswaTertaut,
   daftarDraftUjian,
@@ -18,6 +19,9 @@ import {
   kirimJawabanUjian,
   muatDraftUjian,
   muatSoalUjianGuru,
+  muatSoalUjianSekolah,
+  muatKelasUjianSekolah,
+  muatRosterUjianSekolah,
   muatRosterBelumTertaut,
   muatUjianSiswa,
   muatNilaiUjianSiswa,
@@ -115,10 +119,11 @@ describe('online assessment service', () => {
       durationMinutes: 60,
       questionIds: ['question-1'],
     })).resolves.toBe('exam-1');
-    expect(supabase.rpc).toHaveBeenCalledWith('create_online_exam', expect.objectContaining({
+    expect(supabase.rpc).toHaveBeenCalledWith('create_teacher_online_exam_from_questions', expect.objectContaining({
       p_title: 'Ujian',
       p_kelas: 'X',
       p_question_ids: ['question-1'],
+      p_custom_questions: [],
     }));
 
     await expect(buatUjianOnline({
@@ -129,6 +134,62 @@ describe('online assessment service', () => {
       durationMinutes: 60,
       questionIds: ['question-1', 'question-1'],
     })).rejects.toThrow('tidak valid');
+  });
+
+  it('creates school exam packages for selected classes through the restricted RPC', async () => {
+    const examIds = [
+      '11111111-1111-4111-8111-111111111111',
+      '22222222-2222-4222-8222-222222222222',
+    ];
+    supabase.rpc.mockResolvedValueOnce({ data: examIds, error: null });
+    await expect(buatUjianSekolahOnline({
+      title: 'Ujian Akhir Semester',
+      kelas: ['VII A', 'VII B'],
+      startsAt: '2026-10-18T01:00:00Z',
+      endsAt: '2026-10-18T02:00:00Z',
+      durationMinutes: 60,
+      questionIds: ['question-a', 'question-b'],
+    })).resolves.toEqual(examIds);
+    expect(supabase.rpc).toHaveBeenCalledWith('create_school_online_exams_v2', expect.objectContaining({
+      p_kelas: ['VII A', 'VII B'],
+      p_question_ids: ['question-a', 'question-b'],
+      p_custom_questions: [],
+      p_student_ids: [],
+      p_reviewer_teacher_id: null,
+    }));
+
+    await expect(buatUjianSekolahOnline({
+      title: 'Ujian',
+      kelas: ['VII A', 'VII A'],
+      startsAt: '2026-10-18T01:00:00Z',
+      endsAt: '2026-10-18T02:00:00Z',
+      durationMinutes: 60,
+      questionIds: ['question-a'],
+    })).rejects.toThrow('tidak valid');
+  });
+
+  it('creates one exam from a mix of bank questions and reviewed PDF drafts', async () => {
+    supabase.rpc.mockResolvedValueOnce({ data: 'exam-mixed', error: null });
+    await expect(buatUjianOnline({
+      title: 'Ujian',
+      kelas: 'X',
+      startsAt: '2026-10-18T01:00:00Z',
+      endsAt: '2026-10-18T02:00:00Z',
+      durationMinutes: 60,
+      questionIds: ['question-1'],
+      customQuestions: [{
+        mapel: 'Matematika',
+        kelas: 'X',
+        jenis: 'uraian',
+        pertanyaan: 'Jelaskan.',
+        pilihan: [],
+        jawaban: 'Jawaban',
+      }],
+    })).resolves.toBe('exam-mixed');
+    expect(supabase.rpc).toHaveBeenCalledWith('create_teacher_online_exam_from_questions', expect.objectContaining({
+      p_question_ids: ['question-1'],
+      p_custom_questions: [expect.objectContaining({ pertanyaan: 'Jelaskan.' })],
+    }));
   });
 
   it('creates a student exam link on the same origin and validates the exam identifier', () => {
@@ -190,6 +251,34 @@ describe('online assessment service', () => {
       ['owner_id', 'teacher-1'],
     ]);
     expect(query.select).toHaveBeenCalledWith('id,mapel,kelas,jenis,pertanyaan,pilihan');
+  });
+
+  it('loads school exam questions by tenant without selecting answer keys', async () => {
+    const query = {
+      select: vi.fn(() => query),
+      eq: vi.fn(() => query),
+      order: vi.fn(() => query),
+      limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+    };
+    supabase.from.mockReturnValueOnce(query);
+    await expect(muatSoalUjianSekolah('tenant-1')).resolves.toEqual([]);
+    expect(query.eq).toHaveBeenCalledWith('tenant_id', 'tenant-1');
+    expect(query.select).toHaveBeenCalledWith('id,mapel,kelas,jenis,pertanyaan,pilihan');
+    expect(query.eq).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads only the admin-facing class counts and roster through scoped RPCs', async () => {
+    supabase.rpc
+      .mockResolvedValueOnce({ data: [{ kelas: 'VII A', student_count: 24, linked_count: 20 }], error: null })
+      .mockResolvedValueOnce({ data: [{ student_id: 'student-1', nama: 'Ayu', kelas: 'VII A', account_linked: true }], error: null });
+    await expect(muatKelasUjianSekolah()).resolves.toEqual([
+      { kelas: 'VII A', student_count: 24, linked_count: 20 },
+    ]);
+    await expect(muatRosterUjianSekolah(['VII A'])).resolves.toEqual([
+      { id: 'student-1', nama: 'Ayu', kelas: 'VII A', akunTertaut: true },
+    ]);
+    expect(supabase.rpc).toHaveBeenNthCalledWith(1, 'school_exam_available_classes');
+    expect(supabase.rpc).toHaveBeenNthCalledWith(2, 'school_exam_student_roster', { p_kelas: ['VII A'] });
   });
 
   it('lists unmapped roster/accounts and links accounts through restricted RPCs', async () => {

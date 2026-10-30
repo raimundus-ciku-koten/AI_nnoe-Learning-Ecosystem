@@ -116,6 +116,8 @@ const HalamanPortalWali = lazy(() => import('./pages/ParentPortalPage.jsx'));
 const HalamanIntegrasiAI = lazy(() => import('./pages/AIIntegrationsPage.jsx'));
 const HalamanBankSoal = lazy(() => import('./pages/QuestionBankPage.jsx'));
 const HalamanUjianOnline = lazy(() => import('./pages/OnlineAssessmentPage.jsx'));
+const HalamanPembuatUjianSekolah = lazy(() => import('./pages/SchoolExamBuilderPage.jsx'));
+const HalamanRapor = lazy(() => import('./pages/ReportCardPage.jsx'));
 const HalamanAdminAssessment = lazy(() => import('./pages/AdminAssessmentPage.jsx'));
 const HalamanAdminChatMonitoring = lazy(() => import('./pages/AdminChatMonitoringPage.jsx'));
 const HalamanLaporanSekolah = lazy(() => import('./pages/SchoolReportsPage.jsx'));
@@ -174,7 +176,7 @@ function PrivateShell({ children }) {
   return (
     <PrivilegedMfaGate role={role} userId={user.uid}>
       <MaintenanceGuard>
-      <AppShell path={location.pathname} search={location.search} menuAccessError={menuAccessError}>{children}</AppShell>
+        <AppShell path={location.pathname} search={location.search} menuAccessError={menuAccessError}>{children}</AppShell>
       </MaintenanceGuard>
     </PrivilegedMfaGate>
   );
@@ -233,6 +235,7 @@ function RouteWrapper() {
         <Route path="/testimoni" element={<PrivateShell><HalamanTestimoni /></PrivateShell>} />
         <Route path="/admin/pengguna/:sub" element={<PrivateShell><HalamanAdminPengguna /></PrivateShell>} />
         <Route path="/admin/pengguna/tautkan-wali" element={<PrivateShell><HalamanTautkanWali /></PrivateShell>} />
+        <Route path="/admin/asesmen/buat" element={<PrivateShell><HalamanPembuatUjianSekolah /></PrivateShell>} />
         <Route path="/admin/asesmen/:sub" element={<PrivateShell><HalamanAdminAssessment /></PrivateShell>} />
         <Route path="/admin/dashboard/chat" element={<PrivateShell><HalamanAdminChatMonitoring /></PrivateShell>} />
         <Route path="/admin/pengguna/tautkan-siswa" element={<PrivateShell><HalamanTautkanAkunSiswa /></PrivateShell>} />
@@ -251,6 +254,7 @@ function RouteWrapper() {
         <Route path="/asesmen/formatif" element={<PrivateShell><HalamanUjianOnline assessmentType="formatif" /></PrivateShell>} />
         <Route path="/asesmen/sumatif" element={<PrivateShell><HalamanUjianOnline assessmentType="sumatif" /></PrivateShell>} />
         <Route path="/asesmen/generator-ai" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
+        <Route path="/asesmen/rapor" element={<PrivateShell><HalamanRapor /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/ujian" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/nilai" element={<PrivateShell><HalamanNilaiUjianSiswa /></PrivateShell>} />

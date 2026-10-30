@@ -251,6 +251,7 @@ export const MENU_ADMIN_SEKOLAH = [
   ]),
   grup('admin-asesmen', 'Manajemen Asesmen', 'check', [
     tautan('Bank Soal', '/asesmen/bank-soal', 'book'),
+    tautan('Buat Ujian Sekolah', '/admin/asesmen/buat', 'check'),
     tautan('Paket Ujian', '/admin/asesmen/paket', 'file'),
     tautan('Jadwal Ujian', '/admin/asesmen/jadwal', 'calendar'),
     tautan('Monitoring Ujian', '/admin/asesmen/monitoring', 'chart'),

@@ -54,9 +54,11 @@ describe('school reports and finance pages', () => {
 
     it('shows refresh and aggregate CSV actions in the school assessment monitor', () => {
         const html = renderPage(AdminAssessmentPage, '/admin/asesmen/monitoring');
+        const packages = renderPage(AdminAssessmentPage, '/admin/asesmen/paket');
         expect(html).toContain('Monitoring Ujian');
         expect(html).toContain('Memuat ulang');
         expect(html).toContain('Ekspor CSV');
         expect(html).toContain('Nama siswa, jawaban, kunci, dan nilai individual tidak ditampilkan');
+        expect(packages).toContain('guru atau Admin Sekolah');
     });
 });

@@ -32,6 +32,7 @@ with expected_feature_relations(name) as (
     ('online_exams'),
     ('online_exam_items'),
     ('online_exam_attempts'),
+    ('online_exam_recipients'),
     ('student_class_schedule'),
     ('student_learning_materials'),
     ('student_guardian_links'),

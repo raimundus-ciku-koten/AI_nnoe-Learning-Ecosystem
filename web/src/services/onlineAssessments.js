@@ -97,6 +97,57 @@ export async function muatSoalUjianGuru(tenantId, ownerId) {
   return data;
 }
 
+export async function muatSoalUjianSekolah(tenantId) {
+  wajibText(tenantId, 'Tenant');
+  const { data, error } = await supabase
+    .from('question_bank')
+    .select('id,mapel,kelas,jenis,pertanyaan,pilihan')
+    .eq('tenant_id', tenantId)
+    .order('updated_at', { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  if (!Array.isArray(data) || data.some((row) =>
+    !row || typeof row.id !== 'string' || typeof row.mapel !== 'string' ||
+    typeof row.kelas !== 'string' || !['pilihan_ganda', 'uraian'].includes(row.jenis) ||
+    typeof row.pertanyaan !== 'string' || !Array.isArray(row.pilihan) ||
+    row.pilihan.some((choice) => typeof choice !== 'string'))) {
+    throw new Error('Daftar soal sekolah tidak valid.');
+  }
+  return data;
+}
+
+export async function muatRosterUjianSekolah(kelas) {
+  if (!Array.isArray(kelas) || kelas.length < 1 || kelas.length > 100 ||
+    kelas.some((item) => typeof item !== 'string' || !item.trim())) {
+    throw new TypeError('Pilih kelas yang valid untuk memuat roster.');
+  }
+  const { data, error } = await supabase.rpc('school_exam_student_roster', { p_kelas: kelas });
+  if (error) throw error;
+  if (!Array.isArray(data) || data.some((row) =>
+    !row || typeof row.student_id !== 'string' || typeof row.nama !== 'string' ||
+    typeof row.kelas !== 'string' || typeof row.account_linked !== 'boolean')) {
+    throw new Error('Roster peserta ujian tidak valid.');
+  }
+  return data.map((row) => ({
+    id: row.student_id,
+    nama: row.nama,
+    kelas: row.kelas,
+    akunTertaut: row.account_linked,
+  }));
+}
+
+export async function muatKelasUjianSekolah() {
+  const { data, error } = await supabase.rpc('school_exam_available_classes');
+  if (error) throw error;
+  if (!Array.isArray(data) || data.some((row) =>
+    !row || typeof row.kelas !== 'string' ||
+    !Number.isInteger(row.student_count) || row.student_count < 0 ||
+    !Number.isInteger(row.linked_count) || row.linked_count < 0 || row.linked_count > row.student_count)) {
+    throw new Error('Daftar kelas ujian tidak valid.');
+  }
+  return data;
+}
+
 export async function muatRingkasanUjianGuru() {
   const { data, error } = await supabase.rpc('teacher_online_exam_overview');
   if (error) throw error;
@@ -131,7 +182,7 @@ export function buatCsvRingkasanUjianSekolah(exams) {
   const headers = [
     'Paket ujian',
     'Kelas',
-    'Guru',
+    'Pembuat',
     'Mulai',
     'Berakhir',
     'Durasi (menit)',
@@ -266,14 +317,16 @@ export async function nilaiJawabanUraian(attemptId, essayScore) {
 }
 
 export async function buatUjianOnline({
-  title, kelas, startsAt, endsAt, durationMinutes, questionIds,
+  title, kelas, startsAt, endsAt, durationMinutes, questionIds = [], customQuestions = [],
 }) {
   wajibText(title, 'Judul ujian');
   wajibText(kelas, 'Kelas');
   wajibText(startsAt, 'Waktu mulai');
   wajibText(endsAt, 'Waktu selesai');
   if (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 300 ||
-    !Array.isArray(questionIds) || questionIds.length < 1 || questionIds.length > 100 ||
+    !Array.isArray(questionIds) || questionIds.length > 100 ||
+    !Array.isArray(customQuestions) || customQuestions.length > 100 ||
+    questionIds.length + customQuestions.length < 1 || questionIds.length + customQuestions.length > 100 ||
     new Set(questionIds).size !== questionIds.length) {
     throw new TypeError('Durasi atau daftar soal tidak valid.');
   }
@@ -281,16 +334,73 @@ export async function buatUjianOnline({
     throw new TypeError('Waktu selesai harus setelah waktu mulai.');
   }
 
-  const { data, error } = await supabase.rpc('create_online_exam', {
+  const { data, error } = await supabase.rpc('create_teacher_online_exam_from_questions', {
     p_title: title.trim(),
     p_kelas: kelas.trim(),
     p_starts_at: startsAt,
     p_ends_at: endsAt,
     p_duration_minutes: durationMinutes,
     p_question_ids: questionIds,
+    p_custom_questions: customQuestions.map((question) => ({
+      mapel: question.mapel,
+      kelas: question.kelas,
+      jenis: question.jenis,
+      pertanyaan: question.pertanyaan,
+      pilihan: question.pilihan,
+      jawaban: question.jawaban,
+      pembahasan: question.pembahasan,
+    })),
   });
   if (error) throw error;
   wajibText(data, 'ID ujian');
+  return data;
+}
+
+export async function buatUjianSekolahOnline({
+  title, kelas, startsAt, endsAt, durationMinutes, questionIds = [],
+  customQuestions = [], studentIds = [], reviewerTeacherId = '',
+}) {
+  wajibText(title, 'Judul ujian');
+  if (!Array.isArray(kelas) || kelas.length < 1 || kelas.length > 100 ||
+    kelas.some((item) => typeof item !== 'string' || !item.trim()) ||
+    new Set(kelas).size !== kelas.length ||
+    !Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 300 ||
+    !Array.isArray(questionIds) || questionIds.length > 500 ||
+    !Array.isArray(customQuestions) || customQuestions.length > 500 ||
+    questionIds.length + customQuestions.length < 1 || questionIds.length + customQuestions.length > 500 ||
+    !Array.isArray(studentIds) || studentIds.length > 2000 ||
+    new Set(questionIds).size !== questionIds.length ||
+    new Set(studentIds).size !== studentIds.length ||
+    (reviewerTeacherId && typeof reviewerTeacherId !== 'string')) {
+    throw new TypeError('Kelas, durasi, atau daftar soal ujian sekolah tidak valid.');
+  }
+  wajibText(startsAt, 'Waktu mulai');
+  wajibText(endsAt, 'Waktu selesai');
+  if (Date.parse(endsAt) <= Date.parse(startsAt)) {
+    throw new TypeError('Waktu selesai harus setelah waktu mulai.');
+  }
+  const { data, error } = await supabase.rpc('create_school_online_exams_v2', {
+    p_title: title.trim(),
+    p_kelas: kelas.map((item) => item.trim()),
+    p_starts_at: startsAt,
+    p_ends_at: endsAt,
+    p_duration_minutes: durationMinutes,
+    p_question_ids: questionIds,
+    p_custom_questions: customQuestions.map((question) => ({
+      mapel: question.mapel,
+      kelas: question.kelas,
+      jenis: question.jenis,
+      pertanyaan: question.pertanyaan,
+      pilihan: question.pilihan,
+      jawaban: question.jawaban,
+    })),
+    p_student_ids: studentIds,
+    p_reviewer_teacher_id: reviewerTeacherId || null,
+  });
+  if (error) throw error;
+  if (!Array.isArray(data) || data.length !== kelas.length || data.some((id) => typeof id !== 'string')) {
+    throw new Error('Server tidak mengembalikan paket ujian sekolah yang valid.');
+  }
   return data;
 }
 

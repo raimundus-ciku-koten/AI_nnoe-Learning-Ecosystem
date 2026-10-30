@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { adalahPeranGuru } from '../navigasi.js';
+import PdfQuestionDraftPanel from '../components/PdfQuestionDraftPanel.jsx';
+import MathEquationInput from '../components/MathEquationInput.jsx';
+import { muatPenugasanGuru } from '../services/teacherAssignments.js';
 import { buatSpreadsheetDenganData } from '../services/googleWorkspace.js';
 import { hubungkanGoogleSheetsUntukPengguna } from '../services/googleWorkspaceAuth.js';
 import {
@@ -222,16 +225,15 @@ function StudentAssessments({ userId }) {
                 </label>
               ))
               : (
-                <textarea
-                  rows="4"
-                  maxLength="1000"
+                <MathEquationInput
                   value={answers[question.id] || ''}
+                  maxLength={1000}
+                  label={`Persamaan jawaban uraian nomor ${index + 1}`}
                   readOnly={busy || Boolean(active.submissionId)}
-                  onChange={(event) => setAnswers((previous) => ({
+                  onChange={(answer) => setAnswers((previous) => ({
                     ...previous,
-                    [question.id]: event.target.value,
+                    [question.id]: answer,
                   }))}
-                  aria-label={`Jawaban uraian nomor ${index + 1}`}
                 />
               )}
           </fieldset>
@@ -331,6 +333,7 @@ function StudentAssessments({ userId }) {
 
 function TeacherAssessments({ tenantId, userId, user, assessmentType }) {
   const [questions, setQuestions] = useState([]);
+  const [assignments, setAssignments] = useState({ kelas: [], mapel: [] });
   const [exams, setExams] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [results, setResults] = useState([]);
@@ -341,6 +344,8 @@ function TeacherAssessments({ tenantId, userId, user, assessmentType }) {
   const [endsAt, setEndsAt] = useState('');
   const [duration, setDuration] = useState(60);
   const [selected, setSelected] = useState([]);
+  const [pdfDrafts, setPdfDrafts] = useState([]);
+  const [selectedPdfDraftIds, setSelectedPdfDraftIds] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -360,17 +365,25 @@ function TeacherAssessments({ tenantId, userId, user, assessmentType }) {
   };
 
   useEffect(() => {
-    muatSoalUjianGuru(tenantId, userId)
-      .then(setQuestions)
-      .catch((loadError) => setError(loadError.message));
-    refreshTeacherData().catch((loadError) => setError(loadError.message));
+    let active = true;
+    Promise.all([
+      muatSoalUjianGuru(tenantId, userId),
+      muatPenugasanGuru(userId),
+    ])
+      .then(([rows, teacherAssignments]) => {
+        if (!active) return;
+        setQuestions(rows);
+        setAssignments(teacherAssignments);
+      })
+      .catch((loadError) => { if (active) setError(loadError.message); });
+    refreshTeacherData().catch((loadError) => { if (active) setError(loadError.message); });
+    return () => { active = false; };
   }, [tenantId, userId]);
 
-  const classes = useMemo(
-    () => [...new Set(questions.map((question) => question.kelas))].sort(),
-    [questions],
-  );
+  const classes = assignments.kelas;
   const classQuestions = questions.filter((question) => question.kelas === kelas);
+  const classPdfDrafts = pdfDrafts.filter((question) => question.kelas === kelas);
+  const totalSelectedQuestions = selected.length + selectedPdfDraftIds.length;
   const examOptions = useMemo(() => {
     const seen = new Set();
     return results.reduce((items, result) => {
@@ -398,6 +411,7 @@ function TeacherAssessments({ tenantId, userId, user, assessmentType }) {
         endsAt: new Date(endsAt).toISOString(),
         durationMinutes: Number(duration),
         questionIds: selected,
+        customQuestions: classPdfDrafts.filter((question) => selectedPdfDraftIds.includes(question.id)),
       });
       setNotice(`Ujian berhasil dijadwalkan. Tautan siswa: ${buatTautanUjianSiswa(
         examId,
@@ -406,6 +420,7 @@ function TeacherAssessments({ tenantId, userId, user, assessmentType }) {
       )}`);
       setTitle('');
       setSelected([]);
+      setSelectedPdfDraftIds([]);
       await refreshTeacherData();
     } catch (createError) {
       setError(createError.message);
@@ -476,7 +491,7 @@ function TeacherAssessments({ tenantId, userId, user, assessmentType }) {
     <section className="ale-exam-card" aria-labelledby="exam-create-title">
       <p className="ale-exam-kicker">Asesmen dan penilaian</p>
       <h2 id="exam-create-title">Jadwalkan {assessmentLabel}</h2>
-      <p className="ale-exam-intro">Soal disalin sebagai snapshot saat ujian dibuat. Kunci jawaban hanya digunakan di server untuk penilaian.</p>
+      <p className="ale-exam-intro">Soal disalin sebagai snapshot saat ujian dibuat. Jadwal mulai, batas akhir, dan durasi dihitung serta ditegakkan server.</p>
       {!questions.length && !error && <p>Bank soal milik Anda masih kosong.</p>}
       <form className="ale-exam-form" onSubmit={createExam}>
         <label>Judul ujian
@@ -497,14 +512,21 @@ function TeacherAssessments({ tenantId, userId, user, assessmentType }) {
         <label>Durasi (menit)
           <input required type="number" min="1" max="300" value={duration} onChange={(event) => setDuration(event.target.value)} />
         </label>
+        <PdfQuestionDraftPanel
+          userId={user?.uid}
+          classes={classes}
+          subjects={assignments.mapel}
+          selectedClass={kelas}
+          onDrafts={(drafts) => setPdfDrafts((previous) => [...previous, ...drafts])}
+        />
         <fieldset className="ale-exam-select-questions">
-          <legend>Pilih soal ({selected.length}/100)</legend>
+          <legend>Pilih soal ({totalSelectedQuestions}/100)</legend>
           {classQuestions.map((question) => (
             <label key={question.id}>
               <input
                 type="checkbox"
                 checked={selected.includes(question.id)}
-                disabled={!selected.includes(question.id) && selected.length >= 100}
+                disabled={!selected.includes(question.id) && totalSelectedQuestions >= 100}
                 onChange={(event) => setSelected((previous) => (
                   event.target.checked
                     ? [...previous, question.id]
@@ -514,9 +536,22 @@ function TeacherAssessments({ tenantId, userId, user, assessmentType }) {
               <span>{question.pertanyaan} <small>({question.mapel} · {question.jenis})</small></span>
             </label>
           ))}
-          {kelas && classQuestions.length === 0 && <p>Tidak ada soal untuk kelas ini.</p>}
+          {classPdfDrafts.map((question) => (
+            <label key={question.id}>
+              <input
+                type="checkbox"
+                checked={selectedPdfDraftIds.includes(question.id)}
+                disabled={!selectedPdfDraftIds.includes(question.id) && totalSelectedQuestions >= 100}
+                onChange={(event) => setSelectedPdfDraftIds((previous) => (
+                  event.target.checked ? [...previous, question.id] : previous.filter((id) => id !== question.id)
+                ))}
+              />
+              <span>{question.pertanyaan} <small>(Draf PDF · {question.mapel} · {question.jenis})</small></span>
+            </label>
+          ))}
+          {kelas && classQuestions.length === 0 && classPdfDrafts.length === 0 && <p>Tidak ada soal untuk kelas ini. Unggah PDF untuk membuat draf.</p>}
         </fieldset>
-        <button className="ale-exam-primary" type="submit" disabled={busy || !selected.length}>
+        <button className="ale-exam-primary" type="submit" disabled={busy || !totalSelectedQuestions}>
           {busy ? 'Menyimpan…' : 'Jadwalkan ujian'}
         </button>
       </form>

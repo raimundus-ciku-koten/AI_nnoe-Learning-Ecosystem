@@ -45,6 +45,7 @@ import OnlineAssessmentPage from './OnlineAssessmentPage.jsx';
 import PlatformTenantsPage from './PlatformTenantsPage.jsx';
 import PlatformUsersPage from './PlatformUsersPage.jsx';
 import PlatformOperationsPage, { aktivitasAudit, rincianAudit } from './PlatformOperationsPage.jsx';
+import ReportCardPage from './ReportCardPage.jsx';
 import { MaintenanceGuard } from '../context/PlatformControlContext.jsx';
 
 function renderSubmenu(path, search = '') {
@@ -208,6 +209,26 @@ describe('submenu platform superadmin', () => {
       expect(html).toContain('Simpan nama profil');
       expect(html).toContain('Kirim tautan reset kata sandi');
       expect(html).toContain('Peran dan akses sekolah dikelola');
+    });
+
+    it('menyediakan pratinjau rapor simulasi untuk tiap jenjang', () => {
+      auth.role = 'guru';
+      auth.activeRole = null;
+      auth.tenantId = 'sekolah-test';
+
+      const html = renderToStaticMarkup(
+        React.createElement(MemoryRouter, { initialEntries: ['/asesmen/rapor'] }, React.createElement(ReportCardPage)),
+      );
+
+      expect(html).toContain('Rapor');
+      expect(html).toContain('TK');
+      expect(html).toContain('SD');
+      expect(html).toContain('SMP');
+      expect(html).toContain('SMA');
+      expect(html).toContain('Deskripsi capaian');
+      expect(html).toContain('Catatan wali kelas');
+      expect(html).toContain('seluruh identitas, nilai, kehadiran, dan catatan di bawah adalah data simulasi');
+      expect(html).toContain('bukan dokumen rapor resmi');
     });
 
     it('mengikuti peran aktif saat akun berpindah dari peran utama admin ke guru', () => {
@@ -470,7 +491,7 @@ describe('mode asesmen guru', () => {
 
     expect(html).toContain(`<h2 id="exam-create-title">Jadwalkan ${label}</h2>`);
     expect(html).toContain('Pilih soal');
-    expect(html).toContain('Kunci jawaban hanya digunakan di server');
+    expect(html).toContain('Jadwal mulai, batas akhir, dan durasi dihitung serta ditegakkan server');
   });
 
   it('menggunakan peran guru aktif spesialis saat peran utama admin', () => {

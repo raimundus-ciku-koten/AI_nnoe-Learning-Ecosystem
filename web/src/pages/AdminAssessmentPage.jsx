@@ -7,7 +7,7 @@ import '../styles/online-assessments.css';
 
 const VIEWS = {
     ujian: ['Monitoring Ujian', 'Pantau progres ujian tenant secara agregat dan terbatas sesuai peran.'],
-    paket: ['Paket Ujian', 'Daftar ujian yang dijadwalkan oleh guru di sekolah Anda.'],
+    paket: ['Paket Ujian', 'Daftar ujian yang dibuat oleh guru atau Admin Sekolah di sekolah Anda.'],
     jadwal: ['Jadwal Ujian', 'Jadwal mulai dan berakhir per paket ujian tenant.'],
     monitoring: ['Monitoring Ujian', 'Pantau progres peserta secara agregat tanpa membuka jawaban atau nama siswa.'],
     analisis: ['Analisis Hasil', 'Ringkasan pengumpulan dan status penilaian uraian di tingkat sekolah.'],
@@ -162,7 +162,7 @@ export default function AdminAssessmentPage() {
                             <thead>
                                 <tr>
                                     <th scope="col">Paket / kelas</th>
-                                    <th scope="col">Guru</th>
+                                    <th scope="col">Pembuat</th>
                                     <th scope="col">Jadwal</th>
                                     <th scope="col">Peserta</th>
                                     <th scope="col">Submission</th>

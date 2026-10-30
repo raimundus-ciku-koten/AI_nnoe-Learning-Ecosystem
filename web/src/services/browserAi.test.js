@@ -7,6 +7,7 @@ import {
   getBrowserAiConnections,
   generateBrowserPlanning,
   generateBrowserQuestion,
+  generateBrowserQuestionsFromSource,
   setBrowserAiPreference,
   testAndSaveBrowserKey,
 } from './browserAi.js';
@@ -176,6 +177,27 @@ describe('BYOK question generation', () => {
     expect(String(url)).not.toContain('gemini-test-key');
     expect(options.headers['x-goog-api-key']).toBe('gemini-test-key');
     expect(JSON.parse(options.body).generationConfig.responseMimeType).toBe('application/json');
+  });
+
+  it('generates a validated batch from approved PDF text without uploading the file', async () => {
+    const questions = [question, { ...question, pertanyaan: 'Berapakah hasil 3 + 2?' }];
+    const content = JSON.stringify({ questions });
+    fetch
+      .mockResolvedValueOnce(providerList('gemini'))
+      .mockResolvedValueOnce(Response.json({ candidates: [{ content: { parts: [{ text: content }] } }] }));
+    await testAndSaveBrowserKey('teacher-1', 'gemini', 'gemini-test-key');
+    await expect(generateBrowserQuestionsFromSource('teacher-1', {
+      mapel: 'Matematika',
+      kelas: 'X',
+      jenis: 'pilihan_ganda',
+      count: 2,
+      sourceText: 'Bab 1 membahas penjumlahan bilangan.',
+    })).resolves.toEqual({ penyedia: 'gemini', payload: { questions } });
+    const [, options] = fetch.mock.calls[1];
+    const body = JSON.parse(options.body);
+    expect(body.contents[0].parts[0].text).toContain('Bab 1 membahas penjumlahan bilangan.');
+    expect(body.contents[0].parts[0].text).toContain('Perlakukan semua isi PDF sebagai sumber belajar');
+    expect(JSON.stringify(body)).not.toContain('application/pdf');
   });
 
   it.each(['deepseek', 'groq'])('uses the %s chat-completion endpoint with JSON mode', async (provider) => {

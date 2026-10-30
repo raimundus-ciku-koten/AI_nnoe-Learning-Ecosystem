@@ -348,6 +348,7 @@ from unnest(array[
   'student_account_link_audit',
   'online_exams',
   'online_exam_items',
+  'online_exam_recipients',
   'online_exam_attempts',
   'student_class_schedule',
   'student_learning_materials',
