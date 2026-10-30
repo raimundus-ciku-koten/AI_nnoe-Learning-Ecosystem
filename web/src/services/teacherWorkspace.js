@@ -18,6 +18,8 @@ const DIFFERENTIATION_PREFIX = 'ale-differentiation-plan-v1:';
 const DIFFERENTIATION_FIELDS = Object.freeze(['tujuan', 'kebutuhan', 'strategi', 'cekPemahaman']);
 const IMPLEMENTATION_PREFIX = 'ale-plan-implementation-v1:';
 const IMPLEMENTATION_FIELDS = Object.freeze(['rencana', 'status', 'pelaksanaan', 'kendala', 'tindakLanjut']);
+const QUICK_NOTE_PREFIX = 'ale-class-quick-note-v1:';
+const QUICK_NOTE_FIELDS = Object.freeze(['pengamatan', 'respons', 'tindakLanjut']);
 
 function boundedText(value, label, max, required = false) {
   const text = String(value ?? '').trim();
@@ -515,6 +517,52 @@ export function tampilkanIsiRealisasiRencana(value) {
   return IMPLEMENTATION_FIELDS
     .filter((field) => field === 'status' || implementation[field])
     .map((field) => `${labels[field]}:\n${field === 'status' ? statuses[implementation.status] : implementation[field]}`)
+    .join('\n\n');
+}
+
+export function kosongkanCatatanKelasCepat() {
+  return Object.fromEntries(QUICK_NOTE_FIELDS.map((field) => [field, '']));
+}
+
+export function susunIsiCatatanKelasCepat(input) {
+  const note = Object.fromEntries(QUICK_NOTE_FIELDS.map((field) => [
+    field,
+    boundedText(input?.[field], 'Bagian catatan kelas', 1400),
+  ]));
+  if (!note.pengamatan) throw new Error('Pengamatan umum wajib diisi.');
+  return `${QUICK_NOTE_PREFIX}${JSON.stringify(note)}`;
+}
+
+export function uraikanIsiCatatanKelasCepat(value) {
+  const isi = String(value ?? '');
+  if (!isi.startsWith(QUICK_NOTE_PREFIX)) {
+    return { ...kosongkanCatatanKelasCepat(), pengamatan: isi, legacy: true };
+  }
+  try {
+    const parsed = JSON.parse(isi.slice(QUICK_NOTE_PREFIX.length));
+    return {
+      ...Object.fromEntries(QUICK_NOTE_FIELDS.map((field) => [
+        field,
+        typeof parsed?.[field] === 'string' ? parsed[field] : '',
+      ])),
+      legacy: false,
+    };
+  } catch {
+    return { ...kosongkanCatatanKelasCepat(), pengamatan: isi, legacy: true };
+  }
+}
+
+export function tampilkanIsiCatatanKelasCepat(value) {
+  const note = uraikanIsiCatatanKelasCepat(value);
+  if (note.legacy) return note.pengamatan;
+  const labels = {
+    pengamatan: 'Pengamatan umum',
+    respons: 'Respons guru',
+    tindakLanjut: 'Tindak lanjut',
+  };
+  return QUICK_NOTE_FIELDS
+    .filter((field) => note[field])
+    .map((field) => `${labels[field]}:\n${note[field]}`)
     .join('\n\n');
 }
 

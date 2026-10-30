@@ -24,6 +24,7 @@ import {
   susunIsiRencanaIntervensiKelas,
   susunIsiRencanaDiferensiasi,
   susunIsiRealisasiRencana,
+  susunIsiCatatanKelasCepat,
   susunIsiRencanaPerbaikan,
   susunIsiRencanaKompetensi,
   susunIsiRefleksi,
@@ -34,6 +35,7 @@ import {
   tampilkanIsiRencanaIntervensiKelas,
   tampilkanIsiRencanaDiferensiasi,
   tampilkanIsiRealisasiRencana,
+  tampilkanIsiCatatanKelasCepat,
   tampilkanIsiRencanaPerbaikan,
   tampilkanIsiRencanaKompetensi,
   tampilkanIsiRefleksi,
@@ -43,6 +45,7 @@ import {
   uraikanIsiRencanaIntervensiKelas,
   uraikanIsiRencanaDiferensiasi,
   uraikanIsiRealisasiRencana,
+  uraikanIsiCatatanKelasCepat,
   uraikanIsiRencanaPerbaikan,
   uraikanIsiRencanaKompetensi,
   uraikanIsiRefleksi,
@@ -332,6 +335,31 @@ describe('realisasi rencana pembelajaran', () => {
       .toThrow('Status realisasi tidak valid.');
     expect(uraikanIsiRealisasiRencana('Catatan realisasi lama')).toMatchObject({
       pelaksanaan: 'Catatan realisasi lama',
+      legacy: true,
+    });
+  });
+});
+
+describe('catatan kelas cepat', () => {
+  it('menyimpan pengamatan umum, respons guru, dan tindak lanjut', () => {
+    const note = {
+      pengamatan: 'Diskusi kelompok berjalan aktif.',
+      respons: 'Berikan waktu tambahan untuk merangkum hasil.',
+      tindakLanjut: 'Mulai sesi berikutnya dengan ringkasan kelompok.',
+    };
+    const isi = susunIsiCatatanKelasCepat(note);
+
+    expect(uraikanIsiCatatanKelasCepat(isi)).toEqual({ ...note, legacy: false });
+    expect(tampilkanIsiCatatanKelasCepat(isi)).toContain('Respons guru:\nBerikan waktu tambahan untuk merangkum hasil.');
+    expect(isi).toMatch(/^ale-class-quick-note-v1:/);
+  });
+
+  it('mewajibkan pengamatan dan tetap membaca catatan lama', () => {
+    expect(() => susunIsiCatatanKelasCepat({})).toThrow('Pengamatan umum wajib diisi.');
+    expect(() => susunIsiCatatanKelasCepat({ pengamatan: 'x'.repeat(1401) }))
+      .toThrow('Bagian catatan kelas maksimal 1400 karakter.');
+    expect(uraikanIsiCatatanKelasCepat('Catatan kelas sebelumnya')).toMatchObject({
+      pengamatan: 'Catatan kelas sebelumnya',
       legacy: true,
     });
   });
