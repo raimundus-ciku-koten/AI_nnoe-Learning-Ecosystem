@@ -6,6 +6,8 @@ const IMPROVEMENT_PREFIX = 'ale-improvement-plan-v1:';
 const IMPROVEMENT_FIELDS = Object.freeze(['fokus', 'perubahan', 'indikator', 'tinjauUlang']);
 const JOURNAL_PREFIX = 'ale-teaching-journal-v1:';
 const JOURNAL_FIELDS = Object.freeze(['tujuan', 'kegiatan', 'capaian', 'tindakLanjut']);
+const DEVELOPMENT_PREFIX = 'ale-development-plan-v1:';
+const DEVELOPMENT_FIELDS = Object.freeze(['kompetensi', 'aktivitas', 'target', 'bukti']);
 
 function boundedText(value, label, max, required = false) {
   const text = String(value ?? '').trim();
@@ -185,6 +187,55 @@ export function tampilkanIsiJurnalMengajar(value) {
   return JOURNAL_FIELDS
     .filter((field) => journal[field])
     .map((field) => `${labels[field]}:\n${journal[field]}`)
+    .join('\n\n');
+}
+
+export function kosongkanRencanaKompetensi() {
+  return Object.fromEntries(DEVELOPMENT_FIELDS.map((field) => [field, '']));
+}
+
+export function susunIsiRencanaKompetensi(input) {
+  const plan = Object.fromEntries(DEVELOPMENT_FIELDS.map((field) => [
+    field,
+    boundedText(input?.[field], 'Bagian pengembangan kompetensi', 1400),
+  ]));
+  if (!Object.values(plan).some(Boolean)) {
+    throw new Error('Isi rencana pengembangan kompetensi wajib diisi.');
+  }
+  return `${DEVELOPMENT_PREFIX}${JSON.stringify(plan)}`;
+}
+
+export function uraikanIsiRencanaKompetensi(value) {
+  const isi = String(value ?? '');
+  if (!isi.startsWith(DEVELOPMENT_PREFIX)) {
+    return { ...kosongkanRencanaKompetensi(), kompetensi: isi, legacy: true };
+  }
+  try {
+    const parsed = JSON.parse(isi.slice(DEVELOPMENT_PREFIX.length));
+    return {
+      ...Object.fromEntries(DEVELOPMENT_FIELDS.map((field) => [
+        field,
+        typeof parsed?.[field] === 'string' ? parsed[field] : '',
+      ])),
+      legacy: false,
+    };
+  } catch {
+    return { ...kosongkanRencanaKompetensi(), kompetensi: isi, legacy: true };
+  }
+}
+
+export function tampilkanIsiRencanaKompetensi(value) {
+  const plan = uraikanIsiRencanaKompetensi(value);
+  if (plan.legacy) return plan.kompetensi;
+  const labels = {
+    kompetensi: 'Kompetensi yang dikembangkan',
+    aktivitas: 'Aktivitas belajar',
+    target: 'Target waktu',
+    bukti: 'Bukti atau capaian',
+  };
+  return DEVELOPMENT_FIELDS
+    .filter((field) => plan[field])
+    .map((field) => `${labels[field]}:\n${plan[field]}`)
     .join('\n\n');
 }
 

@@ -20,13 +20,16 @@ import {
 import {
   susunIsiJurnalMengajar,
   susunIsiRencanaPerbaikan,
+  susunIsiRencanaKompetensi,
   susunIsiRefleksi,
   siapkanCatatanGuru,
   tampilkanIsiJurnalMengajar,
   tampilkanIsiRencanaPerbaikan,
+  tampilkanIsiRencanaKompetensi,
   tampilkanIsiRefleksi,
   uraikanIsiJurnalMengajar,
   uraikanIsiRencanaPerbaikan,
+  uraikanIsiRencanaKompetensi,
   uraikanIsiRefleksi,
 } from './teacherWorkspace.js';
 
@@ -149,6 +152,33 @@ describe('jurnal mengajar harian', () => {
     expect(() => susunIsiJurnalMengajar({})).toThrow('Isi jurnal wajib diisi.');
     expect(() => susunIsiJurnalMengajar({ tujuan: 'x'.repeat(1401) }))
       .toThrow('Bagian jurnal maksimal 1400 karakter.');
+  });
+});
+
+describe('rencana pengembangan kompetensi', () => {
+  it('menyimpan kompetensi, aktivitas, target, dan bukti dalam payload berversi', () => {
+    const plan = {
+      kompetensi: 'Asesmen formatif berbasis umpan balik.',
+      aktivitas: 'Ikuti lokakarya dan uji satu strategi di kelas.',
+      target: 'Satu strategi dalam empat minggu.',
+      bukti: 'Catatan refleksi dan contoh instrumen tanpa data siswa.',
+    };
+    const isi = susunIsiRencanaKompetensi(plan);
+
+    expect(uraikanIsiRencanaKompetensi(isi)).toEqual({ ...plan, legacy: false });
+    expect(tampilkanIsiRencanaKompetensi(isi)).toContain('Aktivitas belajar:\nIkuti lokakarya dan uji satu strategi di kelas.');
+    expect(isi).toMatch(/^ale-development-plan-v1:/);
+  });
+
+  it('mempertahankan catatan lama dan menolak rencana kosong atau bagian terlalu panjang', () => {
+    expect(uraikanIsiRencanaKompetensi('Catatan kompetensi sebelumnya')).toMatchObject({
+      kompetensi: 'Catatan kompetensi sebelumnya',
+      legacy: true,
+    });
+    expect(tampilkanIsiRencanaKompetensi('Catatan kompetensi sebelumnya')).toBe('Catatan kompetensi sebelumnya');
+    expect(() => susunIsiRencanaKompetensi({})).toThrow('Isi rencana pengembangan kompetensi wajib diisi.');
+    expect(() => susunIsiRencanaKompetensi({ kompetensi: 'x'.repeat(1401) }))
+      .toThrow('Bagian pengembangan kompetensi maksimal 1400 karakter.');
   });
 });
 
