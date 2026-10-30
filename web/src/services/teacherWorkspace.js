@@ -4,6 +4,8 @@ const REFLECTION_PREFIX = 'ale-reflection-v1:';
 const REFLECTION_FIELDS = Object.freeze(['berhasil', 'bukti', 'tantangan', 'langkahBerikutnya']);
 const IMPROVEMENT_PREFIX = 'ale-improvement-plan-v1:';
 const IMPROVEMENT_FIELDS = Object.freeze(['fokus', 'perubahan', 'indikator', 'tinjauUlang']);
+const JOURNAL_PREFIX = 'ale-teaching-journal-v1:';
+const JOURNAL_FIELDS = Object.freeze(['tujuan', 'kegiatan', 'capaian', 'tindakLanjut']);
 
 function boundedText(value, label, max, required = false) {
   const text = String(value ?? '').trim();
@@ -25,14 +27,15 @@ export function siapkanCatatanGuru(input) {
 
   const status = input.status;
   if (!['draf', 'selesai'].includes(status)) throw new Error('Status catatan tidak valid.');
+  const isJournal = modulePath === '/pelaksanaan/jurnal';
 
   return {
     modulePath,
     moduleLabel: boundedText(input.moduleLabel, 'Nama modul', 100, true),
     judul: boundedText(input.judul, 'Judul', 120, true),
     tanggal,
-    kelas: boundedText(input.kelas, 'Kelas', 80),
-    mapel: boundedText(input.mapel, 'Mata pelajaran', 80),
+    kelas: boundedText(input.kelas, 'Kelas', 80, isJournal),
+    mapel: boundedText(input.mapel, 'Mata pelajaran', 80, isJournal),
     isi: boundedText(input.isi, 'Isi catatan', 6000, true),
     status,
   };
@@ -133,6 +136,55 @@ export function tampilkanIsiRencanaPerbaikan(value) {
   return IMPROVEMENT_FIELDS
     .filter((field) => plan[field])
     .map((field) => `${labels[field]}:\n${plan[field]}`)
+    .join('\n\n');
+}
+
+export function kosongkanJurnalMengajar() {
+  return Object.fromEntries(JOURNAL_FIELDS.map((field) => [field, '']));
+}
+
+export function susunIsiJurnalMengajar(input) {
+  const journal = Object.fromEntries(JOURNAL_FIELDS.map((field) => [
+    field,
+    boundedText(input?.[field], 'Bagian jurnal', 1400),
+  ]));
+  if (!Object.values(journal).some(Boolean)) {
+    throw new Error('Isi jurnal wajib diisi.');
+  }
+  return `${JOURNAL_PREFIX}${JSON.stringify(journal)}`;
+}
+
+export function uraikanIsiJurnalMengajar(value) {
+  const isi = String(value ?? '');
+  if (!isi.startsWith(JOURNAL_PREFIX)) {
+    return { ...kosongkanJurnalMengajar(), kegiatan: isi, legacy: true };
+  }
+  try {
+    const parsed = JSON.parse(isi.slice(JOURNAL_PREFIX.length));
+    return {
+      ...Object.fromEntries(JOURNAL_FIELDS.map((field) => [
+        field,
+        typeof parsed?.[field] === 'string' ? parsed[field] : '',
+      ])),
+      legacy: false,
+    };
+  } catch {
+    return { ...kosongkanJurnalMengajar(), kegiatan: isi, legacy: true };
+  }
+}
+
+export function tampilkanIsiJurnalMengajar(value) {
+  const journal = uraikanIsiJurnalMengajar(value);
+  if (journal.legacy) return journal.kegiatan;
+  const labels = {
+    tujuan: 'Tujuan pembelajaran',
+    kegiatan: 'Kegiatan pembelajaran',
+    capaian: 'Capaian yang diamati',
+    tindakLanjut: 'Tindak lanjut',
+  };
+  return JOURNAL_FIELDS
+    .filter((field) => journal[field])
+    .map((field) => `${labels[field]}:\n${journal[field]}`)
     .join('\n\n');
 }
 

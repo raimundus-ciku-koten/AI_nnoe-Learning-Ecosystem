@@ -109,7 +109,14 @@ describe('submenu platform superadmin', () => {
         const html = renderSubmenu(path);
         expect(html, path).toContain(`<h1>${item.label.replaceAll('&', '&amp;')}</h1>`);
         expect(html, path).toContain('Hindari memasukkan nama');
-        if (path === '/refleksi/pembelajaran') {
+        if (path === '/pelaksanaan/jurnal') {
+          expect(html).toContain('Jurnal mengajar</h2>');
+          expect(html).toContain('Tujuan pembelajaran');
+          expect(html).toContain('Kegiatan pembelajaran');
+          expect(html).toContain('Capaian yang diamati');
+          expect(html).toContain('Tindak lanjut');
+          expect(html).toContain('rekam resmi sekolah');
+        } else if (path === '/refleksi/pembelajaran') {
           expect(html).toContain('Refleksi pembelajaran</h2>');
           expect(html).toContain('Apa yang berjalan baik?');
           expect(html).toContain('Bukti belajar yang terlihat');
@@ -150,7 +157,7 @@ describe('submenu platform superadmin', () => {
       const html = renderSubmenu('/pelaksanaan/jurnal');
 
       expect(html).toContain('<h1>Jurnal Mengajar Harian</h1>');
-      expect(html).toContain('Buat catatan kerja');
+      expect(html).toContain('Tujuan pembelajaran');
       expect(html).not.toContain('Halaman tidak ditemukan');
     });
 
@@ -162,7 +169,7 @@ describe('submenu platform superadmin', () => {
         const html = renderSubmenu('/pelaksanaan/jurnal');
 
         expect(html).toContain('<h1>Jurnal Mengajar Harian</h1>');
-        expect(html).toContain('Buat catatan kerja');
+        expect(html).toContain('Tujuan pembelajaran');
         expect(html).not.toContain('hanya tersedia bagi guru');
         expect(html).not.toContain('Halaman tidak ditemukan');
       },

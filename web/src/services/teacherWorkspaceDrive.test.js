@@ -18,10 +18,14 @@ import {
   ubahCatatanGuruDrive,
 } from './teacherWorkspaceDrive.js';
 import {
+  susunIsiJurnalMengajar,
   susunIsiRencanaPerbaikan,
   susunIsiRefleksi,
+  siapkanCatatanGuru,
+  tampilkanIsiJurnalMengajar,
   tampilkanIsiRencanaPerbaikan,
   tampilkanIsiRefleksi,
+  uraikanIsiJurnalMengajar,
   uraikanIsiRencanaPerbaikan,
   uraikanIsiRefleksi,
 } from './teacherWorkspace.js';
@@ -101,6 +105,50 @@ describe('rencana perbaikan pembelajaran', () => {
     expect(() => susunIsiRencanaPerbaikan({})).toThrow('Isi rencana perbaikan wajib diisi.');
     expect(() => susunIsiRencanaPerbaikan({ fokus: 'x'.repeat(1401) }))
       .toThrow('Bagian rencana perbaikan maksimal 1400 karakter.');
+  });
+});
+
+describe('jurnal mengajar harian', () => {
+  it('mewajibkan kelas dan mata pelajaran pada service jurnal', () => {
+    const journal = {
+      modulePath: '/pelaksanaan/jurnal',
+      moduleLabel: 'Jurnal Mengajar Harian',
+      judul: 'Persamaan linear',
+      tanggal: '2026-10-15',
+      kelas: 'X-1',
+      mapel: 'Matematika',
+      isi: 'Catatan sesi belajar.',
+      status: 'draf',
+    };
+
+    expect(siapkanCatatanGuru(journal)).toMatchObject({ kelas: 'X-1', mapel: 'Matematika' });
+    expect(() => siapkanCatatanGuru({ ...journal, kelas: '' })).toThrow('Kelas wajib diisi.');
+    expect(() => siapkanCatatanGuru({ ...journal, mapel: '' })).toThrow('Mata pelajaran wajib diisi.');
+  });
+
+  it('menyimpan tujuan, kegiatan, capaian, dan tindak lanjut dalam payload berversi', () => {
+    const journal = {
+      tujuan: 'Menjelaskan hubungan pecahan dan desimal.',
+      kegiatan: 'Menggunakan garis bilangan dan latihan berpasangan.',
+      capaian: 'Sebagian besar kelas dapat memberi contoh yang benar.',
+      tindakLanjut: 'Siapkan latihan bertahap pada pertemuan berikutnya.',
+    };
+    const isi = susunIsiJurnalMengajar(journal);
+
+    expect(uraikanIsiJurnalMengajar(isi)).toEqual({ ...journal, legacy: false });
+    expect(tampilkanIsiJurnalMengajar(isi)).toContain('Tujuan pembelajaran:\nMenjelaskan hubungan pecahan dan desimal.');
+    expect(isi).toMatch(/^ale-teaching-journal-v1:/);
+  });
+
+  it('mempertahankan teks jurnal lama dan menolak jurnal kosong atau bagian terlalu panjang', () => {
+    expect(uraikanIsiJurnalMengajar('Catatan mengajar sebelumnya')).toMatchObject({
+      kegiatan: 'Catatan mengajar sebelumnya',
+      legacy: true,
+    });
+    expect(tampilkanIsiJurnalMengajar('Catatan mengajar sebelumnya')).toBe('Catatan mengajar sebelumnya');
+    expect(() => susunIsiJurnalMengajar({})).toThrow('Isi jurnal wajib diisi.');
+    expect(() => susunIsiJurnalMengajar({ tujuan: 'x'.repeat(1401) }))
+      .toThrow('Bagian jurnal maksimal 1400 karakter.');
   });
 });
 
