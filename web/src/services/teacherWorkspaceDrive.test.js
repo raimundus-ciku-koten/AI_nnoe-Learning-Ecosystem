@@ -18,8 +18,11 @@ import {
   ubahCatatanGuruDrive,
 } from './teacherWorkspaceDrive.js';
 import {
+  susunIsiRencanaPerbaikan,
   susunIsiRefleksi,
+  tampilkanIsiRencanaPerbaikan,
   tampilkanIsiRefleksi,
+  uraikanIsiRencanaPerbaikan,
   uraikanIsiRefleksi,
 } from './teacherWorkspace.js';
 
@@ -71,6 +74,33 @@ describe('refleksi pembelajaran terstruktur', () => {
   it('menjaga isi berversi yang rusak sebagai teks lama agar tidak hilang saat edit', () => {
     const invalid = 'ale-reflection-v1:{broken';
     expect(uraikanIsiRefleksi(invalid)).toMatchObject({ berhasil: invalid, legacy: true });
+  });
+});
+
+describe('rencana perbaikan pembelajaran', () => {
+  it('menyimpan fokus, perubahan, indikator, dan waktu tinjau dalam payload berversi', () => {
+    const plan = {
+      fokus: 'Meningkatkan pemerataan diskusi.',
+      perubahan: 'Gunakan giliran bicara berpasangan.',
+      indikator: 'Lebih banyak kelompok menyampaikan alasan.',
+      tinjauUlang: 'Tinjau setelah dua pertemuan.',
+    };
+    const isi = susunIsiRencanaPerbaikan(plan);
+
+    expect(uraikanIsiRencanaPerbaikan(isi)).toEqual({ ...plan, legacy: false });
+    expect(tampilkanIsiRencanaPerbaikan(isi)).toContain('Indikator keberhasilan:\nLebih banyak kelompok menyampaikan alasan.');
+    expect(isi).toMatch(/^ale-improvement-plan-v1:/);
+  });
+
+  it('mempertahankan teks lama dan menolak rencana kosong atau bagian terlalu panjang', () => {
+    expect(uraikanIsiRencanaPerbaikan('Rencana naratif sebelumnya')).toMatchObject({
+      fokus: 'Rencana naratif sebelumnya',
+      legacy: true,
+    });
+    expect(tampilkanIsiRencanaPerbaikan('Rencana naratif sebelumnya')).toBe('Rencana naratif sebelumnya');
+    expect(() => susunIsiRencanaPerbaikan({})).toThrow('Isi rencana perbaikan wajib diisi.');
+    expect(() => susunIsiRencanaPerbaikan({ fokus: 'x'.repeat(1401) }))
+      .toThrow('Bagian rencana perbaikan maksimal 1400 karakter.');
   });
 });
 

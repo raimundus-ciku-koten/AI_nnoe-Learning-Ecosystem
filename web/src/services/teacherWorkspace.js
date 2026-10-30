@@ -2,6 +2,8 @@ const MODULE_PATH = /^\/(pelaksanaan|asesmen|pemantauan|refleksi|laporan|kolabor
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const REFLECTION_PREFIX = 'ale-reflection-v1:';
 const REFLECTION_FIELDS = Object.freeze(['berhasil', 'bukti', 'tantangan', 'langkahBerikutnya']);
+const IMPROVEMENT_PREFIX = 'ale-improvement-plan-v1:';
+const IMPROVEMENT_FIELDS = Object.freeze(['fokus', 'perubahan', 'indikator', 'tinjauUlang']);
 
 function boundedText(value, label, max, required = false) {
   const text = String(value ?? '').trim();
@@ -82,6 +84,55 @@ export function tampilkanIsiRefleksi(value) {
   return REFLECTION_FIELDS
     .filter((field) => reflection[field])
     .map((field) => `${labels[field]}:\n${reflection[field]}`)
+    .join('\n\n');
+}
+
+export function kosongkanRencanaPerbaikan() {
+  return Object.fromEntries(IMPROVEMENT_FIELDS.map((field) => [field, '']));
+}
+
+export function susunIsiRencanaPerbaikan(input) {
+  const plan = Object.fromEntries(IMPROVEMENT_FIELDS.map((field) => [
+    field,
+    boundedText(input?.[field], 'Bagian rencana perbaikan', 1400),
+  ]));
+  if (!Object.values(plan).some(Boolean)) {
+    throw new Error('Isi rencana perbaikan wajib diisi.');
+  }
+  return `${IMPROVEMENT_PREFIX}${JSON.stringify(plan)}`;
+}
+
+export function uraikanIsiRencanaPerbaikan(value) {
+  const isi = String(value ?? '');
+  if (!isi.startsWith(IMPROVEMENT_PREFIX)) {
+    return { ...kosongkanRencanaPerbaikan(), fokus: isi, legacy: true };
+  }
+  try {
+    const parsed = JSON.parse(isi.slice(IMPROVEMENT_PREFIX.length));
+    return {
+      ...Object.fromEntries(IMPROVEMENT_FIELDS.map((field) => [
+        field,
+        typeof parsed?.[field] === 'string' ? parsed[field] : '',
+      ])),
+      legacy: false,
+    };
+  } catch {
+    return { ...kosongkanRencanaPerbaikan(), fokus: isi, legacy: true };
+  }
+}
+
+export function tampilkanIsiRencanaPerbaikan(value) {
+  const plan = uraikanIsiRencanaPerbaikan(value);
+  if (plan.legacy) return plan.fokus;
+  const labels = {
+    fokus: 'Fokus perbaikan',
+    perubahan: 'Perubahan yang dicoba',
+    indikator: 'Indikator keberhasilan',
+    tinjauUlang: 'Tinjau ulang',
+  };
+  return IMPROVEMENT_FIELDS
+    .filter((field) => plan[field])
+    .map((field) => `${labels[field]}:\n${plan[field]}`)
     .join('\n\n');
 }
 

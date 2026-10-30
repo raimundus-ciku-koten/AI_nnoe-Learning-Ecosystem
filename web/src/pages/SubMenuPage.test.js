@@ -96,6 +96,7 @@ describe('submenu platform superadmin', () => {
         '/asesmen/remedial',
         '/pemantauan/catatan',
         '/refleksi/pembelajaran',
+        '/refleksi/perbaikan',
         '/laporan/kinerja-guru',
         '/kolaborasi/praktik-baik',
       ];
@@ -113,6 +114,12 @@ describe('submenu platform superadmin', () => {
           expect(html).toContain('Bukti belajar yang terlihat');
           expect(html).toContain('Apa yang perlu ditingkatkan?');
           expect(html).toContain('Langkah berikutnya');
+        } else if (path === '/refleksi/perbaikan') {
+          expect(html).toContain('Rencana perbaikan</h2>');
+          expect(html).toContain('Fokus perbaikan');
+          expect(html).toContain('Perubahan yang dicoba');
+          expect(html).toContain('Indikator keberhasilan');
+          expect(html).toContain('Tanggal tinjau ulang');
         } else {
           expect(html, path).toContain('Buat catatan kerja');
         }
