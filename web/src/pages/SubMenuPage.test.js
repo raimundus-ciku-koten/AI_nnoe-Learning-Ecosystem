@@ -96,6 +96,7 @@ describe('submenu platform superadmin', () => {
       const targetPaths = [
         '/pelaksanaan/jurnal',
         '/asesmen/remedial',
+        '/pelaksanaan/berdiferensiasi',
         '/pemantauan/catatan',
         '/refleksi/pembelajaran',
         '/refleksi/supervisi',
@@ -120,6 +121,12 @@ describe('submenu platform superadmin', () => {
           expect(html).toContain('Capaian yang diamati');
           expect(html).toContain('Tindak lanjut');
           expect(html).toContain('rekam resmi sekolah');
+        } else if (path === '/pelaksanaan/berdiferensiasi') {
+          expect(html).toContain('Rencana pembelajaran berdiferensiasi</h2>');
+          expect(html).toContain('Tujuan belajar');
+          expect(html).toContain('Kebutuhan umum kelas');
+          expect(html).toContain('Pilihan strategi');
+          expect(html).toContain('Cek pemahaman');
         } else if (path === '/refleksi/pembelajaran') {
           expect(html).toContain('Refleksi pembelajaran</h2>');
           expect(html).toContain('Apa yang berjalan baik?');

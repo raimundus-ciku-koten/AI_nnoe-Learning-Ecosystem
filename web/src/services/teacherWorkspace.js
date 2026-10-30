@@ -14,6 +14,8 @@ const PORTFOLIO_PREFIX = 'ale-portfolio-v1:';
 const PORTFOLIO_FIELDS = Object.freeze(['jenisKarya', 'deskripsi', 'kompetensi', 'tautan']);
 const INTERVENTION_PREFIX = 'ale-class-intervention-v1:';
 const INTERVENTION_FIELDS = Object.freeze(['kebutuhan', 'remedial', 'pengayaan', 'indikator']);
+const DIFFERENTIATION_PREFIX = 'ale-differentiation-plan-v1:';
+const DIFFERENTIATION_FIELDS = Object.freeze(['tujuan', 'kebutuhan', 'strategi', 'cekPemahaman']);
 
 function boundedText(value, label, max, required = false) {
   const text = String(value ?? '').trim();
@@ -400,6 +402,55 @@ export function tampilkanIsiRencanaIntervensiKelas(value) {
     indikator: 'Indikator tinjau ulang',
   };
   return INTERVENTION_FIELDS
+    .filter((field) => plan[field])
+    .map((field) => `${labels[field]}:\n${plan[field]}`)
+    .join('\n\n');
+}
+
+export function kosongkanRencanaDiferensiasi() {
+  return Object.fromEntries(DIFFERENTIATION_FIELDS.map((field) => [field, '']));
+}
+
+export function susunIsiRencanaDiferensiasi(input) {
+  const plan = Object.fromEntries(DIFFERENTIATION_FIELDS.map((field) => [
+    field,
+    boundedText(input?.[field], 'Bagian rencana diferensiasi', 1400),
+  ]));
+  if (!plan.tujuan || !plan.strategi) {
+    throw new Error('Tujuan dan strategi diferensiasi wajib diisi.');
+  }
+  return `${DIFFERENTIATION_PREFIX}${JSON.stringify(plan)}`;
+}
+
+export function uraikanIsiRencanaDiferensiasi(value) {
+  const isi = String(value ?? '');
+  if (!isi.startsWith(DIFFERENTIATION_PREFIX)) {
+    return { ...kosongkanRencanaDiferensiasi(), strategi: isi, legacy: true };
+  }
+  try {
+    const parsed = JSON.parse(isi.slice(DIFFERENTIATION_PREFIX.length));
+    return {
+      ...Object.fromEntries(DIFFERENTIATION_FIELDS.map((field) => [
+        field,
+        typeof parsed?.[field] === 'string' ? parsed[field] : '',
+      ])),
+      legacy: false,
+    };
+  } catch {
+    return { ...kosongkanRencanaDiferensiasi(), strategi: isi, legacy: true };
+  }
+}
+
+export function tampilkanIsiRencanaDiferensiasi(value) {
+  const plan = uraikanIsiRencanaDiferensiasi(value);
+  if (plan.legacy) return plan.strategi;
+  const labels = {
+    tujuan: 'Tujuan belajar',
+    kebutuhan: 'Kebutuhan umum kelas',
+    strategi: 'Pilihan strategi',
+    cekPemahaman: 'Cek pemahaman',
+  };
+  return DIFFERENTIATION_FIELDS
     .filter((field) => plan[field])
     .map((field) => `${labels[field]}:\n${plan[field]}`)
     .join('\n\n');

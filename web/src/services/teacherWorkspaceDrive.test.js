@@ -22,6 +22,7 @@ import {
   susunIsiCatatanObservasi,
   susunIsiPortofolioGuru,
   susunIsiRencanaIntervensiKelas,
+  susunIsiRencanaDiferensiasi,
   susunIsiRencanaPerbaikan,
   susunIsiRencanaKompetensi,
   susunIsiRefleksi,
@@ -30,6 +31,7 @@ import {
   tampilkanIsiCatatanObservasi,
   tampilkanIsiPortofolioGuru,
   tampilkanIsiRencanaIntervensiKelas,
+  tampilkanIsiRencanaDiferensiasi,
   tampilkanIsiRencanaPerbaikan,
   tampilkanIsiRencanaKompetensi,
   tampilkanIsiRefleksi,
@@ -37,6 +39,7 @@ import {
   uraikanIsiCatatanObservasi,
   uraikanIsiPortofolioGuru,
   uraikanIsiRencanaIntervensiKelas,
+  uraikanIsiRencanaDiferensiasi,
   uraikanIsiRencanaPerbaikan,
   uraikanIsiRencanaKompetensi,
   uraikanIsiRefleksi,
@@ -272,6 +275,32 @@ describe('rencana remedial dan pengayaan kelas', () => {
       .toThrow('Isi setidaknya satu rencana remedial atau pengayaan.');
     expect(uraikanIsiRencanaIntervensiKelas('Catatan kelas sebelumnya')).toMatchObject({
       kebutuhan: 'Catatan kelas sebelumnya',
+      legacy: true,
+    });
+  });
+});
+
+describe('rencana pembelajaran berdiferensiasi', () => {
+  it('menyimpan tujuan, kebutuhan kelas, strategi, dan cek pemahaman', () => {
+    const plan = {
+      tujuan: 'Menjelaskan hubungan pecahan dan desimal.',
+      kebutuhan: 'Kelas memerlukan pilihan representasi visual dan numerik.',
+      strategi: 'Sediakan contoh bertahap, diskusi, dan tantangan lanjutan.',
+      cekPemahaman: 'Gunakan exit ticket tanpa nama pada akhir sesi.',
+    };
+    const isi = susunIsiRencanaDiferensiasi(plan);
+
+    expect(uraikanIsiRencanaDiferensiasi(isi)).toEqual({ ...plan, legacy: false });
+    expect(tampilkanIsiRencanaDiferensiasi(isi)).toContain('Pilihan strategi:\nSediakan contoh bertahap, diskusi, dan tantangan lanjutan.');
+    expect(isi).toMatch(/^ale-differentiation-plan-v1:/);
+  });
+
+  it('mewajibkan tujuan dan strategi serta mempertahankan teks sebelumnya', () => {
+    expect(() => susunIsiRencanaDiferensiasi({})).toThrow('Tujuan dan strategi diferensiasi wajib diisi.');
+    expect(() => susunIsiRencanaDiferensiasi({ tujuan: 'Tujuan' }))
+      .toThrow('Tujuan dan strategi diferensiasi wajib diisi.');
+    expect(uraikanIsiRencanaDiferensiasi('Strategi kelas sebelumnya')).toMatchObject({
+      strategi: 'Strategi kelas sebelumnya',
       legacy: true,
     });
   });
