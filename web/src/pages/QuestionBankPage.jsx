@@ -4,6 +4,7 @@ import Ikon from '../components/Ikon.jsx';
 import {
   hapusSoalBank, muatBankSoal, tambahSoalBank, ubahSoalBank,
 } from '../services/questionBank.js';
+import { buatCsvSoalCanva } from '../services/questionBankExport.js';
 import { buatDrafSoalAI } from '../services/aiIntegrations.js';
 import '../styles/question-bank.css';
 
@@ -208,6 +209,24 @@ export default function QuestionBankPage() {
     }
   }
 
+  function exportForCanva() {
+    setError('');
+    setNotice('');
+    try {
+      const csv = buatCsvSoalCanva(visibleItems);
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'bank-soal-canva.csv';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setNotice(`${visibleItems.length} soal diekspor sebagai CSV. Unggah file di Canva untuk menggunakannya sebagai data Bulk Create.`);
+    } catch (exportError) {
+      console.error('[question-bank] Gagal mengekspor soal untuk Canva:', exportError);
+      setError(exportError?.message || 'Soal tidak dapat diekspor.');
+    }
+  }
+
   const pilihanForm = form.jenis === 'pilihan_ganda'
     ? form.pilihan.split(/\r?\n/).map((item) => batasi(item, 300)).filter(Boolean)
     : [];
@@ -248,6 +267,9 @@ export default function QuestionBankPage() {
       {canEdit && (
         <section className="ale-kartu question-bank-editor">
           <h2>{editId ? 'Ubah soal' : 'Tambah soal'}</h2>
+          <p className="question-bank-ai-note">
+            Draf AI bersifat opsional. Jika Anda meminta draf, mata pelajaran, kelas, topik, dan bentuk soal akan dikirim ke provider yang dipilih; jangan masukkan identitas atau data pribadi siswa. Provider dapat mengenakan biaya.
+          </p>
           <form onSubmit={save}>
             <div className="question-bank-fields">
               <label className="question-bank-wide">
@@ -317,7 +339,18 @@ export default function QuestionBankPage() {
             <span className="sr-only">Cari soal</span>
             <input type="search" value={search} placeholder="Cari mapel, kelas, atau pertanyaan" onChange={(e) => setSearch(e.target.value)} />
           </label>
+          {canEdit && (
+            <button type="button" className="question-bank-export" disabled={!visibleItems.length} onClick={exportForCanva}>
+              Ekspor CSV untuk Canva
+            </button>
+          )}
         </div>
+        {canEdit && (
+          <p className="question-bank-canva-note">
+            Ekspor mengikuti hasil pencarian yang sedang tampil dan tidak menyertakan identitas siswa.
+            Canva AI tidak dihubungkan langsung; file CSV dapat diunggah pada <a href="https://www.canva.com/" target="_blank" rel="noopener noreferrer">Canva</a>.
+          </p>
+        )}
         {loading ? <p className="question-bank-empty" role="status">Memuat soal…</p> : null}
         {!loading && visibleItems.length === 0 && (
           <p className="question-bank-empty">{items.length ? 'Tidak ada soal yang cocok dengan pencarian.' : 'Belum ada soal. Tambahkan soal pertama melalui formulir di atas.'}</p>

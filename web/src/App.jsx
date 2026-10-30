@@ -118,9 +118,25 @@ const HalamanPrivasi = lazy(() => import('./pages/PrivacyNoticePage.jsx'));
 const HalamanTrial = lazy(() => import('./pages/TrialDemoPage.jsx'));
 const AppShell = lazy(() => import('./components/AppShell.jsx'));
 
+const POST_LOGIN_RETURN_KEY = 'ale-post-login-return';
+
 function PrivateShell({ children }) {
   const { user, role, activeRole, passwordRecovery } = useAuth();
   const location = useLocation();
+
+  useEffect(() => {
+    if (user || location.pathname !== '/siswa/ujian') return;
+    const examId = new URLSearchParams(location.search).get('examId') || '';
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(examId)) return;
+    try {
+      window.sessionStorage.setItem(
+        POST_LOGIN_RETURN_KEY,
+        `#/siswa/ujian?examId=${encodeURIComponent(examId)}`,
+      );
+    } catch (error) {
+      console.error('[app] Tautan ujian tidak dapat disimpan untuk dilanjutkan setelah login:', error);
+    }
+  }, [user, location.pathname, location.search]);
 
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;

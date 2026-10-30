@@ -11,7 +11,7 @@ import {
 import '../styles/ai-integrations.css';
 
 const PILIHAN_PROVIDER = [
-  ['auto', 'Otomatis (Gemini → DeepSeek → Groq)'],
+  ['auto', 'Otomatis (Gemini → DeepSeek → Groq; satu provider per permintaan)'],
   ['gemini', 'Gemini'],
   ['deepseek', 'DeepSeek'],
   ['groq', 'Groq']
@@ -115,20 +115,18 @@ export default function AIIntegrationsPage() {
       <header className="ai-integrations__header">
         <p className="ai-integrations__eyebrow"><Ikon nama="settings" /> Pengaturan akun</p>
         <h1 id="ai-integrations-title">AI &amp; Layanan</h1>
-        <p>Integrasi AI pihak ketiga dinonaktifkan untuk mencegah penggunaan provider yang dapat memerlukan billing.</p>
+        <p>Hubungkan provider AI dengan kunci pribadi Anda untuk membuat draf soal. Mode manual tetap tersedia tanpa AI.</p>
       </header>
       <p className="ai-integrations__message is-warning" role="note">
         {EXTERNAL_AI_PROVIDERS_ENABLED
-          ? 'Provider AI eksternal aktif. Pastikan ketentuan dan biaya provider dipahami sebelum mengirim data.'
-          : 'Tidak ada kunci AI yang diminta atau disimpan, dan prompt tidak dikirim ke Gemini, DeepSeek, Groq, atau layanan AI eksternal. Fitur AI yang memerlukan provider eksternal tidak tersedia.'}
+          ? 'Permintaan hanya dikirim setelah Anda mengaktifkan kunci dan menjalankan pembuatan draf. Isi topik, mata pelajaran, kelas, dan prompt akan dikirim langsung dari browser ke provider terpilih; satu permintaan tidak otomatis mencoba provider lain. Kuota, biaya, dan kebijakan penyimpanan mengikuti provider.'
+          : 'Provider AI eksternal dinonaktifkan.'}
       </p>
-      {!EXTERNAL_AI_PROVIDERS_ENABLED && (
-        <p className="ai-integrations__message" role="note">
-          Kunci API hanya dapat diterbitkan oleh provider, bukan dibuat otomatis oleh aplikasi.
-          Periksa syarat, kuota gratis, dan kemungkinan billing pada portal resmi sebelum membuat
-          kunci. Membuka portal tidak mengaktifkan integrasi AI di aplikasi.
-        </p>
-      )}
+      <p className="ai-integrations__message" role="note">
+        Kunci hanya disimpan di memori tab browser ini dan dihapus saat keluar atau menutup tab; aplikasi tidak mengirimnya ke servernya.
+        Kunci yang digunakan pada browser tetap dapat diakses oleh skrip halaman. Jangan gunakan kunci bersama atau memasukkan data pribadi siswa.
+        Periksa syarat, kuota, kemungkinan billing, dan kebijakan data provider sebelum mengaktifkan.
+      </p>
 
       {error && <p className="ai-integrations__message is-error" role="alert">{error}</p>}
       {notice && <p className="ai-integrations__message is-success" role="status">{notice}</p>}
@@ -144,7 +142,7 @@ export default function AIIntegrationsPage() {
           <section className="ai-integrations__card" aria-labelledby="ai-provider-title">
             <h2 id="ai-provider-title">Koneksi provider</h2>
             <p>{EXTERNAL_AI_PROVIDERS_ENABLED
-              ? 'Kunci provider hanya digunakan sesuai konfigurasi yang dipilih.'
+              ? 'Periksa kunci menggunakan daftar model provider tanpa membuat konten. Kunci yang berhasil diperiksa hanya aktif sementara di tab ini.'
               : 'Koneksi provider dinonaktifkan. Pengaturan ini tidak menerima atau mengirim kunci API.'}</p>
             <div className="ai-integrations__providers">
               {PROVIDER.map((provider) => (
@@ -191,13 +189,11 @@ export default function AIIntegrationsPage() {
           <section className="ai-integrations__card" aria-labelledby="ai-preferences-title">
             <h2 id="ai-preferences-title">Preferensi per penggunaan</h2>
             <p>{EXTERNAL_AI_PROVIDERS_ENABLED
-              ? 'Preferensi provider tersimpan di browser ini per UID akun.'
-              : 'Pengaturan provider dikunci karena layanan AI eksternal dinonaktifkan. RPE tetap dihitung oleh mesin lokal tanpa AI.'}</p>
+              ? 'Pengaturan ini berlaku untuk pembuatan draf soal dan hanya bertahan selama sesi aplikasi. Otomatis memilih provider aktif pertama berdasarkan urutan Gemini, DeepSeek, Groq; jika gagal, permintaan berhenti tanpa fallback.'
+              : 'Provider AI eksternal dinonaktifkan.'}</p>
             <div className="ai-integrations__preferences">
               {[
-                ['planning', 'Perencanaan (ATP/KKTP/Modul)'],
-                ['assistant', 'Asisten AI'],
-                ['questions', 'Pembuatan soal biasa']
+                ['questions', 'Pembuatan draf soal']
               ].map(([workflow, label]) => (
                 <label key={workflow}>
                   {label}
@@ -213,6 +209,7 @@ export default function AIIntegrationsPage() {
                 </label>
               ))}
             </div>
+            <p>AI perencanaan dan asisten percakapan belum diaktifkan. Perhitungan perencanaan deterministik dan penyuntingan manual tetap tersedia.</p>
           </section>
         </>
       )}

@@ -4,6 +4,7 @@ import Ikon from '../components/Ikon.jsx';
 import { usePlatformControls } from '../context/PlatformControlContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { tanyaAsisten } from '../services/aiAssistant.js';
+import { BROWSER_AI_CAPABILITIES } from '../services/browserAi.js';
 
 const SARAN = [
   'Buat ide kegiatan pembuka pembelajaran yang menarik.',
@@ -11,12 +12,15 @@ const SARAN = [
   'Susun pertanyaan refleksi untuk siswa setelah belajar.',
 ];
 const MAKS_RIWAYAT_TAMPIL = 100;
-const NAMA_PROVIDER = { gemini: 'Gemini', deepseek: 'DeepSeek', groq: 'Groq', cerebras: 'Cerebras' };
+const NAMA_PROVIDER = { gemini: 'Gemini', deepseek: 'DeepSeek', groq: 'Groq' };
 
 export default function AsistenPage() {
   const { features } = usePlatformControls();
   const { user } = useAuth();
-  const aiEnabled = features.aiAssistant;
+  const aiEnabled = features.aiAssistant && BROWSER_AI_CAPABILITIES.assistant;
+  const disabledMessage = features.aiAssistant
+    ? 'Asisten AI belum tersedia pada rilis ini; pesan tidak dikirim ke provider.'
+    : 'Asisten AI sedang dinonaktifkan oleh administrator.';
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
@@ -34,7 +38,7 @@ export default function AsistenPage() {
     const pertanyaan = teks.trim();
     if (!pertanyaan || busy) return;
     if (!aiEnabled) {
-      setError('Asisten AI sedang dinonaktifkan oleh administrator.');
+      setError(disabledMessage);
       return;
     }
     const berikutnya = [...messages, { role: 'user', text: pertanyaan }].slice(-MAKS_RIWAYAT_TAMPIL);
@@ -58,7 +62,7 @@ export default function AsistenPage() {
   async function ulangiPermintaan() {
     if (busy || !messages.length) return;
     if (!aiEnabled) {
-      setError('Asisten AI sedang dinonaktifkan oleh administrator.');
+      setError(disabledMessage);
       return;
     }
     setError('');
@@ -115,11 +119,11 @@ export default function AsistenPage() {
       <div className="ai-chat-card">
         <div className="ai-chat-meta">
           <span className="ai-status"><span aria-hidden="true" /> {aiEnabled ? 'Siap membantu' : 'Layanan dinonaktifkan'}</span>
-          <span>Provider mengikuti pilihan akun: Gemini, DeepSeek, atau Groq</span>
+          <span>{aiEnabled ? 'Provider mengikuti pilihan akun: Gemini, DeepSeek, atau Groq' : 'Provider percakapan belum diaktifkan'}</span>
         </div>
 
         {!aiEnabled && (
-          <p className="ai-error" role="status">Asisten AI sementara dinonaktifkan oleh administrator.</p>
+          <p className="ai-error" role="status">{disabledMessage}</p>
         )}
 
         <div className="ai-messages" ref={daftarRef} aria-live="polite" aria-relevant="additions text">

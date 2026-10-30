@@ -6,6 +6,8 @@ const { supabase } = vi.hoisted(() => ({
 vi.mock('../lib/supabase.ts', () => ({ supabase }));
 
 import {
+  buatDataEksporHasilUjian,
+  buatTautanUjianSiswa,
   buatUjianOnline,
   muatAkunSiswaBelumTertaut,
   muatAkunSiswaTertaut,
@@ -103,6 +105,51 @@ describe('online assessment service', () => {
       durationMinutes: 60,
       questionIds: ['question-1', 'question-1'],
     })).rejects.toThrow('tidak valid');
+  });
+
+  it('creates a student exam link on the same origin and validates the exam identifier', () => {
+    const examId = '11111111-1111-4111-8111-111111111111';
+    expect(buatTautanUjianSiswa(examId, 'https://school.example', '/app'))
+      .toBe(`https://school.example/app#/siswa/ujian?examId=${examId}`);
+    expect(() => buatTautanUjianSiswa('not-a-uuid', 'https://school.example', '/'))
+      .toThrow('ID ujian tidak valid');
+    expect(() => buatTautanUjianSiswa(examId, 'javascript:alert(1)', '/'))
+      .toThrow();
+  });
+
+  it('exports selected exam results without publishing pending grades or silently truncating rows', () => {
+    const rows = [
+      {
+        exam_id: 'exam-1',
+        title: 'Ujian Matematika',
+        kelas: 'X',
+        student_name: 'Ayu',
+        submitted_at: '2026-10-18T02:00:00Z',
+        score: 90,
+        objective_correct: 9,
+        objective_total: 10,
+        grade_pending: false,
+      },
+      {
+        exam_id: 'exam-2',
+        title: 'Ujian IPA',
+        kelas: 'X',
+        student_name: 'Bima',
+        submitted_at: '2026-10-18T02:05:00Z',
+        score: null,
+        objective_correct: 7,
+        objective_total: 10,
+        grade_pending: true,
+      },
+    ];
+    expect(buatDataEksporHasilUjian(rows, 'exam-2')).toEqual([
+      ['Nama siswa', 'Ujian', 'Kelas', 'Dikumpulkan (UTC)', 'PG benar', 'PG total', 'Nilai akhir', 'Status'],
+      ['Bima', 'Ujian IPA', 'X', '2026-10-18T02:05:00Z', '7', '10', '', 'Menunggu penilaian uraian'],
+    ]);
+    expect(() => buatDataEksporHasilUjian(Array.from({ length: 500 }, (_, index) => ({
+      ...rows[0],
+      attempt_id: `attempt-${index}`,
+    })))).toThrow('499 hasil');
   });
 
   it('loads teacher questions only for the requested tenant and owner', async () => {

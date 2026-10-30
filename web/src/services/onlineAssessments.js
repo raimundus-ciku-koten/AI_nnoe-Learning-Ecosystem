@@ -111,6 +111,62 @@ export async function muatHasilUjianGuru() {
   return data;
 }
 
+export function buatTautanUjianSiswa(examId, origin, pathname) {
+  if (typeof examId !== 'string' ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(examId)) {
+    throw new TypeError('ID ujian tidak valid untuk tautan siswa.');
+  }
+  if (typeof origin !== 'string' || typeof pathname !== 'string') {
+    throw new TypeError('Alamat aplikasi tidak valid untuk tautan siswa.');
+  }
+  const url = new URL(`${origin}${pathname}`);
+  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) {
+    throw new TypeError('Alamat aplikasi tidak aman untuk tautan siswa.');
+  }
+  url.hash = `/siswa/ujian?examId=${encodeURIComponent(examId)}`;
+  return url.href;
+}
+
+export function buatDataEksporHasilUjian(results, examId = 'all') {
+  if (!Array.isArray(results) || (examId !== 'all' && typeof examId !== 'string')) {
+    throw new TypeError('Pilihan hasil ujian untuk ekspor tidak valid.');
+  }
+  const selected = examId === 'all'
+    ? results
+    : results.filter((result) => result?.exam_id === examId);
+  if (selected.length > 499) {
+    throw new RangeError('Ekspor Google Sheets dibatasi 499 hasil per berkas. Pilih satu ujian agar ekspor tetap lengkap.');
+  }
+  const rows = selected.map((result, index) => {
+    if (!result || typeof result.exam_id !== 'string' ||
+        typeof result.student_name !== 'string' ||
+        typeof result.title !== 'string' ||
+        typeof result.kelas !== 'string' ||
+        typeof result.submitted_at !== 'string' ||
+        !Number.isFinite(Date.parse(result.submitted_at)) ||
+        !Number.isInteger(result.objective_correct) ||
+        !Number.isInteger(result.objective_total) ||
+        typeof result.grade_pending !== 'boolean' ||
+        (!result.grade_pending && result.score !== null && !Number.isFinite(Number(result.score)))) {
+      throw new TypeError(`Data hasil ujian nomor ${index + 1} tidak valid untuk ekspor.`);
+    }
+    return [
+      result.student_name,
+      result.title,
+      result.kelas,
+      result.submitted_at,
+      String(result.objective_correct),
+      String(result.objective_total),
+      result.grade_pending || result.score === null ? '' : String(result.score),
+      result.grade_pending ? 'Menunggu penilaian uraian' : 'Selesai dinilai',
+    ];
+  });
+  return [
+    ['Nama siswa', 'Ujian', 'Kelas', 'Dikumpulkan (UTC)', 'PG benar', 'PG total', 'Nilai akhir', 'Status'],
+    ...rows,
+  ];
+}
+
 export async function muatNilaiUjianSiswa() {
   const { data, error } = await supabase.rpc('student_online_exam_results');
   if (error) throw error;

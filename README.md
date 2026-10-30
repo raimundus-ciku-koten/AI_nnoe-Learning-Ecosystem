@@ -526,9 +526,11 @@ live as end-to-end encrypted files in each user's own Google Drive. File
 owners may share a file only with school users whose access is verified by the
 server; Drive permissions and encrypted per-recipient data-key envelopes must
 be revoked together. Supabase must never receive plaintext document contents
-or private encryption keys. External AI provider keys are not accepted or sent
-in no-billing mode. Canva OAuth tokens remain unavailable until a trusted
-server-side token exchange is implemented.
+or private encryption keys. Platform-managed AI keys are not used. Teachers may
+optionally provide a personal AI key for question drafts; it stays in browser
+memory and is sent directly to that provider only when the teacher requests a
+draft. Canva OAuth tokens remain unavailable until a trusted server-side token
+exchange is implemented.
 
 The operator selected an end-to-end encryption design. Recovery keys and
 encrypted key backups are used by the vault; key rotation, account recovery,
@@ -1133,16 +1135,25 @@ The active question bank is available at **Asesmen dan Penilaian → Bank Soal**
 Questions are stored in the RLS-protected Supabase `question_bank` table;
 teachers and school administrators can read questions in their tenant, only the
 owning teacher can create, edit, or delete them, and students cannot read the
-table because it contains answer keys. AI-generated question drafts and Canva
-question-link creation are not available in no-billing mode.
+table because it contains answer keys. Optional BYOK question drafts send only
+the requested subject, class, topic, and question type to the selected provider;
+the teacher must review each draft before saving. The question bank can export
+the currently visible questions to a CSV suitable for Canva Bulk Create. Direct
+Canva AI/OAuth design creation is not implemented.
 
 The profile-menu **AI & Layanan** action opens **Pengaturan → AI & Layanan**.
-External Gemini, DeepSeek, and Groq integrations are disabled in no-billing
-mode: the app does not accept provider keys or send prompts to those services.
-The assistant, AI question drafts, and AI planning generation are unavailable;
-local planning and RPE workflows remain available. The former server-side
-encrypted-key and Canva OAuth endpoints remain only in the legacy Firebase
-Functions source and are not called by the active frontend. Word chat
+Gemini, DeepSeek, and Groq can be configured with a teacher's personal key.
+The key is tested through the provider's model-list API, kept only in the
+browser tab's memory, and sent directly to that provider for a requested
+question draft. Provider quotas, data retention, and charges are controlled by
+the provider; the app does not guarantee a free quota. AI assistant and AI
+planning generation remain unavailable; local planning and RPE workflows
+remain available. Ujian Online shares an app link that still requires student
+sign-in, active class membership, and a roster-linked account. Teachers may
+export exam results to a private-by-default Google spreadsheet after explicit
+confirmation. The former server-side encrypted-key and Canva OAuth endpoints
+remain only in the legacy Firebase Functions source and are not called by the
+active frontend. Word chat
 attachments are stored and downloaded in their original format; conversion
 requires a separate paid/server-side service and is not available in Spark mode.
 Planning documents track upstream revisions: a Modul Ajar now requires current
@@ -1233,10 +1244,12 @@ Cloud Console; they cannot be enabled by this repository:
    SDKs or release workflows are intentionally retained. The Android package
    is a Trusted Web Activity; this web build does not initialize Firebase
    Performance Monitoring or Firebase AI Logic.
-5. The AI assistant, question drafts, and planning-document generator are
-   disabled in no-billing mode; no external AI provider is called. Canva OAuth
-   and server-side AI Firebase callables remain legacy Functions; the active
-   frontend does not call them.
+5. The AI assistant and planning-document generator remain disabled. Optional
+   question drafts use a personal BYOK key directly from the browser only after
+   teacher action; this may incur provider charges and is not a free-service
+   guarantee. Canva CSV export is available, but Canva OAuth/design creation
+   and server-side AI Firebase callables remain legacy Functions and are not
+   called by the active frontend.
 6. Do not enable Firebase Blaze, attach billing, run Firebase CLI commands, or
    deploy legacy Firebase functions. Existing Firebase payment, platform
    administration, server-side AI, media conversion, and chat-trigger code
@@ -1264,8 +1277,8 @@ deployed. The following names are retained for migration inventory only:
 - `getAIProviderConnections`, `savePersonalAIProviderKey`,
   `removePersonalAIProviderKey`, `setAIProviderPreference`,
   `generateQuestionDraft`, `generatePerangkat`, and `chatAsisten`: server-side
-  AI/settings callables. Active external AI generation is disabled in
-  no-billing mode; these legacy callables are not replaced or called.
+  AI/settings callables. These legacy callables are not replaced or called;
+  question-draft BYOK requests use direct browser-to-provider API calls only.
 - `startCanvaOAuth`, `canvaOAuthCallback`, and `createCanvaQuestionDesign`:
   Canva server OAuth/design paths remain legacy; no Supabase Edge replacement
   is present in `supabase/functions/`.

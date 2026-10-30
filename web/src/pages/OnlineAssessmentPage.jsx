@@ -1,6 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { buatSpreadsheetDenganData } from '../services/googleWorkspace.js';
+import { hubungkanGoogleSheetsUntukPengguna } from '../services/googleWorkspaceAuth.js';
 import {
+  buatDataEksporHasilUjian,
+  buatTautanUjianSiswa,
   buatUjianOnline,
   daftarDraftUjian,
   hapusDraftUjian,
@@ -25,7 +30,9 @@ function formatWaktu(value) {
 }
 
 function StudentAssessments({ userId }) {
+  const location = useLocation();
   const [exams, setExams] = useState([]);
+  const [examListLoaded, setExamListLoaded] = useState(false);
   const [drafts, setDrafts] = useState([]);
   const [active, setActive] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -33,8 +40,11 @@ function StudentAssessments({ userId }) {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [clock, setClock] = useState(Date.now());
+  const handledExamId = useRef('');
+  const requestedExamId = new URLSearchParams(location.search).get('examId') || '';
 
   const refresh = async () => {
+    setExamListLoaded(false);
     try {
       setDrafts(daftarDraftUjian(userId));
     } catch (draftError) {
@@ -45,6 +55,8 @@ function StudentAssessments({ userId }) {
       setError('');
     } catch (loadError) {
       setError(`Daftar ujian belum dapat disinkronkan: ${loadError.message}`);
+    } finally {
+      setExamListLoaded(true);
     }
   };
 
@@ -97,7 +109,7 @@ function StudentAssessments({ userId }) {
     return () => globalThis.removeEventListener('online', syncPending);
   }, [active, answers, userId]);
 
-  const openExam = async (examId) => {
+  const openExam = useCallback(async (examId) => {
     setBusy(true);
     setError('');
     setNotice('');
@@ -119,7 +131,22 @@ function StudentAssessments({ userId }) {
     } finally {
       setBusy(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!examListLoaded || !requestedExamId || handledExamId.current === requestedExamId) return;
+    handledExamId.current = requestedExamId;
+    const exam = exams.find((item) => item.exam_id === requestedExamId);
+    if (!exam) {
+      setError('Tautan ujian tidak tersedia untuk akun atau kelas Anda. Pastikan akun siswa sudah ditautkan oleh admin sekolah.');
+      return;
+    }
+    if (exam.attempt_status === 'submitted') {
+      setNotice('Ujian pada tautan ini sudah dikumpulkan. Periksa menu Nilai Saya untuk hasilnya.');
+      return;
+    }
+    void openExam(requestedExamId);
+  }, [examListLoaded, exams, openExam, requestedExamId]);
 
   const submitExam = async () => {
     if (!active) return;
@@ -294,7 +321,7 @@ function StudentAssessments({ userId }) {
   );
 }
 
-function TeacherAssessments({ tenantId, userId }) {
+function TeacherAssessments({ tenantId, userId, user }) {
   const [questions, setQuestions] = useState([]);
   const [exams, setExams] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -309,6 +336,8 @@ function TeacherAssessments({ tenantId, userId }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [exportExamId, setExportExamId] = useState('all');
+  const [spreadsheetUrl, setSpreadsheetUrl] = useState('');
 
   const refreshTeacherData = async () => {
     const [examRows, essayRows, resultRows] = await Promise.all([
@@ -333,6 +362,19 @@ function TeacherAssessments({ tenantId, userId }) {
     [questions],
   );
   const classQuestions = questions.filter((question) => question.kelas === kelas);
+  const examOptions = useMemo(() => {
+    const seen = new Set();
+    return results.reduce((items, result) => {
+      if (!seen.has(result.exam_id)) {
+        seen.add(result.exam_id);
+        items.push({ id: result.exam_id, title: result.title });
+      }
+      return items;
+    }, []);
+  }, [results]);
+  const exportResults = exportExamId === 'all'
+    ? results
+    : results.filter((result) => result.exam_id === exportExamId);
 
   const createExam = async (event) => {
     event.preventDefault();
@@ -348,7 +390,11 @@ function TeacherAssessments({ tenantId, userId }) {
         durationMinutes: Number(duration),
         questionIds: selected,
       });
-      setNotice(`Ujian berhasil dijadwalkan. ID ujian: ${examId}`);
+      setNotice(`Ujian berhasil dijadwalkan. Tautan siswa: ${buatTautanUjianSiswa(
+        examId,
+        window.location.origin,
+        window.location.pathname,
+      )}`);
       setTitle('');
       setSelected([]);
       await refreshTeacherData();
@@ -374,6 +420,44 @@ function TeacherAssessments({ tenantId, userId }) {
       await refreshTeacherData();
     } catch (gradeError) {
       setError(gradeError.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const exportResultsToSheets = async () => {
+    if (!exportResults.length) {
+      setError('Belum ada hasil ujian untuk diekspor.');
+      return;
+    }
+    if (exportResults.length > 499) {
+      setError('Ekspor Google Sheets dibatasi 499 hasil per berkas. Pilih satu ujian agar ekspor tetap lengkap.');
+      return;
+    }
+    const confirmed = window.confirm(
+      `Ekspor ${exportResults.length} hasil beserta nama siswa ke Google Sheets pada akun Google Anda? Spreadsheet baru bersifat privat pada akun tersebut sampai Anda membagikannya.`,
+    );
+    if (!confirmed) return;
+
+    setBusy(true);
+    setError('');
+    setNotice('');
+    setSpreadsheetUrl('');
+    try {
+      const googleSession = await hubungkanGoogleSheetsUntukPengguna(user);
+      const values = buatDataEksporHasilUjian(results, exportExamId);
+      const examTitle = exportExamId === 'all'
+        ? 'Semua ujian'
+        : examOptions.find((exam) => exam.id === exportExamId)?.title || 'Ujian';
+      const spreadsheet = await buatSpreadsheetDenganData(googleSession.accessToken, {
+        judul: `Hasil ${examTitle} ${new Date().toISOString().slice(0, 10)}`.slice(0, 120),
+        values,
+      });
+      setSpreadsheetUrl(spreadsheet.spreadsheetUrl);
+      setNotice('Hasil ujian berhasil diekspor ke Google Sheets.');
+    } catch (exportError) {
+      console.error('[online-assessment] Gagal mengekspor hasil ke Google Sheets:', exportError);
+      setError(exportError?.message || 'Hasil ujian tidak dapat diekspor ke Google Sheets.');
     } finally {
       setBusy(false);
     }
@@ -428,6 +512,7 @@ function TeacherAssessments({ tenantId, userId }) {
         </button>
       </form>
       <h3>Ujian terjadwal</h3>
+      <p className="ale-exam-intro">Tautan siswa tidak membuka akses anonim. Siswa tetap harus masuk dengan akun aktif yang sudah ditautkan oleh admin ke roster dan kelas ujian.</p>
       {!exams.length && <p>Belum ada ujian yang dibuat.</p>}
       <ul className="ale-exam-list">
         {exams.map((exam) => (
@@ -438,11 +523,57 @@ function TeacherAssessments({ tenantId, userId }) {
               <span>{exam.submitted_count}/{exam.participant_count} terkumpul · {exam.pending_review_count} menunggu penilaian uraian</span>
             </div>
             <span>{exam.status === 'active' ? 'Aktif' : 'Ditutup'}</span>
+            <div className="ale-exam-link-actions">
+              <a className="ale-exam-secondary" href={buatTautanUjianSiswa(
+                exam.exam_id,
+                window.location.origin,
+                window.location.pathname,
+              )}>Buka tautan siswa</a>
+              <button
+                type="button"
+                className="ale-exam-secondary"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(buatTautanUjianSiswa(
+                      exam.exam_id,
+                      window.location.origin,
+                      window.location.pathname,
+                    ));
+                    setNotice('Tautan ujian siswa berhasil disalin.');
+                    setError('');
+                  } catch (copyError) {
+                    setError(`Tautan tidak dapat disalin. Buka tautan siswa untuk menyalin alamatnya: ${copyError.message}`);
+                  }
+                }}
+              >
+                Salin tautan
+              </button>
+            </div>
           </li>
         ))}
       </ul>
       <h3>Hasil peserta</h3>
       {!results.length && <p>Belum ada hasil yang dapat ditampilkan.</p>}
+      {results.length > 0 && (
+        <div className="ale-exam-export">
+          <label>
+            Ujian untuk diekspor
+            <select value={exportExamId} onChange={(event) => setExportExamId(event.target.value)} disabled={busy}>
+              <option value="all">Semua ujian ({results.length} hasil)</option>
+              {examOptions.map((exam) => (
+                <option key={exam.id} value={exam.id}>
+                  {exam.title} ({results.filter((result) => result.exam_id === exam.id).length} hasil)
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="ale-exam-primary" disabled={busy || !exportResults.length} onClick={() => void exportResultsToSheets()}>
+            {busy ? 'Mengekspor…' : 'Ekspor hasil ke Google Sheets'}
+          </button>
+          <p>Nama siswa dan nilai akan dikirim ke akun Google Anda setelah persetujuan. Spreadsheet baru privat secara default.</p>
+        </div>
+      )}
+      {spreadsheetUrl && <p className="ale-exam-notice"><a href={spreadsheetUrl} target="_blank" rel="noopener noreferrer">Buka spreadsheet hasil</a></p>}
       <div className="ale-exam-results-wrap">
         <table className="ale-exam-results">
           <thead>
@@ -513,7 +644,7 @@ export default function OnlineAssessmentPage() {
   const { role, tenantId, user } = useAuth();
 
   if (role === 'siswa') return <StudentAssessments userId={user.uid} />;
-  if (role === 'guru') return <TeacherAssessments tenantId={tenantId} userId={user.uid} />;
+  if (role === 'guru') return <TeacherAssessments tenantId={tenantId} userId={user.uid} user={user} />;
   return (
     <section className="ale-exam-card">
       <h2>Ujian Online</h2>

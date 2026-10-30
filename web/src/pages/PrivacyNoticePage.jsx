@@ -6,7 +6,8 @@ const dataGroups = [
   ['Pendaftaran uji coba', 'Alamat email terverifikasi dan nama tampilan untuk mencegah penggunaan uji coba berulang; pilihan persona demo tidak menjadi peran akun.'],
   ['Data pembelajaran', 'Data siswa, kelas, kehadiran, bank soal, nilai atau asesmen, dan dokumen yang dimasukkan oleh sekolah atau pengguna.'],
   ['Komunikasi', 'Pesan, metadata percakapan, lampiran yang dipilih pengguna, dan token notifikasi perangkat bila notifikasi diaktifkan.'],
-  ['Integrasi pilihan pengguna', 'Berkas Drive/Sheets yang dibuat atau dipilih langsung oleh pengguna. Token Google Workspace hanya disimpan sementara di memori halaman.'],
+  ['Integrasi pilihan pengguna', 'Berkas Drive/Sheets yang dibuat atau dipilih langsung oleh pengguna. Ekspor nilai dapat memuat nama siswa, kelas, waktu pengumpulan, dan nilai; spreadsheet baru berada pada akun Google pengguna dan privat sampai dibagikan. Token Google Workspace hanya disimpan sementara di memori halaman.'],
+  ['Provider AI pribadi (opsional)', 'Jika guru memasukkan kunci sendiri dan meminta draf soal, mata pelajaran, kelas, topik, serta jenis soal dikirim langsung dari browser ke Gemini, DeepSeek, atau Groq yang dipilih. Kunci hanya disimpan di memori tab dan tidak dikirim ke server aplikasi. Provider dapat menerapkan syarat, biaya, kuota, dan retensi datanya sendiri; jangan masukkan identitas atau data pribadi siswa.'],
   ['Draf program BK dan kegiatan', 'Draf program hanya berada di memori halaman hingga ditutup. Gunakan cetak atau Simpan sebagai PDF untuk membuat salinan lokal; jangan masukkan identitas siswa atau isi konseling.'],
 ];
 
@@ -33,6 +34,12 @@ export default function PrivacyNoticePage() {
           yang dipilih pengguna. Akses seharusnya dibatasi menurut peran dan sekolah; jangan memasukkan data
           yang tidak diperlukan. Jangan membagikan tautan rapat, berkas, atau informasi siswa kepada pihak
           yang tidak berwenang.
+        </p>
+        <p>
+          Penggunaan provider AI pribadi bersifat opsional dan hanya terjadi setelah guru mengaktifkan kunci
+          serta meminta draf soal. Kunci browser tidak dapat dianggap rahasia dari skrip yang berjalan pada
+          halaman tersebut. Tinjau ketentuan provider dan kemungkinan biaya sebelum penggunaan; tidak ada
+          jaminan bahwa kuota gratis tersedia. AI perencanaan dan asisten percakapan belum diaktifkan.
         </p>
         <h2>Penyimpanan dan layanan terkait</h2>
         <p>
