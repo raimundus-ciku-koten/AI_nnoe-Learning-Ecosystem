@@ -40,6 +40,7 @@ import SchoolAnnouncementsPage from './SchoolAnnouncementsPage.jsx';
 import QuestionBankPage from './QuestionBankPage.jsx';
 import PlanningCoverPage from './PlanningCoverPage.jsx';
 import AdminAssessmentPage from './AdminAssessmentPage.jsx';
+import AdminSchoolUnitsPage from './AdminSchoolUnitsPage.jsx';
 import PlatformTenantsPage from './PlatformTenantsPage.jsx';
 import PlatformUsersPage from './PlatformUsersPage.jsx';
 import PlatformOperationsPage, { aktivitasAudit, rincianAudit } from './PlatformOperationsPage.jsx';
@@ -306,6 +307,22 @@ describe('admin sekolah: cakupan pengguna', () => {
 
     expect(html).toContain('<h2>Jadwal</h2>');
     expect(html).toContain('Panduan · baca saja');
+  });
+
+  it('menyediakan pengelolaan unit sekolah khusus untuk admin tenant', () => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = null;
+    const html = renderToStaticMarkup(React.createElement(AdminSchoolUnitsPage));
+
+    expect(html).toContain('<h1 id="school-units-title">Unit dan Jenjang</h1>');
+    expect(html).toContain('Tambah unit sekolah');
+    expect(html).toContain('Jenjang pendidikan');
+    expect(html).not.toContain('Panduan · baca saja');
+
+    auth.role = 'guru';
+    const denied = renderToStaticMarkup(React.createElement(AdminSchoolUnitsPage));
+    expect(denied).toContain('hanya tersedia bagi admin sekolah');
+    expect(denied).not.toContain('Tambah unit sekolah');
   });
 });
 

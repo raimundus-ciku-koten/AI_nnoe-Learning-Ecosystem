@@ -330,6 +330,7 @@ from unnest(array[
   'attendance_records',
   'testimonials',
   'school_announcements',
+  'school_units',
   'chat_conversations',
   'chat_messages',
   'chat_read_receipts',

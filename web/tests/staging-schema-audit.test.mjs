@@ -21,6 +21,7 @@ test('Staging schema audit is read-only and reports role/chat/RLS release gates'
   assert.match(auditSql, /'rls_tables_without_policies'/);
   assert.match(auditSql, /'public_table_rls'/);
   assert.match(auditSql, /'chat_presence'/);
+  assert.match(auditSql, /'school_units'/);
   assert.match(auditSql, /'trial_registrations'/);
   assert.match(auditSql, /\bcommit;\s*$/i);
   assert.doesNotMatch(
