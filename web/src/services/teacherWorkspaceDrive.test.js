@@ -20,17 +20,20 @@ import {
 import {
   susunIsiJurnalMengajar,
   susunIsiCatatanObservasi,
+  susunIsiPortofolioGuru,
   susunIsiRencanaPerbaikan,
   susunIsiRencanaKompetensi,
   susunIsiRefleksi,
   siapkanCatatanGuru,
   tampilkanIsiJurnalMengajar,
   tampilkanIsiCatatanObservasi,
+  tampilkanIsiPortofolioGuru,
   tampilkanIsiRencanaPerbaikan,
   tampilkanIsiRencanaKompetensi,
   tampilkanIsiRefleksi,
   uraikanIsiJurnalMengajar,
   uraikanIsiCatatanObservasi,
+  uraikanIsiPortofolioGuru,
   uraikanIsiRencanaPerbaikan,
   uraikanIsiRencanaKompetensi,
   uraikanIsiRefleksi,
@@ -209,6 +212,39 @@ describe('catatan supervisi dan observasi pribadi', () => {
     expect(() => susunIsiCatatanObservasi({})).toThrow('Isi catatan observasi wajib diisi.');
     expect(() => susunIsiCatatanObservasi({ fokus: 'x'.repeat(1401) }))
       .toThrow('Bagian observasi maksimal 1400 karakter.');
+  });
+});
+
+describe('portofolio guru privat', () => {
+  it('menyimpan metadata karya dan tautan bukti HTTPS yang dinormalisasi', () => {
+    const portfolio = {
+      jenisKarya: 'Modul ajar',
+      deskripsi: 'Rangkaian pembelajaran berbasis proyek.',
+      kompetensi: 'Perencanaan pembelajaran',
+      tautan: 'https://drive.example.org/file/123',
+    };
+    const isi = susunIsiPortofolioGuru(portfolio);
+
+    expect(uraikanIsiPortofolioGuru(isi)).toEqual({ ...portfolio, legacy: false });
+    expect(tampilkanIsiPortofolioGuru(isi)).toContain('Tautan bukti HTTPS:\nhttps://drive.example.org/file/123');
+    expect(isi).toMatch(/^ale-portfolio-v1:/);
+  });
+
+  it('menolak karya tanpa jenis/deskripsi dan tautan selain HTTPS aman', () => {
+    expect(() => susunIsiPortofolioGuru({})).toThrow('Jenis karya wajib diisi.');
+    const entry = { jenisKarya: 'Karya', deskripsi: 'Deskripsi' };
+    expect(() => susunIsiPortofolioGuru({ ...entry, tautan: 'http://example.org' }))
+      .toThrow('Tautan bukti harus menggunakan HTTPS');
+    expect(() => susunIsiPortofolioGuru({ ...entry, tautan: 'https://user:pass@example.org' }))
+      .toThrow('tidak boleh memuat kredensial');
+  });
+
+  it('tetap dapat membaca narasi portofolio lama', () => {
+    expect(uraikanIsiPortofolioGuru('Portofolio naratif sebelumnya')).toMatchObject({
+      deskripsi: 'Portofolio naratif sebelumnya',
+      legacy: true,
+    });
+    expect(tampilkanIsiPortofolioGuru('Portofolio naratif sebelumnya')).toBe('Portofolio naratif sebelumnya');
   });
 });
 

@@ -98,6 +98,7 @@ describe('submenu platform superadmin', () => {
         '/pemantauan/catatan',
         '/refleksi/pembelajaran',
         '/refleksi/supervisi',
+        '/refleksi/portofolio',
         '/refleksi/kompetensi',
         '/refleksi/perbaikan',
         '/laporan/kinerja-guru',
@@ -136,6 +137,13 @@ describe('submenu platform superadmin', () => {
           expect(html).toContain('Catatan faktual');
           expect(html).toContain('Umpan balik');
           expect(html).toContain('bukan evaluasi resmi');
+        } else if (path === '/refleksi/portofolio') {
+          expect(html).toContain('Entri portofolio guru</h2>');
+          expect(html).toContain('Jenis karya');
+          expect(html).toContain('Deskripsi karya');
+          expect(html).toContain('Kompetensi terkait');
+          expect(html).toContain('Tautan bukti HTTPS');
+          expect(html).toContain('Berkas tidak diunggah');
         } else if (path === '/refleksi/perbaikan') {
           expect(html).toContain('Rencana perbaikan</h2>');
           expect(html).toContain('Fokus perbaikan');

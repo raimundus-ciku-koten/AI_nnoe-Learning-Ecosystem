@@ -10,6 +10,8 @@ const DEVELOPMENT_PREFIX = 'ale-development-plan-v1:';
 const DEVELOPMENT_FIELDS = Object.freeze(['kompetensi', 'aktivitas', 'target', 'bukti']);
 const OBSERVATION_PREFIX = 'ale-observation-v1:';
 const OBSERVATION_FIELDS = Object.freeze(['fokus', 'observasi', 'umpanBalik', 'tindakLanjut']);
+const PORTFOLIO_PREFIX = 'ale-portfolio-v1:';
+const PORTFOLIO_FIELDS = Object.freeze(['jenisKarya', 'deskripsi', 'kompetensi', 'tautan']);
 
 function boundedText(value, label, max, required = false) {
   const text = String(value ?? '').trim();
@@ -287,6 +289,67 @@ export function tampilkanIsiCatatanObservasi(value) {
   return OBSERVATION_FIELDS
     .filter((field) => observation[field])
     .map((field) => `${labels[field]}:\n${observation[field]}`)
+    .join('\n\n');
+}
+
+export function kosongkanPortofolioGuru() {
+  return Object.fromEntries(PORTFOLIO_FIELDS.map((field) => [field, '']));
+}
+
+export function susunIsiPortofolioGuru(input) {
+  const labels = {
+    jenisKarya: 'Jenis karya',
+    deskripsi: 'Deskripsi',
+    kompetensi: 'Kompetensi',
+    tautan: 'Tautan bukti',
+  };
+  const portfolio = Object.fromEntries(PORTFOLIO_FIELDS.map((field) => [
+    field,
+    boundedText(input?.[field], labels[field], field === 'tautan' ? 1000 : 1400,
+      ['jenisKarya', 'deskripsi'].includes(field)),
+  ]));
+  if (portfolio.tautan) {
+    let url;
+    try { url = new URL(portfolio.tautan); } catch { throw new Error('Tautan bukti harus berupa URL HTTPS yang valid.'); }
+    if (url.protocol !== 'https:' || url.username || url.password) {
+      throw new Error('Tautan bukti harus menggunakan HTTPS dan tidak boleh memuat kredensial.');
+    }
+    portfolio.tautan = url.href;
+  }
+  return `${PORTFOLIO_PREFIX}${JSON.stringify(portfolio)}`;
+}
+
+export function uraikanIsiPortofolioGuru(value) {
+  const isi = String(value ?? '');
+  if (!isi.startsWith(PORTFOLIO_PREFIX)) {
+    return { ...kosongkanPortofolioGuru(), deskripsi: isi, legacy: true };
+  }
+  try {
+    const parsed = JSON.parse(isi.slice(PORTFOLIO_PREFIX.length));
+    return {
+      ...Object.fromEntries(PORTFOLIO_FIELDS.map((field) => [
+        field,
+        typeof parsed?.[field] === 'string' ? parsed[field] : '',
+      ])),
+      legacy: false,
+    };
+  } catch {
+    return { ...kosongkanPortofolioGuru(), deskripsi: isi, legacy: true };
+  }
+}
+
+export function tampilkanIsiPortofolioGuru(value) {
+  const portfolio = uraikanIsiPortofolioGuru(value);
+  if (portfolio.legacy) return portfolio.deskripsi;
+  const labels = {
+    jenisKarya: 'Jenis karya',
+    deskripsi: 'Deskripsi',
+    kompetensi: 'Kompetensi',
+    tautan: 'Tautan bukti HTTPS',
+  };
+  return PORTFOLIO_FIELDS
+    .filter((field) => portfolio[field])
+    .map((field) => `${labels[field]}:\n${portfolio[field]}`)
     .join('\n\n');
 }
 
