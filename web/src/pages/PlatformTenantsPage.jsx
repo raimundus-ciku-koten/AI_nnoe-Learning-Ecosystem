@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { muatPengaturanTenant, simpanProfilTenant, simpanKopSuratTenant } from '../services/tenantSettings.js';
-import { muatHalamanDirektoriTenant } from '../services/platformTenantDirectory.js';
+import { buatTenantPlatform, muatHalamanDirektoriTenant } from '../services/platformTenantDirectory.js';
 import {
   buatTautanKopSuratTenant,
   hapusKopSuratTenant,
@@ -232,6 +232,9 @@ export default function PlatformTenantsPage() {
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState('');
   const [tenantKop, setTenantKop] = useState(null);
+  const [tenantForm, setTenantForm] = useState({ id: '', name: '' });
+  const [creatingTenant, setCreatingTenant] = useState(false);
+  const [notice, setNotice] = useState('');
   const cursor = useRef(null);
   const busy = useRef(false);
 
@@ -281,6 +284,29 @@ export default function PlatformTenantsPage() {
         String(nilai || '').toLocaleLowerCase('id').includes(kata)));
   }, [search, tenants]);
 
+  async function createTenant(event) {
+    event.preventDefault();
+    if (creatingTenant) return;
+    setCreatingTenant(true);
+    setError('');
+    setNotice('');
+    try {
+      const created = await buatTenantPlatform(tenantForm);
+      setTenantForm({ id: '', name: '' });
+      setNotice(`Tenant ${created.name} (${created.tenant_id}) berhasil dibuat dan dicatat pada audit platform.`);
+      await muat();
+    } catch (cause) {
+      console.error('[platform-tenants] Gagal membuat tenant:', cause);
+      setError(cause?.code === '23505'
+        ? 'ID tenant sudah digunakan. Pilih ID yang berbeda.'
+        : cause?.code === '42501'
+          ? 'Pembuatan tenant ditolak. Pastikan sesi superadmin masih aktif.'
+          : cause?.message || 'Tenant tidak dapat dibuat.');
+    } finally {
+      setCreatingTenant(false);
+    }
+  }
+
   if (role !== 'superadmin') {
     return (
       <main className="platform-tenants">
@@ -299,6 +325,41 @@ export default function PlatformTenantsPage() {
         <h1>Daftar sekolah</h1>
         <p>Ringkasan tenant, akun, roster, dan pesanan sekolah terbaru diambil melalui fungsi backend superadmin. Perubahan akses dan langganan tidak dilakukan dari direktori ini.</p>
       </header>
+
+      <section className="platform-tenants-card" aria-labelledby="create-tenant-title">
+        <h2 id="create-tenant-title">Tambah tenant sekolah</h2>
+        <p>Tenant dibuat aktif. Penambahan tenant tidak membuat pengguna atau mengubah status langganan.</p>
+        <form className="platform-tenant-create-form" onSubmit={createTenant}>
+          <label>
+            ID tenant (slug)
+            <input
+              required
+              minLength={3}
+              maxLength={80}
+              pattern="[a-z0-9]+([a-z0-9-]*[a-z0-9])?"
+              autoComplete="off"
+              value={tenantForm.id}
+              onChange={(event) => setTenantForm((current) => ({ ...current, id: event.target.value.toLowerCase() }))}
+              placeholder="contoh: sekolah-baru"
+            />
+          </label>
+          <label>
+            Nama sekolah
+            <input
+              required
+              minLength={2}
+              maxLength={160}
+              value={tenantForm.name}
+              onChange={(event) => setTenantForm((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Nama resmi sekolah"
+            />
+          </label>
+          <button type="submit" className="platform-tenants-button" disabled={creatingTenant}>
+            {creatingTenant ? 'Membuat tenant…' : 'Buat tenant'}
+          </button>
+        </form>
+        {notice && <p className="platform-tenant-letterhead-notice" role="status">{notice}</p>}
+      </section>
 
       <section className="platform-tenants-card" aria-labelledby="platform-tenants-title">
         <div className="platform-tenants-toolbar">

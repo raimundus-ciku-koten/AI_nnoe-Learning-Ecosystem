@@ -120,6 +120,13 @@ describe('AppShell navigasi berdasarkan peran aktif', () => {
     expect(html).toContain('aria-label="Aktivitas terbaru"');
   });
 
+  it('menghilangkan menu yang dinonaktifkan tanpa mengganggu navigasi peran', () => {
+    const disabled = ['pelaksanaan|/pelaksanaan/jurnal'];
+    const items = menuUntukPeran('guru', disabled).flatMap((group) => group.item);
+    expect(items.some((item) => item.path === '/pelaksanaan/jurnal')).toBe(false);
+    expect(items.some((item) => item.path === '/pelaksanaan/tugas')).toBe(true);
+  });
+
   it('mencari label dan grup hanya dari menu peran yang diberikan', () => {
     const siswa = menuUntukPeran('siswa');
     const hasilGrup = filterMenuSearch(siswa, 'komunikasi');

@@ -67,6 +67,87 @@
   font-size: .82rem;
 }
 
+.platform-tenant-create-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) auto;
+  align-items: end;
+  gap: .8rem;
+}
+
+.platform-tenant-create-form label {
+  display: grid;
+  gap: .35rem;
+  color: #42516a;
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.platform-tenant-create-form input {
+  width: 100%;
+  min-height: 2.65rem;
+  padding: .55rem .75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .65rem;
+  color: #0f172a;
+  background: #fff;
+  font: inherit;
+}
+
+.platform-tenant-create-form input:focus-visible {
+  outline: 3px solid rgb(20 184 166 / .25);
+  border-color: #0f766e;
+}
+
+.platform-user-menu-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  gap: .8rem;
+}
+
+.platform-user-menu-group {
+  display: grid;
+  gap: .35rem;
+  min-width: 0;
+  margin: 0;
+  padding: .8rem;
+  border: 1px solid #e1e8f0;
+  border-radius: .75rem;
+}
+
+.platform-user-menu-group legend {
+  padding: 0 .35rem;
+  color: #24334b;
+  font-weight: 750;
+}
+
+.platform-user-menu-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .55rem;
+  min-height: 2.4rem;
+  padding: .35rem .45rem;
+  border-radius: .45rem;
+  color: #42516a;
+  font-size: .86rem;
+}
+
+.platform-user-menu-option:has(input:checked) {
+  background: #f0f8f6;
+}
+
+.platform-user-menu-option input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #0f766e;
+}
+
+.platform-user-menu-option small {
+  grid-column: 2;
+  color: #64748b;
+  font-size: .72rem;
+}
+
 .platform-tenants-search {
   display: grid;
   gap: .3rem;
@@ -554,6 +635,9 @@
 }
 
 @media (max-width: 640px) {
+  .platform-tenant-create-form {
+    grid-template-columns: 1fr;
+  }
   .platform-tenants-toolbar {
     align-items: stretch;
   }

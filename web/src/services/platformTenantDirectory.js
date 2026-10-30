@@ -2,6 +2,29 @@ import { supabase } from '../lib/supabase.ts';
 
 const ORDER_STATUSES = new Set(['creating', 'pending', 'paid', 'paid_review', 'failed']);
 
+export async function buatTenantPlatform({ id, name }) {
+    if (typeof id !== 'string' || typeof name !== 'string') {
+        throw new TypeError('ID dan nama tenant wajib berupa teks.');
+    }
+    const tenantId = id.trim().toLowerCase();
+    const tenantName = name.trim();
+    if (!/^[a-z0-9]+(?:[a-z0-9-]{0,78}[a-z0-9])?$/.test(tenantId)
+        || tenantId.length < 3 || tenantId.length > 80
+        || tenantName.length < 2 || tenantName.length > 160
+        || /[\u0000-\u001f\u007f]/.test(tenantName)) {
+        throw new TypeError('ID tenant harus berupa slug 3–80 karakter; nama harus 2–160 karakter.');
+    }
+    const { data, error } = await supabase.rpc('create_platform_tenant', {
+        p_tenant_id: tenantId,
+        p_name: tenantName,
+    });
+    if (error) throw error;
+    if (!data || data.tenant_id !== tenantId || data.name !== tenantName || data.active !== true) {
+        throw new Error('Respons pembuatan tenant tidak valid.');
+    }
+    return data;
+}
+
 export async function muatHalamanDirektoriTenant({ after = null, limit = 41 } = {}) {
     if (after !== null && (typeof after !== 'string' || !after.trim())) {
         throw new TypeError('Kursor direktori tenant tidak valid.');

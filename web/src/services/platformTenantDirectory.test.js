@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { supabase } = vi.hoisted(() => ({ supabase: { rpc: vi.fn() } }));
 vi.mock('../lib/supabase.ts', () => ({ supabase }));
 
-import { muatHalamanDirektoriTenant } from './platformTenantDirectory.js';
+import { buatTenantPlatform, muatHalamanDirektoriTenant } from './platformTenantDirectory.js';
 
 const tenantRow = {
     tenant_id: 'school-1',
@@ -20,6 +20,20 @@ const tenantRow = {
 
 describe('platform tenant directory', () => {
     beforeEach(() => vi.clearAllMocks());
+
+    it('creates tenants through the protected RPC after validating slug and name', async () => {
+        supabase.rpc.mockResolvedValueOnce({
+            data: { tenant_id: 'sekolah-baru', name: 'Sekolah Baru', active: true },
+            error: null,
+        });
+        await expect(buatTenantPlatform({ id: ' Sekolah-Baru ', name: ' Sekolah Baru ' }))
+            .resolves.toMatchObject({ tenant_id: 'sekolah-baru', active: true });
+        expect(supabase.rpc).toHaveBeenCalledWith('create_platform_tenant', {
+            p_tenant_id: 'sekolah-baru',
+            p_name: 'Sekolah Baru',
+        });
+        await expect(buatTenantPlatform({ id: 'x', name: 'Sekolah' })).rejects.toThrow('ID tenant');
+    });
 
     it('loads a server-paginated tenant summary without owner or order identifiers', async () => {
         supabase.rpc.mockResolvedValueOnce({ data: [tenantRow], error: null });

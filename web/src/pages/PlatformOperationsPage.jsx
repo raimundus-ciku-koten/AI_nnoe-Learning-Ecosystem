@@ -9,6 +9,7 @@ import { muatSnapshotPlatform } from '../services/platformUsage.js';
 import PRICING from '../../../functions/shared/pricing.json';
 import PlatformContentCatalogPage from './PlatformContentCatalogPage.jsx';
 import PlatformAIManagementPage from './PlatformAIManagementPage.jsx';
+import PlatformUserMenusPage from './PlatformUserMenusPage.jsx';
 import '../styles/platform-tenants.css';
 
 const PERAN_MENU = [
@@ -366,6 +367,7 @@ function nilaiAudit(value) {
 export function aktivitasAudit(data) {
   if (data.action === 'platform.user.created') return 'Akun pengguna dibuat';
   if (data.action === 'platform.user.provisioned') return 'Akses pengguna diprovisikan';
+  if (data.action === 'platform.user.invited') return 'Undangan pengguna dikirim';
   return labelKontrol(data.target);
 }
 
@@ -379,6 +381,9 @@ export function rincianAudit(data) {
     const role = PERAN_MENU.find(([, id]) => id === (data.role || profile.role))?.[0]
       || data.role || profile.role || 'Peran tidak diketahui';
     return `${role} · tenant ${data.tenantId || profile.tenant_id || '—'} · ${data.target || profile.email || '—'}`;
+  }
+  if (data.action === 'platform.user.invited') {
+    return `Undangan Auth · ${data.after_value?.email || data.target || 'email tidak tersedia'}`;
   }
   return `${nilaiAudit(data.before_value ?? data.before)} → ${nilaiAudit(data.after_value ?? data.after)}`;
 }
@@ -549,6 +554,7 @@ export default function PlatformOperationsPage() {
   }
   if (contentType) return <PlatformContentCatalogPage type={contentType} />;
   if (pathname.startsWith('/platform/ai/')) return <PlatformAIManagementPage />;
+  if (pathname === '/platform/fitur/menu-pengguna') return <PlatformUserMenusPage />;
 
   return (
     <main className="platform-tenants">

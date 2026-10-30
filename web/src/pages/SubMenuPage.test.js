@@ -350,6 +350,7 @@ describe('submenu platform superadmin', () => {
     expect(renderOperations('/platform/tenant/paket')).toContain('Sekolah Basic');
     expect(renderOperations('/platform/pengguna/peran')).toContain('Matriks menu dan peran');
     expect(renderOperations('/platform/fitur/menu')).toContain('Katalog menu platform');
+    expect(renderOperations('/platform/fitur/menu-pengguna')).toContain('Menu per Pengguna');
     expect(renderOperations('/platform/dashboard/statistik')).toContain('Statistik Global');
     expect(renderOperations('/platform/konten/template')).toContain('Template Perangkat');
     expect(renderOperations('/platform/konten/bank-soal')).toContain('Bank Soal Global');

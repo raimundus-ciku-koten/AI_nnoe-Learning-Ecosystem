@@ -6,6 +6,7 @@
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '../styles/dashboard.css';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useMenuAccess } from '../context/MenuAccessContext.jsx';
 import { menuUntukPeran, cariMenu } from '../navigasi.js';
 import { NAMA_APLIKASI, WEB_PUSH_PUBLIC_KEY } from '../config.js';
 import { LABEL_PERAN, inisial, sideTutupTersimpan, terapkanSideTutup, toast } from '../ui.js';
@@ -45,16 +46,17 @@ function useDesktop() {
   );
 }
 
-export default function AppShell({ path, search = '', judulHalaman, children }) {
+export default function AppShell({ path, search = '', judulHalaman, menuAccessError = '', children }) {
   const { user, profile, role, activeRole, roles = [], tenantId, logout, switchRole } = useAuth();
+  const { disabledMenuKeys } = useMenuAccess();
   const peranAktif = activeRole || role;
   const hematData = isEconomyMode();
   const desktop = useDesktop();
   const pesanBelumDibaca = useSyncExternalStore(subscribe, hitungPesanBelumDibaca, () => 0);
-  const daftarMenu = menuUntukPeran(peranAktif);
+  const daftarMenu = menuUntukPeran(peranAktif, disabledMenuKeys);
   const adaMenuPath = (target) => daftarMenu.some((group) =>
     group.item.some((item) => item.path === target));
-  const menu = cariMenu(path, search, peranAktif);
+  const menu = cariMenu(path, search, peranAktif, disabledMenuKeys);
   const judulAktif = judulHalaman || menu?.item.label || 'Halaman';
 
   const [sideTutup, setSideTutup] = useState(sideTutupTersimpan);
@@ -539,6 +541,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
         <div className="ale-tirai" hidden={!mobileBuka} onClick={() => setMobileBuka(false)} aria-hidden="true" />
 
         <main id="ale-konten" className="ale-main" tabIndex={-1}>
+          {menuAccessError && <p className="platform-control-warning" role="status">{menuAccessError}</p>}
           {hematData && (
             <p className="ale-economy-notice" role="status">
               Mode hemat data aktif. Gambar profil eksternal dimatikan dan aktivitas online diperbarui lebih jarang.

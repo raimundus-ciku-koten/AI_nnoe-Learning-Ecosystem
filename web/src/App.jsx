@@ -1,10 +1,11 @@
 // web/src/App.jsx
-import React, { useEffect, Suspense, lazy, useRef, useState } from 'react';
+import React, { useCallback, useEffect, Suspense, lazy, useRef, useState } from 'react';
 import {
   HashRouter, Routes, Route, Navigate, useLocation, useParams,
 } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { MaintenanceGuard, PlatformControlProvider } from './context/PlatformControlContext.jsx';
+import { MenuAccessProvider, useMenuAccess } from './context/MenuAccessContext.jsx';
 import { logout } from './auth.js';
 import PrivilegedMfaGate from './components/PrivilegedMfaGate.jsx';
 import { canOpenRolePath } from './services/roleAccess.js';
@@ -80,7 +81,12 @@ const HalamanLogin = lazy(() => import('./pages/login.js').then(({ halamanLogin 
   default: function LoginRoute() { return <LegacyPage render={halamanLogin} />; },
 })));
 const HalamanDashboard = lazy(() => import('./pages/dashboard.js').then(({ halamanDashboard }) => ({
-  default: function DashboardRoute() { return <LegacyPage render={halamanDashboard} />; },
+  default: function DashboardRoute() {
+    const { disabledMenuKeys } = useMenuAccess();
+    const render = useCallback((node, context) =>
+      halamanDashboard(node, { ...context, disabledMenuKeys }), [disabledMenuKeys]);
+    return <LegacyPage render={render} />;
+  },
 })));
 const HalamanPerencanaan = lazy(() => import('./pages/perencanaan.js').then(({ halamanPerencanaan }) => ({
   default: function PerencanaanRoute() { return <LegacyPage render={halamanPerencanaan} />; },
@@ -131,6 +137,7 @@ const POST_LOGIN_RETURN_KEY = 'ale-post-login-return';
 
 function PrivateShell({ children }) {
   const { user, role, activeRole, passwordRecovery } = useAuth();
+  const { disabledMenuKeys, loading: menuAccessLoading, error: menuAccessError } = useMenuAccess();
   const location = useLocation();
 
   useEffect(() => {
@@ -150,7 +157,8 @@ function PrivateShell({ children }) {
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   if (passwordRecovery) return <Navigate to="/login" replace />;
   if ((activeRole || role) === 'demo') return <Navigate to="/trial" replace />;
-  if (!canOpenRolePath(activeRole || role, location.pathname, location.search)) {
+  if (menuAccessLoading) return <div className="app-loader" role="status">Memeriksa akses menu...</div>;
+  if (!canOpenRolePath(activeRole || role, location.pathname, location.search, disabledMenuKeys)) {
     if (!canOpenRolePath(activeRole || role, '/dashboard')) {
       return (
         <main className="app-error-screen" role="alert">
@@ -166,7 +174,7 @@ function PrivateShell({ children }) {
   return (
     <PrivilegedMfaGate role={role} userId={user.uid}>
       <MaintenanceGuard>
-        <AppShell path={location.pathname} search={location.search}>{children}</AppShell>
+      <AppShell path={location.pathname} search={location.search} menuAccessError={menuAccessError}>{children}</AppShell>
       </MaintenanceGuard>
     </PrivilegedMfaGate>
   );
@@ -355,9 +363,11 @@ function RoutedApp() {
   return (
     <AppErrorBoundary locationKey={locationKey}>
       <AuthProvider>
-        <PlatformControlProvider>
-          <RouteWrapper />
-        </PlatformControlProvider>
+        <MenuAccessProvider>
+          <PlatformControlProvider>
+            <RouteWrapper />
+          </PlatformControlProvider>
+        </MenuAccessProvider>
       </AuthProvider>
     </AppErrorBoundary>
   );

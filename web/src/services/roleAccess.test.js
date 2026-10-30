@@ -47,3 +47,12 @@ test('peran demo hanya dapat membuka simulasi uji coba', () => {
     assert.equal(canOpenRolePath('demo', path), false);
   }
 });
+
+test('menu nonaktif memblokir rute langsung tetapi tidak memengaruhi menu lain', () => {
+  const disabled = ['pelaksanaan|/pelaksanaan/jurnal'];
+  assert.equal(canOpenRolePath('guru', '/pelaksanaan/jurnal', '', disabled), false);
+  assert.equal(canOpenRolePath('guru', '/pelaksanaan/tugas', '', disabled), true);
+  assert.equal(canOpenRolePath('guru', '/dashboard', '', ['beranda|/dashboard']), true);
+  assert.equal(canOpenRolePath('guru', '/perencanaan', '?jenis=atp', ['perencanaan|/perencanaan?jenis=atp']), false);
+  assert.equal(canOpenRolePath('guru', '/perencanaan/atp', '', ['perencanaan|/perencanaan?jenis=atp']), false);
+});

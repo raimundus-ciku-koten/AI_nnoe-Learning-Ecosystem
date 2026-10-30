@@ -371,6 +371,20 @@ aggregate exam metadata. The platform AI page controls the existing audited
 feature flags; provider secrets, browser-personal-key usage, token counts, and
 cost are not visible or measured there.
 
+The local migration `20261030001200_tenant_and_user_menu_admin.sql` adds
+superadmin-only tenant creation and audited per-user menu overrides. Disabled
+menus are hidden from navigation and blocked by the application route guard;
+these overrides are not a replacement for database authorization or RLS.
+Creating a tenant does not create an Auth user, send an invitation, or activate
+a subscription. The migration has not been applied to Staging or Production.
+The `platform-invite-user` Edge Function completes the Auth invitation after a
+superadmin saves the user's active allowlist entry. It verifies the caller and
+target on the server, rate-limits repeat sends, and records successful sends in
+the platform audit. Set the server-side `PLATFORM_APP_ORIGIN` to the exact
+application origin and include the invitation callback in Supabase
+Authentication's redirect URL allowlist. The function is source-only until
+deployed to Supabase.
+
 The active platform-controls context reads the `global` row from
 `public.platform_control`. The platform operations UI updates it through the
 protected `set_platform_control` RPC, and the maintenance guard hides

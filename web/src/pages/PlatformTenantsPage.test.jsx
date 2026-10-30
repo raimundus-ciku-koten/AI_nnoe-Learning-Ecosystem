@@ -14,7 +14,10 @@ vi.mock('../services/tenantLetterhead.js', () => ({
     hapusKopSuratTenant: vi.fn(),
     unggahKopSuratTenant: vi.fn(),
 }));
-vi.mock('../services/platformTenantDirectory.js', () => ({ muatHalamanDirektoriTenant: vi.fn() }));
+vi.mock('../services/platformTenantDirectory.js', () => ({
+    buatTenantPlatform: vi.fn(),
+    muatHalamanDirektoriTenant: vi.fn(),
+}));
 
 import PlatformTenantsPage from './PlatformTenantsPage.jsx';
 
@@ -28,6 +31,8 @@ describe('platform tenant directory page', () => {
         expect(html).toContain('Daftar sekolah');
         expect(html).toContain('Ringkasan tenant, akun, roster, dan pesanan sekolah terbaru');
         expect(html).toContain('Perubahan akses dan langganan tidak dilakukan dari direktori ini');
+        expect(html).toContain('Tambah tenant sekolah');
+        expect(html).toContain('Buat tenant');
     });
 
     it('blocks tenant-wide directory access for other roles', () => {

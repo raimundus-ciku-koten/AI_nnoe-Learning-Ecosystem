@@ -49,11 +49,13 @@ function tileStat(id, kelas, ikonNama, label, denganBar) {
     </div>`;
 }
 
-function aksiCepat(role) {
+function aksiCepat(role, disabledMenuKeys = []) {
+  const menuTersedia = menuUntukPeran(role, disabledMenuKeys);
+  const semuaItem = menuTersedia.flatMap((group) => group.item);
   const shortcutPaths = adalahPeranGuru(role)
     ? ['/asesmen/ujian-online', '/asesmen/generator-ai', '/pelaksanaan/ruang-siswa']
-    : menuUntukPeran(role)
-      .flatMap((group) => group.item)
+      .filter((path) => semuaItem.some((entry) => entry.path === path))
+    : semuaItem
       .filter((entry) => entry.path !== '/dashboard')
       .slice(0, 3)
       .map((entry) => entry.path);
@@ -63,8 +65,7 @@ function aksiCepat(role) {
       judul: 'Perencanaan pembelajaran', ket: 'ATP, Prota, Prosem, dan Modul Ajar',
     },
     ...shortcutPaths.map((path) => {
-      const entry = menuUntukPeran(role).flatMap((group) => group.item)
-        .find((item) => item.path === path);
+      const entry = semuaItem.find((item) => item.path === path);
       return entry && {
         href: `#${entry.path}${entry.search || ''}`,
         ikon: entry.ikon,
@@ -93,7 +94,7 @@ function aksiCepat(role) {
 // ============================================================================
 // STRUKTUR MARKUP — hanya isi <main>, tanpa shell
 // ============================================================================
-function tampilan({ sapa, nama, role, peran, subjudul, sekarang }) {
+function tampilan({ sapa, nama, role, peran, subjudul, sekarang, disabledMenuKeys = [] }) {
   const hari = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(sekarang);
   const bulan = new Intl.DateTimeFormat('id-ID', { month: 'short', year: 'numeric' }).format(sekarang);
   const penuh = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(sekarang);
@@ -126,7 +127,7 @@ function tampilan({ sapa, nama, role, peran, subjudul, sekarang }) {
       <div class="ale-kartu-kepala">
         <h2 class="ale-kartu-judul" id="hAksi">${ikon('otomatis')}Akses cepat</h2>
       </div>
-      <div class="ale-aksi-grid">${aksiCepat(role)}</div>
+      <div class="ale-aksi-grid">${aksiCepat(role, disabledMenuKeys)}</div>
     </section>
 
     <div class="ale-grid">
@@ -231,8 +232,11 @@ const AKSI_SUPERADMIN = [
   },
 ];
 
-function aksiAdmin(items) {
-  return items.map((item) => `
+function aksiAdmin(items, role, disabledMenuKeys = []) {
+  const availablePaths = new Set(menuUntukPeran(role, disabledMenuKeys)
+    .flatMap((group) => group.item)
+    .map((item) => item.path));
+  return items.filter((item) => availablePaths.has(item.href.slice(1).split('?')[0])).map((item) => `
     <a class="ale-admin-aksi" href="${item.href}">
       <span class="ale-admin-aksi-ikon">${ikon(item.ikon)}</span>
       <span class="ale-admin-aksi-teks">
@@ -243,7 +247,7 @@ function aksiAdmin(items) {
     </a>`).join('');
 }
 
-function tampilanAdmin({ role, nama, sekolah }) {
+function tampilanAdmin({ role, nama, sekolah, disabledMenuKeys = [] }) {
   const superadmin = role === 'superadmin';
   const peran = LABEL_PERAN[role] || 'Administrator';
   const aksi = superadmin ? AKSI_SUPERADMIN : AKSI_ADMIN_SEKOLAH;
@@ -280,7 +284,7 @@ function tampilanAdmin({ role, nama, sekolah }) {
           </div>
           <span class="ale-admin-pill">${superadmin ? 'Lintas tenant' : 'Tenant terbatas'}</span>
         </div>
-        <div class="ale-admin-aksi-grid">${aksiAdmin(aksi)}</div>
+        <div class="ale-admin-aksi-grid">${aksiAdmin(aksi, role, disabledMenuKeys)}</div>
       </section>
 
       <section class="ale-kartu ale-admin-prinsip" aria-labelledby="aleAdminPrinsip">
@@ -302,7 +306,7 @@ function tampilanAdmin({ role, nama, sekolah }) {
     </div>`;
 }
 
-function tampilanPortal({ role, nama }) {
+function tampilanPortal({ role, nama, disabledMenuKeys = [] }) {
   const peran = LABEL_PERAN[role] || role || 'Pengguna';
   const ringkasan = role === 'siswa'
     ? 'Akses jadwal, materi, ujian, nilai, dan komunikasi yang disediakan sekolah untuk akun Anda.'
@@ -318,7 +322,7 @@ function tampilanPortal({ role, nama }) {
       : role === 'operator'
         ? 'Akses operator dibatasi oleh peran dan tenant sekolah. Halaman panduan tidak mengubah data; gunakan hanya modul yang memang tersedia untuk akun Anda.'
         : 'Beberapa modul akademik masih menunggu integrasi data sekolah. Halaman tetap menampilkan statusnya dengan jelas dan tidak mengubah data sebelum fitur tersebut tersedia.';
-  const grup = menuUntukPeran(role);
+  const grup = menuUntukPeran(role, disabledMenuKeys);
   const daftarMenu = grup.map((bagian) => `
     <section class="ale-kartu ale-aksen-sky" aria-labelledby="portal-${escapeAttr(bagian.id)}">
       <div class="ale-kartu-kepala">
@@ -352,7 +356,7 @@ function tampilanPortal({ role, nama }) {
 // ============================================================================
 // LOGIKA INSIALISASI
 // ============================================================================
-export async function halamanDashboard(wadah) {
+export async function halamanDashboard(wadah, { disabledMenuKeys = [] } = {}) {
   const { user, role, activeRole, profile } = getState();
   if (!user) return () => { };
   const uid = user.uid;
@@ -370,6 +374,7 @@ export async function halamanDashboard(wadah) {
       role: roleDashboard,
       nama: namaAwal,
       sekolah: profile?.sekolah || profilAwal?.sekolah || '',
+      disabledMenuKeys,
     });
     document.title = `${LABEL_PERAN[roleDashboard]} · AI_nnoe Learning Ecosystem`;
 
@@ -385,7 +390,7 @@ export async function halamanDashboard(wadah) {
 
   if (peran === 'operator' || peran === 'siswa' || peran === 'ortu' || peran === 'orang_tua' ||
     (!adalahPeranGuru(peran) && peran !== 'demo')) {
-    wadah.innerHTML = tampilanPortal({ role: peran, nama: namaAwal });
+    wadah.innerHTML = tampilanPortal({ role: peran, nama: namaAwal, disabledMenuKeys });
     document.title = `${LABEL_PERAN[peran] || 'Ruang kerja'} · AI_nnoe Learning Ecosystem`;
     return () => { };
   }
@@ -397,6 +402,7 @@ export async function halamanDashboard(wadah) {
     peran: LABEL_PERAN[peran] || 'Pengguna',
     subjudul: SUBJUDUL_PERAN[peran] || SUBJUDUL_PERAN.guru,
     sekarang,
+    disabledMenuKeys,
   });
   document.title = 'Dasbor · AI_nnoe Learning Ecosystem';
 

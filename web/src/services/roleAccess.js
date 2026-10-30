@@ -7,21 +7,16 @@ const ROLES = new Set([
 ]);
 const DASHBOARD_ONLY_ROLES = new Set(['kepala_sekolah', 'wali_kelas']);
 
-function memilikiMenu(role, path) {
-  return menuUntukPeran(role).some((group) => group.item.some((item) => item.path === path));
+function memilikiMenu(role, path, disabledMenuKeys = []) {
+  return menuUntukPeran(role, disabledMenuKeys).some((group) => group.item.some((item) => item.path === path));
 }
 
-export function canOpenRolePath(role, path, search = '') {
+export function canOpenRolePath(role, path, search = '', disabledMenuKeys = []) {
   const activeRole = String(role || '').trim().toLowerCase();
   if (!ROLES.has(activeRole)) return false;
   if (activeRole === 'demo') return path === '/trial';
   if (DASHBOARD_ONLY_ROLES.has(activeRole)) return path === '/dashboard';
   if (path === '/dashboard') return true;
-
-  const hasPlanning = memilikiMenu(activeRole, '/perencanaan');
-  if (hasPlanning && (/^\/perencanaan\/[^/]+$/.test(path) || path === '/perencanaan')) return true;
-  if (path === '/datadasar' && memilikiMenu(activeRole, '/datadasar/profil')) return true;
-  if (path === '/profil' && memilikiMenu(activeRole, '/pengaturan/akun')) return true;
 
   const legacyPlanning = {
     '/perencanaan/rpe': '?jenis=rpe',
@@ -31,7 +26,21 @@ export function canOpenRolePath(role, path, search = '') {
     '/perencanaan/kktp': '?jenis=kktp',
     '/perencanaan/modul': '?jenis=modul',
   }[path];
-  if (legacyPlanning && hasPlanning) return true;
+  if (legacyPlanning) {
+    return cariMenu('/perencanaan', legacyPlanning, activeRole, disabledMenuKeys) !== null;
+  }
 
-  return cariMenu(path, search, activeRole) !== null;
+  if (path === '/datadasar') {
+    return cariMenu('/datadasar/profil', '', activeRole, disabledMenuKeys) !== null;
+  }
+  if (path === '/profil') {
+    return cariMenu('/pengaturan/akun', '', activeRole, disabledMenuKeys) !== null;
+  }
+
+  const hasPlanning = memilikiMenu(activeRole, '/perencanaan', disabledMenuKeys);
+  if (hasPlanning && (/^\/perencanaan\/[^/]+$/.test(path) || path === '/perencanaan')) {
+    return cariMenu(path, search, activeRole, disabledMenuKeys) !== null;
+  }
+
+  return cariMenu(path, search, activeRole, disabledMenuKeys) !== null;
 }

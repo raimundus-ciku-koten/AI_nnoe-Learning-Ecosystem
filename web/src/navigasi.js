@@ -317,6 +317,7 @@ export const MENU_SUPERADMIN = [
   ]),
   grup('platform-fitur', 'Manajemen Menu dan Fitur', 'settings', [
     tautan('Menu Builder', '/platform/fitur/menu', 'file'),
+    tautan('Menu per Pengguna', '/platform/fitur/menu-pengguna', 'users'),
     tautan('Feature Flags', '/platform/fitur/flags', 'settings'),
     tautan('Izin Peran', '/platform/fitur/izin', 'users'),
   ]),
@@ -359,21 +360,31 @@ function cocokJenis(item, path, search) {
   return path.startsWith(`${item.path}/`) && path.endsWith(`/${jenis}`);
 }
 
-export function menuUntukPeran(role) {
-  const peran = String(role || '').trim().toLowerCase();
-  if (peran === 'admin_sekolah' || peran === 'admin') return MENU_ADMIN_SEKOLAH;
-  if (peran === 'superadmin') return MENU_SUPERADMIN;
-  if (peran === 'siswa') return MENU_SISWA;
-  if (peran === 'ortu' || peran === 'orang_tua') return MENU_ORTU;
-  if (peran === 'operator') return MENU_OPERATOR;
-  if (peran === 'demo') return MENU_DEMO;
-  if (['kepala_sekolah', 'wali_kelas'].includes(peran)) return MENU_KONTEKS_TERBATAS;
-  if (adalahPeranGuru(peran)) return GRUP_MENU;
-  return MENU_TANPA_PERAN;
+export function kunciMenu(grup, item) {
+  if (!grup?.id || !item?.path) return '';
+  return `${grup.id}|${item.path}${item.search || ''}`;
 }
 
-export function cariMenu(path, search = '', role = 'guru') {
-  for (const grup of menuUntukPeran(role)) {
+export function menuUntukPeran(role, disabledMenuKeys = []) {
+  const peran = String(role || '').trim().toLowerCase();
+  const catalog = peran === 'admin_sekolah' || peran === 'admin' ? MENU_ADMIN_SEKOLAH
+    : peran === 'superadmin' ? MENU_SUPERADMIN
+      : peran === 'siswa' ? MENU_SISWA
+        : peran === 'ortu' || peran === 'orang_tua' ? MENU_ORTU
+          : peran === 'operator' ? MENU_OPERATOR
+            : peran === 'demo' ? MENU_DEMO
+              : ['kepala_sekolah', 'wali_kelas'].includes(peran) ? MENU_KONTEKS_TERBATAS
+                : adalahPeranGuru(peran) ? GRUP_MENU : MENU_TANPA_PERAN;
+  const disabled = new Set(disabledMenuKeys);
+  if (!disabled.size) return catalog;
+  return catalog.map((group) => ({
+    ...group,
+    item: group.item.filter((item) => !disabled.has(kunciMenu(group, item))),
+  })).filter((group) => group.item.length);
+}
+
+export function cariMenu(path, search = '', role = 'guru', disabledMenuKeys = []) {
+  for (const grup of menuUntukPeran(role, disabledMenuKeys)) {
     const item = grup.item
       .filter((calon) =>
         calon.path && (path === calon.path || path.startsWith(`${calon.path}/`)) &&

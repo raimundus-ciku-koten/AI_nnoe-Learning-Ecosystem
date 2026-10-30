@@ -354,6 +354,7 @@ from unnest(array[
   'student_guardian_links',
   'student_guardian_link_audit',
   'platform_content_catalog',
+  'platform_user_menu_overrides',
   'trial_registrations'
 ]) as feature(name)
 
