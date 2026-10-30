@@ -324,6 +324,16 @@ describe('admin sekolah: cakupan pengguna', () => {
     expect(denied).toContain('hanya tersedia bagi admin sekolah');
     expect(denied).not.toContain('Tambah unit sekolah');
   });
+
+  it('membuka monitoring ujian tenant yang hanya menampilkan data agregat', () => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = null;
+    const html = renderSubmenu('/admin/dashboard/ujian');
+
+    expect(html).toContain('<h1>Monitoring Ujian</h1>');
+    expect(html).toContain('Nama siswa, jawaban, kunci, dan nilai individual tidak ditampilkan.');
+    expect(html).not.toContain('Panduan · baca saja');
+  });
 });
 
 describe('pengumuman tenant', () => {

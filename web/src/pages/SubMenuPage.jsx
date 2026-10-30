@@ -6,6 +6,7 @@ import Ikon from '../components/Ikon.jsx';
 import TeacherWorkspacePage from './TeacherWorkspacePage.jsx';
 import TeacherAccountPage from './TeacherAccountPage.jsx';
 import AdminAcademicPage from './AdminAcademicPage.jsx';
+import AdminAssessmentPage from './AdminAssessmentPage.jsx';
 import AdminSchoolUnitsPage from './AdminSchoolUnitsPage.jsx';
 import '../styles/submenu.css';
 
@@ -182,6 +183,9 @@ export default function SubMenuPage() {
   }
   if (peranAktif === 'admin_sekolah' && item.path === '/admin/instansi/unit') {
     return <AdminSchoolUnitsPage />;
+  }
+  if (peranAktif === 'admin_sekolah' && item.path === '/admin/dashboard/ujian') {
+    return <AdminAssessmentPage />;
   }
 
   const alur = ALUR[grup.id] || {

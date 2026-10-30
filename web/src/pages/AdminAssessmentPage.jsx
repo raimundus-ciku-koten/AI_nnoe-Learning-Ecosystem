@@ -6,6 +6,7 @@ import Ikon from '../components/Ikon.jsx';
 import '../styles/online-assessments.css';
 
 const VIEWS = {
+    ujian: ['Monitoring Ujian', 'Pantau progres ujian tenant secara agregat dan terbatas sesuai peran.'],
     paket: ['Paket Ujian', 'Daftar ujian yang dijadwalkan oleh guru di sekolah Anda.'],
     jadwal: ['Jadwal Ujian', 'Jadwal mulai dan berakhir per paket ujian tenant.'],
     monitoring: ['Monitoring Ujian', 'Pantau progres peserta secara agregat tanpa membuka jawaban atau nama siswa.'],
