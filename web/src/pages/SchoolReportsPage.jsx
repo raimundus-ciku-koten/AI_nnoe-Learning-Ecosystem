@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { buatCsv, csvEscape, unduhBerkas } from '../lib/berkas.js';
+import SchoolFinancePage from './SchoolFinancePage.jsx';
 import { muatRingkasanUjianSekolah } from '../services/onlineAssessments.js';
-import { muatLaporanKehadiranSekolah } from '../services/schoolReporting.js';
+import { muatLaporanKehadiranSekolahRentang } from '../services/schoolReporting.js';
 import '../styles/school-reports.css';
 
 const LABEL = {
@@ -17,17 +18,29 @@ const waktu = (value) => {
     return Number.isNaN(date.getTime()) ? 'Waktu tidak tersedia'
         : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 };
+const tanggalUtc = (date) => {
+    return date.toISOString().slice(0, 10);
+};
+const rentangDefault = () => {
+    const end = new Date();
+    const start = new Date(`${tanggalUtc(end)}T00:00:00.000Z`);
+    start.setUTCDate(start.getUTCDate() - 89);
+    return { startDate: tanggalUtc(start), endDate: tanggalUtc(end) };
+};
 
-export default function SchoolReportsPage() {
+function SchoolReportsContent() {
     const { pathname } = useLocation();
     const { role, activeRole, tenantId } = useAuth();
     const roleAktif = activeRole || role;
     const sub = pathname.split('/').filter(Boolean).at(-1);
     const [title, description] = LABEL[sub] || LABEL.akademik;
+    const [dateDraft, setDateDraft] = useState(rentangDefault);
+    const [filters, setFilters] = useState(rentangDefault);
     const [attendance, setAttendance] = useState([]);
-    const [exams, setExams] = useState([]);
+    const [allExams, setAllExams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [reloadId, setReloadId] = useState(0);
 
     useEffect(() => {
         let active = true;
@@ -37,11 +50,14 @@ export default function SchoolReportsPage() {
         }
         setLoading(true);
         setError('');
-        Promise.all([muatLaporanKehadiranSekolah(), muatRingkasanUjianSekolah()])
+        Promise.all([
+            muatLaporanKehadiranSekolahRentang(filters),
+            muatRingkasanUjianSekolah(),
+        ])
             .then(([attendanceRows, examRows]) => {
                 if (!active) return;
                 setAttendance(attendanceRows);
-                setExams(examRows);
+                setAllExams(examRows);
             })
             .catch((cause) => {
                 console.error('[school-reports] Gagal memuat laporan tenant:', cause);
@@ -49,7 +65,12 @@ export default function SchoolReportsPage() {
             })
             .finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
-    }, [roleAktif, tenantId]);
+    }, [roleAktif, tenantId, filters, reloadId]);
+
+    const exams = useMemo(() => allExams.filter((exam) => {
+        const date = new Date(exam.starts_at).toISOString().slice(0, 10);
+        return date >= filters.startDate && date <= filters.endDate;
+    }), [allExams, filters]);
 
     const attendanceTotal = useMemo(() => attendance.reduce((sum, row) => sum + row.hadir_scan, 0), [attendance]);
     const examTotals = useMemo(() => exams.reduce((total, exam) => ({
@@ -69,6 +90,11 @@ export default function SchoolReportsPage() {
         unduhBerkas(`laporan-sekolah-${new Date().toISOString().slice(0, 10)}.csv`, csv, 'text/csv');
     }
 
+    function terapkanFilter(event) {
+        event.preventDefault();
+        setFilters({ ...dateDraft });
+    }
+
     if (roleAktif !== 'admin_sekolah') {
         return <section className="school-report-card" role="alert"><h1>{title}</h1><p>Laporan tenant hanya tersedia bagi admin sekolah.</p></section>;
     }
@@ -86,18 +112,33 @@ export default function SchoolReportsPage() {
             <p className="school-report-note" role="note">
                 Kehadiran di bawah hanya menghitung catatan hadir hasil scan; ketiadaan catatan bukan status alfa. Aktivitas ujian hanya metadata agregat dan tidak menampilkan identitas siswa atau jawaban.
             </p>
+            <form className="school-report-filters" onSubmit={terapkanFilter}>
+                <label>Dari tanggal
+                    <input type="date" value={dateDraft.startDate} max={dateDraft.endDate}
+                        onChange={(event) => setDateDraft((current) => ({ ...current, startDate: event.target.value }))} required />
+                </label>
+                <label>Sampai tanggal
+                    <input type="date" value={dateDraft.endDate} max={tanggalUtc(new Date())}
+                        onChange={(event) => setDateDraft((current) => ({ ...current, endDate: event.target.value }))} required />
+                </label>
+                <button className="school-report-button" type="submit" disabled={loading}>Terapkan periode</button>
+                <button className="school-report-button secondary" type="button" onClick={() => setReloadId((current) => current + 1)} disabled={loading}>
+                    Muat ulang
+                </button>
+            </form>
+            <p className="school-report-footnote">Periode laporan maksimal 366 hari dan memakai tanggal UTC. Data ujian mengikuti tanggal mulai; seluruh statistik dan CSV mengikuti periode ini.</p>
             {error && <p className="school-report-error" role="alert">{error}</p>}
             {loading ? <p className="school-report-empty" role="status">Memuat laporan tenant…</p> : (
                 <>
                     {sub === 'ekspor' && <button className="school-report-button" type="button" onClick={eksporCsv}>Unduh CSV</button>}
                     <section className="school-report-stats" aria-label="Ringkasan akademik tenant">
-                        <article><span>Catatan hadir scan (90 hari)</span><strong>{attendanceTotal.toLocaleString('id-ID')}</strong></article>
+                        <article><span>Catatan hadir scan</span><strong>{attendanceTotal.toLocaleString('id-ID')}</strong></article>
                         <article><span>Paket ujian</span><strong>{examTotals.packages.toLocaleString('id-ID')}</strong></article>
                         <article><span>Peserta ujian</span><strong>{examTotals.participants.toLocaleString('id-ID')}</strong></article>
                         <article><span>Submission</span><strong>{examTotals.submissions.toLocaleString('id-ID')}</strong></article>
                     </section>
                     <section className="school-report-card" aria-labelledby="school-attendance-report-title">
-                        <div className="school-report-section-title"><div><p>90 hari terakhir</p><h2 id="school-attendance-report-title">Kehadiran hasil scan</h2></div></div>
+                        <div className="school-report-section-title"><div><p>{filters.startDate} – {filters.endDate}</p><h2 id="school-attendance-report-title">Kehadiran hasil scan</h2></div></div>
                         {!attendance.length ? <p className="school-report-empty">Belum ada catatan hadir hasil scan dalam periode ini.</p> : (
                             <div className="school-report-table-wrap"><table className="school-report-table">
                                 <thead><tr><th scope="col">Tanggal</th><th scope="col">Kelas</th><th scope="col">Catatan hadir scan</th></tr></thead>
@@ -126,4 +167,10 @@ export default function SchoolReportsPage() {
             )}
         </main>
     );
+}
+
+export default function SchoolReportsPage() {
+    const { pathname } = useLocation();
+    if (pathname === '/admin/laporan/keuangan') return <SchoolFinancePage />;
+    return <SchoolReportsContent />;
 }

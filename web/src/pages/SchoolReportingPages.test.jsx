@@ -8,7 +8,11 @@ vi.mock('../context/AuthContext.jsx', () => ({ useAuth: () => auth }));
 vi.mock('../services/onlineAssessments.js', () => ({ muatRingkasanUjianSekolah: vi.fn() }));
 vi.mock('../services/schoolReporting.js', () => ({
     muatLaporanKehadiranSekolah: vi.fn(),
+    muatLaporanKehadiranSekolahRentang: vi.fn(),
     muatPesananKeuanganSekolah: vi.fn(),
+    muatHalamanPesananKeuanganSekolah: vi.fn(),
+    muatRingkasanKeuanganSekolah: vi.fn(),
+    muatSemuaPesananKeuanganSekolah: vi.fn(),
 }));
 
 import SchoolFinancePage from './SchoolFinancePage.jsx';
@@ -29,14 +33,17 @@ describe('school reports and finance pages', () => {
     it('renders distinct reports and finance routes with honest data boundaries', () => {
         const academic = renderPage(SchoolReportsPage, '/admin/laporan/akademik');
         const exportView = renderPage(SchoolReportsPage, '/admin/laporan/ekspor');
+        const financeReport = renderPage(SchoolReportsPage, '/admin/laporan/keuangan');
         const finance = renderPage(SchoolFinancePage, '/admin/keuangan/tagihan');
         expect(academic).toContain('Laporan Akademik');
         expect(academic).toContain('bukan status alfa');
         expect(exportView).toContain('Ekspor Laporan');
         expect(exportView).toContain('Memuat laporan tenant');
+        expect(academic).toContain('Terapkan periode');
+        expect(financeReport).toContain('Laporan keuangan');
         expect(finance).toContain('Tagihan sekolah');
-        expect(finance).toContain('Checkout dan pembayaran online saat ini dinonaktifkan');
-        expect(finance).toContain('Memuat riwayat pesanan');
+        expect(finance).toContain('Checkout dan perubahan status pembayaran tetap dinonaktifkan');
+        expect(finance).toContain('Memuat laporan keuangan');
     });
 
     it('blocks tenant reports and finance pages for other roles', () => {

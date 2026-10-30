@@ -347,6 +347,15 @@ an absence rate; finance status reflects only orders recorded by the backend,
 not an external bank statement. These reports do not create or alter payments,
 and the migration has not been applied to Staging or Production.
 
+Local migrations `20261030001300_school_finance_operations.sql` and
+`20261030001400_school_operational_report_ranges.sql` extend those reports with
+bounded date ranges, tenant-scoped payment summaries, keyset-paginated order
+history, and formula-safe CSV export. Finance export is limited to 1,000
+matching orders per request; narrow the date range if that ceiling is reached.
+School admins still cannot create orders, mark a payment as paid, or activate
+an entitlement from these screens. All three reporting/finance migrations
+remain unapplied to Staging and Production.
+
 The local migration `20261030000900_platform_content_catalog.sql` adds a
 superadmin-only, versioned catalog for templates, question banks, and modules.
 Publishing requires explicit license/source metadata and writes platform audit
