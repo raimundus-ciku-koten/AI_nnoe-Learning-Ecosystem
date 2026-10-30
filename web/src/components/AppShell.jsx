@@ -12,9 +12,21 @@ import { LABEL_PERAN, inisial, sideTutupTersimpan, terapkanSideTutup, toast } fr
 import Ikon from './Ikon.jsx';
 import { urlFotoAman } from '../services/protectedMedia.js';
 import { isEconomyMode } from '../services/economyMode.js';
+import { filterMenuSearch } from '../utils/menuSearch.js';
+import { muatPercakapanTerbaruDasbor } from '../services/dashboard.js';
+import { muatPengumumanSekolah } from '../services/schoolAnnouncements.js';
+import { getState, subscribe } from '../state.js';
 import '../styles/economy-mode.css';
 
 const MQ_DESKTOP = '(min-width: 961px)';
+const hitungPesanBelumDibaca = () => Number(getState().unreadChats) || 0;
+
+function formatWaktuAktivitas(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ''
+    : new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
 
 function useDesktop() {
   return useSyncExternalStore(
@@ -34,10 +46,11 @@ function useDesktop() {
 }
 
 export default function AppShell({ path, search = '', judulHalaman, children }) {
-  const { user, profile, role, activeRole, roles = [], logout, switchRole } = useAuth();
+  const { user, profile, role, activeRole, roles = [], tenantId, logout, switchRole } = useAuth();
   const peranAktif = activeRole || role;
   const hematData = isEconomyMode();
   const desktop = useDesktop();
+  const pesanBelumDibaca = useSyncExternalStore(subscribe, hitungPesanBelumDibaca, () => 0);
   const daftarMenu = menuUntukPeran(peranAktif);
   const adaMenuPath = (target) => daftarMenu.some((group) =>
     group.item.some((item) => item.path === target));
@@ -47,13 +60,23 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   const [sideTutup, setSideTutup] = useState(sideTutupTersimpan);
   const [mobileBuka, setMobileBuka] = useState(false);
   const [profilBuka, setProfilBuka] = useState(false);
+  const [pencarianBuka, setPencarianBuka] = useState(false);
+  const [kueriMenu, setKueriMenu] = useState('');
+  const [aktivitasBuka, setAktivitasBuka] = useState(false);
+  const [aktivitas, setAktivitas] = useState({ loading: false, chats: [], announcements: [], chatError: '', announcementError: '' });
   const [keluar, setKeluar] = useState(false);
   const [menggantiPeran, setMenggantiPeran] = useState(false);
   const [aksiProfil, setAksiProfil] = useState('');
   const [grupBuka, setGrupBuka] = useState(() => new Set([menu?.grup.id || 'beranda']));
   const profilRef = useRef(null);
   const profilBtnRef = useRef(null);
+  const pencarianRef = useRef(null);
+  const pencarianBtnRef = useRef(null);
+  const pencarianInputRef = useRef(null);
+  const aktivitasRef = useRef(null);
+  const aktivitasBtnRef = useRef(null);
   const avatarRef = useRef(null);
+  const hasilPencarian = filterMenuSearch(daftarMenu, kueriMenu);
 
   useEffect(() => {
     const judulSebelumnya = document.title;
@@ -73,7 +96,13 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   }, [hematData, user?.uid, user?.photoURL]);
 
   // Tutup panel mobile & popover saat pindah halaman.
-  useEffect(() => { setMobileBuka(false); setProfilBuka(false); }, [path]);
+  useEffect(() => {
+    setMobileBuka(false);
+    setProfilBuka(false);
+    setPencarianBuka(false);
+    setKueriMenu('');
+    setAktivitasBuka(false);
+  }, [path]);
   useEffect(() => {
     if (menu?.grup.id) setGrupBuka((groups) => new Set(groups).add(menu.grup.id));
   }, [menu?.grup.id]);
@@ -82,14 +111,23 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
 
   // Escape + klik di luar popover.
   useEffect(() => {
-    if (!profilBuka && !mobileBuka) return undefined;
+    if (!profilBuka && !mobileBuka && !pencarianBuka && !aktivitasBuka) return undefined;
     const onKey = (e) => {
       if (e.key !== 'Escape') return;
-      if (profilBuka) { setProfilBuka(false); profilBtnRef.current?.focus(); }
+      if (pencarianBuka) { setPencarianBuka(false); setKueriMenu(''); pencarianBtnRef.current?.focus(); }
+      else if (aktivitasBuka) { setAktivitasBuka(false); aktivitasBtnRef.current?.focus(); }
+      else if (profilBuka) { setProfilBuka(false); profilBtnRef.current?.focus(); }
       else setMobileBuka(false);
     };
     const onKlik = (e) => {
       if (profilBuka && profilRef.current && !profilRef.current.contains(e.target)) setProfilBuka(false);
+      if (pencarianBuka && pencarianRef.current && !pencarianRef.current.contains(e.target)) {
+        setPencarianBuka(false);
+        setKueriMenu('');
+      }
+      if (aktivitasBuka && aktivitasRef.current && !aktivitasRef.current.contains(e.target)) {
+        setAktivitasBuka(false);
+      }
     };
     document.addEventListener('keydown', onKey);
     document.addEventListener('mousedown', onKlik);
@@ -97,7 +135,52 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('mousedown', onKlik);
     };
-  }, [profilBuka, mobileBuka]);
+  }, [profilBuka, mobileBuka, pencarianBuka, aktivitasBuka]);
+
+  useEffect(() => {
+    if (pencarianBuka) {
+      setKueriMenu('');
+      pencarianInputRef.current?.focus();
+    }
+  }, [pencarianBuka]);
+
+  useEffect(() => {
+    const onShortcut = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setProfilBuka(false);
+        setPencarianBuka(true);
+      }
+    };
+    document.addEventListener('keydown', onShortcut);
+    return () => document.removeEventListener('keydown', onShortcut);
+  }, []);
+
+  useEffect(() => {
+    if (!aktivitasBuka) return undefined;
+    let aktif = true;
+    setAktivitas({ loading: true, chats: [], announcements: [], chatError: '', announcementError: '' });
+    Promise.all([
+      muatPercakapanTerbaruDasbor()
+        .then((chats) => ({ chats, error: '' }))
+        .catch(() => ({ chats: [], error: 'Pesan belum dapat dimuat.' })),
+      tenantId
+        ? muatPengumumanSekolah(tenantId)
+          .then((announcements) => ({ announcements, error: '' }))
+          .catch(() => ({ announcements: [], error: 'Pengumuman belum dapat dimuat.' }))
+        : Promise.resolve({ announcements: [], error: '' }),
+    ]).then(([chatResult, announcementResult]) => {
+      if (!aktif) return;
+      setAktivitas({
+        loading: false,
+        chats: chatResult.chats,
+        announcements: announcementResult.announcements.slice(0, 4),
+        chatError: chatResult.error,
+        announcementError: announcementResult.error,
+      });
+    });
+    return () => { aktif = false; };
+  }, [aktivitasBuka, tenantId]);
 
   const toggleMenu = useCallback(() => {
     if (desktop) {
@@ -209,6 +292,93 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
               <img className="ale-logo-sekolah" src={profile.logoSekolah} alt="Logo sekolah"
                 referrerPolicy="no-referrer" width="40" height="40" />
             )}
+
+            <div className="ale-menu-wrap ale-pencarian-wrap" ref={pencarianRef}>
+              <button type="button" ref={pencarianBtnRef} className="ale-ikon-btn"
+                aria-label="Cari menu" title="Cari menu (Ctrl/Cmd+K)"
+                aria-haspopup="dialog" aria-expanded={pencarianBuka} aria-controls="ale-pencarian-menu"
+                onClick={() => { setProfilBuka(false); setAktivitasBuka(false); setPencarianBuka((open) => !open); }}>
+                <Ikon nama="search" />
+              </button>
+              <div id="ale-pencarian-menu" className="ale-pop ale-pop-search" role="dialog"
+                aria-label="Cari menu" hidden={!pencarianBuka}>
+                <label className="ale-pencarian-label" htmlFor="ale-pencarian-input">Cari menu</label>
+                <input id="ale-pencarian-input" ref={pencarianInputRef} className="ale-pencarian-input"
+                  type="search" autoComplete="off" placeholder="Nama menu atau bagian…"
+                  value={kueriMenu} onChange={(event) => setKueriMenu(event.target.value)} />
+                <div className="ale-pencarian-hasil" role="list" aria-label="Hasil pencarian menu">
+                  {kueriMenu.trim() ? hasilPencarian.map(({ groupLabel, item }) => (
+                    <a key={`${item.path}${item.search || ''}`} className="ale-pencarian-item"
+                      href={`#${item.path}${item.search || ''}`} role="listitem"
+                      onClick={() => { setPencarianBuka(false); setKueriMenu(''); }}>
+                      <span className="ale-pencarian-ikon"><Ikon nama={item.ikon} /></span>
+                      <span className="ale-pencarian-teks"><strong>{item.label}</strong><small>{groupLabel}</small></span>
+                      <Ikon nama="external" className="ale-pencarian-panah" />
+                    </a>
+                  )) : <p className="ale-pencarian-kosong">Ketik untuk mencari menu yang tersedia bagi peran Anda.</p>}
+                  {kueriMenu.trim() && hasilPencarian.length === 0 && (
+                    <p className="ale-pencarian-kosong" role="status">Tidak ada menu yang cocok.</p>
+                  )}
+                </div>
+                <p className="ale-pencarian-bantuan"><kbd>Esc</kbd> untuk menutup</p>
+              </div>
+            </div>
+
+            <div className="ale-menu-wrap ale-aktivitas-wrap" ref={aktivitasRef}>
+              <button type="button" ref={aktivitasBtnRef} className="ale-ikon-btn ale-aktivitas-btn"
+                aria-label={`Aktivitas${pesanBelumDibaca ? `, ${pesanBelumDibaca} pesan belum dibaca` : ''}`}
+                title="Aktivitas dan notifikasi" aria-haspopup="dialog" aria-expanded={aktivitasBuka}
+                aria-controls="ale-panel-aktivitas"
+                onClick={() => { setProfilBuka(false); setPencarianBuka(false); setKueriMenu(''); setAktivitasBuka((open) => !open); }}>
+                <Ikon nama="bell" />
+                {pesanBelumDibaca > 0 && <span className="ale-aktivitas-badge" aria-hidden="true">{pesanBelumDibaca > 99 ? '99+' : pesanBelumDibaca}</span>}
+              </button>
+              <section id="ale-panel-aktivitas" className="ale-pop ale-pop-activity" role="dialog"
+                aria-label="Aktivitas terbaru" hidden={!aktivitasBuka}>
+                <header className="ale-activity-heading">
+                  <div><p>Ruang kerja</p><h2>Aktivitas terbaru</h2></div>
+                  {pesanBelumDibaca > 0 && <span className="ale-activity-count">{pesanBelumDibaca} belum dibaca</span>}
+                </header>
+                {aktivitas.loading ? <p className="ale-activity-state" role="status">Memuat aktivitas…</p> : (
+                  <>
+                    <section className="ale-activity-section" aria-labelledby="activity-chat-title">
+                      <div className="ale-activity-section-head">
+                        <h3 id="activity-chat-title">Pesan belum dibaca</h3>
+                        <a href="#/chat" onClick={() => setAktivitasBuka(false)}>Buka chat</a>
+                      </div>
+                      {aktivitas.chatError ? <p className="ale-activity-state" role="status">{aktivitas.chatError}</p>
+                        : aktivitas.chats.filter((chat) => chat.unread > 0).length ? (
+                          <ul className="ale-activity-list">
+                            {aktivitas.chats.filter((chat) => chat.unread > 0).slice(0, 4).map((chat) => (
+                              <li key={chat.id}><a href={`#/chat/${encodeURIComponent(chat.id)}`} onClick={() => setAktivitasBuka(false)}>
+                                <span><strong>{chat.title}</strong><small>{chat.lastMessage || 'Pesan baru'}</small></span>
+                                <b>{chat.unread > 99 ? '99+' : chat.unread}</b>
+                              </a></li>
+                            ))}
+                          </ul>
+                        ) : <p className="ale-activity-state">Tidak ada pesan yang belum dibaca.</p>}
+                    </section>
+                    <section className="ale-activity-section" aria-labelledby="activity-announcement-title">
+                      <div className="ale-activity-section-head">
+                        <h3 id="activity-announcement-title">Pengumuman terbaru</h3>
+                        {tenantId && <a href="#/pengumuman" onClick={() => setAktivitasBuka(false)}>Semua</a>}
+                      </div>
+                      {aktivitas.announcementError ? <p className="ale-activity-state" role="status">{aktivitas.announcementError}</p>
+                        : aktivitas.announcements.length ? (
+                          <ul className="ale-activity-list ale-activity-announcements">
+                            {aktivitas.announcements.map((announcement) => (
+                              <li key={announcement.id}><a href="#/pengumuman" onClick={() => setAktivitasBuka(false)}>
+                                <span><strong>{announcement.title}</strong><small>{announcement.body}</small></span>
+                                <time>{formatWaktuAktivitas(announcement.created_at)}</time>
+                              </a></li>
+                            ))}
+                          </ul>
+                        ) : <p className="ale-activity-state">Belum ada pengumuman terbaru.</p>}
+                    </section>
+                  </>
+                )}
+              </section>
+            </div>
 
             <div className="ale-menu-wrap" ref={profilRef}>
               <button type="button" ref={profilBtnRef} className="ale-akun"

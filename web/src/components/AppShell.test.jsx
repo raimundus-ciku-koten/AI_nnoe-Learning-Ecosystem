@@ -1,6 +1,8 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { menuUntukPeran } from '../navigasi.js';
+import { filterMenuSearch } from '../utils/menuSearch.js';
 
 const auth = vi.hoisted(() => ({
   user: { uid: 'user-test', displayName: 'Pengguna Tes', email: 'test@example.com' },
@@ -18,9 +20,9 @@ vi.mock('../context/AuthContext.jsx', () => ({
 
 import AppShell from './AppShell.jsx';
 
-function renderShell(path) {
+function renderShell(path, search = '') {
   return renderToStaticMarkup(
-    <AppShell path={path}>
+    <AppShell path={path} search={search}>
       <p>Konten halaman</p>
     </AppShell>,
   );
@@ -85,5 +87,49 @@ describe('AppShell navigasi berdasarkan peran aktif', () => {
     expect(html).not.toContain('data-grup="admin-pengguna"');
     expect(html).not.toContain('href="#/admin/pengguna/guru"');
     expect(html).not.toContain('href="#/admin/akademik/kelas"');
+  });
+
+  it('merender dan menandai aktif setiap tautan submenu untuk semua role', () => {
+    const roles = [
+      'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'operator',
+      'admin_sekolah', 'admin', 'superadmin', 'siswa', 'ortu', 'orang_tua',
+      'kepala_sekolah', 'wali_kelas', 'demo',
+    ];
+
+    for (const role of roles) {
+      auth.role = role;
+      auth.activeRole = role;
+      auth.roles = [role];
+      for (const group of menuUntukPeran(role)) {
+        for (const item of group.item) {
+          const html = renderShell(item.path, item.search || '');
+          const href = `href="#${item.path}${item.search || ''}"`.replaceAll('&', '&amp;');
+          expect(html, `${role}: ${item.label} memiliki tautan`).toContain(href);
+          expect(html, `${role}: ${item.label} ditandai aktif`).toContain('aria-current="page"');
+        }
+      }
+    }
+  });
+
+  it('menyediakan pencarian menu pada top bar', () => {
+    const html = renderShell('/dashboard');
+    expect(html).toContain('aria-label="Cari menu"');
+    expect(html).toContain('id="ale-pencarian-menu"');
+    expect(html).toContain('title="Cari menu (Ctrl/Cmd+K)"');
+    expect(html).toContain('title="Aktivitas dan notifikasi"');
+    expect(html).toContain('aria-label="Aktivitas terbaru"');
+  });
+
+  it('mencari label dan grup hanya dari menu peran yang diberikan', () => {
+    const siswa = menuUntukPeran('siswa');
+    const hasilGrup = filterMenuSearch(siswa, 'komunikasi');
+    expect(filterMenuSearch(siswa, 'ujian').map(({ item }) => item.label)).toEqual(['Ujian Saya']);
+    expect(hasilGrup).toHaveLength(4);
+    expect(hasilGrup.every(({ groupLabel }) => groupLabel === 'Komunikasi')).toBe(true);
+    expect(filterMenuSearch(siswa, 'Barcode')).toEqual([]);
+    expect(filterMenuSearch(siswa, 'jadwal', 1)).toHaveLength(1);
+    const duplikat = [{ label: 'Satu', item: [{ label: 'Chat', path: '/chat' }] },
+    { label: 'Dua', item: [{ label: 'Chat lain', path: '/chat' }] }];
+    expect(filterMenuSearch(duplikat, 'chat')).toHaveLength(1);
   });
 });

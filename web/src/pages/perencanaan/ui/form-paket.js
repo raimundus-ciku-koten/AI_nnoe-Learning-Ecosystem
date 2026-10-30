@@ -69,7 +69,10 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
   const ns = tgl('genapSelesai', A.genap.selesai);
 
   const id = A.identitas;
-  const idInput = (nama, nilai, maks = BATAS.TEKS_PENDEK) => input(nama, 'text', nilai, { maxlength: maks });
+  const idInput = (nama, nilai, maks = BATAS.TEKS_PENDEK) => input(nama, 'text', nilai, {
+    maxlength: maks,
+    readonly: ['sekolah', 'guru', 'nipGuru', 'kepsek', 'nipKepsek'].includes(nama),
+  });
   const sekolah = idInput('sekolah', id.sekolah);
   const guru = idInput('guru', id.guru);
   const nipGuru = idInput('nipGuru', id.nipGuru, 30);
@@ -133,6 +136,7 @@ export function bukaFormPaket({ judul, awal = KONTEKS_BAWAAN, onSimpan }) {
       barisKal, galatKal,
       h('button', { type: 'button', class: 'tombol tombol-sekunder tombol-kecil', onClick: () => tambahBaris() }, `+ ${t('form.tambahKalender')}`)),
     h('fieldset', null, h('legend', null, t('form.bagianIdentitas')),
+      h('p', { class: 'hint' }, 'Nama sekolah, guru, NIP, dan kepala sekolah berasal dari profil resmi akun/tenant. Perbarui melalui admin, bukan dari paket ini.'),
       h('div', { class: 'grid-form' },
         kolom('sekolah', t('identitas.sekolah'), sekolah, { lebar: 'lebar-2' }),
         kolom('guru', t('identitas.guru'), guru), kolom('nipGuru', t('identitas.nip'), nipGuru),

@@ -271,6 +271,7 @@ has no tenant `active` field, new tenant creation remains pending until an
 active status is independently verified. The source `jenjang` attribute has
 no target column and is not migrated by this identity-focused mapping.
 
+and links `diperbaruiOleh` only through a unique `profiles.legacy_uid` match.
 The tenant profile mapping is separately approved and has an additive local
 schema migration at `supabase/migrations/20261017000700_tenant_profile_fields.sql`
 and a report-only checker at `scripts/reconcileTenantProfiles.mjs`. It maps
@@ -278,9 +279,12 @@ verified school metadata and the academic year/semester into nullable columns
 on `public.tenants`, preserves existing `active` and target identity values,
 and links `diperbaruiOleh` only through a unique `profiles.legacy_uid` match.
 Semester values are stored as `ganjil`/`genap`. The checker does not export
-records or write to Supabase. The source fields `alamat`, `kop`,
-`logoSekolah`, and the backend-managed `langganan` object remain outside this
-mapping until their schema and target behavior are separately verified.
+records or write to Supabase. A separate local-only migration,
+`supabase/migrations/20261030000500_tenant_letterhead_assets.sql`, now adds a
+bounded school address and a private, tenant-scoped letterhead object path.
+It does not import the legacy `alamat`, `kop`, or `logoSekolah` values; the
+letterhead must be uploaded again by an authorized school admin. The
+backend-managed `langganan` object remains outside this mapping.
 The Data Dasar school-profile and academic-cycle screens now read and update
 the mapped tenant fields through Supabase. Migration
 `20261018000300_tenant_settings_updates.sql` adds admin-only update permissions
@@ -317,6 +321,45 @@ attendance history page use this Supabase table in the current frontend. The
 legacy attendance path was confirmed empty, so there are no historical records
 to import. The table migration has not been applied to Supabase hosted; scan
 and history operations require that hosted schema and its dependencies first.
+
+The local migration `20261030000900_platform_content_catalog.sql` adds a
+superadmin-only, versioned catalog for templates, question banks, and modules.
+Publishing requires explicit license/source metadata and writes platform audit
+events. The catalog does not distribute items to tenant users; question-bank
+consumption must add a separate endpoint that cannot expose answer keys. The
+migration has not been applied to Staging or Production.
+
+The local migration `20261030000600_student_guardian_portal.sql` adds audited,
+same-tenant parent-to-student links and read-only RPCs for linked student
+identity, scan attendance, and completed exam scores. It does not expose exam
+answers or absent status. The parent portal and school-admin link manager use
+these RPCs, but the migration has not been applied to Hosted Supabase; the new
+portal remains unavailable there until schema provenance, Staging, and the
+documented approval gates are satisfied. The local migration
+`20261030000700_school_chat_analytics.sql` adds a same-tenant admin RPC that
+returns aggregate conversation and message counts only, without chat content
+or participant identifiers. It also remains local pending those same gates.
+
+The local migration `20261030000800_school_reporting_finance.sql` adds a
+90-day daily/class scan-attendance aggregate and a read-only list of the latest
+100 school payment orders for active tenant admins. Attendance counts are not
+an absence rate; finance status reflects only orders recorded by the backend,
+not an external bank statement. These reports do not create or alter payments,
+and the migration has not been applied to Staging or Production.
+
+The local migration `20261030000900_platform_content_catalog.sql` adds a
+superadmin-only, versioned catalog for templates, question banks, and modules.
+Publishing requires explicit license/source metadata and writes platform audit
+events. The catalog does not distribute items to tenant users; question-bank
+consumption needs a separate endpoint that cannot expose answer keys. The
+migration has not been applied to Staging or Production.
+
+The local migration `20261030001000_platform_usage_snapshot.sql` adds a
+superadmin-only snapshot of current tenant/profile/roster counts and selected
+30/90-day chat, exam, attendance, question-bank, and published-catalog counts.
+It returns no user identities or message content. These counts are not
+historical telemetry, performance, AI provider usage, or cost data; the
+migration has not been applied to Staging or Production.
 
 The active platform-controls context reads the `global` row from
 `public.platform_control`. The platform operations UI updates it through the
@@ -429,8 +472,13 @@ Firebase. Schedule, pending-task, semester-progress, and planning-history
 widgets do not read legacy Firebase data or present missing records as empty.
 The teacher dashboard now reads today's schedule from the encrypted Google
 Drive vault when the user's Google session and vault key are available; it
-links to Workspace settings otherwise. Pending tasks, semester progress, and
-planning history still await their target data sources.
+links to Workspace settings otherwise. Teacher and school-admin menus now
+include private personal tasks stored in the signed-in user's encrypted Drive
+vault; a task can open a Google Calendar draft only after the user clicks its
+link. These tasks are not student assignments or shared school calendar
+events, and they do not populate the dashboard's pending-task widget. The
+dashboard task summary, semester progress, and planning history still await
+their target data sources.
 Teacher assignments are read from Supabase `profiles.mapel_ids` and
 `profiles.kelas_ids`; the legacy root Firestore `penugasan` collection was
 empty in the read-only console snapshot on 2026-10-17.
@@ -1244,12 +1292,14 @@ Cloud Console; they cannot be enabled by this repository:
    SDKs or release workflows are intentionally retained. The Android package
    is a Trusted Web Activity; this web build does not initialize Firebase
    Performance Monitoring or Firebase AI Logic.
-5. The AI assistant and planning-document generator remain disabled. Optional
-   question drafts use a personal BYOK key directly from the browser only after
-   teacher action; this may incur provider charges and is not a free-service
-   guarantee. Canva CSV export is available, but Canva OAuth/design creation
-   and server-side AI Firebase callables remain legacy Functions and are not
-   called by the active frontend.
+5. The AI_nnoe local assistant provides deterministic Indonesian teaching
+  guides in the browser without provider calls. Gemini, DeepSeek, and Groq are
+  optional BYOK providers for assistant, question, and planning drafts; keys
+  remain in tab memory and requests go directly from the browser only after
+  the user enables a key and submits a request. Provider quotas and charges
+  are not guaranteed to be free. Canva CSV export is available, but Canva
+  OAuth/design creation and server-side AI Firebase callables remain legacy
+  Functions and are not called by the active frontend.
 6. Do not enable Firebase Blaze, attach billing, run Firebase CLI commands, or
    deploy legacy Firebase functions. Existing Firebase payment, platform
    administration, server-side AI, media conversion, and chat-trigger code

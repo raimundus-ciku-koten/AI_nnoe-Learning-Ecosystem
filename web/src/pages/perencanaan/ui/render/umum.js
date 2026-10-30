@@ -6,10 +6,38 @@
 import { h } from '../dom.js';
 import { t } from '../../i18n/index.js';
 
+function tautanKopAman(nilai) {
+  if (typeof nilai !== 'string' || !nilai.trim()) return '';
+  try {
+    const url = new URL(nilai);
+    const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL;
+    const originDiizinkan = supabaseUrl ? new URL(supabaseUrl).origin : '';
+    const localHttp = url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname);
+    if (url.username || url.password || (url.protocol !== 'https:' && !localHttp) ||
+      (originDiizinkan && url.origin !== originDiizinkan)) return '';
+    return url.href;
+  } catch {
+    return '';
+  }
+}
+
 /** Kop dokumen. @param {Object} k konteks paket @param {string} judul */
 export function kopDokumen(k, judul) {
+  const id = k.identitas ?? {};
+  const image = tautanKopAman(id.kopSuratUrl);
   return h('header', { class: 'kop' },
-    k.identitas?.sekolah ? h('p', { class: 'kop-sekolah' }, k.identitas.sekolah) : null,
+    image
+      ? h('img', {
+        class: 'kop-gambar',
+        src: image,
+        alt: `Kop resmi ${id.sekolah || 'sekolah'}`,
+        loading: 'eager',
+        referrerpolicy: 'no-referrer',
+      })
+      : h('div', { class: 'kop-teks' },
+        id.sekolah ? h('p', { class: 'kop-sekolah' }, id.sekolah) : null,
+        id.npsn ? h('p', { class: 'kop-npsn' }, `NPSN ${id.npsn}`) : null,
+        id.alamat ? h('p', { class: 'kop-alamat' }, id.alamat) : null),
     h('h1', { class: 'kop-judul' }, judul),
     h('p', { class: 'kop-sub' }, `${k.mapel} · ${t('umum.kelas')} ${k.kelas} · ${t('umum.fase')} ${k.fase} · ${k.tahunAjaran}`));
 }
@@ -23,6 +51,8 @@ export function tabelIdentitas(k, tambahan = []) {
   const id = k.identitas ?? {};
   const baris = [
     [t('identitas.sekolah'), id.sekolah],
+    [t('identitas.npsn'), id.npsn],
+    [t('identitas.alamat'), id.alamat],
     [t('identitas.guru'), id.guru],
     [t('identitas.mapel'), k.mapel],
     [t('identitas.kelasFase'), `${k.kelas} / ${t('umum.fase')} ${k.fase}`],
@@ -42,10 +72,11 @@ export function blokTtd(k) {
     h('div', { class: 'ttd-ruang', 'aria-hidden': 'true' }),
     h('p', { class: 'ttd-nama' }, nama || '………………………'),
     nip ? h('p', null, `${t('identitas.nip')}. ${nip}`) : null);
+  const jabatanKepala = id.sekolah ? `Mengetahui, Kepala ${id.sekolah}` : t('ttd.kepsek');
   return h('footer', { class: 'ttd' },
     id.lokasi ? h('p', { class: 'ttd-lokasi' }, `${id.lokasi},`) : null,
     h('div', { class: 'ttd-baris' },
-      kolom(t('ttd.kepsek'), id.kepsek, id.nipKepsek),
+      kolom(jabatanKepala, id.kepsek, id.nipKepsek),
       kolom(t('ttd.guru'), id.guru, id.nipGuru)));
 }
 

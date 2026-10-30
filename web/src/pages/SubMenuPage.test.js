@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GRUP_MENU, MENU_SUPERADMIN } from '../navigasi.js';
+import { GRUP_MENU, MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN } from '../navigasi.js';
 
 const auth = vi.hoisted(() => ({
   role: 'superadmin',
@@ -95,6 +95,7 @@ describe('submenu platform superadmin', () => {
     it('menampilkan ruang kerja catatan untuk submenu guru yang belum memiliki modul khusus', () => {
       const targetPaths = [
         '/pelaksanaan/jurnal',
+        '/pelaksanaan/tugas',
         '/pelaksanaan/catatan-cepat',
         '/pelaksanaan/realisasi',
         '/asesmen/remedial',
@@ -116,6 +117,8 @@ describe('submenu platform superadmin', () => {
         const html = renderSubmenu(path);
         expect(html, path).toContain(`<h1>${item.label.replaceAll('&', '&amp;')}</h1>`);
         expect(html, path).toContain('Hindari memasukkan nama');
+        expect(html, path).toContain('Buka Integrasi Google');
+        expect(html, path).toContain('href="#/pengaturan/google"');
         if (path === '/pelaksanaan/jurnal') {
           expect(html).toContain('Jurnal mengajar</h2>');
           expect(html).toContain('Tujuan pembelajaran');
@@ -179,6 +182,11 @@ describe('submenu platform superadmin', () => {
           expect(html).toContain('Perubahan yang dicoba');
           expect(html).toContain('Indikator keberhasilan');
           expect(html).toContain('Tanggal tinjau ulang');
+        } else if (path === '/pelaksanaan/tugas') {
+          expect(html).toContain('Tugas pribadi</h2>');
+          expect(html).toContain('Tenggat tugas');
+          expect(html).toContain('Belum selesai');
+          expect(html).toContain('Simpan tugas');
         } else {
           expect(html, path).toContain('Buat catatan kerja');
         }
@@ -225,6 +233,19 @@ describe('submenu platform superadmin', () => {
         expect(html).not.toContain('Halaman tidak ditemukan');
       },
     );
+  });
+
+  it('menyediakan task pribadi terenkripsi dan integrasi Google di menu Admin Sekolah', () => {
+    auth.role = 'admin_sekolah';
+    auth.activeRole = null;
+    const adminItems = MENU_ADMIN_SEKOLAH.flatMap((group) => group.item);
+    const html = renderSubmenu('/admin/tugas');
+
+    expect(adminItems.some((item) => item.path === '/admin/tugas')).toBe(true);
+    expect(adminItems.some((item) => item.path === '/pengaturan/google')).toBe(true);
+    expect(html).toContain('<h1>Tugas Pribadi</h1>');
+    expect(html).toContain('Google Calendar');
+    expect(html).toContain('href="#/pengaturan/google"');
   });
 
   const itemsPlatform = MENU_SUPERADMIN
@@ -330,6 +351,9 @@ describe('submenu platform superadmin', () => {
     expect(renderOperations('/platform/pengguna/peran')).toContain('Matriks menu dan peran');
     expect(renderOperations('/platform/fitur/menu')).toContain('Katalog menu platform');
     expect(renderOperations('/platform/dashboard/statistik')).toContain('Statistik Global');
+    expect(renderOperations('/platform/konten/template')).toContain('Template Perangkat');
+    expect(renderOperations('/platform/konten/bank-soal')).toContain('Bank Soal Global');
+    expect(renderOperations('/platform/konten/modul')).toContain('Modul Global');
     expect(renderOperations('/platform/laporan/biaya'))
       .toContain('Data biaya billing tidak tersedia pada aplikasi ini.');
 

@@ -177,6 +177,9 @@ export default function SubMenuPage() {
   const { grup, item } = menu;
   if (adalahPeranGuru(peranAktif) && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
   if (adalahPeranGuru(peranAktif)) return <TeacherWorkspacePage grup={grup} item={item} />;
+  if (['admin', 'admin_sekolah'].includes(peranAktif) && item.path === '/admin/tugas') {
+    return <TeacherWorkspacePage grup={grup} item={item} />;
+  }
   if (peranAktif === 'admin_sekolah' &&
     ['/admin/akademik/kelas', '/admin/akademik/mapel'].includes(item.path)) {
     return <AdminAcademicPage />;

@@ -31,9 +31,14 @@ import { perbaruiHeader } from '../components/sidebar.js';
 import { esc, LABEL_PERAN, namaDariUser, ambilProfil } from '../ui.js';
 import { bersih, galat, ik, muatPenugasan, toast } from './dataDasar/umum.js';
 import { muatPengaturanTenant, simpanProfilTenant, simpanSiklusTenant } from '../services/tenantSettings.js';
-import { tabSiswa }  from './dataDasar/tabSiswa.js';
+import {
+  buatTautanKopSuratTenant,
+  hapusKopSuratTenant,
+  unggahKopSuratTenant,
+} from '../services/tenantLetterhead.js';
+import { tabSiswa } from './dataDasar/tabSiswa.js';
 import { tabJadwal } from './dataDasar/tabJadwal.js';
-import { tabDenah }  from './dataDasar/tabDenah.js';
+import { tabDenah } from './dataDasar/tabDenah.js';
 
 // CSS — hanya yang spesifik halaman ini.
 // Gaya halaman dikelompokkan di ../styles/.
@@ -45,13 +50,13 @@ const PERAN_EDIT = ['superadmin', 'admin_sekolah'];
 
 // Daftar sub yang valid + metadata judul
 const SUB = {
-  profil:  { label: 'Profil Guru & Sekolah',   ket: 'Identitas & kepala sekolah', ikon: 'gedung'   },
-  ta:      { label: 'Tahun Ajaran & Semester', ket: 'Siklus akademik aktif',       ikon: 'kalender' },
-  kelas:   { label: 'Kelas & Mapel Saya',      ket: 'Penugasan mengajar',          ikon: 'buku'     },
-  siswa:   { label: 'Data Siswa',              ket: 'Peserta didik per kelas',     ikon: 'pengguna' },
-  barcode: { label: 'Barcode & Kartu Absensi', ket: 'Cetak kartu scan siswa',      ikon: 'qr'       },
-  jadwal:  { label: 'Jadwal Mengajar',         ket: 'Sesi per pekan',              ikon: 'jam'      },
-  denah:   { label: 'Kelompok & Denah Duduk',  ket: 'Posisi dan kelompok',         ikon: 'layout'   },
+  profil: { label: 'Profil Guru & Sekolah', ket: 'Identitas & kepala sekolah', ikon: 'gedung' },
+  ta: { label: 'Tahun Ajaran & Semester', ket: 'Siklus akademik aktif', ikon: 'kalender' },
+  kelas: { label: 'Kelas & Mapel Saya', ket: 'Penugasan mengajar', ikon: 'buku' },
+  siswa: { label: 'Data Siswa', ket: 'Peserta didik per kelas', ikon: 'pengguna' },
+  barcode: { label: 'Barcode & Kartu Absensi', ket: 'Cetak kartu scan siswa', ikon: 'qr' },
+  jadwal: { label: 'Jadwal Mengajar', ket: 'Sesi per pekan', ikon: 'jam' },
+  denah: { label: 'Kelompok & Denah Duduk', ket: 'Posisi dan kelompok', ikon: 'layout' },
 };
 
 /**
@@ -73,13 +78,13 @@ function subDariUrl() {
 
 export async function halamanDataDasar(wadah) {
   const { user, role, tenantId } = getState();
-  if (!user) return () => {};
+  if (!user) return () => { };
 
   // Belum ada sub-rute → alihkan ke default.
   const sub = subDariUrl();
   if (!sub) {
     navigate('/datadasar/profil');
-    return () => {};
+    return () => { };
   }
 
   const bisaEdit = PERAN_EDIT.includes(role);
@@ -175,7 +180,7 @@ export async function halamanDataDasar(wadah) {
     pasangUlang(panelEl, o.ulang);
   }
 
-  return () => {};
+  return () => { };
 }
 
 /* =====================================================================
@@ -198,7 +203,7 @@ function pesanGalat(err) {
     return {
       judul: 'Tidak dapat terhubung ke Supabase',
       rinci: 'Periksa koneksi internet dan konfigurasi layanan Supabase. '
-           + 'Pemblokir iklan, antivirus, atau VPN juga dapat memutus koneksi.',
+        + 'Pemblokir iklan, antivirus, atau VPN juga dapat memutus koneksi.',
     };
   }
   return { judul: 'Data tidak dapat dimuat', rinci: 'Coba muat ulang. Rincian galat ada di konsol browser.' };
@@ -269,6 +274,16 @@ async function tabBarcodeOpsional(panelEl, ctx, muatPenugasanSekali) {
  * =================================================================== */
 async function tabProfil(el, o) {
   const { d, gagal } = await muatConfigAman(o);
+  let kopPreviewUrl = '';
+  let kopGalat = '';
+  if (!gagal && d.kopSuratTersedia && d.kopSuratPath) {
+    try {
+      kopPreviewUrl = await buatTautanKopSuratTenant(o.tenantId, d.kopSuratPath);
+    } catch (error) {
+      console.error('[dataDasar] Kop sekolah belum dapat ditampilkan:', error);
+      kopGalat = 'Preview kop belum dapat dimuat. Periksa akses Storage tenant.';
+    }
+  }
   if (gagal) {
     o = {
       ...o, bisaEdit: false, kunci: 'disabled',
@@ -316,15 +331,105 @@ async function tabProfil(el, o) {
             <input type="text" id="inNip" class="input" inputmode="numeric"
                    maxlength="25" ${o.kunci} value="${esc(d.nipKepalaSekolah || '')}">
           </div>
+          <div class="field ale-field-span-2">
+            <label for="inAlamat">Alamat resmi sekolah</label>
+            <textarea id="inAlamat" class="input" rows="3" maxlength="300"
+                      ${o.kunci}${d.kopSuratTersedia ? '' : ' disabled'}>${esc(d.alamat || '')}</textarea>
+            ${!d.kopSuratTersedia ? '<small class="ale-info-teks">Alamat memerlukan migration tenant letterhead sebelum dapat disimpan.</small>' : ''}
+          </div>
         </div>
         ${o.bisaEdit
-          ? '<div class="ale-form-aksi"><button type="submit" class="btn btn-primary">Simpan Profil Sekolah</button></div>'
-          : '<p class="ale-info-teks">Profil instansi dikelola oleh administrator.</p>'}
+      ? '<div class="ale-form-aksi"><button type="submit" class="btn btn-primary">Simpan Profil Sekolah</button></div>'
+      : '<p class="ale-info-teks">Profil instansi dikelola oleh administrator.</p>'}
       </form>
     </section>`;
 
+  el.insertAdjacentHTML('beforeend', `
+    <section class="ale-kartu card ale-kop-sekolah" aria-labelledby="kopSekolahTitle">
+      <div class="ale-kartu-kepala">
+        <h2 class="ale-kartu-judul" id="kopSekolahTitle">${ik('gedung')} Kop Surat Resmi</h2>
+        ${o.chipAkses}
+      </div>
+      <p class="ale-info-teks">Kop disimpan pada bucket privat tenant. Anggota sekolah dapat melihatnya; hanya admin sekolah atau superadmin yang dapat mengubah. Format: PNG, JPEG, atau WebP, maksimal 2 MiB.</p>
+      ${!d.kopSuratTersedia ? '<p class="ale-kop-status" role="status">Upload kop belum aktif sampai migration tenant letterhead diverifikasi dan diterapkan.</p>' : ''}
+      <div class="ale-kop-preview">
+        <img id="kopPreview" alt="Kop surat resmi sekolah" src="${esc(kopPreviewUrl)}" ${kopPreviewUrl ? '' : 'hidden'}>
+        <p id="kopKosong" class="ale-kop-kosong" ${kopPreviewUrl ? 'hidden' : ''}>${kopGalat || 'Belum ada kop surat yang diunggah.'}</p>
+      </div>
+      ${o.bisaEdit && d.kopSuratTersedia ? `
+        <div class="ale-kop-aksi">
+          <label class="field">
+            <span>Pilih gambar kop sekolah</span>
+            <input id="kopFile" class="input" type="file" accept="image/png,image/jpeg,image/webp">
+          </label>
+          <div class="ale-form-aksi">
+            <button type="button" class="btn btn-primary" id="unggahKop">Unggah / Ganti Kop</button>
+            <button type="button" class="btn btn-secondary" id="hapusKop" ${d.kopSuratPath ? '' : 'disabled'}>Hapus Kop</button>
+          </div>
+        </div>` : ''}
+      <p id="kopStatus" class="ale-kop-status" role="status"></p>
+    </section>`);
+
   pasangUlang(el, o.ulang);
   if (!o.bisaEdit) return;
+
+  const unggahButton = el.querySelector('#unggahKop');
+  if (unggahButton) unggahButton.onclick = async () => {
+    const file = el.querySelector('#kopFile').files?.[0];
+    const status = el.querySelector('#kopStatus');
+    if (!file) {
+      status.textContent = 'Pilih gambar kop sebelum mengunggah.';
+      return;
+    }
+    unggahButton.disabled = true;
+    status.textContent = 'Memeriksa dan mengunggah kop…';
+    try {
+      const hasil = await unggahKopSuratTenant({
+        tenantId: o.tenantId,
+        userId: o.user.id || o.user.uid,
+        file,
+      });
+      const preview = el.querySelector('#kopPreview');
+      preview.src = hasil.url;
+      preview.hidden = false;
+      el.querySelector('#kopKosong').hidden = true;
+      el.querySelector('#hapusKop').disabled = false;
+      el.querySelector('#kopFile').value = '';
+      status.textContent = 'Kop resmi sekolah berhasil diperbarui.';
+      o.invalidateConfig();
+      toast('Kop resmi sekolah berhasil diperbarui.', 'ok');
+    } catch (error) {
+      status.textContent = error?.message || 'Kop sekolah tidak dapat diunggah.';
+      galat(error, 'Gagal mengunggah kop sekolah');
+    } finally {
+      unggahButton.disabled = false;
+    }
+  };
+
+  const hapusButton = el.querySelector('#hapusKop');
+  if (hapusButton) hapusButton.onclick = async () => {
+    if (!d.kopSuratPath || !window.confirm('Hapus kop surat resmi sekolah?')) return;
+    hapusButton.disabled = true;
+    const status = el.querySelector('#kopStatus');
+    try {
+      const hasil = await hapusKopSuratTenant({ tenantId: o.tenantId, userId: o.user.id || o.user.uid });
+      d.kopSuratPath = '';
+      el.querySelector('#kopPreview').hidden = true;
+      el.querySelector('#kopPreview').removeAttribute('src');
+      el.querySelector('#kopKosong').hidden = false;
+      el.querySelector('#kopKosong').textContent = 'Belum ada kop surat yang diunggah.';
+      status.textContent = hasil.assetDeleted
+        ? 'Kop surat berhasil dihapus.'
+        : 'Kop sudah dilepas dari profil; pembersihan file privat perlu dicoba ulang oleh administrator.';
+      o.invalidateConfig();
+      toast(status.textContent, hasil.assetDeleted ? 'ok' : 'galat');
+    } catch (error) {
+      status.textContent = error?.message || 'Kop sekolah tidak dapat dihapus.';
+      galat(error, 'Gagal menghapus kop sekolah');
+    } finally {
+      hapusButton.disabled = !d.kopSuratPath;
+    }
+  };
 
   el.querySelector('#formProfil').onsubmit = async (e) => {
     e.preventDefault();
@@ -333,15 +438,18 @@ async function tabProfil(el, o) {
     try {
       const nama = bersih(el.querySelector('#inNama').value, 150);
       if (!o.tenantId) throw new Error('Akun belum terhubung ke sekolah.');
-      await simpanProfilTenant(o.tenantId, o.user.id || o.user.uid, {
+      const hasil = await simpanProfilTenant(o.tenantId, o.user.id || o.user.uid, {
         nama,
         npsn: bersih(el.querySelector('#inNpsn').value, 12).replace(/\D/g, ''),
         kepalaSekolah: bersih(el.querySelector('#inKepsek').value, 150),
         nipKepalaSekolah: bersih(el.querySelector('#inNip').value, 25).replace(/[^\d\s]/g, ''),
+        alamat: bersih(el.querySelector('#inAlamat').value, 300),
       });
 
       o.invalidateConfig();
-      toast('Profil sekolah berhasil diperbarui.', 'ok');
+      toast(hasil.kopSuratTersedia
+        ? 'Profil sekolah berhasil diperbarui.'
+        : 'Profil sekolah tersimpan; alamat dan kop menunggu migration tenant letterhead.', 'ok');
     } catch (err) {
       galat(err, 'Gagal menyimpan profil sekolah');
     } finally {
@@ -386,8 +494,8 @@ async function tabTA(el, o) {
           </div>
         </div>
         ${o.bisaEdit
-          ? '<div class="ale-form-aksi"><button type="submit" class="btn btn-primary">Simpan Siklus Akademik</button></div>'
-          : '<p class="ale-info-teks">Perubahan tahun ajaran diatur administrator.</p>'}
+      ? '<div class="ale-form-aksi"><button type="submit" class="btn btn-primary">Simpan Siklus Akademik</button></div>'
+      : '<p class="ale-info-teks">Perubahan tahun ajaran diatur administrator.</p>'}
       </form>
     </section>`;
 
@@ -447,7 +555,7 @@ async function tabKelas(el, o) {
         <span class="ale-chip ale-chip-admin">${p.kelas.length + p.mapel.length} daftar</span>
       </div>
       ${p.kelas.length || p.mapel.length
-        ? `<div class="ale-grid-mapel">
+      ? `<div class="ale-grid-mapel">
             <div class="ale-card-item">
               <strong>Mata pelajaran</strong>
               <span>${p.mapel.length ? p.mapel.map(esc).join(', ') : 'Belum ditetapkan'}</span>
@@ -457,9 +565,9 @@ async function tabKelas(el, o) {
               <span>${p.kelas.length ? p.kelas.map(esc).join(', ') : 'Belum ditetapkan'}</span>
             </div>
           </div>`
-        : `<p class="ale-kosong">${gagal
-            ? 'Penugasan belum dapat dimuat.'
-            : 'Belum ada daftar kelas atau mata pelajaran. Penugasan dikelola oleh administrator.'}</p>`}
+      : `<p class="ale-kosong">${gagal
+        ? 'Penugasan belum dapat dimuat.'
+        : 'Belum ada daftar kelas atau mata pelajaran. Penugasan dikelola oleh administrator.'}</p>`}
     </section>`;
 
   pasangUlang(el, o.ulang);

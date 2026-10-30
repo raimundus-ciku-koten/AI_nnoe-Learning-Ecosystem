@@ -5,7 +5,9 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { usePlatformControls } from '../context/PlatformControlContext.jsx';
 import { GRUP_MENU, MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN, menuUntukPeran } from '../navigasi.js';
 import { setPlatformControl } from '../services/platformAdminApi.js';
+import { muatSnapshotPlatform } from '../services/platformUsage.js';
 import PRICING from '../../../functions/shared/pricing.json';
+import PlatformContentCatalogPage from './PlatformContentCatalogPage.jsx';
 import '../styles/platform-tenants.css';
 
 const PERAN_MENU = [
@@ -128,21 +130,21 @@ const INFO_MODUL = {
   },
   '/platform/konten/template': {
     judul: 'Template Perangkat',
-    ringkasan: 'Belum tersedia katalog template global terpisah dengan versi, status publikasi, dan kontrol akses lintas tenant.',
-    status: 'Belum terintegrasi',
-    tindakan: 'Template belum dapat diterbitkan atau diubah dari browser. Tetapkan skema dan alur persetujuan sebelum menyediakan editor global.',
+    ringkasan: 'Katalog global superadmin mendukung draf berversi, pencatatan lisensi/sumber, publikasi, dan arsip.',
+    status: 'Editor katalog tersedia · distribusi belum aktif',
+    tindakan: 'Item terbit belum didistribusikan ke tenant. Pastikan hak penggunaan materi sebelum publikasi.',
   },
   '/platform/konten/bank-soal': {
     judul: 'Bank Soal Global',
-    ringkasan: 'Konten bank soal dapat memuat kunci jawaban atau materi berlisensi dan tidak boleh dibuka melalui pembacaan global dari klien.',
-    status: 'Tidak tersedia untuk akses global klien',
-    tindakan: 'Gunakan bank soal yang dibatasi tenant. Katalog global perlu API server yang hanya mengembalikan metadata terkurasi.',
+    ringkasan: 'Katalog global superadmin menyimpan versi konten dan metadata lisensi melalui RPC server yang dibatasi peran.',
+    status: 'Editor superadmin tersedia · akses guru/siswa belum aktif',
+    tindakan: 'Bank soal mungkin memuat kunci jawaban. Belum ada endpoint distribusi yang memisahkan soal dan kunci; jangan gunakan sebagai bank ujian tenant.',
   },
   '/platform/konten/modul': {
     judul: 'Modul Global',
-    ringkasan: 'Belum tersedia katalog modul global yang terpisah dari dokumen sekolah dan memiliki kontrol publikasi lintas tenant.',
-    status: 'Belum terintegrasi',
-    tindakan: 'Data modul lintas tenant tidak dibaca dari browser karena belum ada API metadata yang membatasi cakupan data.',
+    ringkasan: 'Katalog global superadmin menyediakan draf, versi, lisensi/sumber, publikasi, dan arsip modul.',
+    status: 'Editor katalog tersedia · distribusi belum aktif',
+    tindakan: 'Katalog belum otomatis memasukkan modul ke ruang kerja sekolah atau siswa; distribusi perlu endpoint tenant-scoped terpisah.',
   },
 };
 
@@ -416,20 +418,20 @@ function DaftarAudit() {
       .order('created_at', { ascending: false })
       .range(cursor || 0, (cursor || 0) + 25)
       .then(({ data, error: queryError }) => {
-      if (queryError) throw queryError;
-      if (!active) return;
-      const rows = data || [];
-      const page = rows.slice(0, 25);
-      setEntries((current) => cursor ? [...current, ...page] : page);
-      setHasMore(rows.length > 25);
-    }).catch((err) => {
-      console.error('[platform-audit] Gagal memuat audit platform:', err);
-      if (active) setError(err?.code === '42501'
-        ? 'Akses log audit ditolak. Pastikan sesi superadmin masih aktif.'
-        : 'Log audit tidak dapat dimuat. Periksa koneksi lalu coba lagi.');
-    }).finally(() => {
-      if (active) setLoading(false);
-    });
+        if (queryError) throw queryError;
+        if (!active) return;
+        const rows = data || [];
+        const page = rows.slice(0, 25);
+        setEntries((current) => cursor ? [...current, ...page] : page);
+        setHasMore(rows.length > 25);
+      }).catch((err) => {
+        console.error('[platform-audit] Gagal memuat audit platform:', err);
+        if (active) setError(err?.code === '42501'
+          ? 'Akses log audit ditolak. Pastikan sesi superadmin masih aktif.'
+          : 'Log audit tidak dapat dimuat. Periksa koneksi lalu coba lagi.');
+      }).finally(() => {
+        if (active) setLoading(false);
+      });
     return () => { active = false; };
   }, [cursor, reload]);
 
@@ -502,25 +504,13 @@ function RingkasanPenggunaan({ role, judul = 'Penggunaan Platform' }) {
     let active = true;
     setLoading(true);
     setError('');
-    Promise.all([
-      supabase.from('tenants').select('*', { count: 'exact', head: true }),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'admin_sekolah'),
-      supabase.from('user_allowlist').select('*', { count: 'exact', head: true }).eq('active', true),
-    ]).then(([tenants, users, admins, allowlist]) => {
-      const failed = [tenants, users, admins, allowlist].find((result) => result.error);
-      if (failed?.error) throw failed.error;
-      if (active) setCounts({
-        tenants: tenants.count || 0,
-        users: users.count || 0,
-        admins: admins.count || 0,
-        allowlist: allowlist.count || 0,
-      });
+    muatSnapshotPlatform().then((snapshot) => {
+      if (active) setCounts(snapshot);
     }).catch((err) => {
       console.error('[platform-usage] Gagal memuat agregat:', err);
       if (active) setError(err?.code === '42501'
         ? 'Akses agregat lintas tenant ditolak. Pastikan sesi superadmin masih aktif.'
-        : 'Snapshot penggunaan tidak dapat dimuat. Coba lagi nanti.');
+        : 'Snapshot penggunaan tidak dapat dimuat. Pastikan migrasi metrik platform tersedia, lalu coba lagi.');
     }).finally(() => {
       if (active) setLoading(false);
     });
@@ -532,23 +522,28 @@ function RingkasanPenggunaan({ role, judul = 'Penggunaan Platform' }) {
       <header className="platform-tenants-heading">
         <p className="platform-tenants-kicker">{judul === 'Statistik Global' ? 'Dashboard superadmin · snapshot' : 'Laporan dan analitik · snapshot'}</p>
         <h1>{judul}</h1>
-        <p>Jumlah baris Supabase saat ini; bukan pengguna aktif, penggunaan historis, atau laporan biaya.</p>
+        <p>Hitungan baris dan aktivitas yang tersedia saat ini; bukan tren historis, metrik performa, atau biaya provider.</p>
       </header>
       <section className="platform-tenants-card">
         {error && <p className="platform-tenants-error" role="alert">{error}</p>}
         {loading && <p role="status">Menghitung snapshot Supabase…</p>}
         {counts && (
           <div className="platform-ops-counts">
-            <article><span>Tenant sekolah</span><strong>{counts.tenants.toLocaleString('id-ID')}</strong></article>
-            <article><span>Profil pengguna</span><strong>{counts.users.toLocaleString('id-ID')}</strong></article>
-            <article><span>Admin sekolah</span><strong>{counts.admins.toLocaleString('id-ID')}</strong></article>
-            <article><span>Allowlist aktif</span><strong>{counts.allowlist.toLocaleString('id-ID')}</strong></article>
+            <article><span>Tenant aktif / total</span><strong>{counts.active_tenant_count.toLocaleString('id-ID')} / {counts.tenant_count.toLocaleString('id-ID')}</strong></article>
+            <article><span>Profil aktif / total</span><strong>{counts.active_profile_count.toLocaleString('id-ID')} / {counts.profile_count.toLocaleString('id-ID')}</strong></article>
+            <article><span>Admin sekolah aktif</span><strong>{counts.school_admin_count.toLocaleString('id-ID')}</strong></article>
+            <article><span>Roster siswa</span><strong>{counts.student_count.toLocaleString('id-ID')}</strong></article>
+            <article><span>Hadir scan · 90 hari</span><strong>{counts.attendance_scan_90d.toLocaleString('id-ID')}</strong></article>
+            <article><span>Pesan chat · 30 hari</span><strong>{counts.chat_messages_30d.toLocaleString('id-ID')}</strong></article>
+            <article><span>Ujian dibuat · 30 hari</span><strong>{counts.exams_30d.toLocaleString('id-ID')}</strong></article>
+            <article><span>Soal tenant</span><strong>{counts.question_bank_count.toLocaleString('id-ID')}</strong></article>
+            <article><span>Konten global terbit</span><strong>{counts.published_content_count.toLocaleString('id-ID')}</strong></article>
           </div>
         )}
         <button className="platform-tenants-button secondary" type="button" disabled={loading} onClick={() => setUlang((n) => n + 1)}>
           {loading ? 'Memuat…' : 'Muat ulang snapshot'}
         </button>
-        <p className="platform-ops-note">Angka agregat adalah snapshot saat ini. Untuk tren, biaya, dan akun Auth aktif diperlukan telemetry backend.</p>
+        {counts?.snapshotAt && <p className="platform-ops-note">Snapshot diambil {new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(counts.snapshotAt))}. Untuk tren historis, performa, biaya, dan pengguna aktif harian diperlukan telemetry backend.</p>}
       </section>
     </>
   );
@@ -557,6 +552,11 @@ function RingkasanPenggunaan({ role, judul = 'Penggunaan Platform' }) {
 export default function PlatformOperationsPage() {
   const { pathname } = useLocation();
   const { role } = useAuth();
+  const contentType = {
+    '/platform/konten/template': 'template_perangkat',
+    '/platform/konten/bank-soal': 'bank_soal',
+    '/platform/konten/modul': 'modul',
+  }[pathname];
   const info = INFO_MODUL[pathname];
   const mode = pathname === '/platform/tenant/paket' ? 'paket'
     : pathname === '/platform/pengguna/peran' || pathname === '/platform/fitur/izin' ? 'peran'
@@ -564,6 +564,7 @@ export default function PlatformOperationsPage() {
   if (role !== 'superadmin') {
     return <main className="platform-tenants"><section className="platform-tenants-card" role="alert"><h1>Akses platform dibatasi</h1><p>Modul platform hanya tersedia untuk superadmin.</p></section></main>;
   }
+  if (contentType) return <PlatformContentCatalogPage type={contentType} />;
 
   return (
     <main className="platform-tenants">
@@ -578,18 +579,18 @@ export default function PlatformOperationsPage() {
             ? <KontrolPlatform maintenance />
             : pathname === '/platform/dashboard/aktivitas' || pathname === '/platform/keamanan/audit'
               ? <DaftarAudit />
-        : mode === 'paket'
-          ? <DaftarPaket />
-          : mode === 'menu' || mode === 'peran'
-            ? <DaftarPeran mode={mode} />
-            : info
-              ? <KartuInfo info={info} />
-              : (
-                <section className="platform-tenants-card" role="alert">
-                  <h1>Modul platform tidak tersedia</h1>
-                  <p>Rute ini belum terdaftar pada katalog menu platform.</p>
-                </section>
-              )}
+              : mode === 'paket'
+                ? <DaftarPaket />
+                : mode === 'menu' || mode === 'peran'
+                  ? <DaftarPeran mode={mode} />
+                  : info
+                    ? <KartuInfo info={info} />
+                    : (
+                      <section className="platform-tenants-card" role="alert">
+                        <h1>Modul platform tidak tersedia</h1>
+                        <p>Rute ini belum terdaftar pada katalog menu platform.</p>
+                      </section>
+                    )}
     </main>
   );
 }

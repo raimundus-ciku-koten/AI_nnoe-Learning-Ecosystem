@@ -39,7 +39,7 @@ export default {
   'detail.usang': 'Dokumen ini dibuat dari versi sebelumnya dari dokumen induknya. Buat ulang agar tetap sinkron.',
 
   /* identitas & tanda tangan */
-  'identitas.judul': 'Identitas dokumen', 'identitas.sekolah': 'Satuan pendidikan', 'identitas.guru': 'Nama guru', 'identitas.mapel': 'Mata pelajaran',
+  'identitas.judul': 'Identitas dokumen', 'identitas.sekolah': 'Satuan pendidikan', 'identitas.npsn': 'NPSN', 'identitas.alamat': 'Alamat sekolah', 'identitas.guru': 'Nama guru', 'identitas.mapel': 'Mata pelajaran',
   'identitas.kelasFase': 'Kelas / Fase', 'identitas.tahunAjaran': 'Tahun ajaran', 'identitas.nip': 'NIP', 'identitas.kepsek': 'Kepala sekolah',
   'identitas.nipKepsek': 'NIP kepala sekolah', 'identitas.lokasi': 'Tempat penandatanganan',
   'ttd.kepsek': 'Mengetahui, Kepala Sekolah', 'ttd.guru': 'Guru Mata Pelajaran',

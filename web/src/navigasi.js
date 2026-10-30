@@ -60,6 +60,7 @@ export const GRUP_MENU = [
       tautan('Pembelajaran Berdiferensiasi', '/pelaksanaan/berdiferensiasi', 'users'),
       tautan('Kegiatan Kelas Khusus', '/pelaksanaan/kelas-khusus', 'users'),
       tautan('Catatan Kelas Cepat', '/pelaksanaan/catatan-cepat', 'file'),
+      tautan('Tugas Pribadi', '/pelaksanaan/tugas', 'check'),
       tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
     ],
   },
@@ -208,6 +209,10 @@ export const MENU_ADMIN_SEKOLAH = [
   grup('admin-dashboard', 'Dashboard Admin', 'chart', [
     tautan('Ringkasan Statistik', '/dashboard', 'chart'),
   ]),
+  grup('admin-workspace', 'Ruang Kerja Pribadi', 'calendar', [
+    tautan('Tugas Pribadi', '/admin/tugas', 'check'),
+    tautan('Google Workspace', '/pengaturan/google', 'external'),
+  ]),
   grup('admin-monitoring', 'Monitoring', 'chart', [
     tautan('Aktivitas Terbaru', '/admin/aktivitas', 'file'),
     tautan('Monitoring Ujian', '/admin/dashboard/ujian', 'check'),
@@ -228,6 +233,7 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Siswa', '/admin/pengguna/siswa', 'users'),
     tautan('Tautkan akun siswa ke roster', '/admin/pengguna/tautkan-siswa', 'users'),
     tautan('Orang Tua', '/admin/pengguna/orang-tua', 'users'),
+    tautan('Tautkan orang tua ke siswa', '/admin/pengguna/tautkan-wali', 'users'),
     tautan('Admin Sekolah', '/admin/pengguna/admin', 'user'),
     tautan('Peran dan Hak Akses', '/admin/pengguna/peran', 'settings'),
   ]),

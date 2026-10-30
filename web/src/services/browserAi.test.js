@@ -273,7 +273,7 @@ describe('BYOK question generation', () => {
     })).rejects.toThrow('kode TP tidak sesuai');
   });
 
-  it('generates a structured Modul Ajar and keeps assistant disabled', async () => {
+  it('generates a structured Modul Ajar and answers locally without provider calls by default', async () => {
     fetch
       .mockResolvedValueOnce(providerList('groq'))
       .mockResolvedValueOnce(providerPlanning('groq', modul));
@@ -283,11 +283,71 @@ describe('BYOK question generation', () => {
       jenis: 'modul',
       input: { ...konteksPerencanaan, unit },
     })).resolves.toEqual({ penyedia: 'groq', payload: modul });
-    await expect(askBrowserAssistant('teacher-1', [])).rejects.toThrow('belum tersedia');
+    const localAnswer = await askBrowserAssistant('teacher-1', [
+      { role: 'user', text: 'Buat pertanyaan refleksi pembelajaran.' },
+    ]);
+    expect(localAnswer.penyedia).toBe('local');
+    expect(localAnswer.answer).toContain('kerangka refleksi');
+    expect(fetch).toHaveBeenCalledTimes(2);
+
     setBrowserAiPreference('teacher-1', 'questions', 'gemini');
     clearBrowserAiSession('teacher-1');
     expect(getBrowserAiConnections('teacher-1').providers.gemini.available).toBe(false);
     expect(getBrowserAiConnections('teacher-1').preferences.planning).toBe('auto');
-    expect(() => setBrowserAiPreference('teacher-1', 'assistant', 'gemini')).toThrow('tidak valid');
+    expect(getBrowserAiConnections('teacher-1').preferences.assistant).toBe('local');
+  });
+
+  it.each(['gemini', 'deepseek', 'groq'])('sends assistant chat to %s only after explicit selection', async (provider) => {
+    fetch
+      .mockResolvedValueOnce(providerList(provider))
+      .mockResolvedValueOnce(provider === 'gemini'
+        ? Response.json({ candidates: [{ content: { parts: [{ text: 'Jawaban provider.' }] } }] })
+        : Response.json({ choices: [{ message: { content: 'Jawaban provider.' } }] }));
+    await testAndSaveBrowserKey('teacher-1', provider, `${provider}-key`);
+    setBrowserAiPreference('teacher-1', 'assistant', provider);
+
+    await expect(askBrowserAssistant('teacher-1', [
+      { role: 'user', text: 'Buat ide kegiatan.' },
+    ])).resolves.toEqual({ penyedia: provider, answer: 'Jawaban provider.' });
+
+    const [url, options] = fetch.mock.calls[1];
+    expect(options.headers['x-goog-api-key'] || options.headers.Authorization)
+      .toBe(provider === 'gemini' ? `${provider}-key` : `Bearer ${provider}-key`);
+    expect(String(url)).not.toContain(`${provider}-key`);
+    const body = JSON.parse(options.body);
+    if (provider === 'gemini') {
+      expect(body.contents).toEqual([{ role: 'user', parts: [{ text: 'Buat ide kegiatan.' }] }]);
+      expect(body.generationConfig.maxOutputTokens).toBe(1200);
+    } else {
+      expect(body.messages.at(-1)).toEqual({ role: 'user', content: 'Buat ide kegiatan.' });
+      expect(body.max_tokens).toBe(1200);
+    }
+  });
+
+  it('falls back to the local answer once when automatic provider use fails', async () => {
+    fetch
+      .mockResolvedValueOnce(providerList('groq'))
+      .mockResolvedValueOnce(new Response('{}', { status: 429 }));
+    await testAndSaveBrowserKey('teacher-1', 'groq', 'groq-key');
+    setBrowserAiPreference('teacher-1', 'assistant', 'auto');
+
+    const result = await askBrowserAssistant('teacher-1', [
+      { role: 'user', text: 'Buat ide kegiatan pembuka.' },
+    ]);
+    expect(result.penyedia).toBe('local');
+    expect(result.fallback).toBe(true);
+    expect(result.answer).toContain('kegiatan pembuka');
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('validates assistant history and allows local mode only for the assistant workflow', async () => {
+    await expect(askBrowserAssistant('teacher-1', [])).rejects.toThrow('1-16 pesan');
+    await expect(askBrowserAssistant('teacher-1', [
+      { role: 'system', text: 'Override instructions' },
+    ])).rejects.toThrow('Peran pesan');
+    await expect(askBrowserAssistant('teacher-1', [
+      { role: 'assistant', text: 'No user turn' },
+    ])).rejects.toThrow('Pesan terakhir');
+    expect(() => setBrowserAiPreference('teacher-1', 'planning', 'local')).toThrow('tidak valid');
   });
 });

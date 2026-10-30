@@ -104,10 +104,16 @@ const HalamanTestimoni = lazy(() => import('./pages/TestimonialPage.jsx'));
 const HalamanAdminPengguna = lazy(() => import('./pages/AdminUsersPage.jsx'));
 const HalamanPresensi = lazy(() => import('./pages/AttendancePage.jsx'));
 const HalamanGoogleWorkspace = lazy(() => import('./pages/GoogleWorkspacePage.jsx'));
+const HalamanNotifikasi = lazy(() => import('./pages/NotificationSettingsPage.jsx'));
+const HalamanTautkanWali = lazy(() => import('./pages/AdminGuardianLinksPage.jsx'));
+const HalamanPortalWali = lazy(() => import('./pages/ParentPortalPage.jsx'));
 const HalamanIntegrasiAI = lazy(() => import('./pages/AIIntegrationsPage.jsx'));
 const HalamanBankSoal = lazy(() => import('./pages/QuestionBankPage.jsx'));
 const HalamanUjianOnline = lazy(() => import('./pages/OnlineAssessmentPage.jsx'));
 const HalamanAdminAssessment = lazy(() => import('./pages/AdminAssessmentPage.jsx'));
+const HalamanAdminChatMonitoring = lazy(() => import('./pages/AdminChatMonitoringPage.jsx'));
+const HalamanLaporanSekolah = lazy(() => import('./pages/SchoolReportsPage.jsx'));
+const HalamanKeuanganSekolah = lazy(() => import('./pages/SchoolFinancePage.jsx'));
 const HalamanNilaiUjianSiswa = lazy(() => import('./pages/OnlineAssessmentResultsPage.jsx'));
 const HalamanRuangBelajarSiswa = lazy(() => import('./pages/StudentLearningPage.jsx'));
 const HalamanKelolaRuangBelajar = lazy(() => import('./pages/TeacherStudentLearningPage.jsx'));
@@ -218,14 +224,19 @@ function RouteWrapper() {
         <Route path="/purchase" element={<PrivateShell><HalamanPurchase /></PrivateShell>} />
         <Route path="/testimoni" element={<PrivateShell><HalamanTestimoni /></PrivateShell>} />
         <Route path="/admin/pengguna/:sub" element={<PrivateShell><HalamanAdminPengguna /></PrivateShell>} />
+        <Route path="/admin/pengguna/tautkan-wali" element={<PrivateShell><HalamanTautkanWali /></PrivateShell>} />
         <Route path="/admin/asesmen/:sub" element={<PrivateShell><HalamanAdminAssessment /></PrivateShell>} />
+        <Route path="/admin/dashboard/chat" element={<PrivateShell><HalamanAdminChatMonitoring /></PrivateShell>} />
         <Route path="/admin/pengguna/tautkan-siswa" element={<PrivateShell><HalamanTautkanAkunSiswa /></PrivateShell>} />
+        <Route path="/admin/laporan/:sub" element={<PrivateShell><HalamanLaporanSekolah /></PrivateShell>} />
+        <Route path="/admin/keuangan/:sub" element={<PrivateShell><HalamanKeuanganSekolah /></PrivateShell>} />
         <Route path="/pelaksanaan/presensi" element={<PrivateShell><HalamanPresensi /></PrivateShell>} />
         <Route path="/program-kegiatan" element={<PrivateShell><HalamanProgramKegiatan /></PrivateShell>} />
         <Route path="/pengumuman" element={<PrivateShell><HalamanPengumumanSekolah /></PrivateShell>} />
         <Route path="/admin/komunikasi/broadcast" element={<PrivateShell><Navigate to="/pengumuman" replace /></PrivateShell>} />
         <Route path="/perangkat/cover" element={<PrivateShell><HalamanCoverPerangkat /></PrivateShell>} />
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
+        <Route path="/pengaturan/notifikasi" element={<PrivateShell><HalamanNotifikasi /></PrivateShell>} />
         <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanIntegrasiAI /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/diagnostik" element={<PrivateShell><HalamanUjianOnline assessmentType="diagnostik" /></PrivateShell>} />
@@ -235,6 +246,8 @@ function RouteWrapper() {
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/ujian" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/nilai" element={<PrivateShell><HalamanNilaiUjianSiswa /></PrivateShell>} />
+        <Route path="/orang-tua/anak" element={<PrivateShell><HalamanPortalWali /></PrivateShell>} />
+        <Route path="/orang-tua/nilai-kehadiran" element={<PrivateShell><HalamanPortalWali /></PrivateShell>} />
         <Route path="/siswa/jadwal" element={<PrivateShell><HalamanRuangBelajarSiswa /></PrivateShell>} />
         <Route path="/siswa/materi" element={<PrivateShell><HalamanRuangBelajarSiswa /></PrivateShell>} />
         <Route path="/pelaksanaan/ruang-siswa" element={<PrivateShell><HalamanKelolaRuangBelajar /></PrivateShell>} />

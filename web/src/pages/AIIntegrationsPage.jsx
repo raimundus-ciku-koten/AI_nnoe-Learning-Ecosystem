@@ -37,7 +37,7 @@ export default function AIIntegrationsPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [keys, setKeys] = useState({ gemini: '', deepseek: '', groq: '' });
-  const [preferences, setPreferences] = useState({ planning: 'auto', assistant: 'auto', questions: 'auto' });
+  const [preferences, setPreferences] = useState({ planning: 'auto', assistant: 'local', questions: 'auto' });
   const refresh = useCallback(async () => {
     setError('');
     const result = await muatKoneksiAI(user?.uid);
@@ -115,11 +115,11 @@ export default function AIIntegrationsPage() {
       <header className="ai-integrations__header">
         <p className="ai-integrations__eyebrow"><Ikon nama="settings" /> Pengaturan akun</p>
         <h1 id="ai-integrations-title">AI &amp; Layanan</h1>
-        <p>Hubungkan provider AI dengan kunci pribadi Anda untuk membuat draf soal dan perangkat ajar. Penyusunan manual tetap tersedia.</p>
+        <p>Asisten AI_nnoe Lokal tersedia tanpa kunci provider. Hubungkan provider pribadi hanya jika membutuhkan jawaban generatif.</p>
       </header>
       <p className="ai-integrations__message is-warning" role="note">
         {EXTERNAL_AI_PROVIDERS_ENABLED
-          ? 'Permintaan hanya dikirim setelah Anda mengaktifkan kunci dan menekan tombol pembuatan. Draf perencanaan mengirim konteks paket yang diperlukan (mata pelajaran, kelas, CP/TP, dan tahun ajaran) langsung dari browser ke provider terpilih. Jangan masukkan data pribadi siswa. Kuota, biaya, dan kebijakan penyimpanan mengikuti provider.'
+          ? 'Mode lokal tidak mengirim pesan ke jaringan. Mode provider mengirim permintaan langsung dari browser setelah kunci pribadi diaktifkan dan Anda mengirim permintaan; konteks percakapan atau perencanaan dapat diproses provider. Jangan masukkan data pribadi siswa. Kuota, biaya, dan kebijakan penyimpanan mengikuti provider.'
           : 'Provider AI eksternal dinonaktifkan.'}
       </p>
       <p className="ai-integrations__message" role="note">
@@ -189,10 +189,11 @@ export default function AIIntegrationsPage() {
           <section className="ai-integrations__card" aria-labelledby="ai-preferences-title">
             <h2 id="ai-preferences-title">Preferensi per penggunaan</h2>
             <p>{EXTERNAL_AI_PROVIDERS_ENABLED
-              ? 'Pengaturan berlaku untuk draf soal dan perangkat ajar selama sesi aplikasi. Otomatis memilih provider aktif pertama berdasarkan urutan Gemini, DeepSeek, Groq; jika gagal, permintaan berhenti tanpa fallback.'
+              ? 'Otomatis memakai satu provider aktif. Pada asisten percakapan, kegagalan provider beralih ke panduan lokal tanpa mencoba provider lain; pembuatan soal dan perencanaan tidak melakukan fallback provider.'
               : 'Provider AI eksternal dinonaktifkan.'}</p>
             <div className="ai-integrations__preferences">
               {[
+                ['assistant', 'Asisten percakapan'],
                 ['questions', 'Pembuatan draf soal'],
                 ['planning', 'Perencanaan (KKTP dan Modul Ajar)'],
               ].map(([workflow, label]) => (
@@ -203,6 +204,9 @@ export default function AIIntegrationsPage() {
                     disabled={!EXTERNAL_AI_PROVIDERS_ENABLED || Boolean(busy)}
                     onChange={(event) => ubahPreferensi(workflow, event.target.value)}
                   >
+                    {workflow === 'assistant' && (
+                      <option value="local">AI_nnoe Lokal (tanpa koneksi provider)</option>
+                    )}
                     {PILIHAN_PROVIDER.map(([value, text]) => (
                       <option key={value} value={value}>{text}</option>
                     ))}
@@ -210,7 +214,7 @@ export default function AIIntegrationsPage() {
                 </label>
               ))}
             </div>
-            <p>Asisten percakapan belum diaktifkan. RPE, Prota, dan Prosem tetap dihitung deterministik; ATP, KKTP, dan Modul Ajar dapat ditinjau serta disunting sebelum digunakan.</p>
+            <p>AI_nnoe Lokal menggunakan panduan dan pola tetap, bukan model bahasa besar. RPE, Prota, dan Prosem tetap dihitung deterministik; draf provider dapat ditinjau dan disunting sebelum digunakan.</p>
           </section>
         </>
       )}

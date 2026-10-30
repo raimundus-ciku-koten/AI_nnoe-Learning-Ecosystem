@@ -1,4 +1,5 @@
 const MODULE_PATH = /^\/(pelaksanaan|asesmen|pemantauan|refleksi|laporan|kolaborasi|pengaturan|perangkat)\/[a-z0-9-]+$/;
+const PERSONAL_TASK_PATHS = new Set(['/admin/tugas']);
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const REFLECTION_PREFIX = 'ale-reflection-v1:';
 const REFLECTION_FIELDS = Object.freeze(['berhasil', 'bukti', 'tantangan', 'langkahBerikutnya']);
@@ -30,12 +31,14 @@ function boundedText(value, label, max, required = false) {
 
 export function siapkanCatatanGuru(input) {
   const modulePath = boundedText(input.modulePath, 'Modul', 100, true);
-  if (!MODULE_PATH.test(modulePath)) throw new Error('Modul catatan tidak valid.');
+  if (!MODULE_PATH.test(modulePath) && !PERSONAL_TASK_PATHS.has(modulePath)) {
+    throw new Error('Modul catatan tidak valid.');
+  }
 
   const tanggal = boundedText(input.tanggal, 'Tanggal', 10, true);
   const waktuTanggal = new Date(`${tanggal}T00:00:00Z`);
   if (!ISO_DATE.test(tanggal) || Number.isNaN(waktuTanggal.getTime())
-      || waktuTanggal.toISOString().slice(0, 10) !== tanggal) {
+    || waktuTanggal.toISOString().slice(0, 10) !== tanggal) {
     throw new Error('Tanggal harus menggunakan format yang valid.');
   }
 
