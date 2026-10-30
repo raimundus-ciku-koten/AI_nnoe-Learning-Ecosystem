@@ -23,6 +23,7 @@ import {
   susunIsiPortofolioGuru,
   susunIsiRencanaIntervensiKelas,
   susunIsiRencanaDiferensiasi,
+  susunIsiRealisasiRencana,
   susunIsiRencanaPerbaikan,
   susunIsiRencanaKompetensi,
   susunIsiRefleksi,
@@ -32,6 +33,7 @@ import {
   tampilkanIsiPortofolioGuru,
   tampilkanIsiRencanaIntervensiKelas,
   tampilkanIsiRencanaDiferensiasi,
+  tampilkanIsiRealisasiRencana,
   tampilkanIsiRencanaPerbaikan,
   tampilkanIsiRencanaKompetensi,
   tampilkanIsiRefleksi,
@@ -40,6 +42,7 @@ import {
   uraikanIsiPortofolioGuru,
   uraikanIsiRencanaIntervensiKelas,
   uraikanIsiRencanaDiferensiasi,
+  uraikanIsiRealisasiRencana,
   uraikanIsiRencanaPerbaikan,
   uraikanIsiRencanaKompetensi,
   uraikanIsiRefleksi,
@@ -301,6 +304,34 @@ describe('rencana pembelajaran berdiferensiasi', () => {
       .toThrow('Tujuan dan strategi diferensiasi wajib diisi.');
     expect(uraikanIsiRencanaDiferensiasi('Strategi kelas sebelumnya')).toMatchObject({
       strategi: 'Strategi kelas sebelumnya',
+      legacy: true,
+    });
+  });
+});
+
+describe('realisasi rencana pembelajaran', () => {
+  it('menyimpan rencana, status, pelaksanaan, kendala, dan tindak lanjut', () => {
+    const report = {
+      rencana: 'Gunakan garis bilangan untuk konsep pecahan.',
+      status: 'sebagian',
+      pelaksanaan: 'Contoh visual terlaksana; latihan penutup tertunda.',
+      kendala: 'Waktu diskusi lebih lama dari perkiraan.',
+      tindakLanjut: 'Lanjutkan latihan pada pertemuan berikutnya.',
+    };
+    const isi = susunIsiRealisasiRencana(report);
+
+    expect(uraikanIsiRealisasiRencana(isi)).toEqual({ ...report, legacy: false });
+    expect(tampilkanIsiRealisasiRencana(isi)).toContain('Status pelaksanaan:\nTerlaksana sebagian');
+    expect(isi).toMatch(/^ale-plan-implementation-v1:/);
+  });
+
+  it('menolak rencana/pelaksanaan kosong dan status tak dikenal serta membaca catatan lama', () => {
+    expect(() => susunIsiRealisasiRencana({})).toThrow('Rencana wajib diisi.');
+    expect(() => susunIsiRealisasiRencana({ rencana: 'Rencana' })).toThrow('Pelaksanaan wajib diisi.');
+    expect(() => susunIsiRealisasiRencana({ rencana: 'Rencana', pelaksanaan: 'Catatan', status: 'lain' }))
+      .toThrow('Status realisasi tidak valid.');
+    expect(uraikanIsiRealisasiRencana('Catatan realisasi lama')).toMatchObject({
+      pelaksanaan: 'Catatan realisasi lama',
       legacy: true,
     });
   });

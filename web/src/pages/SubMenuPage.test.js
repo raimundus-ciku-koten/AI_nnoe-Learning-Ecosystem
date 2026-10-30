@@ -95,6 +95,7 @@ describe('submenu platform superadmin', () => {
     it('menampilkan ruang kerja catatan untuk submenu guru yang belum memiliki modul khusus', () => {
       const targetPaths = [
         '/pelaksanaan/jurnal',
+        '/pelaksanaan/realisasi',
         '/asesmen/remedial',
         '/pelaksanaan/berdiferensiasi',
         '/pemantauan/catatan',
@@ -121,6 +122,12 @@ describe('submenu platform superadmin', () => {
           expect(html).toContain('Capaian yang diamati');
           expect(html).toContain('Tindak lanjut');
           expect(html).toContain('rekam resmi sekolah');
+        } else if (path === '/pelaksanaan/realisasi') {
+          expect(html).toContain('Realisasi terhadap Rencana</h2>');
+          expect(html).toContain('Rencana yang ditinjau');
+          expect(html).toContain('Status pelaksanaan');
+          expect(html).toContain('Terlaksana sebagian');
+          expect(html).toContain('Tindak lanjut');
         } else if (path === '/pelaksanaan/berdiferensiasi') {
           expect(html).toContain('Rencana pembelajaran berdiferensiasi</h2>');
           expect(html).toContain('Tujuan belajar');

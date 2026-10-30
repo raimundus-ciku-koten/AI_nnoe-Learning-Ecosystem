@@ -16,6 +16,8 @@ const INTERVENTION_PREFIX = 'ale-class-intervention-v1:';
 const INTERVENTION_FIELDS = Object.freeze(['kebutuhan', 'remedial', 'pengayaan', 'indikator']);
 const DIFFERENTIATION_PREFIX = 'ale-differentiation-plan-v1:';
 const DIFFERENTIATION_FIELDS = Object.freeze(['tujuan', 'kebutuhan', 'strategi', 'cekPemahaman']);
+const IMPLEMENTATION_PREFIX = 'ale-plan-implementation-v1:';
+const IMPLEMENTATION_FIELDS = Object.freeze(['rencana', 'status', 'pelaksanaan', 'kendala', 'tindakLanjut']);
 
 function boundedText(value, label, max, required = false) {
   const text = String(value ?? '').trim();
@@ -453,6 +455,66 @@ export function tampilkanIsiRencanaDiferensiasi(value) {
   return DIFFERENTIATION_FIELDS
     .filter((field) => plan[field])
     .map((field) => `${labels[field]}:\n${plan[field]}`)
+    .join('\n\n');
+}
+
+export function kosongkanRealisasiRencana() {
+  return { ...Object.fromEntries(IMPLEMENTATION_FIELDS.map((field) => [field, ''])), status: 'belum' };
+}
+
+export function susunIsiRealisasiRencana(input) {
+  const labels = {
+    rencana: 'Rencana',
+    status: 'Status',
+    pelaksanaan: 'Pelaksanaan',
+    kendala: 'Kendala',
+    tindakLanjut: 'Tindak lanjut',
+  };
+  const implementation = Object.fromEntries(IMPLEMENTATION_FIELDS.map((field) => [
+    field,
+    field === 'status'
+      ? String(input?.status ?? '')
+      : boundedText(input?.[field], labels[field], 1400, ['rencana', 'pelaksanaan'].includes(field)),
+  ]));
+  if (!['selesai', 'sebagian', 'belum'].includes(implementation.status)) {
+    throw new Error('Status realisasi tidak valid.');
+  }
+  return `${IMPLEMENTATION_PREFIX}${JSON.stringify(implementation)}`;
+}
+
+export function uraikanIsiRealisasiRencana(value) {
+  const isi = String(value ?? '');
+  if (!isi.startsWith(IMPLEMENTATION_PREFIX)) {
+    return { ...kosongkanRealisasiRencana(), pelaksanaan: isi, legacy: true };
+  }
+  try {
+    const parsed = JSON.parse(isi.slice(IMPLEMENTATION_PREFIX.length));
+    return {
+      ...Object.fromEntries(IMPLEMENTATION_FIELDS.map((field) => [
+        field,
+        typeof parsed?.[field] === 'string' ? parsed[field] : field === 'status' ? 'belum' : '',
+      ])),
+      legacy: false,
+    };
+  } catch {
+    return { ...kosongkanRealisasiRencana(), pelaksanaan: isi, legacy: true };
+  }
+}
+
+export function tampilkanIsiRealisasiRencana(value) {
+  const implementation = uraikanIsiRealisasiRencana(value);
+  if (implementation.legacy) return implementation.pelaksanaan;
+  const labels = {
+    rencana: 'Rencana yang ditinjau',
+    status: 'Status pelaksanaan',
+    pelaksanaan: 'Realisasi',
+    kendala: 'Kendala',
+    tindakLanjut: 'Tindak lanjut',
+  };
+  const statuses = { selesai: 'Selesai', sebagian: 'Terlaksana sebagian', belum: 'Belum dimulai' };
+  return IMPLEMENTATION_FIELDS
+    .filter((field) => field === 'status' || implementation[field])
+    .map((field) => `${labels[field]}:\n${field === 'status' ? statuses[implementation.status] : implementation[field]}`)
     .join('\n\n');
 }
 
