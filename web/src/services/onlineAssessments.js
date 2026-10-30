@@ -127,6 +127,51 @@ export async function muatRingkasanUjianSekolah() {
   return data;
 }
 
+export function buatCsvRingkasanUjianSekolah(exams) {
+  const headers = [
+    'Paket ujian',
+    'Kelas',
+    'Guru',
+    'Mulai',
+    'Berakhir',
+    'Durasi (menit)',
+    'Peserta terdaftar',
+    'Percobaan',
+    'Submission',
+    'Menunggu tinjauan uraian',
+    'Status',
+  ];
+  if (!Array.isArray(exams) || exams.some((exam) =>
+    !exam || typeof exam.title !== 'string' || typeof exam.kelas !== 'string'
+    || typeof exam.teacher_name !== 'string'
+    || !Number.isFinite(Date.parse(exam.starts_at)) || !Number.isFinite(Date.parse(exam.ends_at))
+    || !['active', 'closed'].includes(exam.status)
+    || !Number.isSafeInteger(exam.duration_minutes) || exam.duration_minutes < 1 || exam.duration_minutes > 300
+    || !['participant_count', 'attempt_count', 'submitted_count', 'pending_review_count']
+      .every((field) => Number.isSafeInteger(exam[field]) && exam[field] >= 0))) {
+    throw new TypeError('Ringkasan ujian tidak valid untuk ekspor.');
+  }
+  const safeCell = (value) => {
+    const text = String(value ?? '');
+    const protectedText = /^[\u0000-\u0020]*[=+\-@]/.test(text) ? `'${text}` : text;
+    return `"${protectedText.replaceAll('"', '""')}"`;
+  };
+  const rows = exams.map((exam) => [
+    exam.title,
+    exam.kelas,
+    exam.teacher_name,
+    exam.starts_at,
+    exam.ends_at,
+    exam.duration_minutes,
+    exam.participant_count,
+    exam.attempt_count,
+    exam.submitted_count,
+    exam.pending_review_count,
+    exam.status === 'active' ? 'Aktif' : 'Ditutup',
+  ]);
+  return `\uFEFF${[headers, ...rows].map((row) => row.map(safeCell).join(',')).join('\r\n')}`;
+}
+
 export async function muatHasilUjianGuru() {
   const { data, error } = await supabase.rpc('teacher_online_exam_results');
   if (error) throw error;

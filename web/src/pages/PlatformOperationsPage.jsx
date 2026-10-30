@@ -8,6 +8,7 @@ import { setPlatformControl } from '../services/platformAdminApi.js';
 import { muatSnapshotPlatform } from '../services/platformUsage.js';
 import PRICING from '../../../functions/shared/pricing.json';
 import PlatformContentCatalogPage from './PlatformContentCatalogPage.jsx';
+import PlatformAIManagementPage from './PlatformAIManagementPage.jsx';
 import '../styles/platform-tenants.css';
 
 const PERAN_MENU = [
@@ -56,24 +57,6 @@ const INFO_MODUL = {
     ringkasan: 'Kontrol fitur platform yang disimpan dan diperiksa oleh backend Supabase.',
     status: 'Dikelola server dan diaudit',
     tindakan: 'Perubahan divalidasi oleh RPC Supabase yang membatasi superadmin dan menulis audit backend.',
-  },
-  '/platform/ai/api-key': {
-    judul: 'API Key Gemini',
-    ringkasan: 'Kunci model AI harus dikelola sebagai secret backend dan tidak pernah ditampilkan dari browser.',
-    status: 'Dikelola server',
-    tindakan: 'Periksa dan rotasi kunci melalui secret manager backend; aplikasi tidak dapat mengonfirmasi nilainya.',
-  },
-  '/platform/ai/prompt': {
-    judul: 'Template Prompt',
-    ringkasan: 'Prompt AI saat ini ditetapkan di kode layanan, belum melalui katalog template global yang terversi.',
-    status: 'Belum dikelola dari platform',
-    tindakan: 'Ubah prompt melalui proses perubahan kode dan pengujian; jangan menyimpan prompt baru ke koleksi tanpa skema dan audit.',
-  },
-  '/platform/ai/monitoring': {
-    judul: 'Monitoring Penggunaan AI',
-    ringkasan: 'Agregat pemakaian AI lintas tenant belum disediakan oleh backend Supabase.',
-    status: 'Metrik tidak tersedia',
-    tindakan: 'Jangan menganggap angka penggunaan atau biaya tersedia pada dashboard ini.',
   },
   '/platform/keamanan/rules': {
     judul: 'Supabase RLS',
@@ -565,6 +548,7 @@ export default function PlatformOperationsPage() {
     return <main className="platform-tenants"><section className="platform-tenants-card" role="alert"><h1>Akses platform dibatasi</h1><p>Modul platform hanya tersedia untuk superadmin.</p></section></main>;
   }
   if (contentType) return <PlatformContentCatalogPage type={contentType} />;
+  if (pathname.startsWith('/platform/ai/')) return <PlatformAIManagementPage />;
 
   return (
     <main className="platform-tenants">

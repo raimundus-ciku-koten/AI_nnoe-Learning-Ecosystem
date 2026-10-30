@@ -184,6 +184,157 @@
   font-weight: 700;
 }
 
+.admin-assessment-page {
+  display: grid;
+  gap: 1rem;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem);
+  color: var(--text-primary, #172033);
+}
+
+.admin-assessment-header {
+  max-width: 760px;
+}
+
+.admin-assessment-header h1 {
+  margin: .25rem 0;
+  font-size: clamp(1.7rem, 4vw, 2.4rem);
+}
+
+.admin-assessment-header > p:last-child,
+.admin-assessment-updated {
+  color: var(--text-secondary, #526078);
+}
+
+.admin-assessment-privacy {
+  margin: 0;
+  padding: .85rem 1rem;
+  border: 1px solid #cbd9f4;
+  border-radius: 10px;
+  color: #233d6a;
+  background: #f3f7ff;
+}
+
+.admin-assessment-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: .75rem;
+}
+
+.admin-assessment-stats article {
+  display: grid;
+  gap: .35rem;
+  min-height: 92px;
+  padding: 1rem;
+  border: 1px solid var(--border, #dce3ed);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+}
+
+.admin-assessment-stats article span {
+  color: var(--text-secondary, #526078);
+  font-size: .9rem;
+}
+
+.admin-assessment-stats article strong {
+  font-size: 1.5rem;
+}
+
+.admin-assessment-list {
+  max-width: none;
+}
+
+.admin-assessment-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+
+.admin-assessment-toolbar > div:first-child {
+  margin-right: auto;
+}
+
+.admin-assessment-toolbar h2,
+.admin-assessment-toolbar p {
+  margin: 0;
+}
+
+.admin-assessment-toolbar label {
+  display: grid;
+  gap: .3rem;
+}
+
+.admin-assessment-toolbar input,
+.admin-assessment-toolbar select {
+  min-height: 42px;
+  max-width: 100%;
+  padding: .5rem .65rem;
+  border: 1px solid #bdc8d8;
+  border-radius: 8px;
+  color: inherit;
+  background: var(--surface, #fff);
+  font: inherit;
+}
+
+.admin-assessment-toolbar .ale-exam-link-actions {
+  align-items: end;
+}
+
+.admin-assessment-toolbar button {
+  min-height: 42px;
+}
+
+.admin-assessment-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: .6;
+}
+
+.admin-assessment-updated {
+  margin: .5rem 0;
+  font-size: .9rem;
+}
+
+.admin-assessment-table small {
+  display: block;
+  margin-top: .25rem;
+  color: var(--text-secondary, #526078);
+  font-weight: 400;
+}
+
+.admin-assessment-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 620px) {
+  .admin-assessment-toolbar > label {
+    flex: 1 1 100%;
+  }
+
+  .admin-assessment-toolbar > label input,
+  .admin-assessment-toolbar > label select {
+    width: 100%;
+  }
+
+  .admin-assessment-toolbar .ale-exam-link-actions {
+    width: 100%;
+  }
+
+  .admin-assessment-toolbar .ale-exam-link-actions button {
+    flex: 1;
+  }
+}
+
 .ale-exam-question textarea {
   display: block;
   margin-top: .75rem;

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { supabase } from '../lib/supabase.ts';
 import { useAuth } from '../context/AuthContext.jsx';
 import { muatPengaturanTenant, simpanProfilTenant, simpanKopSuratTenant } from '../services/tenantSettings.js';
+import { muatHalamanDirektoriTenant } from '../services/platformTenantDirectory.js';
 import {
   buatTautanKopSuratTenant,
   hapusKopSuratTenant,
@@ -15,6 +15,24 @@ function statusTenant(active) {
   return active
     ? { label: 'Aktif', className: 'is-active' }
     : { label: 'Nonaktif', className: 'is-inactive' };
+}
+
+function statusPesanan(status) {
+  return {
+    creating: 'Dibuat',
+    pending: 'Menunggu pembayaran',
+    paid: 'Lunas',
+    paid_review: 'Menunggu verifikasi',
+    failed: 'Gagal',
+  }[status] || 'Belum ada pesanan';
+}
+
+function rupiah(value) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value);
+}
+
+function waktu(value) {
+  return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(new Date(value));
 }
 
 function TenantLetterheadDialog({ tenant, user, onClose }) {
@@ -230,14 +248,10 @@ export default function PlatformTenantsPage() {
     }
 
     try {
-      let request = supabase
-        .from('tenants')
-        .select('id, name, active')
-        .order('id')
-        .limit(UKURAN_HALAMAN + 1);
-      if (berikutnya && cursor.current) request = request.gt('id', cursor.current);
-      const { data, error: queryError } = await request;
-      if (queryError) throw queryError;
+      const data = await muatHalamanDirektoriTenant({
+        after: berikutnya ? cursor.current : null,
+        limit: UKURAN_HALAMAN + 1,
+      });
 
       const page = data.slice(0, UKURAN_HALAMAN);
       cursor.current = page.at(-1)?.id || cursor.current;
@@ -283,7 +297,7 @@ export default function PlatformTenantsPage() {
       <header className="platform-tenants-heading">
         <p className="platform-tenants-kicker">Manajemen tenant · platform</p>
         <h1>Daftar sekolah</h1>
-        <p>Daftar tenant dan status ditampilkan baca-saja. Kop surat resmi dapat dikelola per tenant; status langganan dan perubahan tenant tetap melalui alur backend berizin.</p>
+        <p>Ringkasan tenant, akun, roster, dan pesanan sekolah terbaru diambil melalui fungsi backend superadmin. Perubahan akses dan langganan tidak dilakukan dari direktori ini.</p>
       </header>
 
       <section className="platform-tenants-card" aria-labelledby="platform-tenants-title">
@@ -326,6 +340,9 @@ export default function PlatformTenantsPage() {
                   <th scope="col">Sekolah</th>
                   <th scope="col">ID tenant</th>
                   <th scope="col">Status</th>
+                  <th scope="col">Akun aktif / total</th>
+                  <th scope="col">Roster siswa</th>
+                  <th scope="col">Pesanan sekolah terbaru</th>
                   <th scope="col"><span className="platform-tenants-sr-only">Kop surat</span></th>
                 </tr>
               </thead>
@@ -337,6 +354,15 @@ export default function PlatformTenantsPage() {
                       <th scope="row">{tenant.name || tenant.id}</th>
                       <td>{tenant.id}</td>
                       <td><span className={`platform-tenants-status ${status.className}`}>{status.label}</span></td>
+                      <td>{tenant.activeProfileCount.toLocaleString('id-ID')} / {tenant.profileCount.toLocaleString('id-ID')}</td>
+                      <td>{tenant.studentCount.toLocaleString('id-ID')}</td>
+                      <td>{tenant.latestPlanName ? (
+                        <>
+                          {tenant.latestPlanName}
+                          <small>{statusPesanan(tenant.latestOrderStatus)} · {rupiah(tenant.latestOrderTotal)} · {waktu(tenant.latestOrderCreatedAt)}</small>
+                        </>
+                      ) : 'Belum ada pesanan sekolah'}
+                      </td>
                       <td><button className="platform-tenants-button secondary" type="button" onClick={() => setTenantKop(tenant)}>Kop surat</button></td>
                     </tr>
                   );

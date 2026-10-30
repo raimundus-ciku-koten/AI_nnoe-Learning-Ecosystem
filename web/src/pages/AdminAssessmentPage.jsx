@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
-import { muatRingkasanUjianSekolah } from '../services/onlineAssessments.js';
+import { buatCsvRingkasanUjianSekolah, muatRingkasanUjianSekolah } from '../services/onlineAssessments.js';
 import Ikon from '../components/Ikon.jsx';
 import '../styles/online-assessments.css';
 
@@ -31,6 +31,8 @@ export default function AdminAssessmentPage() {
     const [status, setStatus] = useState('all');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [reload, setReload] = useState(0);
+    const [lastLoaded, setLastLoaded] = useState(null);
 
     useEffect(() => {
         let active = true;
@@ -41,14 +43,18 @@ export default function AdminAssessmentPage() {
         setLoading(true);
         setError('');
         muatRingkasanUjianSekolah()
-            .then((rows) => { if (active) setExams(rows); })
+            .then((rows) => {
+                if (!active) return;
+                setExams(rows);
+                setLastLoaded(new Date());
+            })
             .catch((cause) => {
                 console.error('[admin-assessment] Gagal memuat ringkasan ujian tenant:', cause);
                 if (active) setError('Ringkasan ujian belum tersedia. Pastikan migrasi monitoring admin telah diterapkan pada tenant ini.');
             })
             .finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
-    }, [roleAktif, tenantId]);
+    }, [roleAktif, tenantId, reload]);
 
     const visible = useMemo(() => {
         const term = search.trim().toLocaleLowerCase('id');
@@ -61,6 +67,18 @@ export default function AdminAssessmentPage() {
         submitted: result.submitted + exam.submitted_count,
         pending: result.pending + exam.pending_review_count,
     }), { packages: 0, participants: 0, submitted: 0, pending: 0 }), [visible]);
+
+    function eksporCsv() {
+        const csv = buatCsvRingkasanUjianSekolah(visible);
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `monitoring-ujian-${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+    }
 
     if (roleAktif !== 'admin_sekolah') {
         return (
@@ -119,9 +137,22 @@ export default function AdminAssessmentPage() {
                             <option value="closed">Ditutup</option>
                         </select>
                     </label>
+                    <div className="ale-exam-link-actions">
+                        <button className="ale-exam-secondary" type="button" disabled={loading} onClick={() => setReload((value) => value + 1)}>
+                            {loading ? 'Memuat ulang…' : 'Muat ulang'}
+                        </button>
+                        <button className="ale-exam-primary" type="button" disabled={loading || !visible.length} onClick={eksporCsv}>
+                            Ekspor CSV
+                        </button>
+                    </div>
                 </div>
 
                 {loading && <p role="status">Memuat ujian tenant…</p>}
+                {lastLoaded && !loading && (
+                    <p className="admin-assessment-updated" role="status">
+                        Data diperbarui {waktu(lastLoaded.toISOString())}. Ekspor hanya memuat metadata dan hitungan agregat yang sedang ditampilkan.
+                    </p>
+                )}
                 {!loading && !error && !visible.length && (
                     <p className="ale-exam-empty">{exams.length ? 'Tidak ada ujian yang cocok dengan filter.' : 'Belum ada ujian pada tenant ini.'}</p>
                 )}

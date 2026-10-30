@@ -361,6 +361,16 @@ It returns no user identities or message content. These counts are not
 historical telemetry, performance, AI provider usage, or cost data; the
 migration has not been applied to Staging or Production.
 
+The local migration `20261030001100_platform_tenant_directory.sql` adds a
+bounded, keyset-paginated superadmin RPC for tenant-level account/roster counts
+and the latest school payment-order summary. It omits order and owner
+identifiers, does not determine entitlement, and does not change subscription
+state. The migration has not been applied to Staging or Production. The school
+assessment monitor also supports refresh and formula-safe CSV export of
+aggregate exam metadata. The platform AI page controls the existing audited
+feature flags; provider secrets, browser-personal-key usage, token counts, and
+cost are not visible or measured there.
+
 The active platform-controls context reads the `global` row from
 `public.platform_control`. The platform operations UI updates it through the
 protected `set_platform_control` RPC, and the maintenance guard hides

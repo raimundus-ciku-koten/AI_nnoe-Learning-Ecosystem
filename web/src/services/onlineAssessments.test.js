@@ -6,6 +6,7 @@ const { supabase } = vi.hoisted(() => ({
 vi.mock('../lib/supabase.ts', () => ({ supabase }));
 
 import {
+  buatCsvRingkasanUjianSekolah,
   buatDataEksporHasilUjian,
   buatTautanUjianSiswa,
   buatUjianOnline,
@@ -80,6 +81,28 @@ describe('online assessment service', () => {
       error: null,
     });
     await expect(mulaiUjianOnline('exam-1')).rejects.toThrow('tidak valid');
+  });
+
+  it('exports tenant exam monitoring as formula-safe aggregate CSV without student data', () => {
+    const csv = buatCsvRingkasanUjianSekolah([{
+      title: '=HYPERLINK("https://example.test")',
+      kelas: 'X',
+      teacher_name: 'Guru "Satu"',
+      starts_at: '2026-10-18T01:00:00Z',
+      ends_at: '2026-10-18T02:00:00Z',
+      duration_minutes: 60,
+      participant_count: 30,
+      attempt_count: 20,
+      submitted_count: 18,
+      pending_review_count: 2,
+      status: 'active',
+    }]);
+    expect(csv).toContain('"\'=HYPERLINK(""https://example.test"")"');
+    expect(csv).toContain('"Guru ""Satu"""');
+    expect(csv).toContain('"30"');
+    expect(csv).not.toContain('nama siswa');
+    expect(csv).not.toContain('jawaban');
+    expect(() => buatCsvRingkasanUjianSekolah([{ title: '=1+1' }])).toThrow('tidak valid');
   });
 
   it('creates exams with bounded fields and unique question IDs', async () => {

@@ -13,6 +13,7 @@ vi.mock('../services/schoolReporting.js', () => ({
 
 import SchoolFinancePage from './SchoolFinancePage.jsx';
 import SchoolReportsPage from './SchoolReportsPage.jsx';
+import AdminAssessmentPage from './AdminAssessmentPage.jsx';
 
 function renderPage(Page, path) {
     return renderToStaticMarkup(<MemoryRouter initialEntries={[path]}><Page /></MemoryRouter>);
@@ -42,5 +43,13 @@ describe('school reports and finance pages', () => {
         auth.role = 'guru';
         expect(renderPage(SchoolReportsPage, '/admin/laporan/akademik')).toContain('Laporan tenant hanya tersedia bagi admin sekolah');
         expect(renderPage(SchoolFinancePage, '/admin/keuangan/pembayaran')).toContain('Keuangan tenant hanya tersedia bagi admin sekolah');
+    });
+
+    it('shows refresh and aggregate CSV actions in the school assessment monitor', () => {
+        const html = renderPage(AdminAssessmentPage, '/admin/asesmen/monitoring');
+        expect(html).toContain('Monitoring Ujian');
+        expect(html).toContain('Memuat ulang');
+        expect(html).toContain('Ekspor CSV');
+        expect(html).toContain('Nama siswa, jawaban, kunci, dan nilai individual tidak ditampilkan');
     });
 });
