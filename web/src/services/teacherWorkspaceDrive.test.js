@@ -19,15 +19,18 @@ import {
 } from './teacherWorkspaceDrive.js';
 import {
   susunIsiJurnalMengajar,
+  susunIsiCatatanObservasi,
   susunIsiRencanaPerbaikan,
   susunIsiRencanaKompetensi,
   susunIsiRefleksi,
   siapkanCatatanGuru,
   tampilkanIsiJurnalMengajar,
+  tampilkanIsiCatatanObservasi,
   tampilkanIsiRencanaPerbaikan,
   tampilkanIsiRencanaKompetensi,
   tampilkanIsiRefleksi,
   uraikanIsiJurnalMengajar,
+  uraikanIsiCatatanObservasi,
   uraikanIsiRencanaPerbaikan,
   uraikanIsiRencanaKompetensi,
   uraikanIsiRefleksi,
@@ -179,6 +182,33 @@ describe('rencana pengembangan kompetensi', () => {
     expect(() => susunIsiRencanaKompetensi({})).toThrow('Isi rencana pengembangan kompetensi wajib diisi.');
     expect(() => susunIsiRencanaKompetensi({ kompetensi: 'x'.repeat(1401) }))
       .toThrow('Bagian pengembangan kompetensi maksimal 1400 karakter.');
+  });
+});
+
+describe('catatan supervisi dan observasi pribadi', () => {
+  it('menyimpan fokus, temuan faktual, umpan balik, dan tindak lanjut', () => {
+    const observation = {
+      fokus: 'Keterlibatan dalam diskusi.',
+      observasi: 'Pertanyaan terbuka memberi ruang pada lebih banyak pendapat.',
+      umpanBalik: 'Pertahankan jeda sebelum menunjuk penjawab.',
+      tindakLanjut: 'Coba strategi yang sama pada pertemuan berikutnya.',
+    };
+    const isi = susunIsiCatatanObservasi(observation);
+
+    expect(uraikanIsiCatatanObservasi(isi)).toEqual({ ...observation, legacy: false });
+    expect(tampilkanIsiCatatanObservasi(isi)).toContain('Catatan faktual:\nPertanyaan terbuka memberi ruang pada lebih banyak pendapat.');
+    expect(isi).toMatch(/^ale-observation-v1:/);
+  });
+
+  it('mempertahankan teks lama dan menolak catatan kosong atau bagian terlalu panjang', () => {
+    expect(uraikanIsiCatatanObservasi('Catatan observasi sebelumnya')).toMatchObject({
+      observasi: 'Catatan observasi sebelumnya',
+      legacy: true,
+    });
+    expect(tampilkanIsiCatatanObservasi('Catatan observasi sebelumnya')).toBe('Catatan observasi sebelumnya');
+    expect(() => susunIsiCatatanObservasi({})).toThrow('Isi catatan observasi wajib diisi.');
+    expect(() => susunIsiCatatanObservasi({ fokus: 'x'.repeat(1401) }))
+      .toThrow('Bagian observasi maksimal 1400 karakter.');
   });
 });
 

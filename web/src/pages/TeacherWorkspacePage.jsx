@@ -5,18 +5,22 @@ import { adalahPeranGuru } from '../navigasi.js';
 import {
   catatanKeCsv,
   kosongkanJurnalMengajar,
+  kosongkanCatatanObservasi,
   kosongkanRefleksi,
   kosongkanRencanaKompetensi,
   kosongkanRencanaPerbaikan,
   susunIsiJurnalMengajar,
+  susunIsiCatatanObservasi,
   susunIsiRencanaKompetensi,
   susunIsiRencanaPerbaikan,
   susunIsiRefleksi,
   tampilkanIsiJurnalMengajar,
+  tampilkanIsiCatatanObservasi,
   tampilkanIsiRencanaKompetensi,
   tampilkanIsiRencanaPerbaikan,
   tampilkanIsiRefleksi,
   uraikanIsiJurnalMengajar,
+  uraikanIsiCatatanObservasi,
   uraikanIsiRencanaKompetensi,
   uraikanIsiRencanaPerbaikan,
   uraikanIsiRefleksi,
@@ -56,6 +60,7 @@ const REFLECTION_PATH = '/refleksi/pembelajaran';
 const IMPROVEMENT_PATH = '/refleksi/perbaikan';
 const JOURNAL_PATH = '/pelaksanaan/jurnal';
 const DEVELOPMENT_PATH = '/refleksi/kompetensi';
+const OBSERVATION_PATH = '/refleksi/supervisi';
 const REFLECTION_FIELDS = [
   { key: 'berhasil', label: 'Apa yang berjalan baik?', placeholder: 'Catat strategi atau momen belajar yang efektif.' },
   { key: 'bukti', label: 'Bukti belajar yang terlihat', placeholder: 'Tuliskan bukti umum tanpa nama atau identitas siswa.' },
@@ -79,6 +84,12 @@ const DEVELOPMENT_FIELDS = [
   { key: 'aktivitas', label: 'Aktivitas belajar', placeholder: 'Catat lokakarya, komunitas belajar, atau praktik yang akan dicoba.' },
   { key: 'target', label: 'Target waktu', placeholder: 'Tentukan target yang realistis dan terukur.' },
   { key: 'bukti', label: 'Bukti atau capaian', placeholder: 'Catat bukti pengembangan tanpa data pribadi siswa.' },
+];
+const OBSERVATION_FIELDS = [
+  { key: 'fokus', label: 'Fokus observasi', placeholder: 'Pilih satu aspek pembelajaran yang diamati.' },
+  { key: 'observasi', label: 'Catatan faktual', placeholder: 'Tuliskan perilaku atau proses yang terlihat, tanpa penilaian personal.' },
+  { key: 'umpanBalik', label: 'Umpan balik', placeholder: 'Catat masukan atau pembelajaran yang Anda peroleh.' },
+  { key: 'tindakLanjut', label: 'Tindak lanjut', placeholder: 'Tentukan satu langkah yang ingin dicoba berikutnya.' },
 ];
 
 const formKosong = (path, label) => ({
@@ -117,18 +128,20 @@ export default function TeacherWorkspacePage({ grup, item }) {
   const isImprovementPlan = item.path === IMPROVEMENT_PATH;
   const isJournal = item.path === JOURNAL_PATH;
   const isDevelopmentPlan = item.path === DEVELOPMENT_PATH;
-  const isStructuredNote = isReflection || isImprovementPlan || isJournal || isDevelopmentPlan;
+  const isObservation = item.path === OBSERVATION_PATH;
+  const isStructuredNote = isReflection || isImprovementPlan || isJournal || isDevelopmentPlan || isObservation;
   const fieldsTerstruktur = isReflection
     ? REFLECTION_FIELDS
     : isImprovementPlan
       ? IMPROVEMENT_FIELDS
-      : isJournal ? JOURNAL_FIELDS : DEVELOPMENT_FIELDS;
+      : isJournal ? JOURNAL_FIELDS : isDevelopmentPlan ? DEVELOPMENT_FIELDS : OBSERVATION_FIELDS;
   const [catatan, setCatatan] = useState([]);
   const [form, setForm] = useState(() => formKosong(item.path, item.label));
   const [refleksi, setRefleksi] = useState(kosongkanRefleksi);
   const [rencanaPerbaikan, setRencanaPerbaikan] = useState(kosongkanRencanaPerbaikan);
   const [jurnal, setJurnal] = useState(kosongkanJurnalMengajar);
   const [rencanaKompetensi, setRencanaKompetensi] = useState(kosongkanRencanaKompetensi);
+  const [observasi, setObservasi] = useState(kosongkanCatatanObservasi);
   const [editId, setEditId] = useState('');
   const [cari, setCari] = useState('');
   const [loading, setLoading] = useState(true);
@@ -149,7 +162,9 @@ export default function TeacherWorkspacePage({ grup, item }) {
   const [catatanOwnerKey, setCatatanOwnerKey] = useState('');
   const draftTerstruktur = isReflection
     ? refleksi
-    : isImprovementPlan ? rencanaPerbaikan : isJournal ? jurnal : rencanaKompetensi;
+    : isImprovementPlan
+      ? rencanaPerbaikan
+      : isJournal ? jurnal : isDevelopmentPlan ? rencanaKompetensi : observasi;
   const jumlahKarakterTerstruktur = fieldsTerstruktur.reduce(
     (total, field) => total + draftTerstruktur[field.key].length,
     0,
@@ -218,6 +233,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
     setRencanaPerbaikan(kosongkanRencanaPerbaikan());
     setJurnal(kosongkanJurnalMengajar());
     setRencanaKompetensi(kosongkanRencanaKompetensi());
+    setObservasi(kosongkanCatatanObservasi());
     setEditId('');
     setError('');
     setNotice('');
@@ -270,6 +286,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
     setRencanaKompetensi(isDevelopmentPlan
       ? uraikanIsiRencanaKompetensi(entry.isi)
       : kosongkanRencanaKompetensi());
+    setObservasi(isObservation ? uraikanIsiCatatanObservasi(entry.isi) : kosongkanCatatanObservasi());
     setEditId(entry.id);
     setError('');
     setNotice('');
@@ -281,6 +298,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
     setRencanaPerbaikan(kosongkanRencanaPerbaikan());
     setJurnal(kosongkanJurnalMengajar());
     setRencanaKompetensi(kosongkanRencanaKompetensi());
+    setObservasi(kosongkanCatatanObservasi());
     setEditId('');
     setError('');
   }
@@ -300,7 +318,9 @@ export default function TeacherWorkspacePage({ grup, item }) {
             ? susunIsiRencanaPerbaikan(rencanaPerbaikan)
             : isJournal
               ? susunIsiJurnalMengajar(jurnal)
-              : isDevelopmentPlan ? susunIsiRencanaKompetensi(rencanaKompetensi) : form.isi,
+              : isDevelopmentPlan
+                ? susunIsiRencanaKompetensi(rencanaKompetensi)
+                : isObservation ? susunIsiCatatanObservasi(observasi) : form.isi,
       };
       if (isJournal && (!form.kelas.trim() || !form.mapel.trim())) {
         throw new Error('Kelas dan mata pelajaran wajib dipilih untuk jurnal mengajar.');
@@ -328,6 +348,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
       setRencanaPerbaikan(kosongkanRencanaPerbaikan());
       setJurnal(kosongkanJurnalMengajar());
       setRencanaKompetensi(kosongkanRencanaKompetensi());
+      setObservasi(kosongkanCatatanObservasi());
       setEditId('');
       await muat();
     } catch (err) {
@@ -367,7 +388,9 @@ export default function TeacherWorkspacePage({ grup, item }) {
             ? tampilkanIsiRencanaPerbaikan(entry.isi)
             : isJournal
               ? tampilkanIsiJurnalMengajar(entry.isi)
-              : tampilkanIsiRencanaKompetensi(entry.isi),
+              : isDevelopmentPlan
+                ? tampilkanIsiRencanaKompetensi(entry.isi)
+                : tampilkanIsiCatatanObservasi(entry.isi),
       }))
       : catatanModul;
     unduhCsv(items, `catatan-${nama}.csv`);
@@ -396,6 +419,8 @@ export default function TeacherWorkspacePage({ grup, item }) {
                 ? 'Catat tujuan, kegiatan, capaian umum, dan tindak lanjut untuk satu sesi mengajar.'
                 : isDevelopmentPlan
                   ? 'Susun langkah pengembangan profesional yang terukur dan dapat ditinjau kembali.'
+                  : isObservation
+                    ? 'Catat proses pembelajaran secara faktual dan tentukan tindak lanjut pribadi.'
                 : 'Simpan dan kelola catatan kerja pribadi untuk modul ini.'}</p>
         </div>
         <a className="teacher-workspace-related" href="#/dashboard">
@@ -420,15 +445,17 @@ export default function TeacherWorkspacePage({ grup, item }) {
         <Ikon nama="badge" />
         <p>{isJournal
           ? 'Jurnal ini adalah catatan pribadi untuk membantu refleksi mengajar, bukan rekam resmi sekolah atau pengganti presensi dan nilai. Hindari memasukkan nama, nomor identitas, maupun informasi pribadi siswa.'
-          : 'Catatan ini hanya dapat dibaca oleh akun guru Anda. Ini bukan nilai, presensi, laporan resmi, atau komunikasi dengan siswa/orang tua. Hindari memasukkan nama, nomor identitas, maupun informasi pribadi siswa.'}</p>
+          : isObservation
+            ? 'Catatan observasi ini hanya dapat dibaca oleh akun guru Anda, bukan evaluasi resmi atau hasil penilaian supervisi formal. Hindari memasukkan nama, identitas, atau informasi sensitif tentang siswa maupun rekan kerja.'
+            : 'Catatan ini hanya dapat dibaca oleh akun guru Anda. Ini bukan nilai, presensi, laporan resmi, atau komunikasi dengan siswa/orang tua. Hindari memasukkan nama, nomor identitas, maupun informasi pribadi siswa.'}</p>
       </aside>
 
       <div className="teacher-workspace-grid">
         <section className="ale-kartu teacher-workspace-form" aria-labelledby="teacher-workspace-form-title">
           <div className="teacher-workspace-section-head">
             <div>
-              <p className="teacher-workspace-eyebrow">{editId ? 'Perbarui catatan' : isReflection ? 'Refleksi baru' : isImprovementPlan || isDevelopmentPlan ? 'Rencana baru' : isJournal ? 'Jurnal baru' : 'Catatan baru'}</p>
-              <h2 id="teacher-workspace-form-title">{editId ? 'Edit catatan kerja' : isReflection ? 'Refleksi pembelajaran' : isImprovementPlan ? 'Rencana perbaikan' : isJournal ? 'Jurnal mengajar' : isDevelopmentPlan ? 'Rencana pengembangan kompetensi' : 'Buat catatan kerja'}</h2>
+              <p className="teacher-workspace-eyebrow">{editId ? 'Perbarui catatan' : isReflection || isObservation ? 'Catatan baru' : isImprovementPlan || isDevelopmentPlan ? 'Rencana baru' : isJournal ? 'Jurnal baru' : 'Catatan baru'}</p>
+              <h2 id="teacher-workspace-form-title">{editId ? 'Edit catatan kerja' : isReflection ? 'Refleksi pembelajaran' : isImprovementPlan ? 'Rencana perbaikan' : isJournal ? 'Jurnal mengajar' : isDevelopmentPlan ? 'Rencana pengembangan kompetensi' : isObservation ? 'Catatan supervisi dan observasi' : 'Buat catatan kerja'}</h2>
             </div>
             <span className="teacher-workspace-status">{editId ? 'Mengedit' : 'Pribadi'}</span>
           </div>
@@ -445,7 +472,9 @@ export default function TeacherWorkspacePage({ grup, item }) {
                     ? 'Contoh: Pemerataan diskusi kelas'
                     : isJournal
                       ? 'Contoh: Persamaan linear dua variabel'
-                      : isDevelopmentPlan ? 'Contoh: Asesmen formatif' : 'Beri judul catatan'}
+                      : isDevelopmentPlan
+                        ? 'Contoh: Asesmen formatif'
+                        : isObservation ? 'Contoh: Observasi diskusi kelas' : 'Beri judul catatan'}
               />
             </label>
             <div className="teacher-workspace-form-row">
@@ -485,7 +514,9 @@ export default function TeacherWorkspacePage({ grup, item }) {
                 ? 'Bagian refleksi'
                 : isImprovementPlan
                   ? 'Bagian rencana perbaikan'
-                  : isJournal ? 'Bagian jurnal mengajar' : 'Bagian pengembangan kompetensi'}>
+                  : isJournal
+                    ? 'Bagian jurnal mengajar'
+                    : isDevelopmentPlan ? 'Bagian pengembangan kompetensi' : 'Bagian supervisi dan observasi'}>
                 {fieldsTerstruktur.map((field) => (
                   <label key={field.key}>
                     {field.label}
@@ -496,7 +527,9 @@ export default function TeacherWorkspacePage({ grup, item }) {
                           ? setRefleksi
                           : isImprovementPlan
                             ? setRencanaPerbaikan
-                            : isJournal ? setJurnal : setRencanaKompetensi;
+                            : isJournal
+                              ? setJurnal
+                              : isDevelopmentPlan ? setRencanaKompetensi : setObservasi;
                         setter((current) => ({ ...current, [field.key]: event.target.value }));
                       }}
                       placeholder={field.placeholder}
@@ -594,7 +627,9 @@ export default function TeacherWorkspacePage({ grup, item }) {
                       ? tampilkanIsiRencanaPerbaikan(entry.isi)
                       : isJournal
                         ? tampilkanIsiJurnalMengajar(entry.isi)
-                        : isDevelopmentPlan ? tampilkanIsiRencanaKompetensi(entry.isi) : entry.isi}
+                        : isDevelopmentPlan
+                          ? tampilkanIsiRencanaKompetensi(entry.isi)
+                          : isObservation ? tampilkanIsiCatatanObservasi(entry.isi) : entry.isi}
                 </p>
                 <div className="teacher-workspace-entry-footer">
                   <small>Diperbarui {waktuTampil(entry.updatedAt)}</small>

@@ -8,6 +8,8 @@ const JOURNAL_PREFIX = 'ale-teaching-journal-v1:';
 const JOURNAL_FIELDS = Object.freeze(['tujuan', 'kegiatan', 'capaian', 'tindakLanjut']);
 const DEVELOPMENT_PREFIX = 'ale-development-plan-v1:';
 const DEVELOPMENT_FIELDS = Object.freeze(['kompetensi', 'aktivitas', 'target', 'bukti']);
+const OBSERVATION_PREFIX = 'ale-observation-v1:';
+const OBSERVATION_FIELDS = Object.freeze(['fokus', 'observasi', 'umpanBalik', 'tindakLanjut']);
 
 function boundedText(value, label, max, required = false) {
   const text = String(value ?? '').trim();
@@ -236,6 +238,55 @@ export function tampilkanIsiRencanaKompetensi(value) {
   return DEVELOPMENT_FIELDS
     .filter((field) => plan[field])
     .map((field) => `${labels[field]}:\n${plan[field]}`)
+    .join('\n\n');
+}
+
+export function kosongkanCatatanObservasi() {
+  return Object.fromEntries(OBSERVATION_FIELDS.map((field) => [field, '']));
+}
+
+export function susunIsiCatatanObservasi(input) {
+  const observation = Object.fromEntries(OBSERVATION_FIELDS.map((field) => [
+    field,
+    boundedText(input?.[field], 'Bagian observasi', 1400),
+  ]));
+  if (!Object.values(observation).some(Boolean)) {
+    throw new Error('Isi catatan observasi wajib diisi.');
+  }
+  return `${OBSERVATION_PREFIX}${JSON.stringify(observation)}`;
+}
+
+export function uraikanIsiCatatanObservasi(value) {
+  const isi = String(value ?? '');
+  if (!isi.startsWith(OBSERVATION_PREFIX)) {
+    return { ...kosongkanCatatanObservasi(), observasi: isi, legacy: true };
+  }
+  try {
+    const parsed = JSON.parse(isi.slice(OBSERVATION_PREFIX.length));
+    return {
+      ...Object.fromEntries(OBSERVATION_FIELDS.map((field) => [
+        field,
+        typeof parsed?.[field] === 'string' ? parsed[field] : '',
+      ])),
+      legacy: false,
+    };
+  } catch {
+    return { ...kosongkanCatatanObservasi(), observasi: isi, legacy: true };
+  }
+}
+
+export function tampilkanIsiCatatanObservasi(value) {
+  const observation = uraikanIsiCatatanObservasi(value);
+  if (observation.legacy) return observation.observasi;
+  const labels = {
+    fokus: 'Fokus observasi',
+    observasi: 'Catatan faktual',
+    umpanBalik: 'Umpan balik',
+    tindakLanjut: 'Tindak lanjut',
+  };
+  return OBSERVATION_FIELDS
+    .filter((field) => observation[field])
+    .map((field) => `${labels[field]}:\n${observation[field]}`)
     .join('\n\n');
 }
 

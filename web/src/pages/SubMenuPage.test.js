@@ -97,6 +97,7 @@ describe('submenu platform superadmin', () => {
         '/asesmen/remedial',
         '/pemantauan/catatan',
         '/refleksi/pembelajaran',
+        '/refleksi/supervisi',
         '/refleksi/kompetensi',
         '/refleksi/perbaikan',
         '/laporan/kinerja-guru',
@@ -129,6 +130,12 @@ describe('submenu platform superadmin', () => {
           expect(html).toContain('Aktivitas belajar');
           expect(html).toContain('Target waktu');
           expect(html).toContain('Bukti atau capaian');
+        } else if (path === '/refleksi/supervisi') {
+          expect(html).toContain('Catatan supervisi dan observasi</h2>');
+          expect(html).toContain('Fokus observasi');
+          expect(html).toContain('Catatan faktual');
+          expect(html).toContain('Umpan balik');
+          expect(html).toContain('bukan evaluasi resmi');
         } else if (path === '/refleksi/perbaikan') {
           expect(html).toContain('Rencana perbaikan</h2>');
           expect(html).toContain('Fokus perbaikan');
