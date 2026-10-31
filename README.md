@@ -167,9 +167,12 @@ absent.
 The Supabase Database → Backups dashboard was also inspected read-only on
 2026-10-18 and states that the Free Plan does not include project backups.
 Scheduled hosted backups therefore cannot be used as the recovery copy for this
-cutover without upgrading, which is not allowed. No independent backup with a
-tested restore has been verified; do not mutate hosted schema or data until the
-owner provides a no-cost recovery path and it has been validated.
+cutover without upgrading, which is not allowed. The later Staging-only
+encrypted artifact completed a disposable restore round-trip in run
+40667639757, but its one-day retention does not provide an independent durable
+Production recovery copy. Do not mutate Production schema or data until the
+owner provides a no-cost Production recovery path and its restore has been
+validated.
 The local migration set also contains data-changing statements: the verified
 owner bootstrap upserts a privileged allowlist/profile, and platform user
 management provisions a tenant and updates allowlist/profile records for named
@@ -752,46 +755,85 @@ No-upgrade operating constraint:
 
 ### Free-tier recovery and operations
 
-The current `main` workflow still targets Cloudflare R2 until the proposed
-replacement is merged. The owner declined R2 due to potential charges. The
-replacement on `deploy/free-encrypted-backup-artifact` is Staging-only and
-manual-only; it rejects non-`main` runs, creates a custom-format PostgreSQL
-dump, validates it with `pg_restore`, encrypts it with AES-256-GCM, limits the
-artifact to 400 MiB, and retains the encrypted GitHub Actions artifact for one
-day. No backup has yet been created. This is not a guarantee of zero cost:
-check the repository's Actions storage usage and billing limits before
-triggering a run. Artifact creation and archive validation are not a restore
-test.
+Production recovery remains an open release gate. The Supabase Free Plan has
+no scheduled project backups, R2 was declined due to potential charges, and
+there is no verified, independently stored Production backup. Do not treat
+Staging evidence as Production recovery evidence.
+
+#### Verified Staging-only pipeline
+
+The manual-only `.github/workflows/supabase-backup.yml` is on `main` and
+validates that its database URL targets the configured Staging project
+`samszhfyhbjuculrcffg`; it rejects other projects and does not touch Production.
+Run [40667639757](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/40667639757)
+completed an encrypted artifact round-trip on 2026-10-28: it restored the
+Staging dump into disposable PostgreSQL 17, encrypted and decrypted it, restored
+the decrypted dump into a second disposable database, and matched user-table
+counts. The 352,895-byte ciphertext artifact was retained for one day.
+
+This verifies a Staging database round-trip only. The workflow uses
+`--no-owner --no-acl`, so it does not verify original ownership or grants; the
+one-day artifact is not a durable recovery copy or a guarantee of zero cost.
+Check current Actions storage usage and billing limits before any future run.
+Never repoint the Staging workflow or its secret at Production.
 
 | GitHub setting | Value |
 | --- | --- |
 | Secret `SUPABASE_DB_URL` | PostgreSQL direct or session-pooler URL for Staging project `samszhfyhbjuculrcffg`; never the transaction pooler URL. The workflow validates the target. |
-| Secret `BACKUP_ENCRYPTION_KEY` | Base64 encoding of 32 cryptographically random bytes. Generate locally with `node -p "require('node:crypto').randomBytes(32).toString('base64')"` and store only as a GitHub secret. |
+| Secret `BACKUP_ENCRYPTION_KEY` | Base64 encoding of 32 cryptographically random bytes; store only in GitHub Actions secrets and never send its value through chat or commit it. |
 
-After the replacement is merged, configure both secrets directly in GitHub
-Actions settings; never send their values through chat or commit them. Before
-the first manual run, verify current Actions storage usage and billing
-settings. Download the encrypted artifact within its one-day retention period,
-decrypt it on a trusted machine, and complete a restore into a disposable
-PostgreSQL instance before any hosted schema/data mutation. Until that drill
-passes, Staging migrations remain blocked.
+Before a Staging run, configure both secrets directly in GitHub Actions
+settings and verify current storage and billing limits. Download its encrypted
+artifact within the one-day retention period, decrypt it on a trusted machine,
+and restore it into a disposable PostgreSQL instance before a Staging
+schema/data mutation.
 
-The workflow does not run on a schedule, configure R2, or touch Production.
-GitHub Actions free quotas and billing behavior are account-dependent. Backup
-credentials are exposed only to the validation and dump/encryption steps;
-they are not passed to checkout, PostgreSQL client installation, or artifact
-upload.
+#### Production recovery checklist (owner-run; not yet executed)
 
-The encryption utility is tested for round-trip integrity, wrong keys, and
-tampering (`npm --prefix web run test:backup`); this is **not** a verified
-database restore. Before any hosted schema/data mutation, download a ciphertext
-backup to a trusted machine, decrypt it only into a protected temporary
-directory, restore into a disposable local Supabase stack using the matching
-PostgreSQL major version, and verify representative schema, Auth rows, and
-application records. Repeat this restore drill quarterly. Never commit a dump,
-decryption key, database URL, or R2 credentials. The document's additional
-Google Drive copy is still a manual operational step: no refresh token or
-service-account credential is stored by this application or workflow.
+The owner selected an offline, owner-controlled encrypted copy. No Production
+backup or restore was performed while preparing this checklist. Before
+execution, verify the current Supabase limits and any compute/network egress
+impact; stop if the operation could incur a charge or exceed the Free Tier.
+
+1. Use a trusted, disk-encrypted workstation with PostgreSQL client tools
+   compatible with the Production server's reported major version. Confirm the
+   connection details identify Production project
+   `jvcrmzmuxgyuetkjqady`. Keep the connection URI password-free and use the
+   client's interactive password prompt; never put the password in shell
+   history, command arguments, logs, or chat.
+2. Create a custom-format logical database dump in a restricted temporary
+   directory outside the repository. Follow current Supabase export guidance
+   and preserve ownership and ACL information, or separately document how
+   those will be restored. Do not copy the Staging workflow's
+   `--no-owner --no-acl` options for a full-fidelity recovery plan.
+3. Check the dump with `pg_restore --list`. Encrypt it with
+   `scripts/encryptedBackup.mjs` using a base64 key for 32 cryptographically
+   random bytes supplied through a secure local process environment. Store the
+   key separately in an owner-controlled password manager, never beside the
+   backup or in source control.
+4. Copy only the ciphertext to the offline recovery location. Decrypt a
+   verification copy into a protected temporary directory and restore it into
+   an isolated disposable PostgreSQL/Supabase environment of the compatible
+   major version. Use `pg_restore --exit-on-error`; never restore this test
+   into Production. Any restore error, missing object, or unexplained grant or
+   policy difference fails the drill.
+5. Verify representative schema, extensions, functions, grants, RLS policies,
+   and application records without printing or sharing row contents. Separately
+   verify recovery for Supabase Auth configuration, Storage objects, Edge
+   Functions/secrets, and project settings; a PostgreSQL dump alone does not
+   demonstrate recovery of the complete Supabase project.
+6. Record non-sensitive evidence only: timestamp, source project reference,
+   client/server versions, ciphertext size, restore target/version, validation
+   results, and responsible owner. Never attach a dump, connection URI, key,
+   or personal data to an issue or pull request. Clean up plaintext temporary
+   files after the drill; rely on disk encryption because deleting a file does
+   not guarantee secure erasure on modern storage.
+
+This checklist is not authorization to run a Production export and does not
+clear the release gate. The owner must confirm the operation's cost and data
+handling, define acceptable recovery-point and recovery-time objectives, and
+complete and document the restore drill. A PostgreSQL restore alone is not a
+full-project recovery test.
 
 Start a local Supabase development stack with Docker and Supabase CLI from the
 repository root using `npx supabase start`; inspect its connection values with
