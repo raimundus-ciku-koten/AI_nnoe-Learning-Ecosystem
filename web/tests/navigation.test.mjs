@@ -1,8 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  GRUP_MENU, MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN, adalahPeranGuru, cariMenu, menuUntukPeran,
+  GRUP_MENU, MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN, adalahPeranGuru, cariMenu,
+  menuTanpaChat, menuUntukPeran,
 } from '../src/navigasi.js';
+import {
+  CHAT_FEATURE_ENABLED, isChatFeatureEnabled, isChatFeaturePath,
+} from '../src/services/featureFlags.js';
 
 const grup = (id) => GRUP_MENU.find((item) => item.id === id);
 
@@ -50,10 +54,32 @@ test('hasil perencanaan membuka arsip dari kedua kelompok menu', () => {
 });
 
 test('menu memilih rute terdalam untuk chat dan data dasar', () => {
-  assert.equal(cariMenu('/chat')?.item.label, 'Semua Percakapan');
-  assert.equal(cariMenu('/chat/grup')?.item.label, 'Grup');
-  assert.equal(cariMenu('/chat/kontak')?.item.label, 'Kontak');
+  assert.equal(cariMenu('/chat'), null);
+  assert.equal(cariMenu('/chat/grup'), null);
+  assert.equal(cariMenu('/chat/kontak'), null);
   assert.equal(cariMenu('/datadasar/siswa')?.item.label, 'Data Siswa');
+});
+
+test('chat stays disabled unless explicitly enabled and chat-only paths are identified', () => {
+  assert.equal(CHAT_FEATURE_ENABLED, false);
+  assert.equal(isChatFeatureEnabled({ VITE_CHAT_ENABLED: 'true' }), true);
+  assert.equal(isChatFeatureEnabled({ VITE_CHAT_ENABLED: 'TRUE' }), true);
+  assert.equal(isChatFeatureEnabled({ VITE_CHAT_ENABLED: '1' }), false);
+  assert.equal(isChatFeatureEnabled({}), false);
+  assert.equal(isChatFeaturePath('/chat'), true);
+  assert.equal(isChatFeaturePath('/chat/kontak'), true);
+  assert.equal(isChatFeaturePath('/admin/dashboard/chat'), true);
+  assert.equal(isChatFeaturePath('/admin/komunikasi/pengumuman'), false);
+});
+
+test('chat-disabled menus retain unrelated links and remove empty chat groups', () => {
+  const menu = [
+    { id: 'mixed', item: [{ path: '/asisten' }, { path: '/chat' }] },
+    { id: 'chat-only', item: [{ path: '/chat/kontak' }] },
+  ];
+  assert.deepEqual(menuTanpaChat(menu), [
+    { id: 'mixed', item: [{ path: '/asisten' }] },
+  ]);
 });
 
 test('semua submenu memiliki rute aktif dan dapat ditemukan kembali', () => {
@@ -64,7 +90,11 @@ test('semua submenu memiliki rute aktif dan dapat ditemukan kembali', () => {
   assert.ok(items.every((item) => item.path));
   assert.equal(new Set(rute).size, items.length, 'setiap submenu memiliki URL unik');
   for (const item of items) {
-    assert.equal(cariMenu(item.path, item.search || '')?.item, item, item.label);
+    if (isChatFeaturePath(item.path)) {
+      assert.equal(cariMenu(item.path, item.search || ''), null, item.label);
+    } else {
+      assert.equal(cariMenu(item.path, item.search || '')?.item, item, item.label);
+    }
   }
 });
 
@@ -122,9 +152,6 @@ test('menu operator dibatasi pada dashboard, operasional sekolah, dan komunikasi
     '/datadasar/siswa',
     '/datadasar/barcode',
     '/pelaksanaan/presensi',
-    '/chat',
-    '/chat/kontak',
-    '/chat/grup',
   ]);
   assert.ok(!paths.some((path) => path.startsWith('/perencanaan')));
   assert.ok(!paths.some((path) => path.startsWith('/admin/')));
@@ -143,8 +170,8 @@ test('admin sekolah dan superadmin mendapat menu sesuai ruang lingkupnya', () =>
   assert.equal(MENU_SUPERADMIN.length, 11, '10 grup pengelolaan platform dan grup chat dukungan');
   assert.ok(!MENU_SUPERADMIN.some((group) => group.id === 'platform-firebase'));
   assert.ok(!MENU_SUPERADMIN.some((group) => group.item.some((item) => item.path === '/platform/keamanan/app-check')));
-  assert.equal(menuUntukPeran('admin_sekolah'), MENU_ADMIN_SEKOLAH);
-  assert.equal(menuUntukPeran('superadmin'), MENU_SUPERADMIN);
+  assert.deepEqual(menuUntukPeran('admin_sekolah'), menuTanpaChat(MENU_ADMIN_SEKOLAH));
+  assert.deepEqual(menuUntukPeran('superadmin'), menuTanpaChat(MENU_SUPERADMIN));
 
   assert.equal(cariMenu('/admin/pengguna/guru', '', 'admin_sekolah')?.grup.id, 'admin-pengguna');
   assert.equal(cariMenu('/admin/pengguna/tautkan-siswa', '', 'admin_sekolah')?.item.label, 'Tautkan akun siswa ke roster');
@@ -156,8 +183,8 @@ test('admin sekolah dan superadmin mendapat menu sesuai ruang lingkupnya', () =>
   assert.equal(cariMenu('/platform/tenant/sekolah', '', 'superadmin')?.grup.id, 'platform-tenant');
   assert.equal(cariMenu('/platform/tenant/sekolah', '', 'admin_sekolah'), null);
   assert.equal(cariMenu('/admin/pengguna/guru', '', 'superadmin'), null);
-  assert.equal(cariMenu('/chat', '', 'superadmin')?.grup.id, 'platform-chat');
-  assert.equal(cariMenu('/chat/kontak', '', 'siswa')?.item.label, 'Kontak');
+  assert.equal(cariMenu('/chat', '', 'superadmin'), null);
+  assert.equal(cariMenu('/chat/kontak', '', 'siswa'), null);
   assert.equal(cariMenu('/testimoni', '', 'guru')?.item.label, 'Testimoni');
   assert.equal(cariMenu('/purchase', '', 'admin_sekolah')?.item.label, 'Purchase Lisensi');
   assert.equal(cariMenu('/asesmen/bank-soal', '', 'admin_sekolah')?.item.label, 'Bank Soal');

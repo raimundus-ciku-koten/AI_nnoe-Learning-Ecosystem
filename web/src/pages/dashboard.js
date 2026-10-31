@@ -19,6 +19,7 @@ import { getState } from '../state.js';
 import { perbaruiHeader } from '../components/sidebar.js';
 import { LINK_PERENCANAAN } from '../config.js';
 import { menuUntukPeran } from '../navigasi.js';
+import { CHAT_FEATURE_ENABLED } from '../services/featureFlags.js';
 import { sesiUntukHari } from './dataDasar/jadwalUtil.js';
 import {
   esc, ikon, inisial, namaDariUser, sapaanWaktu, formatWaktu,
@@ -51,7 +52,7 @@ function tileStat(id, kelas, ikonNama, label, denganBar) {
 
 function aksiCepat() {
   const item = [
-    { href: '#/chat', ikon: 'chat', warna: 'teal', judul: 'Chat',
+    CHAT_FEATURE_ENABLED && { href: '#/chat', ikon: 'chat', warna: 'teal', judul: 'Chat',
       ket: 'Percakapan realtime dengan guru dan orang tua' },
     linkLuarAman(LINK_PERENCANAAN) && {
       href: LINK_PERENCANAAN, luar: true, ikon: 'buku', warna: 'indigo',
@@ -146,13 +147,16 @@ function tampilan({ sapa, nama, peran, subjudul, sekarang }) {
       </div>
       <div class="ale-kolom">
 
-        <section class="ale-kartu ale-aksen-teal" id="aleKartuChat" aria-labelledby="hChat" aria-busy="true">
+        <section class="ale-kartu ale-aksen-teal" id="aleKartuChat" aria-labelledby="hChat"
+                 aria-busy="${CHAT_FEATURE_ENABLED}">
           <div class="ale-kartu-kepala">
             <h2 class="ale-kartu-judul" id="hChat">${ikon('chat')}Percakapan terbaru</h2>
             <span class="ale-chip" id="aleChipChat" hidden></span>
           </div>
-          <div data-isi>${SKELETON}</div>
-          <a class="ale-tautan" href="#/chat">Buka chat${ikon('panah')}</a>
+          ${CHAT_FEATURE_ENABLED
+            ? `<div data-isi>${SKELETON}</div>
+              <a class="ale-tautan" href="#/chat">Buka chat${ikon('panah')}</a>`
+            : '<div data-isi><p class="ale-kosong" role="status">Chat sementara tidak tersedia sampai skema database dan kebijakan akses diverifikasi.</p></div>'}
         </section>
 
         <section class="ale-kartu ale-aksen-emerald" id="aleKartuTugas" aria-labelledby="hTugas">
@@ -490,7 +494,7 @@ export async function halamanDashboard(wadah) {
       isiBar(st.progres, null);
     },
 
-    async chat() {
+    ...(CHAT_FEATURE_ENABLED ? { async chat() {
       const daftar = await muatPercakapanTerbaruDasbor();
       if (chipChat) {
         chipChat.hidden = daftar.length === 0;
@@ -519,7 +523,7 @@ export async function halamanDashboard(wadah) {
       ).join('');
 
       isi.chat.innerHTML = `<ul class="ale-daftar">${itemsHtml}</ul>`;
-    },
+    } } : {}),
 
     async riwayat() {
       kosong(isi.riwayat, 'Metadata dokumen belum dimigrasikan ke indeks Drive terenkripsi.');

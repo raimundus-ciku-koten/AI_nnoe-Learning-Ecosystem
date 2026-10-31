@@ -1,3 +1,5 @@
+import { CHAT_FEATURE_ENABLED, isChatFeaturePath } from './services/featureFlags.js';
+
 const tautan = (label, path, ikon, search = '') => ({ label, path, ikon, search });
 const perencanaan = (label, jenis, ikon) =>
   tautan(label, '/perencanaan', ikon, `?jenis=${jenis}`);
@@ -338,6 +340,22 @@ export const MENU_SUPERADMIN = [
   ]),
 ];
 
+const menuChatCache = new WeakMap();
+
+export function menuTanpaChat(menu) {
+  if (CHAT_FEATURE_ENABLED) return menu;
+  const cached = menuChatCache.get(menu);
+  if (cached) return cached;
+  const filtered = menu
+    .map((bagian) => ({
+      ...bagian,
+      item: bagian.item.filter((item) => !isChatFeaturePath(item.path)),
+    }))
+    .filter((bagian) => bagian.item.length > 0);
+  menuChatCache.set(menu, filtered);
+  return filtered;
+}
+
 function cocokJenis(item, path, search) {
   if (!item.search) return true;
   const target = new URLSearchParams(item.search);
@@ -352,15 +370,16 @@ function cocokJenis(item, path, search) {
 
 export function menuUntukPeran(role) {
   const peran = String(role || '').trim().toLowerCase();
-  if (peran === 'admin_sekolah' || peran === 'admin') return MENU_ADMIN_SEKOLAH;
-  if (peran === 'superadmin') return MENU_SUPERADMIN;
-  if (peran === 'siswa') return MENU_SISWA;
-  if (peran === 'ortu' || peran === 'orang_tua') return MENU_ORTU;
-  if (peran === 'operator') return MENU_OPERATOR;
-  if (peran === 'demo') return MENU_DEMO;
-  if (['kepala_sekolah', 'wali_kelas'].includes(peran)) return MENU_KONTEKS_TERBATAS;
-  if (adalahPeranGuru(peran)) return GRUP_MENU;
-  return MENU_TANPA_PERAN;
+  let menu = MENU_TANPA_PERAN;
+  if (peran === 'admin_sekolah' || peran === 'admin') menu = MENU_ADMIN_SEKOLAH;
+  else if (peran === 'superadmin') menu = MENU_SUPERADMIN;
+  else if (peran === 'siswa') menu = MENU_SISWA;
+  else if (peran === 'ortu' || peran === 'orang_tua') menu = MENU_ORTU;
+  else if (peran === 'operator') menu = MENU_OPERATOR;
+  else if (peran === 'demo') menu = MENU_DEMO;
+  else if (['kepala_sekolah', 'wali_kelas'].includes(peran)) menu = MENU_KONTEKS_TERBATAS;
+  else if (adalahPeranGuru(peran)) menu = GRUP_MENU;
+  return menuTanpaChat(menu);
 }
 
 export function cariMenu(path, search = '', role = 'guru') {
