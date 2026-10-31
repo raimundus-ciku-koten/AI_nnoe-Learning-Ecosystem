@@ -4,7 +4,7 @@ import { test } from 'node:test';
 
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
-test('migration rehearsal is manual, main-only, and checks out the approved immutable source', async () => {
+test('migration rehearsal is manual, main-only, and fetches the approved immutable source', async () => {
   const workflow = await read('../.github/workflows/supabase-staging-migration-rehearsal.yml');
 
   assert.match(workflow, /^  workflow_dispatch:$/m);
@@ -19,7 +19,13 @@ test('migration rehearsal is manual, main-only, and checks out the approved immu
   assert.match(workflow, /GITHUB_REF" != "refs\/heads\/main"/);
   assert.match(workflow, /ref: 3990f7cf858dce45d4fb64de7b4220749686707a/);
   assert.match(workflow, /path: migration-source/);
+  assert.match(workflow, /uses: actions\/checkout@v4\r?\n        with:\r?\n          persist-credentials: true/);
   assert.match(workflow, /persist-credentials: false/);
+  assert.match(workflow, /name: Fetch candidate migrations without checking out submodules/);
+  assert.match(workflow, /git fetch --no-tags --no-recurse-submodules --depth=1 origin "\$SOURCE_COMMIT"/);
+  assert.match(workflow, /git rev-parse --verify "FETCH_HEAD\^{commit}"/);
+  assert.match(workflow, /git archive "\$fetched_commit" supabase\/migrations \| tar -x -C candidate-source/);
+  assert.doesNotMatch(workflow, /ref: \$\{\{ inputs\.source_commit \}\}/);
   assert.match(workflow, /migration-source\/supabase\/migrations/);
 });
 

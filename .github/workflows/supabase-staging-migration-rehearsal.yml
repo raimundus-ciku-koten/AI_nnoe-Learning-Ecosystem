@@ -46,7 +46,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Checkout pinned release migrations
         uses: actions/checkout@v4
@@ -68,13 +68,21 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout candidate migration source
+      - name: Fetch candidate migrations without checking out submodules
         if: inputs.rehearsal_mode == 'feature_migration_schema_only'
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.source_commit }}
-          path: candidate-source
-          persist-credentials: false
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --no-recurse-submodules --depth=1 origin "$SOURCE_COMMIT"
+          fetched_commit="$(git rev-parse --verify "FETCH_HEAD^{commit}")"
+          if [[ "$fetched_commit" != "$SOURCE_COMMIT" ]]; then
+            echo "::error::Fetched source does not match the approved commit."
+            exit 1
+          fi
+          mkdir -p candidate-source
+          git archive "$fetched_commit" supabase/migrations | tar -x -C candidate-source
 
       - name: Validate the Staging-only target
         shell: bash
