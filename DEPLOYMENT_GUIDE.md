@@ -234,6 +234,13 @@ A signed APK candidate already exists at `android-apk/app/build/outputs/apk/rele
 - Migration `supabase/migrations/20261020000100_student_learning_space.sql` is source-only and has not been applied to any hosted database. Do not run it in Staging or Production until the backup, restore, schema provenance, and explicit-approval gates in section 3 are satisfied. Run the staging release audit after applying it in a verified disposable/staging environment.
 - Assignments/submission workflows, file uploads, and integration with the existing private Google Drive timetable are not included in this module and must not be advertised as available.
 
+13) School leadership workspaces and module follow-ups (source only)
+
+- Active homeroom teachers can view the exam-grade ledger for their assigned classes through a tenant-scoped RPC. Pending grades remain hidden; the ledger does not include non-exam subjects. The report-card page is still a preview and is not an official student report.
+- School heads have a supervision workspace with calendar references and browser-only draft forms. Drafts are not saved to the server; no supervision table or RPC is included.
+- School admins can create, update, and delete audited follow-up actions scoped to their tenant and submenu. The database enforces the active school-admin role and validates the module key and action fields.
+- Migrations `20261031000100_school_leadership_roles.sql` and `20261031000200_school_module_actions.sql` are source-only and have not been applied to Staging or Production. Validate role claims, tenant isolation, audit behavior, and restore readiness in a verified Staging environment before any Production migration. Production rollout remains subject to the backup, migration-provenance, and owner-approval gates in section 3.
+
 ---
 
 Never send passwords, API keys, or other secrets in chat. Configure them directly in the provider dashboards or as deployment secrets.

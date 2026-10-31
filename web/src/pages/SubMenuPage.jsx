@@ -253,7 +253,7 @@ export default function SubMenuPage() {
             {terkait.map((sub) => (
               <a key={sub.label} className="ale-submenu-link" href={`#${sub.path}${sub.search || ''}`}>
                 <span className="ale-submenu-link-icon"><Ikon nama={sub.ikon} /></span>
-                <span><strong>{sub.label}</strong><small>Buka panduan</small></span>
+                <span><strong>{sub.label}</strong><small>Kunjungi menu</small></span>
                 <span className="ale-submenu-arrow" aria-hidden="true">›</span>
               </a>
             ))}

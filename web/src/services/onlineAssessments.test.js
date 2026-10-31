@@ -21,6 +21,7 @@ import {
   muatSoalUjianGuru,
   muatSoalUjianSekolah,
   muatKelasUjianSekolah,
+  muatLegerUjianWali,
   muatRosterUjianSekolah,
   muatRosterBelumTertaut,
   muatUjianSiswa,
@@ -279,6 +280,54 @@ describe('online assessment service', () => {
     ]);
     expect(supabase.rpc).toHaveBeenNthCalledWith(1, 'school_exam_available_classes');
     expect(supabase.rpc).toHaveBeenNthCalledWith(2, 'school_exam_student_roster', { p_kelas: ['VII A'] });
+  });
+
+  it('loads the homeroom ledger without answer content and conceals pending essay grades', async () => {
+    supabase.rpc.mockResolvedValueOnce({
+      data: [{
+        student_id: 'student-1',
+        student_name: 'Ayu',
+        kelas: 'X-A',
+        exam_id: 'exam-1',
+        exam_title: 'Sumatif Matematika',
+        starts_at: '2026-10-30T01:00:00Z',
+        duration_minutes: 60,
+        attempt_status: 'submitted',
+        objective_correct: 8,
+        objective_total: 10,
+        score: 80,
+        grade_pending: true,
+        submitted_at: '2026-10-30T02:00:00Z',
+      }], error: null
+    });
+    await expect(muatLegerUjianWali()).resolves.toMatchObject([{
+      studentId: 'student-1',
+      status: 'submitted',
+      objectiveCorrect: 8,
+      score: null,
+      gradePending: true,
+    }]);
+    expect(supabase.rpc).toHaveBeenCalledWith('homeroom_exam_grade_ledger');
+
+    supabase.rpc.mockResolvedValueOnce({
+      data: [{
+        student_id: 'student-1',
+        student_name: 'Ayu',
+        kelas: 'X-A',
+        exam_id: 'exam-1',
+        exam_title: 'Sumatif Matematika',
+        starts_at: '2026-10-30T01:00:00Z',
+        duration_minutes: 60,
+        attempt_status: 'submitted',
+        objective_correct: 8,
+        objective_total: 10,
+        score: 80,
+        grade_pending: false,
+        submitted_at: '2026-10-30T02:00:00Z',
+        answers: { secret: 'private' },
+      }], error: null
+    });
+    await expect(muatLegerUjianWali()).rejects.toThrow('tidak valid');
   });
 
   it('lists unmapped roster/accounts and links accounts through restricted RPCs', async () => {

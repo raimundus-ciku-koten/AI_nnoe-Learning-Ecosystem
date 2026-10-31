@@ -303,6 +303,7 @@ test('hosted schema audit script contains read-only SQL only', () => {
     'attendance_records',
     'testimonials',
     'school_announcements',
+    'school_module_actions',
     'school_units',
     'chat_conversations',
     'chat_messages',

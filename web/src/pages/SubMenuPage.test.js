@@ -227,7 +227,7 @@ describe('submenu platform superadmin', () => {
       expect(html).toContain('SMA');
       expect(html).toContain('Deskripsi capaian');
       expect(html).toContain('Catatan wali kelas');
-      expect(html).toContain('seluruh identitas, nilai, kehadiran, dan catatan di bawah adalah data simulasi');
+      expect(html).toContain('Contoh identitas, nilai, kehadiran, dan catatan di bawah adalah data simulasi');
       expect(html).toContain('bukan dokumen rapor resmi');
     });
 

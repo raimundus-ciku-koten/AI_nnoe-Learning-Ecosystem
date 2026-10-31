@@ -90,9 +90,20 @@ test('spesialis guru memakai menu guru; kepala sekolah dan wali kelas tidak menj
   }
   assert.equal(adalahPeranGuru('guru'), true);
   assert.equal(adalahPeranGuru(' admin_sekolah '), false);
-  for (const role of ['kepala_sekolah', 'wali_kelas']) {
+  for (const [role, expectedPaths] of [
+    ['kepala_sekolah', [
+      '/dashboard',
+      '/kepala-sekolah/supervisi',
+      '/kepala-sekolah/supervisi/jadwal',
+      '/kepala-sekolah/supervisi/pra-observasi',
+      '/kepala-sekolah/supervisi/observasi',
+      '/kepala-sekolah/supervisi/tindak-lanjut',
+      '/kepala-sekolah/supervisi/rekap',
+    ]],
+    ['wali_kelas', ['/dashboard', '/wali-kelas/leger', '/wali-kelas/rapor', '/chat', '/pengumuman']],
+  ]) {
     const paths = menuUntukPeran(role).flatMap((group) => group.item.map((item) => item.path));
-    assert.deepEqual(paths, ['/dashboard']);
+    assert.deepEqual(paths, expectedPaths);
     assert.equal(cariMenu('/platform/tenant/sekolah', '', role), null);
     assert.equal(cariMenu('/admin/pengguna/guru', '', role), null);
   }

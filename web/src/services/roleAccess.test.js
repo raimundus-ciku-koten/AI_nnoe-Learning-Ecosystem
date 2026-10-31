@@ -3,19 +3,24 @@ import { test } from 'node:test';
 import { menuUntukPeran } from '../navigasi.js';
 import { canOpenRolePath } from './roleAccess.js';
 
-test('Kepala Sekolah dan Wali Kelas hanya dapat membuka dashboard sampai ada izin terukur', () => {
-  for (const role of ['kepala_sekolah', 'wali_kelas']) {
-    assert.equal(canOpenRolePath(role, '/dashboard'), true);
-    assert.equal(canOpenRolePath(role, '/admin/pengguna/guru'), false);
-    assert.equal(canOpenRolePath(role, '/perencanaan'), false);
-    assert.equal(canOpenRolePath(role, '/chat'), false);
-  }
+test('Kepala Sekolah dibatasi pada supervisi dan Wali Kelas pada leger/rapor', () => {
+  assert.equal(canOpenRolePath('kepala_sekolah', '/dashboard'), true);
+  assert.equal(canOpenRolePath('kepala_sekolah', '/kepala-sekolah/supervisi'), true);
+  assert.equal(canOpenRolePath('kepala_sekolah', '/kepala-sekolah/supervisi/rekap'), true);
+  assert.equal(canOpenRolePath('kepala_sekolah', '/wali-kelas/leger'), false);
+  assert.equal(canOpenRolePath('kepala_sekolah', '/admin/pengguna/guru'), false);
+  assert.equal(canOpenRolePath('wali_kelas', '/dashboard'), true);
+  assert.equal(canOpenRolePath('wali_kelas', '/wali-kelas/leger'), true);
+  assert.equal(canOpenRolePath('wali_kelas', '/wali-kelas/rapor'), true);
+  assert.equal(canOpenRolePath('wali_kelas', '/kepala-sekolah/supervisi'), false);
+  assert.equal(canOpenRolePath('wali_kelas', '/admin/pengguna/guru'), false);
 });
 
 test('setiap tautan menu aktif diizinkan oleh gerbang rute peran yang sama', () => {
   const roles = [
     'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler', 'siswa',
     'ortu', 'orang_tua', 'operator', 'admin_sekolah', 'admin', 'superadmin',
+    'wali_kelas', 'kepala_sekolah',
   ];
   for (const role of roles) {
     assert.equal(canOpenRolePath(role, '/dashboard'), true);

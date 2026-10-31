@@ -178,6 +178,46 @@ export async function muatRingkasanUjianSekolah() {
   return data;
 }
 
+export async function muatLegerUjianWali() {
+  const { data, error } = await supabase.rpc('homeroom_exam_grade_ledger');
+  if (error) throw error;
+  const allowedFields = new Set([
+    'student_id', 'student_name', 'kelas', 'exam_id', 'exam_title', 'starts_at',
+    'duration_minutes', 'attempt_status', 'objective_correct', 'objective_total',
+    'score', 'grade_pending', 'submitted_at',
+  ]);
+  if (!Array.isArray(data) || data.some((row) =>
+    !row || typeof row !== 'object' || Object.keys(row).some((field) => !allowedFields.has(field)) ||
+    typeof row.student_id !== 'string' || typeof row.student_name !== 'string' || typeof row.kelas !== 'string' ||
+    (row.exam_id !== null && typeof row.exam_id !== 'string') ||
+    (row.exam_title !== null && typeof row.exam_title !== 'string') ||
+    (row.starts_at !== null && !Number.isFinite(Date.parse(row.starts_at))) ||
+    (row.duration_minutes !== null && (!Number.isInteger(row.duration_minutes) || row.duration_minutes < 1 || row.duration_minutes > 300)) ||
+    !['not_scheduled', 'not_started', 'in_progress', 'submitted'].includes(row.attempt_status) ||
+    !Number.isInteger(row.objective_correct) || row.objective_correct < 0 ||
+    !Number.isInteger(row.objective_total) || row.objective_total < 0 ||
+    (row.score !== null && !Number.isFinite(Number(row.score))) ||
+    typeof row.grade_pending !== 'boolean' ||
+    (row.submitted_at !== null && !Number.isFinite(Date.parse(row.submitted_at))))) {
+    throw new Error('Data leger kelas tidak valid.');
+  }
+  return data.map((row) => ({
+    studentId: row.student_id,
+    studentName: row.student_name,
+    kelas: row.kelas,
+    examId: row.exam_id,
+    examTitle: row.exam_title,
+    startsAt: row.starts_at,
+    durationMinutes: row.duration_minutes,
+    status: row.attempt_status,
+    objectiveCorrect: row.objective_correct,
+    objectiveTotal: row.objective_total,
+    score: row.score === null || row.grade_pending ? null : Number(row.score),
+    gradePending: row.grade_pending,
+    submittedAt: row.submitted_at,
+  }));
+}
+
 export function buatCsvRingkasanUjianSekolah(exams) {
   const headers = [
     'Paket ujian',

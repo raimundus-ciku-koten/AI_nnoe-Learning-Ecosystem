@@ -17,6 +17,8 @@ export default defineConfig({
     target: 'es2020',
     cssCodeSplit: true,
     emptyOutDir: true,
+    // MathLive is an on-demand editor chunk; keep its measured budget explicit.
+    chunkSizeWarningLimit: 850,
     rollupOptions: {
       output: {
         chunkFileNames: 'assets/[name]-[hash].js',

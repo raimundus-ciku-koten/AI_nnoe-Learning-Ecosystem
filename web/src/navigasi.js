@@ -183,9 +183,30 @@ const MENU_ORTU = [
     tautan('Kontak', '/chat/kontak', 'users'),
   ]),
 ];
-const MENU_KONTEKS_TERBATAS = [
+export const MENU_WALI_KELAS = [
   grup('beranda', 'Dashboard', 'home', [
     tautan('Dashboard', '/dashboard', 'home'),
+  ]),
+  grup('wali-akademik', 'Leger Nilai dan Rapor', 'chart', [
+    tautan('Leger Nilai Ujian', '/wali-kelas/leger', 'chart'),
+    tautan('Rapor Kelas', '/wali-kelas/rapor', 'file'),
+  ]),
+  grup('wali-komunikasi', 'Komunikasi Kelas', 'chat', [
+    tautan('Percakapan', '/chat', 'chat'),
+    tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
+  ]),
+];
+export const MENU_KEPALA_SEKOLAH = [
+  grup('beranda', 'Dashboard', 'home', [
+    tautan('Dashboard', '/dashboard', 'home'),
+  ]),
+  grup('kepala-supervisi', 'Supervisi Akademik', 'check', [
+    tautan('Program Supervisi', '/kepala-sekolah/supervisi', 'check'),
+    tautan('Jadwal Supervisi', '/kepala-sekolah/supervisi/jadwal', 'calendar'),
+    tautan('Pra-Observasi', '/kepala-sekolah/supervisi/pra-observasi', 'file'),
+    tautan('Observasi Kelas', '/kepala-sekolah/supervisi/observasi', 'eye'),
+    tautan('Pasca-Observasi dan RTL', '/kepala-sekolah/supervisi/tindak-lanjut', 'refresh'),
+    tautan('Rekapitulasi Supervisi', '/kepala-sekolah/supervisi/rekap', 'chart'),
   ]),
 ];
 export const MENU_OPERATOR = [
@@ -374,8 +395,9 @@ export function menuUntukPeran(role, disabledMenuKeys = []) {
         : peran === 'ortu' || peran === 'orang_tua' ? MENU_ORTU
           : peran === 'operator' ? MENU_OPERATOR
             : peran === 'demo' ? MENU_DEMO
-              : ['kepala_sekolah', 'wali_kelas'].includes(peran) ? MENU_KONTEKS_TERBATAS
-                : adalahPeranGuru(peran) ? GRUP_MENU : MENU_TANPA_PERAN;
+              : peran === 'kepala_sekolah' ? MENU_KEPALA_SEKOLAH
+                : peran === 'wali_kelas' ? MENU_WALI_KELAS
+                  : adalahPeranGuru(peran) ? GRUP_MENU : MENU_TANPA_PERAN;
   const disabled = new Set(disabledMenuKeys);
   if (!disabled.size) return catalog;
   return catalog.map((group) => ({

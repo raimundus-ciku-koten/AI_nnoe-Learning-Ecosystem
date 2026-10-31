@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { adalahPeranGuru } from '../navigasi.js';
 import PdfQuestionDraftPanel from '../components/PdfQuestionDraftPanel.jsx';
-import MathEquationInput from '../components/MathEquationInput.jsx';
+import MathEquationInput, { MathEquationDisplay } from '../components/MathEquationInput.jsx';
 import { muatPenugasanGuru } from '../services/teacherAssignments.js';
 import { buatSpreadsheetDenganData } from '../services/googleWorkspace.js';
 import { hubungkanGoogleSheetsUntukPengguna } from '../services/googleWorkspaceAuth.js';
@@ -209,7 +209,7 @@ function StudentAssessments({ userId }) {
         </p>
         {active.questions.map((question, index) => (
           <fieldset className="ale-exam-question" key={question.id}>
-            <legend>{index + 1}. {question.prompt}</legend>
+            <legend>{index + 1}. <MathEquationDisplay value={question.prompt} /></legend>
             {question.kind === 'pilihan_ganda'
               ? question.choices.map((choice) => (
                 <label className="ale-exam-choice" key={choice}>
@@ -650,8 +650,8 @@ function TeacherAssessments({ tenantId, userId, user, assessmentType }) {
           <p>Kelas {review.kelas} · dikumpulkan {formatWaktu(review.submitted_at)}</p>
           {review.essay_responses.map((response, index) => (
             <div className="ale-exam-review-answer" key={`${review.attempt_id}-${index}`}>
-              <strong>{response.prompt}</strong>
-              <p>{response.answer || 'Tidak dijawab'}</p>
+              <strong><MathEquationDisplay value={response.prompt} /></strong>
+              <p><MathEquationDisplay value={response.answer || 'Tidak dijawab'} /></p>
             </div>
           ))}
           <label>Nilai rata-rata seluruh jawaban uraian (0–100)

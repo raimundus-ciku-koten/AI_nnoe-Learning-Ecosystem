@@ -145,11 +145,11 @@ export default function ReportCardPage() {
 
             <section
                 role="note"
-                aria-label="Pemberitahuan data simulasi"
+                aria-label="Pemberitahuan rapor pratinjau"
                 style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 12, padding: '0.9rem 1rem', color: '#78350f' }}
             >
-                <strong>Pratinjau saja — seluruh identitas, nilai, kehadiran, dan catatan di bawah adalah data simulasi.</strong>
-                <p style={{ margin: '0.35rem 0 0' }}>Halaman ini belum terhubung ke data peserta didik dan bukan dokumen rapor resmi.</p>
+                <strong>Pratinjau saja — nilai mata pelajaran non-ujian belum tersedia di sistem.</strong>
+                <p style={{ margin: '0.35rem 0 0' }}>Contoh identitas, nilai, kehadiran, dan catatan di bawah adalah data simulasi. Halaman ini bukan dokumen rapor resmi.</p>
             </section>
 
             <section style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem' }} aria-label="Pemilih jenjang rapor">

@@ -1,0 +1,375 @@
+.role-workspace {
+    --workspace-ink: #1d2927;
+    --workspace-muted: #63716c;
+    --workspace-line: #d7dfd9;
+    --workspace-paper: #fffefa;
+    --workspace-green: #176b53;
+    --workspace-pale: #eff5ef;
+    display: grid;
+    gap: 1rem;
+    padding: 1rem 0 2rem;
+    color: var(--workspace-ink);
+}
+
+.role-workspace__heading {
+    display: flex;
+    justify-content: space-between;
+    padding: 1.1rem 0 1.25rem;
+    border-bottom: 1px solid var(--workspace-line);
+}
+
+.role-workspace__heading h1 {
+    margin: 0.2rem 0 0.45rem;
+    font-size: 1.8rem;
+    line-height: 1.15;
+}
+
+.role-workspace__heading p:last-child,
+.role-workspace__panel-head p,
+.supervision-phases p {
+    margin: 0;
+    color: var(--workspace-muted);
+    line-height: 1.55;
+}
+
+.role-workspace__eyebrow {
+    margin: 0;
+    color: var(--workspace-green);
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.role-workspace__tabs {
+    display: flex;
+    gap: 0.35rem;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--workspace-line);
+}
+
+.role-workspace__tabs a {
+    flex: 0 0 auto;
+    padding: 0.7rem 0.8rem;
+    color: var(--workspace-muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+}
+
+.role-workspace__tabs a.is-active {
+    color: var(--workspace-green);
+    border-bottom-color: var(--workspace-green);
+}
+
+.role-workspace__notice {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.85rem 1rem;
+    color: #543914;
+    background: #fff5df;
+    border: 1px solid #e8ca85;
+    border-radius: 6px;
+    line-height: 1.5;
+}
+
+.role-workspace__metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid var(--workspace-line);
+    border-radius: 6px;
+    background: var(--workspace-paper);
+}
+
+.role-workspace__metrics div {
+    display: grid;
+    gap: 0.3rem;
+    padding: 0.9rem 1rem;
+}
+
+.role-workspace__metrics div+div {
+    border-left: 1px solid var(--workspace-line);
+}
+
+.role-workspace__metrics span {
+    color: var(--workspace-muted);
+    font-size: 0.82rem;
+}
+
+.role-workspace__metrics strong {
+    font-size: 1.4rem;
+}
+
+.role-workspace__panel {
+    padding: 1rem;
+    background: var(--workspace-paper);
+    border: 1px solid var(--workspace-line);
+    border-radius: 6px;
+}
+
+.role-workspace__panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.8rem;
+}
+
+.role-workspace__panel-head h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.08rem;
+}
+
+.role-workspace__search input {
+    width: min(100%, 290px);
+}
+
+.role-workspace input,
+.role-workspace textarea {
+    box-sizing: border-box;
+    min-width: 0;
+    padding: 0.65rem 0.7rem;
+    color: var(--workspace-ink);
+    background: #fff;
+    border: 1px solid #aebbb3;
+    border-radius: 4px;
+    font: inherit;
+}
+
+.role-workspace__table-wrap {
+    overflow-x: auto;
+}
+
+.role-workspace__table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.role-workspace__table th,
+.role-workspace__table td {
+    padding: 0.72rem 0.65rem;
+    border-top: 1px solid #e5eae6;
+    vertical-align: top;
+}
+
+.role-workspace__table th {
+    color: var(--workspace-muted);
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.role-workspace__table td small {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--workspace-muted);
+}
+
+.role-workspace__status,
+.role-workspace__draft-label {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    color: #294d3f;
+    background: var(--workspace-pale);
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.role-workspace__status--in_progress {
+    color: #765115;
+    background: #fff2d6;
+}
+
+.role-workspace__status--submitted {
+    color: #176b53;
+    background: #e5f3e8;
+}
+
+.role-workspace__state {
+    padding: 1.2rem 0.2rem;
+    color: var(--workspace-muted);
+}
+
+.role-workspace__state--error {
+    color: #912f2f;
+}
+
+.role-workspace__state button,
+.supervision-form button {
+    padding: 0.6rem 0.85rem;
+    color: white;
+    background: var(--workspace-green);
+    border: 0;
+    border-radius: 4px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.supervision-phases {
+    display: grid;
+    gap: 0;
+    margin: 0 0 1.15rem;
+    padding: 0;
+    list-style: none;
+}
+
+.supervision-phases li {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr;
+    gap: 0.7rem;
+    padding: 0.9rem 0;
+    border-top: 1px solid #e5eae6;
+}
+
+.supervision-phases__number {
+    color: var(--workspace-green);
+    font-weight: 800;
+}
+
+.supervision-phases a {
+    color: var(--workspace-ink);
+    font-weight: 800;
+    text-decoration-color: #9ab8a7;
+    text-underline-offset: 3px;
+}
+
+.supervision-phases p {
+    margin-top: 0.2rem;
+}
+
+.role-workspace__primary-link {
+    display: inline-block;
+    padding: 0.65rem 0.85rem;
+    color: white;
+    background: var(--workspace-green);
+    border-radius: 4px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.supervision-documents {
+    display: grid;
+    gap: 0.7rem;
+    margin: 0;
+    padding-left: 1.2rem;
+}
+
+.supervision-documents a {
+    color: #145f83;
+    font-weight: 700;
+    text-underline-offset: 3px;
+}
+
+.supervision-documents small {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--workspace-muted);
+}
+
+.role-workspace__fineprint {
+    color: var(--workspace-muted);
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+.supervision-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.supervision-form label {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.supervision-form__wide,
+.supervision-form__actions {
+    grid-column: 1 / -1;
+}
+
+.supervision-form textarea {
+    resize: vertical;
+}
+
+.supervision-form__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.supervision-form__actions span {
+    color: var(--workspace-muted);
+    font-size: 0.85rem;
+}
+
+@media (max-width: 680px) {
+    .role-workspace__metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .role-workspace__metrics div+div {
+        border-top: 1px solid var(--workspace-line);
+        border-left: 0;
+    }
+
+    .role-workspace__panel-head {
+        display: grid;
+    }
+
+    .role-workspace__search,
+    .role-workspace__search input {
+        width: 100%;
+    }
+
+    .supervision-form {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .supervision-form__wide,
+    .supervision-form__actions {
+        grid-column: auto;
+    }
+
+    .role-workspace__table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+    }
+
+    .role-workspace__table,
+    .role-workspace__table tbody,
+    .role-workspace__table tr,
+    .role-workspace__table td {
+        display: block;
+        width: 100%;
+    }
+
+    .role-workspace__table tr {
+        padding: 0.4rem 0;
+        border-top: 1px solid var(--workspace-line);
+    }
+
+    .role-workspace__table td {
+        display: grid;
+        grid-template-columns: 8.5rem minmax(0, 1fr);
+        gap: 0.5rem;
+        padding: 0.4rem 0.2rem;
+        border: 0;
+    }
+
+    .role-workspace__table td::before {
+        content: attr(data-label);
+        color: var(--workspace-muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+}

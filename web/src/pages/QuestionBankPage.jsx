@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
-import MathEquationInput from '../components/MathEquationInput.jsx';
+import MathEquationInput, { MathEquationDisplay } from '../components/MathEquationInput.jsx';
 import {
   hapusSoalBank, muatBankSoal, tambahSoalBank, ubahSoalBank,
 } from '../services/questionBank.js';
@@ -382,7 +382,7 @@ export default function QuestionBankPage() {
               <span>{item.mapel} · Kelas {item.kelas}</span>
               <span>{item.jenis === 'uraian' ? 'Uraian' : 'Pilihan ganda'} · {formatTanggal(item.updatedAt)}</span>
             </div>
-            <h3>{item.pertanyaan}</h3>
+            <h3><MathEquationDisplay value={item.pertanyaan} /></h3>
             {item.jenis === 'pilihan_ganda' && (
               <ol type="A">{(item.pilihan || []).map((option) => <li key={option}>{option}</li>)}</ol>
             )}
