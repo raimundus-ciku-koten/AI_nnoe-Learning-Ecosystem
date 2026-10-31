@@ -28,7 +28,7 @@ function Aksi({ href, warna, ikon, judul, ket, luar }) {
     </>
   );
   if (!href) {
-    return <div className="ale-aksi is-soon" aria-disabled="true">{isi}</div>;
+    return <div className="ale-aksi is-disabled" aria-disabled="true">{isi}</div>;
   }
   return (
     <a className={`ale-aksi ale-aksi-${warna}`} href={href}
@@ -77,8 +77,10 @@ export default function DashboardPage() {
           <Aksi href={LINK_PERENCANAAN_AKTIF} luar warna="teal" ikon="clipboard"
                 judul="Perencanaan pembelajaran"
                 ket={LINK_PERENCANAAN_AKTIF ? 'Buka aplikasi perencanaan di tab baru' : 'Tautan belum diatur di config.js'} />
-          <Aksi ikon="calendar" judul="Jadwal mengajar" ket="Segera hadir" />
-          <Aksi ikon="check" judul="Asesmen" ket="Segera hadir" />
+          <Aksi href="#/datadasar/jadwal" warna="teal" ikon="calendar"
+                judul="Jadwal mengajar" ket="Buka jadwal kelas dan mengajar" />
+          <Aksi href="#/asesmen/ujian-online" warna="indigo" ikon="check"
+                judul="Asesmen" ket="Buka ujian online" />
         </div>
       </section>
 

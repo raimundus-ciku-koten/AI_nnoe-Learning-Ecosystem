@@ -452,10 +452,10 @@ function htmlMenu(role, { path, query, k }) {
         </a>`;
       }
 
-      return `<span class="ale-sub is-soon" aria-disabled="true"
+      return `<span class="ale-sub is-disabled" aria-disabled="true"
                    title="${esc(m.availabilityMessage || '')}">
         <span class="ale-sub-teks">${esc(m.judul)}</span>
-        <span class="ale-tag">${esc(m.statusLabel || 'Segera')}</span>
+        <span class="ale-tag">${esc(m.statusLabel || 'Nonaktif')}</span>
       </span>`;
     }).join('');
 

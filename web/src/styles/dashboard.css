@@ -765,7 +765,7 @@ a.ale-sub:hover {
   height: 0.85rem;
   color: rgb(255 255 255 / 0.5);
 }
-.ale-sub.is-soon {
+.ale-sub.is-disabled {
   color: var(--ale-side-teks-dim);
   font-weight: 500;
   cursor: default;
@@ -1489,11 +1489,11 @@ a.ale-aksi:hover {
   border-color: var(--qa);
   box-shadow: 0 10px 24px -12px rgb(15 23 42 / 0.25);
 }
-.ale-aksi.is-soon {
+.ale-aksi.is-disabled {
   background: #f8fafc;
   border-style: dashed;
 }
-.ale-aksi.is-soon .ale-aksi-ikon { background: #e2e8f0; color: #475569; }
+.ale-aksi.is-disabled .ale-aksi-ikon { background: #e2e8f0; color: #475569; }
 
 /* =========================================================
    14. SKELETON / KOSONG / GALAT

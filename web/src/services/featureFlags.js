@@ -10,7 +10,7 @@ export function isChatCallsEnabled(env = import.meta.env) {
 export const CHAT_FEATURE_ENABLED = isChatFeatureEnabled();
 export const CHAT_CALLS_ENABLED = isChatCallsEnabled();
 export const CHAT_UNAVAILABLE_MESSAGE =
-  'Chat belum tersedia karena skema database dan kebijakan akses sekolah belum terverifikasi. Fitur akan dibuka setelah pemeriksaan keamanan dan uji fungsi selesai.';
+  'Chat dinonaktifkan pada lingkungan ini karena skema database dan kebijakan akses sekolah belum terverifikasi. Pesan pribadi, grup, kontak, panggilan audio, dan video call tidak dapat digunakan.';
 
 export function isChatFeaturePath(path) {
   return path === '/chat' ||

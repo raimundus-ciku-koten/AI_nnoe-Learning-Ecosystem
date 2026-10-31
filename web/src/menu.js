@@ -9,7 +9,7 @@
 //   rute    : halaman yang sudah ada (href "#/rute")
 //   gulir   : bagian di halaman Dasbor (menggulir ke kartu terkait)
 //   gas     : fitur yang masih berjalan di aplikasi perencanaan lama (Apps Script)
-//   segera  : belum dibangun (tampil redup, tidak bisa diklik)
+//   nonaktif: fitur belum tersedia pada lingkungan ini (tidak bisa diklik)
 //
 // Catatan:
 //   - Grup "Dasbor" hanya punya 1 item → dirender sebagai link tunggal oleh
@@ -39,7 +39,7 @@ import {
 const r = (judul, href, ikon) => ({ status: 'rute',   judul, href, ikon });
 const g = (judul, kunci, ikon) => ({ status: 'gulir', judul, kunci, href: `#/dashboard?k=${kunci}`, ikon });
 const p = (judul, ikon)        => ({ status: 'gas',    judul, ikon });
-const s = (judul, ikon)        => ({ status: 'segera', judul, ikon });
+const s = (judul, ikon)        => ({ status: 'nonaktif', judul, ikon });
 
 // Tautan Chat dipakai berulang di beberapa peran.
 const chat = { status: 'rute', judul: 'Chat', href: '#/chat', ikon: 'chat-dots' };
@@ -459,10 +459,10 @@ export function menuUntuk(role) {
         if (chatStatusAdded) return [];
         chatStatusAdded = true;
         return [{
-          status: 'segera',
+          status: 'nonaktif',
           judul: 'Chat',
           ikon: item.ikon,
-          statusLabel: 'Menunggu validasi',
+          statusLabel: 'Nonaktif',
           availabilityMessage: CHAT_UNAVAILABLE_MESSAGE,
         }];
       });
@@ -478,7 +478,7 @@ function dariNavigasi(grupNavigasi) {
     ikon: grup.ikon,
     items: grup.item.map((item) => item.disabled
       ? {
-        status: 'segera',
+        status: 'nonaktif',
         judul: item.label,
         ikon: item.ikon,
         statusLabel: item.statusLabel,

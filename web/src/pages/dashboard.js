@@ -61,8 +61,8 @@ function aksiCepat() {
       href: LINK_PERENCANAAN, luar: true, ikon: 'buku', warna: 'indigo',
       judul: 'Perencanaan pembelajaran', ket: 'ATP, Prota, Prosem, dan Modul Ajar',
     },
-    { segera: true, ikon: 'ujian',    judul: 'Ujian online',      ket: 'Segera hadir' },
-    { segera: true, ikon: 'otomatis', judul: 'Generator soal AI', ket: 'Segera hadir' },
+    { href: '#/asesmen/ujian-online', ikon: 'ujian', warna: 'indigo',
+      judul: 'Ujian online', ket: 'Buat dan kelola ujian sekolah' },
   ].filter(Boolean);
 
   return item.map((a) => {
@@ -72,9 +72,6 @@ function aksiCepat() {
         <strong>${esc(a.judul)}</strong><small>${esc(a.ket)}</small>
       </span>`;
 
-    if (a.segera) {
-      return `<div class="ale-aksi is-soon" aria-disabled="true">${isi}</div>`;
-    }
     return a.luar
       ? `<a class="ale-aksi ale-aksi-${a.warna}" href="${esc(a.href)}"
              target="_blank" rel="noopener noreferrer">${isi}
@@ -313,7 +310,7 @@ function tampilanPortal({ role, nama }) {
       ? 'Informasi anak hanya dapat ditampilkan setelah sekolah menautkan akun orang tua secara resmi. Halaman yang belum terhubung hanya menampilkan panduan.'
       : role === 'operator'
         ? 'Akses operator dibatasi oleh peran dan tenant sekolah. Halaman panduan tidak mengubah data; gunakan hanya modul yang memang tersedia untuk akun Anda.'
-        : 'Beberapa modul akademik masih menunggu integrasi data sekolah. Halaman tetap menampilkan statusnya dengan jelas dan tidak mengubah data sebelum fitur tersebut tersedia.';
+        : 'Sebagian modul akademik belum aktif karena integrasi data sekolah belum tersedia. Halaman terkait hanya menjelaskan batas akses dan tidak mengubah data.';
   const grup = menuUntukPeran(role);
   const daftarMenu = grup.map((bagian) => `
     <section class="ale-kartu ale-aksen-sky" aria-labelledby="portal-${escapeAttr(bagian.id)}">
@@ -324,7 +321,7 @@ function tampilanPortal({ role, nama }) {
       </div>
       <nav class="ale-aksi-grid" aria-label="${escapeAttr(bagian.label)}">
         ${bagian.item.map((item) => item.disabled
-          ? `<div class="ale-aksi is-soon" aria-disabled="true"
+          ? `<div class="ale-aksi is-disabled" aria-disabled="true"
                   title="${escapeAttr(item.availabilityMessage)}">
               <span class="ale-aksi-ikon">${ikon(item.ikon)}</span>
               <span class="ale-aksi-teks"><strong>${esc(item.label)}</strong><small>${esc(item.statusLabel)}</small></span>

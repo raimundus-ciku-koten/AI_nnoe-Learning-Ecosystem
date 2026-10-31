@@ -339,10 +339,10 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
                           );
                         }
                         return (
-                          <span key={it.label} className="ale-sub is-soon" aria-disabled="true"
+                          <span key={it.label} className="ale-sub is-disabled" aria-disabled="true"
                                 title={it.availabilityMessage}>
                             <span className="ale-sub-teks">{it.label}</span>
-                            <span className="ale-tag">{it.statusLabel || 'Segera'}</span>
+                            <span className="ale-tag">{it.statusLabel || 'Nonaktif'}</span>
                           </span>
                         );
                       })}

@@ -226,8 +226,8 @@ textarea.input { resize: vertical; min-height: 96px; }
 .sidebar__item:hover { background: rgba(255, 255, 255, .07); color: #fff; }
 .sidebar__item.aktif { background: rgba(255, 255, 255, .11); color: #fff; font-weight: 600; box-shadow: inset 3px 0 0 var(--surya); }
 .sidebar__item-luar { width: 14px; height: 14px; margin-left: auto; opacity: .7; }
-.sidebar__item.is-soon { opacity: .6; cursor: default; }
-.sidebar__item.is-soon:hover { background: transparent; color: #bbd3d7; }
+.sidebar__item.is-disabled { opacity: .6; cursor: default; }
+.sidebar__item.is-disabled:hover { background: transparent; color: #bbd3d7; }
 .sidebar__tag {
   margin-left: auto; padding: .1rem .5rem; border-radius: 999px;
   font-size: .6875rem; font-weight: 600; background: rgba(255, 255, 255, .14); color: #fff;

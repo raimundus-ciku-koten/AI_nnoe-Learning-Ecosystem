@@ -12,7 +12,7 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
       for (const group of groups) {
         assert.ok(group.items.length > 0, `${group.judul} tidak memiliki item`);
         for (const item of group.items) {
-          if (item.status === 'segera') {
+          if (item.status === 'nonaktif') {
             assert.equal(item.href, undefined, `${item.judul} tidak boleh menjadi tautan aktif`);
             continue;
           }
@@ -34,7 +34,7 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
           const items = menuUntuk(role).flatMap((group) => group.items);
           assert.ok(items.some((item) => item.href === href));
           assert.ok(items.every((item) =>
-            item.status === 'rute' || (item.status === 'segera' && item.judul === 'Chat')));
+            item.status === 'rute' || (item.status === 'nonaktif' && item.judul === 'Chat')));
         });
       }
 
@@ -54,7 +54,7 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
       const items = groups.flatMap((group) => group.items);
       const chat = items.filter((item) => item.judul === 'Chat');
       assert.equal(chat.length, 1, `${role}: status Chat tetap terlihat`);
-      assert.equal(chat[0].status, 'segera');
+      assert.equal(chat[0].status, 'nonaktif');
       assert.equal(chat[0].href, undefined);
       assert.match(chat[0].availabilityMessage, /kebijakan akses sekolah belum terverifikasi/);
       assert.ok(items.every((item) =>

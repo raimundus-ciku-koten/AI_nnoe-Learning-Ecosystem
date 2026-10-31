@@ -5,7 +5,7 @@ import {
   menuTanpaChat, menuUntukPeran,
 } from '../src/navigasi.js';
 import {
-  CHAT_CALLS_ENABLED, CHAT_FEATURE_ENABLED, isChatCallsEnabled,
+  CHAT_CALLS_ENABLED, CHAT_FEATURE_ENABLED, CHAT_UNAVAILABLE_MESSAGE, isChatCallsEnabled,
   isChatFeatureEnabled, isChatFeaturePath,
 } from '../src/services/featureFlags.js';
 
@@ -62,7 +62,9 @@ test('menu memilih rute terdalam untuk chat dan data dasar', () => {
     .find((entry) => entry.id === 'chat').item.find((entry) => entry.label === 'Chat');
   assert.equal(chat?.disabled, true);
   assert.equal(chat?.path, undefined);
+  assert.equal(chat?.statusLabel, 'Nonaktif');
   assert.match(chat?.availabilityMessage || '', /kebijakan akses sekolah belum terverifikasi/);
+  assert.doesNotMatch(chat?.availabilityMessage || '', /akan dibuka|segera hadir/i);
   assert.equal(cariMenu('/datadasar/siswa')?.item.label, 'Data Siswa');
 });
 
@@ -105,8 +107,8 @@ test('chat-disabled menus retain unrelated links and show a non-clickable status
           label: 'Chat',
           ikon: undefined,
           disabled: true,
-          statusLabel: 'Menunggu validasi',
-          availabilityMessage: 'Chat belum tersedia karena skema database dan kebijakan akses sekolah belum terverifikasi. Fitur akan dibuka setelah pemeriksaan keamanan dan uji fungsi selesai.',
+          statusLabel: 'Nonaktif',
+          availabilityMessage: CHAT_UNAVAILABLE_MESSAGE,
         },
       ],
     },
@@ -116,8 +118,8 @@ test('chat-disabled menus retain unrelated links and show a non-clickable status
         label: 'Chat',
         ikon: undefined,
         disabled: true,
-        statusLabel: 'Menunggu validasi',
-        availabilityMessage: 'Chat belum tersedia karena skema database dan kebijakan akses sekolah belum terverifikasi. Fitur akan dibuka setelah pemeriksaan keamanan dan uji fungsi selesai.',
+        statusLabel: 'Nonaktif',
+        availabilityMessage: CHAT_UNAVAILABLE_MESSAGE,
       }],
     },
   ]);

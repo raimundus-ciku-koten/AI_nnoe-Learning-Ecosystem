@@ -124,7 +124,7 @@ function ChatFeatureGate({ children }) {
   if (CHAT_FEATURE_ENABLED) return children;
   return (
     <section className="card empty-state" role="status">
-      <h2>Chat belum tersedia</h2>
+      <h2>Chat nonaktif</h2>
       <p>{CHAT_UNAVAILABLE_MESSAGE}</p>
       <a href="#/dashboard">Kembali ke dashboard</a>
     </section>

@@ -361,7 +361,7 @@ export function menuTanpaChat(menu) {
           label: 'Chat',
           ikon: entry.ikon,
           disabled: true,
-          statusLabel: 'Menunggu validasi',
+          statusLabel: 'Nonaktif',
           availabilityMessage: CHAT_UNAVAILABLE_MESSAGE,
         }];
       });
