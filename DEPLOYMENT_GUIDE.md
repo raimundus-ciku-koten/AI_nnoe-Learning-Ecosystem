@@ -95,7 +95,9 @@ For the school-leadership migrations, first run the main-only
 `04b8afa3cf1006f9a1c05e35fba7d74d18aa31b5`.
 That mode uses a schema-only Staging snapshot and replays only the two
 school-leadership migrations in a disposable local database; it does not expose
-Staging rows or modify the hosted database. A successful rehearsal is not a
+Staging rows or modify the hosted database. It fetches the pinned source commit
+and extracts only its migration directory without checking out nested
+repositories. A successful rehearsal is not a
 substitute for the required tenant-isolation checks, Staging validation, backup,
 or explicit Production approval.
 
