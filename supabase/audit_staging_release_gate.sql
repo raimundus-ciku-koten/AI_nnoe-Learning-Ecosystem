@@ -109,6 +109,20 @@ select jsonb_pretty(jsonb_build_object(
         'policy_count', table_info.policy_count
       ) order by table_info.table_name)
       from public_tables as table_info
+    ), '[]'::jsonb),
+  'public_table_policies',
+    coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'table', policy.tablename,
+        'name', policy.policyname,
+        'permissive', policy.permissive,
+        'roles', policy.roles,
+        'command', policy.cmd,
+        'using', policy.qual,
+        'with_check', policy.with_check
+      ) order by policy.tablename, policy.policyname)
+      from pg_policies as policy
+      where policy.schemaname = 'public'
     ), '[]'::jsonb)
 ));
 

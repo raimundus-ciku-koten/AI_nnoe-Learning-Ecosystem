@@ -20,6 +20,12 @@ test('Staging schema audit is read-only and reports role/chat/RLS release gates'
   assert.match(auditSql, /'public_tables_without_rls'/);
   assert.match(auditSql, /'rls_tables_without_policies'/);
   assert.match(auditSql, /'public_table_rls'/);
+  assert.match(auditSql, /'public_table_policies'/);
+  assert.match(auditSql, /from pg_policies as policy/);
+  assert.match(auditSql, /'roles', policy\.roles/);
+  assert.match(auditSql, /'using', policy\.qual/);
+  assert.match(auditSql, /'with_check', policy\.with_check/);
+  assert.match(auditSql, /where policy\.schemaname = 'public'/);
   assert.match(auditSql, /'chat_presence'/);
   assert.match(auditSql, /'trial_registrations'/);
   assert.match(auditSql, /\bcommit;\s*$/i);
