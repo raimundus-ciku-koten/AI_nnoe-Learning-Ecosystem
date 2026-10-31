@@ -89,6 +89,16 @@ Applying migrations (recommended workflow):
   3. Run the full test suite (local and any DB-focused integration tests) against staging.
   4. After sign-off, apply migrations to production during a maintenance window.
 
+For the school-leadership migrations, first run the main-only
+`supabase-staging-migration-rehearsal` workflow with mode
+`feature_migration_schema_only` and approved commit
+`04b8afa3cf1006f9a1c05e35fba7d74d18aa31b5`.
+That mode uses a schema-only Staging snapshot and replays only the two
+school-leadership migrations in a disposable local database; it does not expose
+Staging rows or modify the hosted database. A successful rehearsal is not a
+substitute for the required tenant-isolation checks, Staging validation, backup,
+or explicit Production approval.
+
 The trial migration `supabase/migrations/20261019000200_public_demo_trial.sql` creates `trial_registrations` and writes `trial_expires_at`. Staging has a table with that name, but no migration history exists, so its provenance and parity with this migration are unknown. The migration is append-only but modifies `public.provision_auth_profile()` and `public.custom_access_token_hook()` logic; audit those functions carefully in Staging. The additional migrations `20261019000100_indonesia_price_catalog.sql`, `20261019000300_live_profile_active_check.sql`, `20261019000400_private_ai_credentials.sql`, and `20261019000500_random_attendance_tokens.sql` have not been verified in Staging or Production.
 
 Current blocker: the Staging backup workflow's encrypted-artifact round-trip passed in [run 40667639757](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/40667639757), but the latest Staging audit found no migration ledger and 31 missing expected relations. Migration provenance and schema parity remain unresolved, semantic tenant-isolation validation is not evidenced, and Production backup/recovery readiness remains separate and unverified. Do not apply hosted migrations until schema provenance and compatibility are reconciled, tenant-isolation semantics are validated, Production recovery controls are verified for a Production rollout, and required approvals are recorded. Do not use Production as a substitute for Staging.

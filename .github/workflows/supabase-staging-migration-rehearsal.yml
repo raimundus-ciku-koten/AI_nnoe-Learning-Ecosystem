@@ -11,6 +11,12 @@ on:
         options:
           - full_history
           - current_staging_forward_only
+          - feature_migration_schema_only
+      source_commit:
+        description: Approved immutable source commit SHA for feature_migration_schema_only
+        required: false
+        type: string
+        default: 04b8afa3cf1006f9a1c05e35fba7d74d18aa31b5
 
 permissions:
   contents: read
@@ -39,12 +45,35 @@ jobs:
           --health-retries 12
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Checkout pinned release migrations
         uses: actions/checkout@v4
         with:
           ref: 3990f7cf858dce45d4fb64de7b4220749686707a
           path: migration-source
+          persist-credentials: false
+
+      - name: Validate candidate migration source
+        if: inputs.rehearsal_mode == 'feature_migration_schema_only'
+        shell: bash
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          set -euo pipefail
+          expected_source_commit="04b8afa3cf1006f9a1c05e35fba7d74d18aa31b5"
+          if [[ "$SOURCE_COMMIT" != "$expected_source_commit" ]]; then
+            echo "::error::The rehearsal source must match the approved immutable feature commit."
+            exit 1
+          fi
+
+      - name: Checkout candidate migration source
+        if: inputs.rehearsal_mode == 'feature_migration_schema_only'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_commit }}
+          path: candidate-source
           persist-credentials: false
 
       - name: Validate the Staging-only target
@@ -81,6 +110,7 @@ jobs:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           PGAPPNAME: ai-nnoe-staging-migration-rehearsal
           PGCONNECT_TIMEOUT: 15
+          REHEARSAL_MODE: ${{ inputs.rehearsal_mode }}
         run: |
           set -euo pipefail
           umask 077
@@ -88,9 +118,13 @@ jobs:
           error_log="${RUNNER_TEMP}/supabase-staging-rehearsal-${GITHUB_RUN_ID}.log"
           restore_db="migration_rehearsal_${GITHUB_RUN_ID}"
           printf 'REHEARSAL_LOG_PATH=%s\n' "$error_log" >> "$GITHUB_ENV"
+          dump_options=(--format=custom --no-owner --no-acl --file "$dump")
+          if [[ "$REHEARSAL_MODE" == "feature_migration_schema_only" ]]; then
+            dump_options+=(--schema-only)
+          fi
 
           if ! /usr/lib/postgresql/17/bin/pg_dump \
-            --format=custom --no-owner --no-acl --file "$dump" "$SUPABASE_DB_URL" \
+            "${dump_options[@]}" "$SUPABASE_DB_URL" \
             2> "$error_log"; then
             echo "::error::Staging snapshot could not be created; database output was withheld."
             exit 1
@@ -131,7 +165,11 @@ jobs:
             echo "::error::Disposable restore completed without any user tables."
             exit 1
           fi
-          echo "Fresh Staging snapshot restored to disposable database ($table_count user tables)."
+          if [[ "$REHEARSAL_MODE" == "feature_migration_schema_only" ]]; then
+            echo "Fresh Staging schema-only snapshot restored to disposable database ($table_count user tables)."
+          else
+            echo "Fresh Staging snapshot restored to disposable database ($table_count user tables)."
+          fi
           echo "The hosted Staging database was not modified."
 
       - name: Replay in-scope migrations on the disposable restore
@@ -141,6 +179,7 @@ jobs:
           PGCONNECT_TIMEOUT: 15
           PGOPTIONS: -c statement_timeout=120000 -c lock_timeout=15000
           REHEARSAL_MODE: ${{ inputs.rehearsal_mode }}
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
         run: |
           set -euo pipefail
           export PGPASSWORD=restore-validation-only
@@ -156,6 +195,28 @@ jobs:
                 exit 1
               fi
               migration_files+=("$forward_migration")
+              ;;
+            feature_migration_schema_only)
+              migrations="candidate-source/supabase/migrations"
+              candidate_commit="$(git -C candidate-source rev-parse HEAD)"
+              if [[ "$candidate_commit" != "$SOURCE_COMMIT" ]]; then
+                echo "::error::Checked out source does not match the requested commit."
+                exit 1
+              fi
+              for required in \
+                20261031000100_school_leadership_roles.sql \
+                20261031000200_school_module_actions.sql; do
+                migration="${migrations}/${required}"
+                if [[ ! -f "$migration" ]]; then
+                  echo "::error::Candidate migration is missing: ${required}"
+                  exit 1
+                fi
+                if grep -nEq '^[[:space:]]*\\' "$migration"; then
+                  echo "::error::Candidate migration contains unsupported psql meta-commands."
+                  exit 1
+                fi
+                migration_files+=("$migration")
+              done
               ;;
             full_history)
               while IFS= read -r migration; do
@@ -220,6 +281,8 @@ jobs:
           done
           if [[ "$REHEARSAL_MODE" == "current_staging_forward_only" ]]; then
             echo "Forward-only rehearsal completed: ${applied} candidate migration applied to the disposable restored snapshot."
+          elif [[ "$REHEARSAL_MODE" == "feature_migration_schema_only" ]]; then
+            echo "Feature migration rehearsal completed against the schema-only Staging snapshot in the disposable database."
           else
             echo "Rehearsal completed: ${applied} in-scope migrations applied to the disposable restored snapshot."
           fi
