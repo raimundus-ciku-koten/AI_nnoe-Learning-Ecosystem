@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { menuUntuk } from '../src/menu.js';
 import { cariMenu } from '../src/navigasi.js';
+import { isChatFeaturePath } from '../src/services/featureFlags.js';
 
 describe('rute menu guru, staf pengajar, dan superadmin', () => {
   for (const role of ['guru', 'operator', 'demo', 'superadmin']) {
@@ -38,4 +39,15 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
       });
     });
   }
+
+  it('hides chat links from every legacy role menu while the schema is gated', () => {
+    for (const role of [
+      'guru', 'operator', 'siswa', 'ortu', 'admin_sekolah', 'superadmin',
+    ]) {
+      const groups = menuUntuk(role);
+      assert.ok(groups.every((group) => group.items.length > 0));
+      assert.ok(groups.flatMap((group) => group.items).every((item) =>
+        !item.href || !isChatFeaturePath(item.href.slice(1).split('?')[0])));
+    }
+  });
 });

@@ -30,6 +30,7 @@ import {
   MENU_SUPERADMIN as MENU_NAV_SUPERADMIN,
   menuUntukPeran,
 } from './navigasi.js';
+import { CHAT_FEATURE_ENABLED, isChatFeaturePath } from './services/featureFlags.js';
 
 const r = (judul, href, ikon) => ({ status: 'rute',   judul, href, ikon });
 const g = (judul, kunci, ikon) => ({ status: 'gulir', judul, kunci, href: `#/dashboard?k=${kunci}`, ikon });
@@ -433,17 +434,24 @@ export function gabungMenu(role, dasar) {
 
 export function menuUntuk(role) {
   const bersih = String(role || '').toLowerCase().trim();
-  if (bersih === 'admin_sekolah' || bersih === 'admin') return gabungMenu('admin_sekolah', MENU_ADMIN);
-  if (bersih === 'superadmin') return dariNavigasi(MENU_NAV_SUPERADMIN);
-  if (['siswa', 'ortu', 'orang_tua'].includes(bersih)) {
-    return dariNavigasi(menuUntukPeran(bersih));
-  }
-  if (bersih === 'operator') return dariNavigasi(MENU_NAV_OPERATOR);
-  if (bersih === 'demo') return dariNavigasi(menuUntukPeran(bersih));
-  if (bersih === 'guru') {
-    return dariNavigasi(MENU_NAV_GURU);
-  }
-  return dariNavigasi(menuUntukPeran(bersih));
+  let menu;
+  if (bersih === 'admin_sekolah' || bersih === 'admin') menu = gabungMenu('admin_sekolah', MENU_ADMIN);
+  else if (bersih === 'superadmin') menu = dariNavigasi(MENU_NAV_SUPERADMIN);
+  else if (['siswa', 'ortu', 'orang_tua'].includes(bersih)) {
+    menu = dariNavigasi(menuUntukPeran(bersih));
+  } else if (bersih === 'operator') menu = dariNavigasi(MENU_NAV_OPERATOR);
+  else if (bersih === 'demo') menu = dariNavigasi(menuUntukPeran(bersih));
+  else if (bersih === 'guru') menu = dariNavigasi(MENU_NAV_GURU);
+  else menu = dariNavigasi(menuUntukPeran(bersih));
+
+  if (CHAT_FEATURE_ENABLED) return menu;
+  return menu
+    .map((bagian) => ({
+      ...bagian,
+      items: bagian.items.filter((item) =>
+        !item.href || !isChatFeaturePath(item.href.slice(1).split('?')[0])),
+    }))
+    .filter((bagian) => bagian.items.length > 0);
 }
 
 function dariNavigasi(grupNavigasi) {

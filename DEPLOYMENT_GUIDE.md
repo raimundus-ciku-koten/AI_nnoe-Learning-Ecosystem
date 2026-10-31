@@ -127,6 +127,7 @@ Set these environment variables in Vercel (Project Settings → Environment Vari
 - VITE_SUPABASE_ANON_KEY — Supabase anon/publishable key (frontend)
 - SUPABASE_SERVICE_ROLE_KEY — (ONLY for server-side functions; never expose to client)
 - VITE_TURNSTILE_SITE_KEY — Cloudflare Turnstile site key (frontend)
+- VITE_CHAT_ENABLED — set to `true` only after the chat schema, RLS policies, tenant isolation, and UAT are verified in the target environment; unset/`false` keeps chat routes, navigation, dashboard requests, and presence sync disabled.
 - VITE_OWNER_WHATSAPP — public WhatsApp contact in international format (for the manual registration PDF flow). This is intentionally unset until the owner approves/configures the recipient; values prefixed `VITE_` are visible in the client bundle.
 - Turnstile secret: configure only in Supabase Auth CAPTCHA settings; never store it in Vercel or frontend environment variables.
 - VERCEL_TOKEN — (only if automating deployments via CLI in scripts)

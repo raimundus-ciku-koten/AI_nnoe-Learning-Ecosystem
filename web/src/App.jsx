@@ -8,6 +8,7 @@ import { MaintenanceGuard, PlatformControlProvider } from './context/PlatformCon
 import { logout } from './auth.js';
 import PrivilegedMfaGate from './components/PrivilegedMfaGate.jsx';
 import { canOpenRolePath } from './services/roleAccess.js';
+import { CHAT_FEATURE_ENABLED } from './services/featureFlags.js';
 
 // Legacy Alias Mapper[cite: 10]
 const LEGACY_ALIAS = {
@@ -116,6 +117,16 @@ const HalamanPrivasi = lazy(() => import('./pages/PrivacyNoticePage.jsx'));
 const HalamanTrial = lazy(() => import('./pages/TrialDemoPage.jsx'));
 const AppShell = lazy(() => import('./components/AppShell.jsx'));
 
+function ChatFeatureGate({ children }) {
+  if (CHAT_FEATURE_ENABLED) return children;
+  return (
+    <section className="card empty-state" role="status">
+      <h2>Fitur chat sementara tidak tersedia</h2>
+      <p>Komunikasi chat akan dibuka kembali setelah skema database dan kebijakan akses sekolah diverifikasi.</p>
+    </section>
+  );
+}
+
 function PrivateShell({ children }) {
   const { user, role, activeRole, passwordRecovery } = useAuth();
   const location = useLocation();
@@ -150,7 +161,7 @@ function RouteWrapper() {
   }, [location]);
 
   useEffect(() => {
-    if (!userId || selectedRole === 'demo') return;
+    if (!CHAT_FEATURE_ENABLED || !userId || selectedRole === 'demo') return;
     let active = true;
     Promise.all([
       import('./services/chatSync.js'),
@@ -217,11 +228,12 @@ function RouteWrapper() {
         <Route path="/laporan/arsip-perencanaan" element={<PrivateShell><HalamanArsipPerencanaan /></PrivateShell>} />
         
         {/* Chat Routes - URUTAN KRUSIAL[cite: 9] */}
-        <Route path="/chat" element={<PrivateShell><HalamanChat /></PrivateShell>} />
-        <Route path="/chat/baru" element={<PrivateShell><HalamanChat /></PrivateShell>} />
-        <Route path="/chat/kontak" element={<PrivateShell><HalamanChat /></PrivateShell>} />
-        <Route path="/chat/grup" element={<PrivateShell><HalamanChat /></PrivateShell>} />
-        <Route path="/chat/:chatId" element={<PrivateShell><HalamanChat /></PrivateShell>} /> {/*[cite: 9] */}
+        <Route path="/chat" element={<PrivateShell><ChatFeatureGate><HalamanChat /></ChatFeatureGate></PrivateShell>} />
+        <Route path="/chat/baru" element={<PrivateShell><ChatFeatureGate><HalamanChat /></ChatFeatureGate></PrivateShell>} />
+        <Route path="/chat/kontak" element={<PrivateShell><ChatFeatureGate><HalamanChat /></ChatFeatureGate></PrivateShell>} />
+        <Route path="/chat/grup" element={<PrivateShell><ChatFeatureGate><HalamanChat /></ChatFeatureGate></PrivateShell>} />
+        <Route path="/chat/:chatId" element={<PrivateShell><ChatFeatureGate><HalamanChat /></ChatFeatureGate></PrivateShell>} /> {/*[cite: 9] */}
+        <Route path="/admin/dashboard/chat" element={<PrivateShell><ChatFeatureGate><HalamanSubMenu /></ChatFeatureGate></PrivateShell>} />
         <Route path="/asisten" element={<PrivateShell><HalamanAsisten /></PrivateShell>} />
         
         <Route path="/profil" element={<Navigate to="/pengaturan/akun" replace />} />
