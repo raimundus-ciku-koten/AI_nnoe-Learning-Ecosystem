@@ -72,7 +72,7 @@ test('migration rehearsal validates Staging and replays only into a disposable l
   assert.match(restore, /REHEARSAL_MODE: \$\{\{ inputs\.rehearsal_mode \}\}/);
   assert.match(restore, /dump_options\+=\(--schema-only\)/);
   assert.match(replay, /No hosted schema was changed/);
-  assert.match(replay, /20261018000400_midtrans_billing\.sql/);
+  assert.match(replay, /20261018000400_plan_entitlements\.sql/);
   assert.match(replay, /20261019000100_indonesia_price_catalog\.sql/);
   assert.match(replay, /20261019000200_public_demo_trial\.sql/);
   assert.match(workflow, /Remove temporary database files/);

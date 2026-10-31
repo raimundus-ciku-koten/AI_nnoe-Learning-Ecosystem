@@ -1019,6 +1019,15 @@ a.ale-sub:hover {
   box-shadow: 0 10px 24px -14px rgb(15 23 42 / 0.35);
 }
 .is-superadmin .ale-admin-aksi:hover { border-color: #4338ca; }
+.ale-admin-aksi.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+.ale-admin-aksi.is-disabled:hover {
+  transform: none;
+  border-color: var(--ale-line);
+  box-shadow: none;
+}
 .ale-admin-aksi:focus-visible {
   outline: 3px solid #0f766e;
   outline-offset: 2px;

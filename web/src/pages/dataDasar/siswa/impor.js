@@ -1,6 +1,6 @@
 // web/src/pages/dataDasar/siswa/impor.js
 /**
- * Penguraian data impor siswa — MURNI (tanpa DOM, tanpa Firebase).
+ * Penguraian data impor siswa — murni, tanpa DOM.
  * Dipisah dari tab agar bisa diuji unit dengan `node --test`.
  *
  * Perbaikan dibanding versi di dalam tabSiswa.js:

@@ -3,9 +3,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 const root = new URL('../../', import.meta.url);
-const pricing = JSON.parse(readFileSync(new URL('functions/shared/pricing.json', root), 'utf8'));
+const pricing = JSON.parse(readFileSync(new URL('shared/pricing.json', root), 'utf8'));
 const migration = readFileSync(
-  new URL('supabase/migrations/20261018000400_midtrans_billing.sql', root),
+  new URL('supabase/migrations/20261018000400_plan_entitlements.sql', root),
   'utf8',
 );
 const priceAdjustment = readFileSync(

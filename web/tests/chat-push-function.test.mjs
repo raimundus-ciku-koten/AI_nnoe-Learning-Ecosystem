@@ -18,6 +18,10 @@ const chatServiceSource = await readFile(
   new URL('../src/services/chat.js', import.meta.url),
   'utf8',
 );
+const messagingSource = await readFile(
+  new URL('../src/services/messaging.js', import.meta.url),
+  'utf8',
+);
 const chatAttachmentMigration = await readFile(
   new URL('../../supabase/migrations/20261018000800_chat_drive_attachment_registration.sql', import.meta.url),
   'utf8',
@@ -42,14 +46,19 @@ test('sends generic notifications only to active, eligible conversation particip
   assert.doesNotMatch(functionSource, /body:\s*message\.body/);
 });
 
-test('validates Web Push destinations and discards expired subscriptions', () => {
+test('validates supported Web Push destinations and discards expired subscriptions', () => {
   assert.match(functionSource, /url\.protocol === 'https:'/);
-  assert.match(functionSource, /fcm\.googleapis\.com/);
+  assert.doesNotMatch(functionSource, /fcm\.googleapis\.com/);
   assert.match(functionSource, /push\.services\.mozilla\.com/);
   assert.match(functionSource, /web\.push\.apple\.com/);
   assert.match(functionSource, /notify\.windows\.com/);
   assert.match(functionSource, /statusCode === 404 \|\| statusCode === 410/);
   assert.match(functionSource, /\.delete\(\)[\s\S]*?\.eq\('id', subscription\.id\)/);
+});
+
+test('rejects FCM-backed browser subscriptions before storing them', () => {
+  assert.match(messagingSource, /host !== 'fcm\.googleapis\.com' && !host\.endsWith\('\.fcm\.googleapis\.com'\)/);
+  assert.match(messagingSource, /if \(!endpointDidukung\(subscription\.endpoint\)\)[\s\S]*?if \(!existingSubscription\) await subscription\.unsubscribe\(\)[\s\S]*?throw new Error/);
 });
 
 test('deduplicates dispatches by immutable message ID with service-role-only access', () => {

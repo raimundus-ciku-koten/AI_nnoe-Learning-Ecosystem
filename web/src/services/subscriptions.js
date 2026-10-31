@@ -48,7 +48,3 @@ function petakanLangganan(data, jenis) {
     sampai,
   };
 }
-
-export async function mulaiCheckoutMidtrans() {
-  throw new Error('Checkout dinonaktifkan. Aplikasi beroperasi tanpa pembayaran atau billing.');
-}

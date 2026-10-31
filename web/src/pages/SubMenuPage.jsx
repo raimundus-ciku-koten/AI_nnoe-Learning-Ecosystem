@@ -85,7 +85,7 @@ const ALUR = {
     langkah: ['Pilih konfigurasi atau metrik AI', 'Tinjau pemakaian dan batas biaya', 'Ubah rahasia hanya melalui layanan tepercaya'],
   },
   'platform-keamanan': {
-    ringkasan: 'Tinjau kontrol keamanan platform, audit, dan App Check untuk memastikan akses tetap terjaga.',
+    ringkasan: 'Tinjau kebijakan RLS, autentikasi, dan audit akses melalui layanan yang dikonfigurasi.',
     langkah: ['Pilih kontrol atau rentang waktu', 'Tinjau temuan dan jejak audit', 'Terapkan tindak lanjut yang telah disetujui'],
   },
   'platform-laporan': {
@@ -172,6 +172,16 @@ export default function SubMenuPage() {
   }
 
   const { grup, item } = menu;
+  if (item.disabled) {
+    return (
+      <section className="ale-kartu ale-submenu-tidak-ada" aria-labelledby="submenu-unavailable">
+        <Ikon nama={item.ikon || 'file'} />
+        <h2 id="submenu-unavailable">{item.label} belum tersedia</h2>
+        <p>{item.availabilityMessage}</p>
+        <a className="ale-submenu-tombol" href="#/dashboard">Kembali ke Dashboard</a>
+      </section>
+    );
+  }
   if (adalahPeranGuru(peranAktif) && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
   if (adalahPeranGuru(peranAktif)) return <TeacherWorkspacePage grup={grup} item={item} />;
 
@@ -179,7 +189,7 @@ export default function SubMenuPage() {
     ringkasan: 'Pilih aktivitas yang dibutuhkan dan lanjutkan ke modul terkait.',
     langkah: ['Pilih konteks kerja', 'Tinjau informasi yang tersedia', 'Lanjutkan ke aktivitas terkait'],
   };
-  const terkait = grup.item.filter((sub) => sub !== item && sub.path);
+  const terkait = grup.item.filter((sub) => sub !== item && sub.path && !sub.disabled);
   const statusModul = role === 'siswa'
     ? 'Data jadwal, materi, tugas, ujian, atau nilai hanya muncul setelah sekolah menautkan data akademik ke akun siswa. Halaman ini saat ini hanya panduan dan tidak mengubah data.'
     : ['ortu', 'orang_tua'].includes(role)

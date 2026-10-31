@@ -1,7 +1,0 @@
-{
-  "name": "ainnoe-legacy-functions-archive",
-  "private": true,
-  "description": "Archived Firebase Functions source; not installable, tested, or deployed by this project.",
-  "type": "commonjs",
-  "engines": { "node": "20" }
-}

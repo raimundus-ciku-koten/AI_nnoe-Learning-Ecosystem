@@ -7,8 +7,8 @@ It requires `Authorization: Bearer <token>` matching the
 raw body of `POST /convert`; requests over 10 MiB are rejected. Successful
 responses have `Content-Type: application/pdf`.
 
-Cloud Run terminates HTTPS. Deploy this service with ingress restricted to the
-trusted Firebase Cloud Functions path where possible, and store the bearer token
+Cloud Run terminates HTTPS. Deploy this service with ingress restricted to a trusted server-side caller
+where possible, and store the bearer token
 in Secret Manager rather than in source or a client. Set the same secret in the
 calling function and as `CONVERSION_BEARER_TOKEN` for this service. The service
 listens on the Cloud Run-provided `PORT` (8080 by default).

@@ -8,7 +8,7 @@ import {
 } from '../lib/supabase.ts';
 import { pasangTurnstile } from '../services/turnstile.js';
 import { getState, subscribe } from '../state.js';
-import PRICING from '../../../functions/shared/pricing.json';
+import PRICING from '../../../shared/pricing.json';
 
 const TURNSTILE_SITE_KEY = import.meta.env?.VITE_TURNSTILE_SITE_KEY?.trim() || '';
 const DEMO_TRIAL_ENABLED = import.meta.env?.VITE_PUBLIC_DEMO_TRIAL_ENABLED?.trim().toLowerCase() === 'true'

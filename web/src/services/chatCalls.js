@@ -50,6 +50,7 @@ export function buatPengendaliPanggilan({
   let state = { status: 'idle' };
   let disposed = false;
   let ringTimeout = null;
+  let operationId = 0;
 
   function publish(next) {
     state = next;
@@ -57,13 +58,15 @@ export function buatPengendaliPanggilan({
   }
 
   function emitError(error) {
+    if (disposed || !call) return;
     publish({ ...state, status: 'error', error });
   }
 
   async function connect() {
+    if (disposed) throw new Error('Pengendali panggilan sudah ditutup.');
     if (connectionPromise) return connectionPromise;
     if (channel) return;
-    channel = supabase
+    const connectingChannel = supabase
       .channel(`chat-call:${conversationId}`, { config: { private: true } })
       .on('broadcast', { event: 'signal' }, (event) => {
         const payload = event?.payload && typeof event.payload === 'object'
@@ -71,14 +74,15 @@ export function buatPengendaliPanggilan({
           : event;
         void terimaSinyal(payload).catch(emitError);
       });
+    channel = connectingChannel;
 
     connectionPromise = new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Koneksi signaling panggilan timeout.')), 15_000);
-      channel.subscribe((status, error) => {
+      connectingChannel.subscribe((status, error) => {
         if (status === 'SUBSCRIBED') {
           clearTimeout(timeout);
           resolve();
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           clearTimeout(timeout);
           reject(error || new Error('Tidak dapat terhubung ke signaling panggilan.'));
         }
@@ -86,9 +90,12 @@ export function buatPengendaliPanggilan({
     });
     try {
       await connectionPromise;
+      if (disposed) throw new Error('Pengendali panggilan sudah ditutup.');
     } catch (error) {
-      await supabase.removeChannel(channel);
-      channel = null;
+      if (channel === connectingChannel) {
+        channel = null;
+        await supabase.removeChannel(connectingChannel);
+      }
       throw error;
     } finally {
       connectionPromise = null;
@@ -115,16 +122,18 @@ export function buatPengendaliPanggilan({
     const connection = buatPeerConnection({ iceServers });
     for (const track of stream.getTracks()) connection.addTrack(track, stream);
     connection.onicecandidate = ({ candidate }) => {
-      if (candidate && call) {
+      if (candidate && call?.peer?.connection === connection) {
         void kirimSinyal('candidate', remoteId, { candidate: candidate.toJSON() })
           .catch(emitError);
       }
     };
     connection.ontrack = ({ streams }) => {
-      if (call) publish({ ...state, status: 'connected', remoteStream: streams[0] });
+      if (call?.peer?.connection === connection) {
+        publish({ ...state, status: 'connected', remoteStream: streams[0] });
+      }
     };
     connection.onconnectionstatechange = () => {
-      if (!call) return;
+      if (call?.peer?.connection !== connection) return;
       if (connection.connectionState === 'connected') {
         publish({ ...state, status: 'connected' });
       } else if (connection.connectionState === 'failed') {
@@ -157,11 +166,13 @@ export function buatPengendaliPanggilan({
     if (payload.type === 'offer') {
       if (call || !CALL_KINDS.has(payload.kind) ||
           !descriptionValid(payload.description, 'offer')) return;
+      const currentOperationId = ++operationId;
       call = {
         id: payload.callId,
         peerId: payload.senderId,
         kind: payload.kind,
         direction: 'incoming',
+        operationId: currentOperationId,
         description: payload.description,
         pendingCandidates: [],
       };
@@ -182,10 +193,14 @@ export function buatPengendaliPanggilan({
     const peer = call.peer;
     if (payload.type === 'answer' && peer &&
         descriptionValid(payload.description, 'answer') && call.direction === 'outgoing') {
+      const activeCall = call;
+      const currentOperationId = activeCall.operationId;
       clearTimeout(ringTimeout);
       ringTimeout = null;
       await peer.connection.setRemoteDescription(payload.description);
+      if (disposed || operationId !== currentOperationId || call !== activeCall) return;
       await pasangKandidatTertunda(peer);
+      if (disposed || operationId !== currentOperationId || call !== activeCall) return;
       publish({ ...state, status: 'connecting' });
     } else if (payload.type === 'candidate' && candidateValid(payload.candidate)) {
       if (peer) await pasangKandidat(peer, payload.candidate);
@@ -195,6 +210,7 @@ export function buatPengendaliPanggilan({
     } else if (payload.type === 'end') {
       clearTimeout(ringTimeout);
       ringTimeout = null;
+      operationId += 1;
       bersihkanPanggilan();
       publish({ status: 'idle' });
     }
@@ -212,27 +228,47 @@ export function buatPengendaliPanggilan({
   }
 
   async function mulai(kind, peerId, iceServers) {
+    if (disposed) throw new Error('Pengendali panggilan sudah ditutup.');
     if (!CALL_KINDS.has(kind) || !peers.has(peerId)) {
       throw new TypeError('Jenis panggilan atau kontak tidak valid.');
     }
     if (call) throw new Error('Panggilan lain sedang berlangsung.');
     const id = buatId();
     if (!id) throw new Error('Browser tidak menyediakan identitas panggilan yang aman.');
+
+    const currentOperationId = ++operationId;
+    const outgoingCall = {
+      id,
+      peerId,
+      kind,
+      direction: 'outgoing',
+      operationId: currentOperationId,
+    };
+    call = outgoingCall;
     publish({ status: 'connecting', kind, peerId });
     try {
-      stream = await getUserMedia({ audio: true, video: kind === 'video' });
+      const localStream = await getUserMedia({ audio: true, video: kind === 'video' });
+      if (disposed || operationId !== currentOperationId || call !== outgoingCall) {
+        localStream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      stream = localStream;
       await connect();
-      call = { id, peerId, kind, direction: 'outgoing' };
+      if (disposed || operationId !== currentOperationId || call !== outgoingCall) return;
       const peer = buatKoneksi(peerId, iceServers);
       call.peer = peer;
       const description = await peer.connection.createOffer();
+      if (disposed || operationId !== currentOperationId || call !== outgoingCall) return;
       await peer.connection.setLocalDescription(description);
+      if (disposed || operationId !== currentOperationId || call !== outgoingCall) return;
       await kirimSinyal('offer', peerId, { kind, description: peer.connection.localDescription });
+      if (disposed || operationId !== currentOperationId || call !== outgoingCall) return;
       publish({ status: 'ringing', callId: id, peerId, kind, localStream: stream });
       ringTimeout = setTimeout(() => {
         if (call?.id === id) void akhiri().catch(emitError);
       }, RING_TIMEOUT_MS);
     } catch (error) {
+      if (disposed || operationId !== currentOperationId || call !== outgoingCall) return;
       bersihkanPanggilan();
       publish({ status: 'idle' });
       throw error;
@@ -240,28 +276,41 @@ export function buatPengendaliPanggilan({
   }
 
   async function terima(iceServers) {
-    if (!call || call.direction !== 'incoming' || !state.callId) {
+    if (disposed || !call || call.direction !== 'incoming' || !state.callId) {
       throw new Error('Tidak ada panggilan masuk untuk diterima.');
     }
     const incoming = call;
+    const currentOperationId = incoming.operationId;
     clearTimeout(ringTimeout);
     ringTimeout = null;
     publish({ ...state, status: 'connecting' });
     try {
-      stream = await getUserMedia({ audio: true, video: incoming.kind === 'video' });
+      const localStream = await getUserMedia({ audio: true, video: incoming.kind === 'video' });
+      if (disposed || operationId !== currentOperationId || call !== incoming) {
+        localStream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      stream = localStream;
       await connect();
+      if (disposed || operationId !== currentOperationId || call !== incoming) return;
       const peer = buatKoneksi(incoming.peerId, iceServers);
       incoming.peer = peer;
       await peer.connection.setRemoteDescription(incoming.description);
+      if (disposed || operationId !== currentOperationId || call !== incoming) return;
       for (const candidate of incoming.pendingCandidates.splice(0)) {
         await pasangKandidat(peer, candidate);
+        if (disposed || operationId !== currentOperationId || call !== incoming) return;
       }
       await pasangKandidatTertunda(peer);
+      if (disposed || operationId !== currentOperationId || call !== incoming) return;
       const answer = await peer.connection.createAnswer();
+      if (disposed || operationId !== currentOperationId || call !== incoming) return;
       await peer.connection.setLocalDescription(answer);
+      if (disposed || operationId !== currentOperationId || call !== incoming) return;
       await kirimSinyal('answer', incoming.peerId, {
         description: peer.connection.localDescription,
       });
+      if (disposed || operationId !== currentOperationId || call !== incoming) return;
       publish({
         status: 'connecting',
         callId: incoming.id,
@@ -270,6 +319,7 @@ export function buatPengendaliPanggilan({
         localStream: stream,
       });
     } catch (error) {
+      if (disposed || operationId !== currentOperationId || call !== incoming) return;
       bersihkanPanggilan();
       publish({ status: 'idle' });
       throw error;
@@ -278,17 +328,11 @@ export function buatPengendaliPanggilan({
 
   async function akhiri() {
     const active = call;
-    if (active && channel) {
-      try {
-        await kirimSinyal('end', active.peerId);
-      } finally {
-        bersihkanPanggilan();
-        publish({ status: 'idle' });
-      }
-      return;
-    }
+    operationId += 1;
+    const endSignal = active && channel ? kirimSinyal('end', active.peerId) : null;
     bersihkanPanggilan();
     publish({ status: 'idle' });
+    if (endSignal) await endSignal;
   }
 
   async function tolak() {
@@ -297,15 +341,23 @@ export function buatPengendaliPanggilan({
   }
 
   async function dispose() {
+    if (disposed) return;
     disposed = true;
+    operationId += 1;
+    const active = call;
+    const activeChannel = channel;
+    const endSignal = active && activeChannel ? kirimSinyal('end', active.peerId) : null;
+    channel = null;
+    bersihkanPanggilan();
     try {
-      if (call && channel) await kirimSinyal('end', call.peerId);
+      if (endSignal) await endSignal;
     } finally {
-      bersihkanPanggilan();
-      if (channel) await supabase.removeChannel(channel);
-      channel = null;
+      try {
+        if (activeChannel) await supabase.removeChannel(activeChannel);
+      } finally {
+        publish({ status: 'idle' });
+      }
     }
-    publish({ status: 'idle' });
   }
 
   return {

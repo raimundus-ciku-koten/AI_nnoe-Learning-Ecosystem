@@ -19,7 +19,6 @@ function endpointAman(endpoint: string) {
     const url = new URL(endpoint);
     const host = url.hostname.toLowerCase();
     const allowedHosts = [
-      'fcm.googleapis.com',
       'push.services.mozilla.com',
       'web.push.apple.com',
       'notify.windows.com',

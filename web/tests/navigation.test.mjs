@@ -133,13 +133,16 @@ test('semua submenu memiliki rute aktif dan dapat ditemukan kembali', () => {
   assert.ok(items.every((item) => item.path));
   assert.equal(new Set(rute).size, items.length, 'setiap submenu memiliki URL unik');
   for (const item of items) {
-    if (item.disabled) {
-      assert.equal(item.path, undefined);
-      assert.equal(cariMenu('/chat'), null, item.label);
-    } else if (isChatFeaturePath(item.path)) {
+    if (isChatFeaturePath(item.path)) {
       assert.equal(cariMenu(item.path, item.search || ''), null, item.label);
     } else {
-      assert.equal(cariMenu(item.path, item.search || '')?.item, item, item.label);
+      const hasil = cariMenu(item.path, item.search || '')?.item;
+      assert.equal(hasil?.label, item.label, item.label);
+      if (hasil?.disabled) {
+        assert.match(hasil.availabilityMessage, /Alur kerja.*belum tersedia/);
+      } else {
+        assert.equal(hasil, item, item.label);
+      }
     }
   }
 });
@@ -153,7 +156,7 @@ test('semua tautan untuk guru, siswa, orang tua, sekolah, dan platform cocok den
     const menu = menuUntukPeran(role);
     for (const item of menu.flatMap((bagian) => bagian.item)) {
       if (item.disabled) {
-        assert.equal(item.path, undefined, `${role}: ${item.label} tidak punya tautan aktif`);
+        assert.equal(item.availabilityMessage?.length > 0, true, `${role}: ${item.label} butuh alasan`);
         continue;
       }
       assert.equal(cariMenu(item.path, item.search || '', role)?.item, item, `${role}: ${item.label}`);
@@ -184,13 +187,13 @@ test('menu siswa dan orang tua mengikuti perannya tanpa menampilkan modul guru a
   const ortu = semua('orang_tua');
   const tautanAktif = (items) => items.filter((item) => !item.disabled);
 
-  assert.ok(tautanAktif(siswa).some((item) => item.path === '/siswa/jadwal'));
+  assert.ok(siswa.some((item) => item.disabled && item.label === 'Jadwal dan Tugas'));
   assert.ok(tautanAktif(siswa).some((item) => item.path === '/siswa/ujian'));
   assert.ok(tautanAktif(siswa).some((item) => item.path === '/purchase'));
   assert.ok(!tautanAktif(siswa).some((item) => item.path.startsWith('/datadasar/')));
   assert.ok(!tautanAktif(siswa).some((item) => item.path.startsWith('/platform/')));
-  assert.ok(tautanAktif(ortu).some((item) => item.path === '/orang-tua/anak'));
-  assert.ok(tautanAktif(ortu).some((item) => item.path === '/orang-tua/nilai-kehadiran'));
+  assert.ok(ortu.some((item) => item.disabled && item.label === 'Ringkasan Anak'));
+  assert.ok(ortu.some((item) => item.disabled && item.label === 'Nilai dan Kehadiran'));
   assert.ok(!tautanAktif(ortu).some((item) => item.path.startsWith('/admin/')));
   assert.equal(menuUntukPeran('orang_tua'), menuUntukPeran('ortu'));
 });

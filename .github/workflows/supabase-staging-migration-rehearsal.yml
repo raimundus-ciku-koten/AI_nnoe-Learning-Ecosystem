@@ -234,7 +234,7 @@ jobs:
             full_history)
               while IFS= read -r migration; do
                 case "$(basename "$migration")" in
-                  20261018000400_midtrans_billing.sql|20261019000100_indonesia_price_catalog.sql|20261019000200_public_demo_trial.sql)
+                  20261018000400_plan_entitlements.sql|20261019000100_indonesia_price_catalog.sql|20261019000200_public_demo_trial.sql)
                     echo "Excluded from release scope: $(basename "$migration")"
                     continue
                     ;;

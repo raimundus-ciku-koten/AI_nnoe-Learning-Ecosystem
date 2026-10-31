@@ -5,6 +5,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import '../styles/dashboard.css';
+import '../styles/professional-shell.css';
 import { useAuth } from '../context/AuthContext.jsx';
 import { menuUntukPeran, cariMenu } from '../navigasi.js';
 import { NAMA_APLIKASI } from '../config.js';
@@ -40,7 +41,8 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   const daftarMenu = menuUntukPeran(role);
   const menu = cariMenu(path, search, role);
   const judulAktif = judulHalaman || menu?.item.label || 'Halaman';
-  const grupChat = daftarMenu.find((grup) => grup.item.some((item) => item.disabled));
+  const grupChat = daftarMenu.find((grup) =>
+    grup.item.some((item) => item.label === 'Chat' && item.disabled));
 
   const [sideTutup, setSideTutup] = useState(sideTutupTersimpan);
   const [mobileBuka, setMobileBuka] = useState(false);
@@ -233,11 +235,11 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
               <div id="ale-pop-profil" className="ale-pop ale-pop-profil" role="dialog"
                    aria-label="Menu profil" hidden={!profilBuka}>
                 <p className="ale-pop-judul" role="presentation">Profil</p>
-                <div style={{ padding: '0 .75rem .25rem', overflowWrap: 'anywhere', fontSize: '.88rem', color: 'var(--ale-muted)' }}>
+                <div className="ale-pop-email">
                   {user?.email}
                 </div>
                 {roles.length > 1 && (
-                  <label style={{ display: 'grid', gap: '.35rem', padding: '.5rem .75rem', fontSize: '.88rem' }}>
+                  <label className="ale-pop-role-select">
                     <span>Masuk sebagai</span>
                     <select value={peranAktif || ''} onChange={handleGantiPeran} disabled={menggantiPeran}
                             aria-label="Pilih peran aktif">
@@ -355,7 +357,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
             })}
           </nav>
 
-          <div className="ale-side-foot" style={{ display: 'flex', alignItems: 'center', gap: '.7rem' }}>
+          <div className="ale-side-foot">
             <span className="ale-foot-avatar" aria-hidden="true">{inisial(nama)}</span>
             <div className="ale-foot-teks">
               <small>Masuk sebagai</small>

@@ -4,6 +4,17 @@ Overview
 
 This document records the release state and the remaining safe rollout steps for AI_nnoe Learning Ecosystem.
 
+### Cost and activation guardrails
+
+Design for vendor free tiers, but do not describe them as a guarantee of
+zero cost: quotas, plan terms, traffic, build minutes, storage, and provider
+fees can change or be exceeded. Do not enable a paid plan, paid API, or usage
+that could incur charges without the owner's explicit approval. Keep optional
+billing and AI-provider features disabled until their cost, quota, security,
+and operational limits have been reviewed. Legacy provider source, rules, and
+local payment/advertising integrations have been removed from the workspace.
+This does not retire hosted projects, deployed services, or data.
+
 Current release status:
 - **Chat safety gate deployed to Production (2026-10-31):** [PR #33](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/pull/33) (`11f45de`) merged to `main` as `9b9a121`; [post-merge Web CI](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/41161157477) passed and [Vercel Production deployment](https://vercel.com/kotenraimundusc-4094/ainnoe-le/7Kg8rN6MV5gF6PXXh13udJyGwe1m) was marked Ready. A signed-in Production smoke check confirmed that direct chat navigation displays an unavailable notice and the expanded navigation does not expose a chat link. Chat remains disabled until its schema, RLS policy semantics, tenant isolation, and UAT are verified. No hosted database changes were made. Preview sign-in could not be validated because Cloudflare Turnstile returned error `110200`; no credentials were entered and no security settings were changed.
 - **Local source UX improvement (not deployed):** role menus and the dashboard now retain a non-clickable Chat status entry explaining that database schema and school access policies still need verification. This makes the disabled feature discoverable without enabling chat routes, data requests, or presence synchronization. Production remains unchanged until this source update passes release review and deployment.
@@ -20,7 +31,7 @@ Current release status:
 - The Supabase organization is on the Free plan. Production `Ainnoe LE` (`jvcrmzmuxgyuetkjqady`) and `Ainnoe LE Staging` (`samszhfyhbjuculrcffg`) are both in `ap-south-1`; scheduled project backups are unavailable. The owner declined R2 due to potential charges. The manual-only, Staging-targeted encrypted backup workflow is active on `main`, with a 400 MiB cap and one-day artifact retention. Run [40667639757](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/40667639757) completed successfully on 2026-10-28: it restored the raw dump to disposable PostgreSQL 17, encrypted it, decrypted it, restored it into a second disposable database, and verified the restored user-table count matched. It uploaded a 352,895-byte encrypted artifact, retained for one day. This validates the Staging backup round-trip in CI; it does not establish a Production backup/recovery plan. GitHub Actions storage/billing limits should be checked before future runs; the workflow is manual-only and does not guarantee zero cost.
 - The Actions secrets pages were inspected without reading secret values. The successful backup run confirms the workflow's Staging-target validation and required secrets were available; never send these values through chat or commit them. The validator restricts the connection to the configured Staging project and the workflow refuses to run from any branch other than `main`.
 - Supabase CAPTCHA protection is currently disabled. A Turnstile widget and server-side CAPTCHA validation have not been verified.
-- A fresh read-only Staging inventory run from the Dashboard SQL Editor on 2026-10-21 checked the 35 relations then listed in `supabase/audit_hosted_schema.sql`: only `school_registration_requests` and `trial_registrations` exist as public base tables; the other 33 expected feature relations are missing. `supabase_migrations.schema_migrations` is also absent, so migration provenance cannot be established from the hosted database. A metadata-only comparison found that the existing `school_registration_requests` is a legacy/incompatible shape: it has `user_id`, `school_name`, `submitted_at`, `terms_accepted_at`, and `review_notes`, while the current application expects `requester_id`, `submitted_name`, `education_level`, `province`, `city`, `address`, and registry fields. Its hosted RPC signatures also differ from the app contract. Per owner decision on 2026-10-21, the local migration now creates `school_registration_requests_v2` and versioned RPCs without altering the legacy relation or its old RPCs; the app and school-registry Edge Function target only v2. The audit list now includes both the retained legacy relation and v2 (36 expected relations total) for a future re-check. RLS is enabled on both existing tables; the hosted policy and columns for `trial_registrations` resemble the local baseline, but this does not prove full schema or migration parity. These queries inspected schema metadata only and did not inspect application rows or mutate the database. The v2 migration passed DDL execution against disposable PostgreSQL WASM in clean-install and legacy-schema scenarios; this verifies local SQL compatibility and legacy table/RPC preservation only, not behavior against the hosted Supabase database. The migration has not been deployed and must not run until migration provenance, full schema compatibility, and the backup/restore prerequisite are resolved. The other rollout migrations (price catalog, active-profile check, private AI credentials, and random attendance tokens) are not validated in Staging or Production. Midtrans business review is in progress. AdSense has no registered sites yet; `ads.txt` is published, but ads are not active.
+- A historical read-only Staging inventory run from the Dashboard SQL Editor on 2026-10-21 checked the 35 relations then listed in `supabase/audit_hosted_schema.sql`: only `school_registration_requests` and `trial_registrations` existed as public base tables; the other 33 expected feature relations were missing. `supabase_migrations.schema_migrations` was also absent, so migration provenance could not be established from the hosted database. A metadata-only comparison found that the existing `school_registration_requests` had a legacy/incompatible shape and hosted RPC signatures differed from the app contract. Per owner decision on 2026-10-21, the local migration now creates `school_registration_requests_v2` and versioned RPCs without altering the legacy relation or its old RPCs; the app and school-registry Edge Function target only v2. These queries inspected schema metadata only and did not inspect application rows or mutate the database. The v2 migration passed DDL execution against disposable PostgreSQL WASM in clean-install and legacy-schema scenarios; this verifies local SQL compatibility and legacy table/RPC preservation only, not behavior against the hosted Supabase database. The migration has not been deployed and must not run until migration provenance, full schema compatibility, and the backup/restore prerequisite are resolved. This is a historical snapshot, not a current hosted inventory.
 - The latest read-only Staging schema audit, [run 41163900266](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/41163900266), completed successfully on 2026-10-31 at commit `820549a`. The report found no `supabase_migrations.schema_migrations` ledger and 29 of 30 expected feature relations missing; only `trial_registrations` was present. All six expected chat relations were absent. All eight existing public tables had RLS enabled and at least one policy, but `FORCE ROW LEVEL SECURITY` was disabled on all eight. The audit inspected metadata only and did not change the database.
 - **RLS review evidence:** Run 41163900266 recorded nine policy definitions across the eight tables. The `profiles` self-row read branch omits `current_user_is_active()`, matching the local policy in `supabase/migrations/20261016000200_auth_claim_hook.sql`; this is source behavior, not a Staging drift finding. The legacy `school_registration_requests` self-row policy also omits that check, but no matching policy migration for this legacy relation was found in the local migration set; its intended inactive-account behavior and provenance remain unknown. The inventory does not establish effective table grants, function privileges, or tenant isolation through behavioral tests. Policy semantics and tenant isolation therefore remain unverified.
 - On the same commit, [Staging migration rehearsal run 41158021856](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/41158021856) successfully replayed the two approved school-workspace migrations against a disposable restore of a schema-only Staging snapshot. The hosted Staging database was not modified. This rehearsal does not establish full schema parity, tenant isolation, a Production recovery plan, or authorization to run hosted migrations. PR #28 remains a draft pending those release gates and owner approval.
@@ -67,6 +78,13 @@ broadcast signaling. It requires the migration
 TURN service that accepts time-limited HMAC credentials, and Supabase Realtime
 configured to disallow public channels. `TURN_URLS` and `TURN_SHARED_SECRET`
 must be configured as Supabase Edge Function secrets before testing.
+
+The local call controller now discards late microphone/camera permission
+results after hangup or disposal, stops any tracks that arrive late, and
+ignores stale peer-connection callbacks. Regression tests cover outgoing and
+incoming calls and controller disposal. These source changes have passed the
+local web test suite and production build, but have not been published or
+deployed.
 
 The feature remains off by default. Validate private-topic denial for
 nonparticipants, accepted-contact checks, microphone/camera permission flows,
@@ -153,8 +171,6 @@ Set these environment variables in Vercel (Project Settings → Environment Vari
 - VITE_OWNER_WHATSAPP — public WhatsApp contact in international format (for the manual registration PDF flow). This is intentionally unset until the owner approves/configures the recipient; values prefixed `VITE_` are visible in the client bundle.
 - Turnstile secret: configure only in Supabase Auth CAPTCHA settings; never store it in Vercel or frontend environment variables.
 - VERCEL_TOKEN — (only if automating deployments via CLI in scripts)
-- MIDTRANS_SERVER_KEY / MIDTRANS_CLIENT_KEY — use Midtrans sandbox keys for testing
-- ADSENSE_PUBLISHER_ID, ADMOB_APP_ID — placeholders until accounts are approved
 
 For local Staging work, run `npm run dev:staging` from `web`. This uses the
 isolated `web/env/staging/.env.staging` profile and does not load the root
@@ -170,27 +186,12 @@ apply migrations or submit real user data as part of this setup.
 
 Important:
 - The frontend must never receive service_role or other server secrets.
-- Implement serverless functions (Edge Functions) as a proxy for Midtrans using server-side secrets.
 - After staging exists: create a dedicated Managed Cloudflare Turnstile widget for the exact Vercel Preview hostname(s) used for staging; configure its site key and secret in the staging Supabase Authentication → Attack Protection → CAPTCHA protection settings; and add only the public site key as `VITE_TURNSTILE_SITE_KEY` to Vercel Preview. Do not use a broad `*.vercel.app` hostname allowlist. Validate missing, invalid, and expired tokens before any Production rollout.
 - After staging validation and written approval, create a separate Turnstile widget restricted to `ainnoe-le.vercel.app`, configure its key pair in Production Supabase, add the public site key to Vercel Production, redeploy, and verify the live signup flow. Never store or expose the Turnstile secret in Vercel, source control, chat, or a frontend build.
 - The current public build has no Turnstile widget and blocks trial registration when the site key is missing. Do not add the frontend site key until Supabase Auth is configured to validate Turnstile tokens server-side.
 - The school-registration submission path calls the `school-registry` Supabase Edge Function, which verifies the caller's confirmed user and checks the Ministry registry before using the service role to submit a v2 request. `supabase/config.toml` requires JWT verification for this function. Deploy it only after the v2 schema has been reviewed and safely applied to a disposable/Staging database; never grant browser clients direct execute access to the v2 submit RPC.
 
-5) Midtrans integration (billing)
-
-- Keep checkout disabled until you verify Midtrans sandbox behavior and the payment flow uses server-side verification.
-- Midtrans business registration is currently under review; do not claim payments are enabled or add live credentials before approval.
-- Implement an Edge Function / Supabase Function to call Midtrans server-side finalize endpoints using `MIDTRANS_SERVER_KEY`. The DB function `finalize_midtrans_payment()` is provided in migrations but must be executed only by `service_role` or via authenticated serverless functions.
-- Test end-to-end with Midtrans sandbox credentials.
-
-6) AdSense / AdMob
-
-- AdSense requires account approval and site verification. Do not enable live ad units until AdSense approves the site.
-- AdSense has no registered sites and remains in onboarding; `ads.txt` is published, but no live ads are enabled.
-- Add `ads.txt` and `app-ads.txt` as required, but keep ad scripts disabled in the release until approval.
-- For AdMob in an Android build, the app must be a real native app (AAB) and have a registered package name and signing key uploaded to the Play Console. Trusted Web Activity (TWA) is not sufficient for AdMob SDK.
-
-7) Building the Android APK / AAB
+5) Building the Android APK / AAB
 
 Prerequisites (local machine or CI runner):
 - JDK 17+, Android SDK, Android Build Tools, Gradle wrapper provided by the project (if Android project is present)
@@ -205,7 +206,7 @@ For a Play Store release (recommended):
 - Set up `keystore.properties` with password and alias (never commit these to the repo).
 - Run `./gradlew bundleRelease` to generate an AAB, sign it with your keystore, and verify with `apksigner`.
 
-A signed APK candidate already exists at `android-apk/app/build/outputs/apk/release/app-release.apk`. It targets `ainnoe-le.vercel.app`; the production Digital Asset Links endpoint is live and matches its signing fingerprint. Treat it as a candidate, not a Play Store release, until store listing, legal details, and release review are complete.
+A signed APK candidate already exists at `android-apk/app/build/outputs/apk/release/app-release.apk`. It targets `ainnoe-le.vercel.app`; the production Digital Asset Links endpoint is live and matches its signing fingerprint. Treat it as a candidate, not a Play Store release, until store listing, legal details, and release review are complete. The current checked-in `android-apk/twa-manifest.json` still contains `APP_DOMAIN_REQUIRED.invalid` placeholders, and `android-apk/android.keystore` is not present in the workspace. Do not rebuild or publish from this template until the owner configures the real domain and a separately secured signing key; do not commit signing material. Confirm any store or service fees before proceeding under the zero-cost requirement.
 
 8) Post-deploy checks
 
@@ -216,7 +217,7 @@ A signed APK candidate already exists at `android-apk/app/build/outputs/apk/rele
   - `https://ainnoe-le.vercel.app/.well-known/assetlinks.json` returns HTTP 200 with the APK package and signing fingerprint.
   - Superadmin allowlist entries work and the supplied emails can set passwords via the password setup flow.
   - After provider configuration is verified, demo accounts can sign up and are limited to `/trial` and in-browser simulation only.
-  - Billing pages show indicative pricing but checkout remains disabled until Midtrans is configured.
+  - The package catalog is informational only and does not create orders or request payment.
 
 9) Rollout & privacy
 
@@ -229,8 +230,6 @@ A signed APK candidate already exists at `android-apk/app/build/outputs/apk/rele
 - Configure Turnstile only after staging Auth is reachable, then validate server-side CAPTCHA enforcement and email redirects before enabling trial registration.
 - Deploy the MFA gate fix through the approved release path, then have the administrator explicitly enroll or verify their own TOTP factor and confirm a fresh session reaches AAL2. Never request or handle the authenticator QR, secret, recovery code, or one-time code.
 - Verify the staging schema, backup, and restore process before applying any hosted migrations; production migration still requires explicit approval.
-- Wait for Midtrans business review and complete sandbox/webhook tests before enabling checkout.
-- Complete AdSense site verification and policy approval before enabling ads.
 - Publish the privacy contact and verified email-erasure process before inviting students or processing real school data.
 
 11) AI provider and Canva rollout (source changes only)

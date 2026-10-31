@@ -8,8 +8,7 @@
     "dev": "npm --prefix web run dev",
     "build": "npm --prefix web run build",
     "preview": "npm --prefix web run preview",
-    "test": "npm --prefix web test",
-    "test:billing": "node --test functions/lib/billing.test.js"
+    "test": "npm --prefix web test"
   },
   "keywords": [
     "kurikulum-merdeka",

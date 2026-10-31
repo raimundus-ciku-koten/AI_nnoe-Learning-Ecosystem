@@ -3,9 +3,15 @@ import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase.ts';
 import { useAuth } from '../context/AuthContext.jsx';
 import { usePlatformControls } from '../context/PlatformControlContext.jsx';
-import { GRUP_MENU, MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN, menuUntukPeran } from '../navigasi.js';
+import {
+  cariMenu as cariNavigasiMenu,
+  GRUP_MENU,
+  MENU_ADMIN_SEKOLAH,
+  MENU_SUPERADMIN,
+  menuUntukPeran,
+} from '../navigasi.js';
 import { setPlatformControl } from '../services/platformAdminApi.js';
-import PRICING from '../../../functions/shared/pricing.json';
+import PRICING from '../../../shared/pricing.json';
 import '../styles/platform-tenants.css';
 
 const PERAN_MENU = [
@@ -201,7 +207,7 @@ function DaftarPaket() {
 }
 
 function DaftarPeran({ mode }) {
-  const semuaGrup = MENU_SUPERADMIN;
+  const semuaGrup = menuUntukPeran('superadmin');
   const matriks = PERAN_MENU.map(([label, role]) => ({
     label,
     role,
@@ -225,20 +231,29 @@ function DaftarPeran({ mode }) {
             {semuaGrup.map((group) => (
               <article key={group.id}>
                 <h2>{group.label}</h2>
-                <ul>{group.item.map((item) => <li key={item.path}><a href={`#${item.path}${item.search || ''}`}>{item.label}</a></li>)}</ul>
+                <ul>{group.item.map((item) => (
+                  <li key={item.path}>
+                    {item.disabled
+                      ? <span aria-disabled="true" title={item.availabilityMessage}>{item.label} · {item.statusLabel}</span>
+                      : <a href={`#${item.path}${item.search || ''}`}>{item.label}</a>}
+                  </li>
+                ))}</ul>
               </article>
             ))}
           </div>
         ) : (
           <div className="platform-tenants-table-wrap">
             <table className="platform-tenants-table">
-              <thead><tr><th scope="col">Peran</th><th scope="col">Grup menu</th><th scope="col">Tautan</th></tr></thead>
+              <thead><tr><th scope="col">Peran</th><th scope="col">Grup menu</th><th scope="col">Menu aktif</th></tr></thead>
               <tbody>
                 {matriks.map(({ label, role, grup }) => (
                   <tr key={role}>
                     <th scope="row">{label}</th>
                     <td>{grup.map((section) => section.label).join(' · ')}</td>
-                    <td>{grup.reduce((total, section) => total + section.item.length, 0)}</td>
+                    <td>{grup.reduce(
+                      (total, section) => total + section.item.filter((item) => !item.disabled).length,
+                      0,
+                    )}</td>
                   </tr>
                 ))}
               </tbody>
@@ -248,7 +263,7 @@ function DaftarPeran({ mode }) {
         {mode === 'peran' && (
           <p className="platform-ops-note">
             {GRUP_MENU.length + MENU_ADMIN_SEKOLAH.length} grup guru dan admin sekolah didefinisikan terpisah dari {MENU_SUPERADMIN.length} grup superadmin.
-            Perubahan hak akses global membutuhkan perubahan claim dan Security Rules yang teruji.
+            Perubahan hak akses global membutuhkan claim, kebijakan RLS, dan API server yang diuji bersama.
           </p>
         )}
       </section>
@@ -563,6 +578,18 @@ export default function PlatformOperationsPage() {
       : pathname === '/platform/fitur/menu' ? 'menu' : '';
   if (role !== 'superadmin') {
     return <main className="platform-tenants"><section className="platform-tenants-card" role="alert"><h1>Akses platform dibatasi</h1><p>Modul platform hanya tersedia untuk superadmin.</p></section></main>;
+  }
+
+  const menu = cariNavigasiMenu(pathname, '', role);
+  if (menu?.item.disabled) {
+    return (
+      <main className="platform-tenants">
+        <section className="platform-tenants-card" role="status">
+          <h1>{menu.item.label} belum tersedia</h1>
+          <p>{menu.item.availabilityMessage}</p>
+        </section>
+      </main>
+    );
   }
 
   return (

@@ -1,4 +1,4 @@
--- Identity foundation for the staged Firebase-to-Supabase migration.
+-- Identity foundation for the staged legacy-identity migration.
 -- Roles and tenant assignments are provisioned only through trusted SQL/service code.
 
 create table if not exists public.tenants (

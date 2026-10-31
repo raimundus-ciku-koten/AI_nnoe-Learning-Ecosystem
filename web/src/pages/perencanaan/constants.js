@@ -1,7 +1,7 @@
 /**
  * @file Konstanta modul Perencanaan Pembelajaran.
  * Satu-satunya tempat nilai "ajaib" (batas, nama koleksi, urutan dokumen).
- * Nilai batas HARUS selaras dengan firestore.rules dan functions/lib/schema.js.
+ * Nilai batas harus selaras dengan validasi dan batas skema aplikasi.
  */
 
 export const SCHEMA_VERSION = 1;
@@ -47,7 +47,7 @@ export const PRASYARAT = Object.freeze({
   [JENIS.MODUL]: [JENIS.ATP, JENIS.PROTA, JENIS.PROSEM]
 });
 
-/** Batas validasi (selaras dengan Security Rules). */
+/** Batas validasi input dokumen perencanaan. */
 export const BATAS = Object.freeze({
   TEKS_PENDEK: 120,
   TEKS_SEDANG: 300,

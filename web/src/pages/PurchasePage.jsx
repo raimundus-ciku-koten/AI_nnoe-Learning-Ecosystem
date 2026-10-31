@@ -4,7 +4,7 @@ import {
   muatLanggananPersonal,
   muatLanggananTenant,
 } from '../services/subscriptions.js';
-import PRICING from '../../../functions/shared/pricing.json';
+import PRICING from '../../../shared/pricing.json';
 import '../styles/purchase.css';
 
 const formatRupiah = (value) => new Intl.NumberFormat('id-ID', {

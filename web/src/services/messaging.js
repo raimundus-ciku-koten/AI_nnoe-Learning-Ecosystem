@@ -4,6 +4,11 @@ import { WEB_PUSH_PUBLIC_KEY } from '../config.js';
 export const statusNotifikasi = () =>
   typeof Notification === 'undefined' ? 'denied' : Notification.permission;
 
+function endpointDidukung(endpoint) {
+  const host = new URL(endpoint).hostname.toLowerCase();
+  return host !== 'fcm.googleapis.com' && !host.endsWith('.fcm.googleapis.com');
+}
+
 function kunciAplikasiServer(encodedKey) {
   const padding = '='.repeat((4 - encodedKey.length % 4) % 4);
   const base64 = (encodedKey + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -46,11 +51,15 @@ export async function aktifkanNotifikasi(uid) {
   if (permission !== 'granted') throw new Error('Izin notifikasi tidak diberikan.');
 
   const registration = await daftarkanSW();
-  const subscription = await registration.pushManager.getSubscription()
-    || await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: kunciAplikasiServer(WEB_PUSH_PUBLIC_KEY),
-    });
+  const existingSubscription = await registration.pushManager.getSubscription();
+  const subscription = existingSubscription || await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: kunciAplikasiServer(WEB_PUSH_PUBLIC_KEY),
+  });
+  if (!endpointDidukung(subscription.endpoint)) {
+    if (!existingSubscription) await subscription.unsubscribe();
+    throw new Error('Notifikasi Chrome tidak didukung karena endpoint FCM telah dihapus.');
+  }
   await simpanLangganan(uid, subscription);
   return subscription;
 }

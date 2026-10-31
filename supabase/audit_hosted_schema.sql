@@ -338,7 +338,6 @@ from unnest(array[
   'chat_presence',
   'billing_plans',
   'personal_entitlements',
-  'payment_orders',
   'testimonial_submissions',
   'question_bank',
   'web_push_subscriptions',

@@ -1,0 +1,254 @@
+.ale-shell {
+  --ale-side-w: clamp(15rem, 18vw, 21rem);
+  --ale-gutter: clamp(1rem, 2.4vw, 2.25rem);
+  --ale-radius: 1rem;
+  --ale-bayangan: 0 1px 2px rgb(15 23 42 / 0.04), 0 12px 30px -20px rgb(15 23 42 / 0.2);
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #f5f7fb;
+  color: #172033;
+}
+
+.ale-topbar {
+  border-bottom: 1px solid #dfe5ef;
+  box-shadow: 0 4px 18px -14px rgb(15 23 42 / 0.35);
+}
+
+.ale-topbar::after {
+  height: 2px;
+  opacity: 0.8;
+}
+
+.ale-topbar-judul {
+  padding-left: 1rem;
+}
+
+.ale-judul-induk {
+  color: #0f766e;
+  font-size: 0.68rem;
+  letter-spacing: 0.11em;
+}
+
+.ale-judul-teks {
+  color: #172554;
+  font-size: 1.18rem;
+}
+
+.app {
+  min-height: 100dvh;
+  background: #f5f7fb;
+}
+
+.app > .ale-main {
+  width: 100%;
+  padding: clamp(1.25rem, 2.4vw, 2.25rem) var(--ale-gutter) 3rem;
+}
+
+.ale-main > * {
+  width: min(100%, 96rem);
+  margin-inline: auto;
+}
+
+.ale-main > .ale-economy-notice {
+  width: min(100%, 96rem);
+  margin: 0 auto 1rem;
+}
+
+.ale-side {
+  background: linear-gradient(180deg, #172554 0%, #1e293b 58%, #183b52 100%);
+  box-shadow: inset -1px 0 0 rgb(255 255 255 / 0.08);
+}
+
+.ale-nav {
+  padding: 0.75rem 0.8rem 1rem;
+}
+
+.ale-grup-menu + .ale-grup-menu {
+  margin-top: 0.2rem;
+}
+
+.ale-grup-btn {
+  min-height: 2.8rem;
+  border-radius: 0.7rem;
+  font-size: 0.875rem;
+}
+
+.ale-sub {
+  min-height: 2.55rem;
+  border-radius: 0.55rem;
+  font-size: 0.82rem;
+}
+
+.ale-side-foot {
+  padding: 0.9rem 1rem;
+  background: rgb(8 15 34 / 0.28);
+}
+
+.ale-main .ale-hero {
+  min-height: 13.5rem;
+  padding: clamp(1.5rem, 3.2vw, 2.5rem);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 46px -30px rgb(23 37 84 / 0.72);
+}
+
+.ale-main .ale-hero h1,
+.ale-main .ale-hero h2 {
+  max-width: 24ch;
+  font-size: clamp(1.7rem, 3vw, 2.45rem);
+  line-height: 1.14;
+  letter-spacing: -0.035em;
+}
+
+.ale-main .ale-hero p {
+  max-width: 56ch;
+  font-size: 0.96rem;
+  line-height: 1.65;
+}
+
+.ale-main .ale-kicker {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.015em;
+}
+
+.ale-main .ale-tanggal {
+  min-width: 7.5rem;
+  border-radius: 0.9rem;
+}
+
+.ale-main .ale-kartu,
+.ale-main .card {
+  border-color: #e1e7f0;
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.035), 0 10px 24px -22px rgb(15 23 42 / 0.34);
+}
+
+.ale-main .ale-kartu::before {
+  height: 2px;
+  opacity: 0.75;
+}
+
+.ale-main .ale-kartu-kepala {
+  margin-bottom: 1.1rem;
+}
+
+.ale-main .ale-kartu-judul {
+  color: #172554;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.ale-main .ale-sub-judul {
+  color: #172554;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.ale-main .ale-stat {
+  min-width: 0;
+  padding: 1.05rem;
+  border-color: #e4e9f1;
+  border-radius: 0.85rem;
+  background: #fff;
+}
+
+.ale-main .ale-stat-ikon,
+.ale-main .ale-aksi-ikon {
+  border-radius: 0.7rem;
+  box-shadow: none;
+}
+
+.ale-main .ale-stat-nilai {
+  color: #172554;
+  font-size: 1.55rem;
+}
+
+.ale-main .ale-aksi {
+  min-height: 5rem;
+  align-items: center;
+  padding: 0.9rem;
+  border-color: #e3e8f0;
+  border-radius: 0.85rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.025);
+}
+
+.ale-main a.ale-aksi:hover {
+  transform: translateY(-1px);
+  border-color: #a5b4fc;
+  box-shadow: 0 12px 24px -20px rgb(55 48 163 / 0.55);
+  text-decoration: none;
+}
+
+.ale-main .ale-aksi-teks strong {
+  color: #172554;
+  font-size: 0.88rem;
+}
+
+.ale-main .ale-aksi-teks small {
+  line-height: 1.5;
+}
+
+.ale-main .ale-kosong {
+  color: #64748b;
+  line-height: 1.65;
+}
+
+.ale-main :is(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid #0f766e;
+  outline-offset: 3px;
+}
+
+.ale-pop-email {
+  padding: 0 0.75rem 0.25rem;
+  overflow-wrap: anywhere;
+  color: var(--ale-muted);
+  font-size: 0.88rem;
+}
+
+.ale-pop-role-select {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.88rem;
+}
+
+.ale-pop-role-select select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.6rem;
+  background: #fff;
+}
+
+@media (max-width: 960px) {
+  .app > .ale-main {
+    padding: 1.25rem 1rem 2.5rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .ale-main .ale-hero {
+    min-height: 0;
+    padding: 1.35rem;
+    border-radius: 1rem;
+  }
+
+  .ale-main .ale-hero h1,
+  .ale-main .ale-hero h2 {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+  }
+
+  .ale-main .ale-kartu,
+  .ale-main .card {
+    padding: 1rem;
+    border-radius: 0.85rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ale-main a.ale-aksi:hover {
+    transform: none;
+  }
+}

@@ -57,6 +57,12 @@ function mockPeerConnection() {
   };
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolvePromise) => { resolve = resolvePromise; });
+  return { promise, resolve };
+}
+
 test('only allows private broadcast signaling for active conversation participants', () => {
   assert.match(migration, /on realtime\.messages[\s\S]*?for select[\s\S]*?to authenticated/i);
   assert.match(migration, /on realtime\.messages[\s\S]*?for insert[\s\S]*?to authenticated/i);
@@ -127,6 +133,52 @@ test('outgoing calls use a private conversation topic and clean up media on hang
   assert.equal(stopped, 1);
 });
 
+test('hangup cancels an outgoing call while microphone or camera permission is pending', async () => {
+  const supabase = fakeSupabase();
+  const media = deferred();
+  let stopped = 0;
+  const controller = buatPengendaliPanggilan({
+    supabase,
+    conversationId,
+    userId,
+    peerIds: [peerId],
+    getUserMedia: () => media.promise,
+  });
+
+  const starting = controller.mulai('audio', peerId, []);
+  await controller.akhiri();
+  media.resolve({ getTracks: () => [{ stop() { stopped += 1; } }] });
+  await starting;
+
+  assert.equal(stopped, 1);
+  assert.equal(supabase.channelName, null);
+  assert.deepEqual(supabase.sent, []);
+  assert.equal(controller.state.status, 'idle');
+});
+
+test('disposing the call controller cancels a pending media permission request', async () => {
+  const supabase = fakeSupabase();
+  const media = deferred();
+  let stopped = 0;
+  const controller = buatPengendaliPanggilan({
+    supabase,
+    conversationId,
+    userId,
+    peerIds: [peerId],
+    getUserMedia: () => media.promise,
+  });
+
+  const starting = controller.mulai('video', peerId, []);
+  await controller.dispose();
+  media.resolve({ getTracks: () => [{ stop() { stopped += 1; } }] });
+  await starting;
+
+  assert.equal(stopped, 1);
+  assert.equal(supabase.channelName, null);
+  assert.deepEqual(supabase.sent, []);
+  assert.equal(controller.state.status, 'idle');
+});
+
 test('accepts valid incoming calls, buffers ICE, and rejects signals from nonparticipants', async () => {
   const supabase = fakeSupabase();
   const peer = mockPeerConnection();
@@ -176,5 +228,37 @@ test('accepts valid incoming calls, buffers ICE, and rejects signals from nonpar
   peer.ontrack({ streams: [{ id: 'remote-media' }] });
   assert.equal(controller.state.status, 'connected');
   assert.equal(controller.state.remoteStream.id, 'remote-media');
+  await controller.dispose();
+});
+
+test('hangup cancels an incoming call while microphone or camera permission is pending', async () => {
+  const supabase = fakeSupabase();
+  const media = deferred();
+  let stopped = 0;
+  const controller = buatPengendaliPanggilan({
+    supabase,
+    conversationId,
+    userId,
+    peerIds: [peerId],
+    getUserMedia: () => media.promise,
+  });
+  await controller.hubungkan();
+  supabase.receive({
+    type: 'offer',
+    callId,
+    senderId: peerId,
+    recipientId: userId,
+    kind: 'audio',
+    description: { type: 'offer', sdp: 'remote-offer' },
+  });
+
+  const accepting = controller.terima([]);
+  await controller.akhiri();
+  media.resolve({ getTracks: () => [{ stop() { stopped += 1; } }] });
+  await accepting;
+
+  assert.equal(stopped, 1);
+  assert.deepEqual(supabase.sent.map(({ payload }) => payload.type), ['end']);
+  assert.equal(controller.state.status, 'idle');
   await controller.dispose();
 });

@@ -18,7 +18,7 @@ import { muatJadwalGuruDrive } from '../services/teacherScheduleDrive.js';
 import { getState } from '../state.js';
 import { perbaruiHeader } from '../components/sidebar.js';
 import { LINK_PERENCANAAN } from '../config.js';
-import { menuUntukPeran } from '../navigasi.js';
+import { cariMenu, menuUntukPeran } from '../navigasi.js';
 import {
   CHAT_FEATURE_ENABLED,
   CHAT_UNAVAILABLE_MESSAGE,
@@ -216,7 +216,7 @@ const AKSI_SUPERADMIN = [
   },
   {
     href: '#/platform/keamanan/audit', ikon: 'perisai', judul: 'Keamanan dan audit',
-    ket: 'Audit log, Security Rules, dan App Check',
+    ket: 'Audit log, RLS, dan kontrol akses',
   },
   {
     href: '#/platform/laporan/biaya', ikon: 'progres', judul: 'Analitik global',
@@ -224,16 +224,30 @@ const AKSI_SUPERADMIN = [
   },
 ];
 
-function aksiAdmin(items) {
-  return items.map((item) => `
-    <a class="ale-admin-aksi" href="${item.href}">
-      <span class="ale-admin-aksi-ikon">${ikon(item.ikon)}</span>
-      <span class="ale-admin-aksi-teks">
-        <strong>${esc(item.judul)}</strong>
-        <small>${esc(item.ket)}</small>
-      </span>
-      <span class="ale-admin-aksi-panah" aria-hidden="true">${ikon('panah')}</span>
-    </a>`).join('');
+function aksiAdmin(items, role) {
+  return items.map((item) => {
+    const path = item.href.startsWith('#/')
+      ? item.href.slice(1).split('?')[0]
+      : '';
+    const menu = path ? cariMenu(path, '', role) : null;
+    const unavailable = Boolean(menu?.item.disabled);
+    const tag = unavailable ? 'div' : 'a';
+    const href = unavailable ? '' : ` href="${escapeAttr(item.href)}"`;
+    const status = unavailable
+      ? `<small>${esc(menu.item.statusLabel || 'Belum tersedia')}</small>`
+      : `<small>${esc(item.ket)}</small>`;
+
+    return `
+      <${tag} class="ale-admin-aksi${unavailable ? ' is-disabled' : ''}"${href}
+        ${unavailable ? `aria-disabled="true" title="${escapeAttr(menu.item.availabilityMessage)}"` : ''}>
+        <span class="ale-admin-aksi-ikon">${ikon(item.ikon)}</span>
+        <span class="ale-admin-aksi-teks">
+          <strong>${esc(item.judul)}</strong>
+          ${status}
+        </span>
+        ${unavailable ? '' : `<span class="ale-admin-aksi-panah" aria-hidden="true">${ikon('panah')}</span>`}
+      </${tag}>`;
+  }).join('');
 }
 
 function tampilanAdmin({ role, nama, sekolah }) {
@@ -273,7 +287,7 @@ function tampilanAdmin({ role, nama, sekolah }) {
           </div>
           <span class="ale-admin-pill">${superadmin ? 'Lintas tenant' : 'Tenant terbatas'}</span>
         </div>
-        <div class="ale-admin-aksi-grid">${aksiAdmin(aksi)}</div>
+        <div class="ale-admin-aksi-grid">${aksiAdmin(aksi, role)}</div>
       </section>
 
       <section class="ale-kartu ale-admin-prinsip" aria-labelledby="aleAdminPrinsip">

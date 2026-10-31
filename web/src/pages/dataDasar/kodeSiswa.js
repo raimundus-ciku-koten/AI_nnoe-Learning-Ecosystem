@@ -1,5 +1,5 @@
 // web/src/pages/dataDasar/kodeSiswa.js
-// Kode unik siswa + URL scan. Mandiri (tanpa Firebase) agar mudah diuji.
+// Kode unik siswa + URL scan. Pure logic keeps it easy to test.
 //
 // Format : ALE-<KELAS>-<HASH6>-<IDENT>
 //   KELAS : A-Z0-9, maks 6 karakter (default 'KELAS')

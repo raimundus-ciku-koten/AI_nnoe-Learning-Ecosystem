@@ -894,6 +894,33 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand-600); }
 }
 
 @media (max-width: 760px) {
+  .public-login {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+  .public-login main {
+    display: block;
+    flex: 1 0 auto;
+  }
+  .public-login main > section {
+    min-height: auto;
+    overflow: visible;
+  }
+  .public-login main > .hero {
+    display: block;
+    padding-block: 1rem;
+  }
+  .public-login .hero-grid {
+    align-items: start;
+  }
+  .public-login .hero-copy {
+    padding-bottom: 0.75rem;
+  }
+  .public-login .site-footer {
+    margin-top: auto;
+  }
   .public-login .header-inner { gap: .35rem; }
   .public-login .brand { gap: .35rem; }
   .public-login .brand img { width: 38px; }

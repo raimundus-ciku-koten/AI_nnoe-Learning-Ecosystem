@@ -8,6 +8,128 @@ const tautan = (label, path, ikon, search = '') => ({ label, path, ikon, search 
 const perencanaan = (label, jenis, ikon) =>
   tautan(label, '/perencanaan', ikon, `?jenis=${jenis}`);
 
+const RUTE_TANPA_ALUR = new Set([
+  '/perangkat/modul-siswa',
+  '/perangkat/cover',
+  '/pelaksanaan/jurnal',
+  '/pelaksanaan/realisasi',
+  '/pelaksanaan/berdiferensiasi',
+  '/pelaksanaan/kelas-khusus',
+  '/pelaksanaan/catatan-cepat',
+  '/asesmen/diagnostik',
+  '/asesmen/formatif',
+  '/asesmen/sumatif',
+  '/asesmen/rubrik',
+  '/asesmen/analisis',
+  '/asesmen/remedial',
+  '/asesmen/rapor',
+  '/asesmen/generator-ai',
+  '/asesmen/penilaian-otomatis',
+  '/pemantauan/profil-siswa',
+  '/pemantauan/catatan',
+  '/pemantauan/karakter',
+  '/pemantauan/pendampingan',
+  '/pemantauan/komunikasi',
+  '/refleksi/pembelajaran',
+  '/refleksi/supervisi',
+  '/refleksi/portofolio',
+  '/refleksi/kompetensi',
+  '/refleksi/perbaikan',
+  '/laporan/harian-bulanan',
+  '/laporan/penilaian',
+  '/laporan/ketercapaian',
+  '/laporan/kinerja-guru',
+  '/laporan/ekspor-cetak',
+  '/laporan/dokumen',
+  '/laporan/riwayat-cetak',
+  '/kolaborasi/ruang-kerja',
+  '/kolaborasi/praktik-baik',
+  '/kolaborasi/kepala-sekolah',
+  '/kolaborasi/grup-chat',
+  '/kolaborasi/guru-pengganti',
+  '/pengaturan/peran',
+  '/pengaturan/preferensi',
+  '/pengaturan/cadangan',
+  '/pengaturan/bantuan',
+  '/pengaturan/notifikasi',
+  '/siswa/jadwal',
+  '/siswa/materi',
+  '/orang-tua/anak',
+  '/orang-tua/nilai-kehadiran',
+  '/admin/dashboard/ujian',
+  '/admin/aktivitas',
+  '/admin/instansi/profil',
+  '/admin/instansi/tahun-ajaran',
+  '/admin/instansi/semester',
+  '/admin/instansi/unit',
+  '/admin/akademik/kelas',
+  '/admin/akademik/mapel',
+  '/admin/akademik/jadwal',
+  '/admin/akademik/kelompok',
+  '/admin/akademik/denah',
+  '/admin/perencanaan/monitoring',
+  '/admin/perencanaan/persetujuan',
+  '/admin/asesmen/paket',
+  '/admin/asesmen/jadwal',
+  '/admin/asesmen/monitoring',
+  '/admin/asesmen/analisis',
+  '/admin/konten/modul-ajar',
+  '/admin/konten/bahan-ajar',
+  '/admin/konten/perpustakaan',
+  '/admin/komunikasi/pengumuman',
+  '/admin/komunikasi/broadcast',
+  '/admin/komunikasi/monitoring',
+  '/admin/keuangan/pembayaran',
+  '/admin/keuangan/tagihan',
+  '/admin/keuangan/laporan',
+  '/admin/laporan/akademik',
+  '/admin/laporan/keuangan',
+  '/admin/laporan/kinerja',
+  '/admin/laporan/ekspor',
+  '/admin/pengaturan/integrasi',
+  '/admin/pengaturan/api',
+  '/admin/pengaturan/cadangan',
+  '/admin/pengaturan/log-aktivitas',
+  '/admin/bantuan/panduan',
+  '/admin/bantuan/support',
+  '/admin/bantuan/faq',
+  '/platform/dashboard/kesehatan',
+  '/platform/tenant/langganan',
+  '/platform/tenant/paket',
+  '/platform/pengguna/peran',
+  '/platform/fitur/menu',
+  '/platform/fitur/izin',
+  '/platform/konten/template',
+  '/platform/konten/bank-soal',
+  '/platform/konten/modul',
+  '/platform/ai/api-key',
+  '/platform/ai/prompt',
+  '/platform/ai/monitoring',
+  '/platform/keamanan/rules',
+  '/platform/laporan/performa',
+  '/platform/laporan/biaya',
+  '/platform/pengaturan/konfigurasi',
+  '/platform/pengaturan/integrasi',
+  '/platform/pengaturan/cadangan',
+]);
+
+const PESAN_RUTE_TANPA_ALUR =
+  'Alur kerja untuk menu ini belum tersedia. Tautan dinonaktifkan agar tidak membuka halaman panduan atau catatan yang menyesatkan.';
+
+function tandaiMenuBelumTersedia(menu) {
+  return menu.map((bagian) => ({
+    ...bagian,
+    item: bagian.item.map((item) => RUTE_TANPA_ALUR.has(item.path)
+      ? {
+        ...item,
+        disabled: true,
+        statusLabel: 'Belum tersedia',
+        availabilityMessage: PESAN_RUTE_TANPA_ALUR,
+      }
+      : item),
+  }));
+}
+
 export function adalahPeranGuru(role) {
   return ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler']
     .includes(String(role || '').trim().toLowerCase());
@@ -347,10 +469,11 @@ export const MENU_SUPERADMIN = [
 const menuChatCache = new WeakMap();
 
 export function menuTanpaChat(menu) {
-  if (CHAT_FEATURE_ENABLED) return menu;
+  const menuTersedia = tandaiMenuBelumTersedia(menu);
+  if (CHAT_FEATURE_ENABLED) return menuTersedia;
   const cached = menuChatCache.get(menu);
   if (cached) return cached;
-  const withStatus = menu
+  const withStatus = menuTersedia
     .map((bagian) => {
       let chatStatusAdded = false;
       const item = bagian.item.flatMap((entry) => {

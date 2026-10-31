@@ -38,20 +38,17 @@ def releaseSigningConfigured = [
 
 def configuredTwaHost = providers.gradleProperty('twaHost').orElse(providers.environmentVariable('TWA_HOST')).orNull
 if (!configuredTwaHost) {
-    throw new GradleException('Set TWA_HOST (atau -PtwaHost) ke domain HTTPS non-Firebase sebelum membangun APK.')
+    throw new GradleException('Set TWA_HOST (atau -PtwaHost) ke domain HTTPS publik sebelum membangun APK.')
 }
 
 def normalizedTwaHost = configuredTwaHost.toLowerCase(Locale.ROOT)
 def twaHostUri = URI.create("https://${configuredTwaHost}")
-def firebaseManagedHost = ['web.app', 'firebaseapp.com', 'firebaseio.com'].any { suffix ->
-    normalizedTwaHost == suffix || normalizedTwaHost.endsWith(".${suffix}")
-}
 def placeholderHost = ['invalid', 'example', 'localhost'].any { suffix ->
     normalizedTwaHost == suffix || normalizedTwaHost.endsWith(".${suffix}")
 } || ['example.com', 'example.net', 'example.org'].contains(normalizedTwaHost)
 if (!twaHostUri.host?.equalsIgnoreCase(configuredTwaHost) || twaHostUri.port != -1 || twaHostUri.rawPath ||
-    firebaseManagedHost || placeholderHost) {
-    throw new GradleException('TWA_HOST harus berupa hostname publik HTTPS non-Firebase, bukan placeholder, tanpa path atau port.')
+    placeholderHost) {
+    throw new GradleException('TWA_HOST harus berupa hostname publik HTTPS, bukan placeholder, tanpa path atau port.')
 }
 
 def twaManifest = [
