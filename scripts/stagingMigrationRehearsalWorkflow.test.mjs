@@ -11,6 +11,8 @@ test('migration rehearsal is manual, main-only, and checks out the approved immu
   assert.match(workflow, /rehearsal_mode:/);
   assert.match(workflow, /- full_history/);
   assert.match(workflow, /- current_staging_forward_only/);
+  assert.match(workflow, /- feature_migration_schema_only/);
+  assert.match(workflow, /source_commit:/);
   assert.match(workflow, /Run this workflow from main only/);
   assert.match(workflow, /GITHUB_REF" != "refs\/heads\/main"/);
   assert.match(workflow, /ref: 3990f7cf858dce45d4fb64de7b4220749686707a/);
@@ -50,10 +52,18 @@ test('migration rehearsal validates Staging and replays only into a disposable l
     /forward_migration="\$\{migrations\}\/20261028000100_platform_tenant_and_superadmin_provisioning\.sql"/,
   );
   assert.match(replay, /full_history\)/);
+  assert.match(replay, /feature_migration_schema_only\)/);
+  assert.match(replay, /candidate-source\/supabase\/migrations/);
+  assert.match(replay, /20261031000100_school_leadership_roles\.sql/);
+  assert.match(replay, /20261031000200_school_module_actions\.sql/);
+  assert.doesNotMatch(replay, /SUPABASE_DB_URL/);
+  assert.match(restore, /REHEARSAL_MODE: \$\{\{ inputs\.rehearsal_mode \}\}/);
+  assert.match(restore, /dump_options\+=\(--schema-only\)/);
   assert.match(replay, /No hosted schema was changed/);
   assert.match(replay, /20261018000400_midtrans_billing\.sql/);
   assert.match(replay, /20261019000100_indonesia_price_catalog\.sql/);
   assert.match(replay, /20261019000200_public_demo_trial\.sql/);
   assert.match(workflow, /Remove temporary database files/);
+  assert.match(workflow, /persist-credentials: false/);
   assert.doesNotMatch(workflow, /upload-artifact|SUPABASE_DB_URL[\s\S]{0,80}psql/);
 });
