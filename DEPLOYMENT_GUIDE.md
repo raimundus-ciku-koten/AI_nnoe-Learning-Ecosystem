@@ -59,6 +59,23 @@ This status compares the five uploaded documents with the current local source. 
 
 Do NOT apply database migrations to hosted Supabase until backups and a staging verification are complete.
 
+### Chat audio/video call release gate
+
+The call implementation uses browser WebRTC with private Supabase Realtime
+broadcast signaling. It requires the migration
+`supabase/migrations/20261031000100_chat_call_signaling.sql`, an authenticated
+TURN service that accepts time-limited HMAC credentials, and Supabase Realtime
+configured to disallow public channels. `TURN_URLS` and `TURN_SHARED_SECRET`
+must be configured as Supabase Edge Function secrets before testing.
+
+The feature remains off by default. Validate private-topic denial for
+nonparticipants, accepted-contact checks, microphone/camera permission flows,
+audio/video negotiation, ICE relay through TURN, hangup cleanup, browser
+background/refresh behavior, and mobile Safari/Chrome on Staging before
+enabling `VITE_CHAT_CALLS_ENABLED`. The current release candidate supports
+one-to-one calls from an open direct conversation only; it does not provide
+group calls, missed-call history, or ringing when the recipient is offline.
+
 1) Pull request and release branch
 
 - GitHub currently reports PR #1 (`chore: establish staged Supabase migration foundation`) open against `main`, and PR #2 (`Add secure 3-day demo trial and align Indonesian pricing`) closed without merge. PR #3 with the same trial-release scope was merged into `migration/supabase-foundation-preview`. `main` remains unchanged.
@@ -131,6 +148,8 @@ Set these environment variables in Vercel (Project Settings → Environment Vari
 - SUPABASE_SERVICE_ROLE_KEY — (ONLY for server-side functions; never expose to client)
 - VITE_TURNSTILE_SITE_KEY — Cloudflare Turnstile site key (frontend)
 - VITE_CHAT_ENABLED — set to `true` only after the chat schema, RLS policies, tenant isolation, and UAT are verified in the target environment; unset/`false` keeps chat routes, navigation, dashboard requests, and presence sync disabled.
+- VITE_CHAT_CALLS_ENABLED — set to `true` only after `VITE_CHAT_ENABLED`, the private call-signaling migration, private-channel Realtime settings, TURN credentials, and browser-device call tests have passed in Staging. Calls are one-to-one audio/video in this release candidate; group calls and calls when the recipient is offline are not supported.
+- `TURN_URLS` (Supabase Edge Function secret; JSON array of `turn:`/`turns:` URLs) and `TURN_SHARED_SECRET` (server-only coturn shared secret). Deploy `chat-turn-credentials` with JWT verification enabled; never put the shared secret or static TURN credentials in any `VITE_*` setting.
 - VITE_OWNER_WHATSAPP — public WhatsApp contact in international format (for the manual registration PDF flow). This is intentionally unset until the owner approves/configures the recipient; values prefixed `VITE_` are visible in the client bundle.
 - Turnstile secret: configure only in Supabase Auth CAPTCHA settings; never store it in Vercel or frontend environment variables.
 - VERCEL_TOKEN — (only if automating deployments via CLI in scripts)

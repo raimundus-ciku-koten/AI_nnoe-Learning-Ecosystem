@@ -5,7 +5,8 @@ import {
   menuTanpaChat, menuUntukPeran,
 } from '../src/navigasi.js';
 import {
-  CHAT_FEATURE_ENABLED, isChatFeatureEnabled, isChatFeaturePath,
+  CHAT_CALLS_ENABLED, CHAT_FEATURE_ENABLED, isChatCallsEnabled,
+  isChatFeatureEnabled, isChatFeaturePath,
 } from '../src/services/featureFlags.js';
 
 const grup = (id) => GRUP_MENU.find((item) => item.id === id);
@@ -67,9 +68,22 @@ test('menu memilih rute terdalam untuk chat dan data dasar', () => {
 
 test('chat stays disabled unless explicitly enabled and chat-only paths are identified', () => {
   assert.equal(CHAT_FEATURE_ENABLED, false);
+  assert.equal(CHAT_CALLS_ENABLED, false);
   assert.equal(isChatFeatureEnabled({ VITE_CHAT_ENABLED: 'true' }), true);
   assert.equal(isChatFeatureEnabled({ VITE_CHAT_ENABLED: 'TRUE' }), true);
   assert.equal(isChatFeatureEnabled({ VITE_CHAT_ENABLED: '1' }), false);
+  assert.equal(isChatCallsEnabled({
+    VITE_CHAT_ENABLED: 'true',
+    VITE_CHAT_CALLS_ENABLED: 'true',
+  }), true);
+  assert.equal(isChatCallsEnabled({
+    VITE_CHAT_ENABLED: 'false',
+    VITE_CHAT_CALLS_ENABLED: 'true',
+  }), false);
+  assert.equal(isChatCallsEnabled({
+    VITE_CHAT_ENABLED: 'true',
+    VITE_CHAT_CALLS_ENABLED: '1',
+  }), false);
   assert.equal(isChatFeatureEnabled({}), false);
   assert.equal(isChatFeaturePath('/chat'), true);
   assert.equal(isChatFeaturePath('/chat/kontak'), true);

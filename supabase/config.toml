@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.chat-push]
 verify_jwt = true
+
+[functions.chat-turn-credentials]
+verify_jwt = true

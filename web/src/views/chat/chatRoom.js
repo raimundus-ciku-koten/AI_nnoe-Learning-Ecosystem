@@ -19,6 +19,9 @@ import {
   pantauBacaan, unggahBerkas, ambilLampiran
 } from '../../services/chat.js';
 import { pantauPresence } from '../../services/presence.js';
+import { ambilIceServers, buatPengendaliPanggilan } from '../../services/chatCalls.js';
+import { CHAT_CALLS_ENABLED } from '../../services/featureFlags.js';
+import { supabase } from '../../lib/supabase.ts';
 import {
   MAKS_TEKS, ATRIBUT_ACCEPT, idValid, formatUkuran, jamMenit,
   labelHari, kunciHari, statusTerakhirDilihat, presenceMasihAktif, pesanGalatChat, periksaBerkas,
@@ -87,6 +90,107 @@ export async function tampilkanRuang(panel, chatId) {
     h('span', { class: 'avatar' },
       grup ? h('i', { class: 'bi bi-people-fill', 'aria-hidden': 'true' }) : initials(judul)),
     h('div', { class: 'chat-kepala__teks' }, h('strong', {}, judul), status));
+
+  let pengendaliPanggilan = null;
+  const statusPanggilan = h('p', { class: 'chat-call__status', role: 'status', 'aria-live': 'polite', hidden: true });
+  const terimaPanggilan = h('button', {
+    class: 'btn btn-sm btn-success', type: 'button', hidden: true,
+    onclick: async () => {
+      try {
+        await pengendaliPanggilan.terima(await ambilIceServers(supabase, chatId));
+      } catch (error) {
+        console.error('[chat] menerima panggilan gagal:', error);
+        toast(error.message || 'Panggilan tidak dapat diterima.', 'error');
+      }
+    }
+  }, 'Terima');
+  const akhiriPanggilan = h('button', {
+    class: 'btn btn-sm btn-outline-danger', type: 'button', hidden: true,
+    onclick: () => { void pengendaliPanggilan?.akhiri().catch((error) => toast(error.message, 'error')); }
+  }, 'Akhiri');
+  const videoLokal = h('video', {
+    class: 'chat-call__video chat-call__video--local', autoplay: true, playsinline: true, muted: true, hidden: true,
+    'aria-label': 'Pratinjau video Anda',
+  });
+  const videoJarakJauh = h('video', {
+    class: 'chat-call__video', autoplay: true, playsinline: true, hidden: true,
+    'aria-label': 'Video lawan bicara',
+  });
+  const audioJarakJauh = h('audio', { autoplay: true, hidden: true });
+  const panelPanggilan = h('section', { class: 'chat-call', 'aria-label': 'Panggilan suara dan video', hidden: true },
+    h('div', { class: 'chat-call__media' }, videoJarakJauh, videoLokal, audioJarakJauh),
+    statusPanggilan,
+    h('div', { class: 'chat-call__actions' }, terimaPanggilan, akhiriPanggilan));
+  const tombolPanggilan = [];
+  let kontakAktifUntukPanggilan = false;
+  let panggilanTerhubung = false;
+  function terapkanPanggilan(state) {
+    const active = state.status !== 'idle';
+    panelPanggilan.hidden = !active;
+    statusPanggilan.hidden = !active;
+    terimaPanggilan.hidden = state.status !== 'incoming';
+    akhiriPanggilan.hidden = !active;
+    statusPanggilan.textContent = state.status === 'incoming'
+      ? `Panggilan ${state.kind === 'video' ? 'video' : 'suara'} masuk.`
+      : state.status === 'ringing'
+        ? 'Memanggil…'
+        : state.status === 'connected'
+          ? 'Panggilan tersambung.'
+          : state.status === 'error'
+            ? state.error?.message || 'Koneksi panggilan bermasalah.'
+            : 'Menghubungkan panggilan…';
+    akhiriPanggilan.textContent = state.status === 'incoming' ? 'Tolak panggilan' : 'Akhiri panggilan';
+    videoLokal.hidden = state.kind !== 'video' || !state.localStream;
+    videoJarakJauh.hidden = state.kind !== 'video' || !state.remoteStream;
+    audioJarakJauh.hidden = state.kind !== 'audio' || !state.remoteStream;
+    if (state.localStream && videoLokal.srcObject !== state.localStream) videoLokal.srcObject = state.localStream;
+    if (state.remoteStream) {
+      const media = state.kind === 'video' ? videoJarakJauh : audioJarakJauh;
+      if (media.srcObject !== state.remoteStream) media.srcObject = state.remoteStream;
+      void media.play().catch(() => {});
+    } else if (!active) {
+      videoLokal.srcObject = null;
+      videoJarakJauh.srcObject = null;
+      audioJarakJauh.srcObject = null;
+    }
+    terimaPanggilan.disabled = !kontakAktifUntukPanggilan;
+    tombolPanggilan.forEach((button) => {
+      button.disabled = active || !kontakAktifUntukPanggilan;
+    });
+  }
+
+  if (CHAT_CALLS_ENABLED && !grup && lawan && globalThis.navigator?.mediaDevices?.getUserMedia &&
+      typeof globalThis.RTCPeerConnection === 'function') {
+    pengendaliPanggilan = buatPengendaliPanggilan({
+      supabase,
+      conversationId: chatId,
+      userId: saya,
+      peerIds: [lawan],
+      onChange: terapkanPanggilan,
+    });
+    for (const [kind, label, icon] of [
+      ['audio', 'Panggilan suara', 'bi-telephone'],
+      ['video', 'Panggilan video', 'bi-camera-video'],
+    ]) {
+      const button = h('button', {
+        class: 'btn btn-sm btn-light', type: 'button', 'aria-label': label,
+        title: label,
+        onclick: async () => {
+          button.disabled = true;
+          try {
+            await pengendaliPanggilan.mulai(kind, lawan, await ambilIceServers(supabase, chatId));
+          } catch (error) {
+            console.error('[chat] memulai panggilan gagal:', error);
+            toast(error.message || 'Panggilan tidak dapat dimulai.', 'error');
+          } finally {
+            button.disabled = pengendaliPanggilan.state.status !== 'idle';
+          }
+        }
+      }, h('i', { class: `bi ${icon}`, 'aria-hidden': 'true' }));
+      tombolPanggilan.push(button);
+      kepala.append(button);
+    }
+  }
 
   if (lawan) {
     pembatal.push(pantauPresence(lawan, (p) => {
@@ -411,15 +515,34 @@ export async function tampilkanRuang(panel, chatId) {
 
   /* Chat pribadi hanya boleh dikirimi bila kontak masih 'accepted' (selaras Rules). */
   function terapkanStatusKontak(s) {
-    if (grup || !s.kontakSiap) return;
-    const aktifKontak = (s.kontak || []).some((k) => k.peerUid === lawan && k.status === 'accepted');
+    if (grup) return;
+    const aktifKontak = s.kontakSiap &&
+      (s.kontak || []).some((k) => k.peerUid === lawan && k.status === 'accepted');
+    kontakAktifUntukPanggilan = aktifKontak;
     catatan.hidden = aktifKontak;
     for (const el of [kolom, tombolKirim, tombolEmoji, tombolLampir]) el.disabled = !aktifKontak || (el === tombolLampir && mengunggah);
+    terimaPanggilan.disabled = !aktifKontak;
+    tombolPanggilan.forEach((button) => {
+      button.disabled = !aktifKontak || pengendaliPanggilan?.state.status !== 'idle';
+    });
+    if (!aktifKontak && pengendaliPanggilan?.state.status !== 'idle') {
+      void pengendaliPanggilan.akhiri().catch((error) => {
+        console.error('[chat] panggilan berhenti setelah kontak dihapus:', error);
+      });
+    }
+    if (aktifKontak && pengendaliPanggilan && !panggilanTerhubung) {
+      panggilanTerhubung = true;
+      void pengendaliPanggilan.hubungkan().catch((error) => {
+        panggilanTerhubung = false;
+        console.error('[chat] kanal panggilan gagal dihubungkan:', error);
+        toast(error.message || 'Panggilan belum dapat dihubungkan.', 'error');
+      });
+    }
   }
   terapkanStatusKontak(getState());
   pembatal.push(subscribe(terapkanStatusKontak));
 
-  panel.append(kepala, daftar, catatan, penulis);
+  panel.append(kepala, panelPanggilan, daftar, catatan, penulis);
 
   /* ---------- Mulai mendengarkan ---------- */
   pembatal.push(pantauBacaan(chatId, (nilai) => {
@@ -440,5 +563,8 @@ export async function tampilkanRuang(panel, chatId) {
     pengendaliUnduhan.forEach((controller) => controller.abort());
     urlLampiran.forEach((url) => URL.revokeObjectURL(url));
     pembatal.forEach((fn) => { try { fn(); } catch { /* abaikan */ } });
+    void pengendaliPanggilan?.dispose().catch((error) => {
+      console.error('[chat] pembersihan panggilan gagal:', error);
+    });
   };
 }
