@@ -1,4 +1,8 @@
-import { CHAT_FEATURE_ENABLED, isChatFeaturePath } from './services/featureFlags.js';
+import {
+  CHAT_FEATURE_ENABLED,
+  CHAT_UNAVAILABLE_MESSAGE,
+  isChatFeaturePath,
+} from './services/featureFlags.js';
 
 const tautan = (label, path, ikon, search = '') => ({ label, path, ikon, search });
 const perencanaan = (label, jenis, ikon) =>
@@ -346,14 +350,26 @@ export function menuTanpaChat(menu) {
   if (CHAT_FEATURE_ENABLED) return menu;
   const cached = menuChatCache.get(menu);
   if (cached) return cached;
-  const filtered = menu
-    .map((bagian) => ({
-      ...bagian,
-      item: bagian.item.filter((item) => !isChatFeaturePath(item.path)),
-    }))
+  const withStatus = menu
+    .map((bagian) => {
+      let chatStatusAdded = false;
+      const item = bagian.item.flatMap((entry) => {
+        if (!isChatFeaturePath(entry.path)) return [entry];
+        if (chatStatusAdded) return [];
+        chatStatusAdded = true;
+        return [{
+          label: 'Chat',
+          ikon: entry.ikon,
+          disabled: true,
+          statusLabel: 'Menunggu validasi',
+          availabilityMessage: CHAT_UNAVAILABLE_MESSAGE,
+        }];
+      });
+      return { ...bagian, item };
+    })
     .filter((bagian) => bagian.item.length > 0);
-  menuChatCache.set(menu, filtered);
-  return filtered;
+  menuChatCache.set(menu, withStatus);
+  return withStatus;
 }
 
 function cocokJenis(item, path, search) {
@@ -386,7 +402,8 @@ export function cariMenu(path, search = '', role = 'guru') {
   for (const grup of menuUntukPeran(role)) {
     const item = grup.item
       .filter((calon) =>
-        calon.path && (path === calon.path || path.startsWith(`${calon.path}/`)) &&
+        calon.path &&
+        (path === calon.path || path.startsWith(`${calon.path}/`)) &&
         cocokJenis(calon, path, search))
       .sort((a, b) => b.path.length - a.path.length)[0];
     if (item) return { grup, item };

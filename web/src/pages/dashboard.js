@@ -19,7 +19,10 @@ import { getState } from '../state.js';
 import { perbaruiHeader } from '../components/sidebar.js';
 import { LINK_PERENCANAAN } from '../config.js';
 import { menuUntukPeran } from '../navigasi.js';
-import { CHAT_FEATURE_ENABLED } from '../services/featureFlags.js';
+import {
+  CHAT_FEATURE_ENABLED,
+  CHAT_UNAVAILABLE_MESSAGE,
+} from '../services/featureFlags.js';
 import { sesiUntukHari } from './dataDasar/jadwalUtil.js';
 import {
   esc, ikon, inisial, namaDariUser, sapaanWaktu, formatWaktu,
@@ -156,7 +159,7 @@ function tampilan({ sapa, nama, peran, subjudul, sekarang }) {
           ${CHAT_FEATURE_ENABLED
             ? `<div data-isi>${SKELETON}</div>
               <a class="ale-tautan" href="#/chat">Buka chat${ikon('panah')}</a>`
-            : '<div data-isi><p class="ale-kosong" role="status">Chat sementara tidak tersedia sampai skema database dan kebijakan akses diverifikasi.</p></div>'}
+            : `<div data-isi><p class="ale-kosong" role="status">${esc(CHAT_UNAVAILABLE_MESSAGE)}</p></div>`}
         </section>
 
         <section class="ale-kartu ale-aksen-emerald" id="aleKartuTugas" aria-labelledby="hTugas">
@@ -320,11 +323,16 @@ function tampilanPortal({ role, nama }) {
         </h2>
       </div>
       <nav class="ale-aksi-grid" aria-label="${escapeAttr(bagian.label)}">
-        ${bagian.item.map((item) => `
-          <a class="ale-aksi ale-aksi-teal" href="#${escapeAttr(item.path)}${escapeAttr(item.search || '')}">
-            <span class="ale-aksi-ikon">${ikon(item.ikon)}</span>
-            <span class="ale-aksi-teks"><strong>${esc(item.label)}</strong><small>Buka menu</small></span>
-          </a>`).join('')}
+        ${bagian.item.map((item) => item.disabled
+          ? `<div class="ale-aksi is-soon" aria-disabled="true"
+                  title="${escapeAttr(item.availabilityMessage)}">
+              <span class="ale-aksi-ikon">${ikon(item.ikon)}</span>
+              <span class="ale-aksi-teks"><strong>${esc(item.label)}</strong><small>${esc(item.statusLabel)}</small></span>
+            </div>`
+          : `<a class="ale-aksi ale-aksi-teal" href="#${escapeAttr(item.path)}${escapeAttr(item.search || '')}">
+              <span class="ale-aksi-ikon">${ikon(item.ikon)}</span>
+              <span class="ale-aksi-teks"><strong>${esc(item.label)}</strong><small>Buka menu</small></span>
+            </a>`).join('')}
       </nav>
     </section>`).join('');
 

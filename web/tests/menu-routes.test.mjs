@@ -12,6 +12,10 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
       for (const group of groups) {
         assert.ok(group.items.length > 0, `${group.judul} tidak memiliki item`);
         for (const item of group.items) {
+          if (item.status === 'segera') {
+            assert.equal(item.href, undefined, `${item.judul} tidak boleh menjadi tautan aktif`);
+            continue;
+          }
           assert.equal(item.status, 'rute', `${item.judul} bukan tautan aktif`);
           assert.ok(item.href.startsWith('#/'), `${item.judul} tidak memiliki path hash`);
           const [path, query = ''] = item.href.slice(1).split('?');
@@ -29,7 +33,8 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
         it(`menampilkan tautan yang sesuai untuk ${role}`, () => {
           const items = menuUntuk(role).flatMap((group) => group.items);
           assert.ok(items.some((item) => item.href === href));
-          assert.ok(items.every((item) => item.status === 'rute'));
+          assert.ok(items.every((item) =>
+            item.status === 'rute' || (item.status === 'segera' && item.judul === 'Chat')));
         });
       }
 
@@ -40,13 +45,19 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
     });
   }
 
-  it('hides chat links from every legacy role menu while the schema is gated', () => {
+  it('shows chat as unavailable without a link in every legacy role menu while the schema is gated', () => {
     for (const role of [
       'guru', 'operator', 'siswa', 'ortu', 'admin_sekolah', 'superadmin',
     ]) {
       const groups = menuUntuk(role);
       assert.ok(groups.every((group) => group.items.length > 0));
-      assert.ok(groups.flatMap((group) => group.items).every((item) =>
+      const items = groups.flatMap((group) => group.items);
+      const chat = items.filter((item) => item.judul === 'Chat');
+      assert.equal(chat.length, 1, `${role}: status Chat tetap terlihat`);
+      assert.equal(chat[0].status, 'segera');
+      assert.equal(chat[0].href, undefined);
+      assert.match(chat[0].availabilityMessage, /kebijakan akses sekolah belum terverifikasi/);
+      assert.ok(items.every((item) =>
         !item.href || !isChatFeaturePath(item.href.slice(1).split('?')[0])));
     }
   });

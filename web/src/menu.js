@@ -30,7 +30,11 @@ import {
   MENU_SUPERADMIN as MENU_NAV_SUPERADMIN,
   menuUntukPeran,
 } from './navigasi.js';
-import { CHAT_FEATURE_ENABLED, isChatFeaturePath } from './services/featureFlags.js';
+import {
+  CHAT_FEATURE_ENABLED,
+  CHAT_UNAVAILABLE_MESSAGE,
+  isChatFeaturePath,
+} from './services/featureFlags.js';
 
 const r = (judul, href, ikon) => ({ status: 'rute',   judul, href, ikon });
 const g = (judul, kunci, ikon) => ({ status: 'gulir', judul, kunci, href: `#/dashboard?k=${kunci}`, ikon });
@@ -446,11 +450,24 @@ export function menuUntuk(role) {
 
   if (CHAT_FEATURE_ENABLED) return menu;
   return menu
-    .map((bagian) => ({
-      ...bagian,
-      items: bagian.items.filter((item) =>
-        !item.href || !isChatFeaturePath(item.href.slice(1).split('?')[0])),
-    }))
+    .map((bagian) => {
+      let chatStatusAdded = false;
+      const items = bagian.items.flatMap((item) => {
+        if (!item.href || !isChatFeaturePath(item.href.slice(1).split('?')[0])) {
+          return [item];
+        }
+        if (chatStatusAdded) return [];
+        chatStatusAdded = true;
+        return [{
+          status: 'segera',
+          judul: 'Chat',
+          ikon: item.ikon,
+          statusLabel: 'Menunggu validasi',
+          availabilityMessage: CHAT_UNAVAILABLE_MESSAGE,
+        }];
+      });
+      return { ...bagian, items };
+    })
     .filter((bagian) => bagian.items.length > 0);
 }
 
@@ -459,11 +476,15 @@ function dariNavigasi(grupNavigasi) {
     id: grup.id,
     judul: grup.label,
     ikon: grup.ikon,
-    items: grup.item.map((item) => r(
-      item.label,
-      `#${item.path}${item.search || ''}`,
-      item.ikon,
-    )),
+    items: grup.item.map((item) => item.disabled
+      ? {
+        status: 'segera',
+        judul: item.label,
+        ikon: item.ikon,
+        statusLabel: item.statusLabel,
+        availabilityMessage: item.availabilityMessage,
+      }
+      : r(item.label, `#${item.path}${item.search || ''}`, item.ikon)),
   }));
 }
 

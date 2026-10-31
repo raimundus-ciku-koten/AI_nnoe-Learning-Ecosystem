@@ -8,7 +8,10 @@ import { MaintenanceGuard, PlatformControlProvider } from './context/PlatformCon
 import { logout } from './auth.js';
 import PrivilegedMfaGate from './components/PrivilegedMfaGate.jsx';
 import { canOpenRolePath } from './services/roleAccess.js';
-import { CHAT_FEATURE_ENABLED } from './services/featureFlags.js';
+import {
+  CHAT_FEATURE_ENABLED,
+  CHAT_UNAVAILABLE_MESSAGE,
+} from './services/featureFlags.js';
 
 // Legacy Alias Mapper[cite: 10]
 const LEGACY_ALIAS = {
@@ -121,8 +124,9 @@ function ChatFeatureGate({ children }) {
   if (CHAT_FEATURE_ENABLED) return children;
   return (
     <section className="card empty-state" role="status">
-      <h2>Fitur chat sementara tidak tersedia</h2>
-      <p>Komunikasi chat akan dibuka kembali setelah skema database dan kebijakan akses sekolah diverifikasi.</p>
+      <h2>Chat belum tersedia</h2>
+      <p>{CHAT_UNAVAILABLE_MESSAGE}</p>
+      <a href="#/dashboard">Kembali ke dashboard</a>
     </section>
   );
 }

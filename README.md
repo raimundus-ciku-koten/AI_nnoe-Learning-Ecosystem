@@ -97,7 +97,9 @@ applied to hosted Supabase. Do not deploy it until the existing hosted schema
 is reconciled and the required backup/staging checks are complete.
 
 Audio/video calls require HTTPS (localhost is also supported) and browser
-microphone/camera permission. Calls use Supabase Realtime for signaling and a
+microphone/camera permission. Hosting permits microphone access only to the
+same application origin; the browser still requires each user to grant
+permission. Calls use Supabase Realtime for signaling and a
 public STUN server by default. Networks that block direct peer connections
 also need a TURN service. Set `VITE_WEBRTC_ICE_SERVERS` to a JSON array of ICE
 server objects during the web build when TURN is required. Because this

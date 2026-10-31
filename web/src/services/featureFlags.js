@@ -3,6 +3,8 @@ export function isChatFeatureEnabled(env = import.meta.env) {
 }
 
 export const CHAT_FEATURE_ENABLED = isChatFeatureEnabled();
+export const CHAT_UNAVAILABLE_MESSAGE =
+  'Chat belum tersedia karena skema database dan kebijakan akses sekolah belum terverifikasi. Fitur akan dibuka setelah pemeriksaan keamanan dan uji fungsi selesai.';
 
 export function isChatFeaturePath(path) {
   return path === '/chat' ||
