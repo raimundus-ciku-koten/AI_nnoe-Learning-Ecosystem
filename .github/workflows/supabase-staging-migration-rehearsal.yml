@@ -82,6 +82,7 @@ jobs:
             exit 1
           fi
           mkdir -p candidate-source
+          printf '%s\n' "$fetched_commit" > candidate-source/.source-commit
           git archive "$fetched_commit" supabase/migrations | tar -x -C candidate-source
 
       - name: Validate the Staging-only target
@@ -206,9 +207,13 @@ jobs:
               ;;
             feature_migration_schema_only)
               migrations="candidate-source/supabase/migrations"
-              candidate_commit="$(git -C candidate-source rev-parse HEAD)"
+              if [[ ! -f candidate-source/.source-commit ]]; then
+                echo "::error::Candidate source commit metadata is missing."
+                exit 1
+              fi
+              candidate_commit="$(cat candidate-source/.source-commit)"
               if [[ "$candidate_commit" != "$SOURCE_COMMIT" ]]; then
-                echo "::error::Checked out source does not match the requested commit."
+                echo "::error::Archived source does not match the requested commit."
                 exit 1
               fi
               for required in \

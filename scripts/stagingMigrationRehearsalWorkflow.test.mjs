@@ -24,6 +24,7 @@ test('migration rehearsal is manual, main-only, and fetches the approved immutab
   assert.match(workflow, /name: Fetch candidate migrations without checking out submodules/);
   assert.match(workflow, /git fetch --no-tags --no-recurse-submodules --depth=1 origin "\$SOURCE_COMMIT"/);
   assert.match(workflow, /git rev-parse --verify "FETCH_HEAD\^{commit}"/);
+  assert.match(workflow, /printf '%s\\n' "\$fetched_commit" > candidate-source\/\.source-commit/);
   assert.match(workflow, /git archive "\$fetched_commit" supabase\/migrations \| tar -x -C candidate-source/);
   assert.doesNotMatch(workflow, /ref: \$\{\{ inputs\.source_commit \}\}/);
   assert.match(workflow, /migration-source\/supabase\/migrations/);
@@ -61,6 +62,8 @@ test('migration rehearsal validates Staging and replays only into a disposable l
   );
   assert.match(replay, /full_history\)/);
   assert.match(replay, /feature_migration_schema_only\)/);
+  assert.match(replay, /candidate_commit="\$\(cat candidate-source\/\.source-commit\)"/);
+  assert.doesNotMatch(replay, /git -C candidate-source rev-parse HEAD/);
   assert.match(replay, /candidate-source\/supabase\/migrations/);
   assert.match(replay, /20261031000100_school_leadership_roles\.sql/);
   assert.match(replay, /20261031000200_school_module_actions\.sql/);
