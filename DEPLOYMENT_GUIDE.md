@@ -91,7 +91,8 @@ Applying migrations (recommended workflow):
 
 For the school-leadership migrations, first run the main-only
 `supabase-staging-migration-rehearsal` workflow with mode
-`feature_migration_schema_only` and the exact 40-character feature commit SHA.
+`feature_migration_schema_only` and approved commit
+`04b8afa3cf1006f9a1c05e35fba7d74d18aa31b5`.
 That mode uses a schema-only Staging snapshot and replays only the two
 school-leadership migrations in a disposable local database; it does not expose
 Staging rows or modify the hosted database. A successful rehearsal is not a

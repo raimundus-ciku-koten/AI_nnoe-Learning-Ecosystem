@@ -13,6 +13,8 @@ test('migration rehearsal is manual, main-only, and checks out the approved immu
   assert.match(workflow, /- current_staging_forward_only/);
   assert.match(workflow, /- feature_migration_schema_only/);
   assert.match(workflow, /source_commit:/);
+  assert.match(workflow, /default: 04b8afa3cf1006f9a1c05e35fba7d74d18aa31b5/);
+  assert.match(workflow, /expected_source_commit="04b8afa3cf1006f9a1c05e35fba7d74d18aa31b5"/);
   assert.match(workflow, /Run this workflow from main only/);
   assert.match(workflow, /GITHUB_REF" != "refs\/heads\/main"/);
   assert.match(workflow, /ref: 3990f7cf858dce45d4fb64de7b4220749686707a/);
@@ -56,6 +58,7 @@ test('migration rehearsal validates Staging and replays only into a disposable l
   assert.match(replay, /candidate-source\/supabase\/migrations/);
   assert.match(replay, /20261031000100_school_leadership_roles\.sql/);
   assert.match(replay, /20261031000200_school_module_actions\.sql/);
+  assert.match(replay, /grep -nEq '\^\[\[:space:\]\]\*\\\\'/);
   assert.doesNotMatch(replay, /SUPABASE_DB_URL/);
   assert.match(restore, /REHEARSAL_MODE: \$\{\{ inputs\.rehearsal_mode \}\}/);
   assert.match(restore, /dump_options\+=\(--schema-only\)/);

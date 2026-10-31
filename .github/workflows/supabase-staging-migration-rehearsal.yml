@@ -13,9 +13,10 @@ on:
           - current_staging_forward_only
           - feature_migration_schema_only
       source_commit:
-        description: Immutable source commit SHA for feature_migration_schema_only
+        description: Approved immutable source commit SHA for feature_migration_schema_only
         required: false
         type: string
+        default: 04b8afa3cf1006f9a1c05e35fba7d74d18aa31b5
 
 permissions:
   contents: read
@@ -61,8 +62,9 @@ jobs:
           SOURCE_COMMIT: ${{ inputs.source_commit }}
         run: |
           set -euo pipefail
-          if [[ ! "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "::error::Provide an immutable 40-character commit SHA for the candidate source."
+          expected_source_commit="04b8afa3cf1006f9a1c05e35fba7d74d18aa31b5"
+          if [[ "$SOURCE_COMMIT" != "$expected_source_commit" ]]; then
+            echo "::error::The rehearsal source must match the approved immutable feature commit."
             exit 1
           fi
 
@@ -207,6 +209,10 @@ jobs:
                 migration="${migrations}/${required}"
                 if [[ ! -f "$migration" ]]; then
                   echo "::error::Candidate migration is missing: ${required}"
+                  exit 1
+                fi
+                if grep -nEq '^[[:space:]]*\\' "$migration"; then
+                  echo "::error::Candidate migration contains unsupported psql meta-commands."
                   exit 1
                 fi
                 migration_files+=("$migration")
