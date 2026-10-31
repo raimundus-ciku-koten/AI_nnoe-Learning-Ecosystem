@@ -13,6 +13,8 @@ with expected_feature_relations(name) as (
     ('attendance_records'),
     ('testimonials'),
     ('school_announcements'),
+    ('school_module_actions'),
+    ('school_units'),
     ('chat_conversations'),
     ('chat_messages'),
     ('chat_read_receipts'),
@@ -31,6 +33,12 @@ with expected_feature_relations(name) as (
     ('online_exams'),
     ('online_exam_items'),
     ('online_exam_attempts'),
+    ('online_exam_recipients'),
+    ('student_class_schedule'),
+    ('student_learning_materials'),
+    ('student_guardian_links'),
+    ('student_guardian_link_audit'),
+    ('platform_content_catalog'),
     ('trial_registrations')
 ),
 public_tables as (

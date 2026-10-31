@@ -5,6 +5,9 @@ import { adalahPeranGuru, cariMenu } from '../navigasi.js';
 import Ikon from '../components/Ikon.jsx';
 import TeacherWorkspacePage from './TeacherWorkspacePage.jsx';
 import TeacherAccountPage from './TeacherAccountPage.jsx';
+import AdminAcademicPage from './AdminAcademicPage.jsx';
+import AdminAssessmentPage from './AdminAssessmentPage.jsx';
+import AdminSchoolUnitsPage from './AdminSchoolUnitsPage.jsx';
 import '../styles/submenu.css';
 
 const ALUR = {
@@ -174,17 +177,30 @@ export default function SubMenuPage() {
   const { grup, item } = menu;
   if (adalahPeranGuru(peranAktif) && item.path === '/pengaturan/akun') return <TeacherAccountPage />;
   if (adalahPeranGuru(peranAktif)) return <TeacherWorkspacePage grup={grup} item={item} />;
+  if (['admin', 'admin_sekolah'].includes(peranAktif) && item.path === '/admin/tugas') {
+    return <TeacherWorkspacePage grup={grup} item={item} />;
+  }
+  if (peranAktif === 'admin_sekolah' &&
+    ['/admin/akademik/kelas', '/admin/akademik/mapel'].includes(item.path)) {
+    return <AdminAcademicPage />;
+  }
+  if (peranAktif === 'admin_sekolah' && item.path === '/admin/instansi/unit') {
+    return <AdminSchoolUnitsPage />;
+  }
+  if (peranAktif === 'admin_sekolah' && item.path === '/admin/dashboard/ujian') {
+    return <AdminAssessmentPage />;
+  }
 
   const alur = ALUR[grup.id] || {
     ringkasan: 'Pilih aktivitas yang dibutuhkan dan lanjutkan ke modul terkait.',
     langkah: ['Pilih konteks kerja', 'Tinjau informasi yang tersedia', 'Lanjutkan ke aktivitas terkait'],
   };
   const terkait = grup.item.filter((sub) => sub !== item && sub.path);
-  const statusModul = role === 'siswa'
+  const statusModul = peranAktif === 'siswa'
     ? 'Data jadwal, materi, tugas, ujian, atau nilai hanya muncul setelah sekolah menautkan data akademik ke akun siswa. Halaman ini saat ini hanya panduan dan tidak mengubah data.'
-    : ['ortu', 'orang_tua'].includes(role)
+    : ['ortu', 'orang_tua'].includes(peranAktif)
       ? 'Informasi anak hanya tersedia setelah sekolah menautkan akun orang tua secara resmi. Halaman ini saat ini hanya panduan dan tidak menampilkan data anak yang belum ditautkan.'
-      : role === 'operator'
+      : peranAktif === 'operator'
         ? 'Akses data operasional tetap dibatasi oleh peran dan tenant sekolah. Halaman ini hanya panduan dan tidak mengubah data.'
         : `Tautan dan halaman menu tersedia. Fitur data khusus untuk modul ${item.label} belum diaktifkan, sehingga halaman ini tidak mengubah data. Gunakan modul terkait yang sudah tersedia, atau hubungi administrator untuk informasi peluncuran.`;
 
@@ -237,7 +253,7 @@ export default function SubMenuPage() {
             {terkait.map((sub) => (
               <a key={sub.label} className="ale-submenu-link" href={`#${sub.path}${sub.search || ''}`}>
                 <span className="ale-submenu-link-icon"><Ikon nama={sub.ikon} /></span>
-                <span><strong>{sub.label}</strong><small>Buka panduan</small></span>
+                <span><strong>{sub.label}</strong><small>Kunjungi menu</small></span>
                 <span className="ale-submenu-arrow" aria-hidden="true">›</span>
               </a>
             ))}

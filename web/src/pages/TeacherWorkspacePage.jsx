@@ -2,7 +2,49 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
 import { adalahPeranGuru } from '../navigasi.js';
-import { catatanKeCsv } from '../services/teacherWorkspace.js';
+import {
+  catatanKeCsv,
+  kosongkanJurnalMengajar,
+  kosongkanCatatanObservasi,
+  kosongkanPortofolioGuru,
+  kosongkanRencanaIntervensiKelas,
+  kosongkanRencanaDiferensiasi,
+  kosongkanRealisasiRencana,
+  kosongkanCatatanKelasCepat,
+  kosongkanRefleksi,
+  kosongkanRencanaKompetensi,
+  kosongkanRencanaPerbaikan,
+  susunIsiJurnalMengajar,
+  susunIsiCatatanObservasi,
+  susunIsiPortofolioGuru,
+  susunIsiRencanaIntervensiKelas,
+  susunIsiRencanaDiferensiasi,
+  susunIsiRealisasiRencana,
+  susunIsiCatatanKelasCepat,
+  susunIsiRencanaKompetensi,
+  susunIsiRencanaPerbaikan,
+  susunIsiRefleksi,
+  tampilkanIsiJurnalMengajar,
+  tampilkanIsiCatatanObservasi,
+  tampilkanIsiPortofolioGuru,
+  tampilkanIsiRencanaIntervensiKelas,
+  tampilkanIsiRencanaDiferensiasi,
+  tampilkanIsiRealisasiRencana,
+  tampilkanIsiCatatanKelasCepat,
+  tampilkanIsiRencanaKompetensi,
+  tampilkanIsiRencanaPerbaikan,
+  tampilkanIsiRefleksi,
+  uraikanIsiJurnalMengajar,
+  uraikanIsiCatatanObservasi,
+  uraikanIsiPortofolioGuru,
+  uraikanIsiRencanaIntervensiKelas,
+  uraikanIsiRencanaDiferensiasi,
+  uraikanIsiRealisasiRencana,
+  uraikanIsiCatatanKelasCepat,
+  uraikanIsiRencanaKompetensi,
+  uraikanIsiRencanaPerbaikan,
+  uraikanIsiRefleksi,
+} from '../services/teacherWorkspace.js';
 import {
   hapusCatatanGuruDrive, muatCatatanGuruDrive, tambahCatatanGuruDrive,
   ubahCatatanGuruDrive,
@@ -11,6 +53,7 @@ import {
   hubungkanGoogleDriveUntukPengguna,
   sesiGoogleWorkspacePerPengguna,
 } from '../services/googleWorkspaceAuth.js';
+import { buatTautanKalenderTugas } from '../services/googleWorkspace.js';
 import { identitasEnkripsiDriveDalamSesi } from '../services/driveEncryption.js';
 import '../styles/teacher-workspace.css';
 
@@ -32,6 +75,86 @@ function waktuTampil(nilai) {
   return !Number.isNaN(waktu.getTime())
     ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(waktu)
     : 'Baru saja';
+}
+
+const REFLECTION_PATH = '/refleksi/pembelajaran';
+const IMPROVEMENT_PATH = '/refleksi/perbaikan';
+const JOURNAL_PATH = '/pelaksanaan/jurnal';
+const DEVELOPMENT_PATH = '/refleksi/kompetensi';
+const OBSERVATION_PATH = '/refleksi/supervisi';
+const PORTFOLIO_PATH = '/refleksi/portofolio';
+const INTERVENTION_PATH = '/asesmen/remedial';
+const DIFFERENTIATION_PATH = '/pelaksanaan/berdiferensiasi';
+const IMPLEMENTATION_PATH = '/pelaksanaan/realisasi';
+const QUICK_NOTE_PATH = '/pelaksanaan/catatan-cepat';
+const TASK_PATHS = new Set(['/pelaksanaan/tugas', '/admin/tugas']);
+const REFLECTION_FIELDS = [
+  { key: 'berhasil', label: 'Apa yang berjalan baik?', placeholder: 'Catat strategi atau momen belajar yang efektif.' },
+  { key: 'bukti', label: 'Bukti belajar yang terlihat', placeholder: 'Tuliskan bukti umum tanpa nama atau identitas siswa.' },
+  { key: 'tantangan', label: 'Apa yang perlu ditingkatkan?', placeholder: 'Catat tantangan pembelajaran atau hal yang belum tercapai.' },
+  { key: 'langkahBerikutnya', label: 'Langkah berikutnya', placeholder: 'Tentukan satu tindak lanjut yang dapat dilakukan.' },
+];
+const IMPROVEMENT_FIELDS = [
+  { key: 'fokus', label: 'Fokus perbaikan', placeholder: 'Tentukan satu praktik yang ingin ditingkatkan.' },
+  { key: 'perubahan', label: 'Perubahan yang dicoba', placeholder: 'Tuliskan langkah konkret yang akan diterapkan.' },
+  { key: 'indikator', label: 'Indikator keberhasilan', placeholder: 'Tentukan bukti umum yang dapat diamati.' },
+  { key: 'tinjauUlang', label: 'Catatan saat tinjau ulang', placeholder: 'Catat hasil dan penyesuaian setelah dicoba.' },
+];
+const JOURNAL_FIELDS = [
+  { key: 'tujuan', label: 'Tujuan pembelajaran', placeholder: 'Tuliskan tujuan atau kompetensi yang dibahas.' },
+  { key: 'kegiatan', label: 'Kegiatan pembelajaran', placeholder: 'Ringkas strategi dan aktivitas belajar yang dilakukan.' },
+  { key: 'capaian', label: 'Capaian yang diamati', placeholder: 'Catat capaian umum tanpa nama atau identitas siswa.' },
+  { key: 'tindakLanjut', label: 'Tindak lanjut', placeholder: 'Tentukan penguatan atau persiapan pertemuan berikutnya.' },
+];
+const DEVELOPMENT_FIELDS = [
+  { key: 'kompetensi', label: 'Kompetensi yang dikembangkan', placeholder: 'Pilih satu kompetensi yang ingin diperkuat.' },
+  { key: 'aktivitas', label: 'Aktivitas belajar', placeholder: 'Catat lokakarya, komunitas belajar, atau praktik yang akan dicoba.' },
+  { key: 'target', label: 'Target waktu', placeholder: 'Tentukan target yang realistis dan terukur.' },
+  { key: 'bukti', label: 'Bukti atau capaian', placeholder: 'Catat bukti pengembangan tanpa data pribadi siswa.' },
+];
+const OBSERVATION_FIELDS = [
+  { key: 'fokus', label: 'Fokus observasi', placeholder: 'Pilih satu aspek pembelajaran yang diamati.' },
+  { key: 'observasi', label: 'Catatan faktual', placeholder: 'Tuliskan perilaku atau proses yang terlihat, tanpa penilaian personal.' },
+  { key: 'umpanBalik', label: 'Umpan balik', placeholder: 'Catat masukan atau pembelajaran yang Anda peroleh.' },
+  { key: 'tindakLanjut', label: 'Tindak lanjut', placeholder: 'Tentukan satu langkah yang ingin dicoba berikutnya.' },
+];
+const PORTFOLIO_FIELDS = [
+  { key: 'jenisKarya', label: 'Jenis karya', placeholder: 'Contoh: Modul ajar, media belajar, atau praktik baik.', required: true },
+  { key: 'deskripsi', label: 'Deskripsi karya', placeholder: 'Jelaskan konteks dan kontribusi Anda.', required: true },
+  { key: 'kompetensi', label: 'Kompetensi terkait', placeholder: 'Kompetensi yang tampak pada karya ini.' },
+  { key: 'tautan', label: 'Tautan bukti HTTPS', placeholder: 'https://… (file tetap berada di layanan asal)', type: 'url' },
+];
+const INTERVENTION_FIELDS = [
+  { key: 'kebutuhan', label: 'Kebutuhan belajar kelas', placeholder: 'Catat kebutuhan umum pada tingkat kelas, tanpa menyebut siswa.' },
+  { key: 'remedial', label: 'Rencana penguatan/remedial', placeholder: 'Rancang dukungan belajar yang dapat dilakukan guru.' },
+  { key: 'pengayaan', label: 'Rencana pengayaan', placeholder: 'Rancang tantangan lanjutan untuk memperdalam pemahaman.' },
+  { key: 'indikator', label: 'Indikator tinjau ulang', placeholder: 'Tentukan bukti umum untuk meninjau efektivitas rencana.' },
+];
+const DIFFERENTIATION_FIELDS = [
+  { key: 'tujuan', label: 'Tujuan belajar', placeholder: 'Tuliskan tujuan utama untuk sesi atau rangkaian belajar.' },
+  { key: 'kebutuhan', label: 'Kebutuhan umum kelas', placeholder: 'Catat kebutuhan kelompok secara umum tanpa menyebut siswa.' },
+  { key: 'strategi', label: 'Pilihan strategi', placeholder: 'Rencanakan variasi konten, proses, atau bentuk keluaran belajar.' },
+  { key: 'cekPemahaman', label: 'Cek pemahaman', placeholder: 'Tentukan bukti belajar umum yang akan ditinjau.' },
+];
+const IMPLEMENTATION_FIELDS = [
+  { key: 'rencana', label: 'Rencana yang ditinjau', placeholder: 'Sebutkan nama atau bagian rencana pembelajaran.', required: true },
+  { key: 'pelaksanaan', label: 'Realisasi', placeholder: 'Ringkas kegiatan yang benar-benar terlaksana.', required: true },
+  { key: 'kendala', label: 'Kendala', placeholder: 'Catat faktor umum yang memengaruhi pelaksanaan.' },
+  { key: 'tindakLanjut', label: 'Tindak lanjut', placeholder: 'Tentukan langkah berikutnya.' },
+];
+const QUICK_NOTE_FIELDS = [
+  { key: 'pengamatan', label: 'Pengamatan umum', placeholder: 'Catat situasi kelas tanpa nama atau identitas siswa.', required: true },
+  { key: 'respons', label: 'Respons guru', placeholder: 'Catat respons atau penyesuaian yang dilakukan.' },
+  { key: 'tindakLanjut', label: 'Tindak lanjut', placeholder: 'Catat hal yang perlu dilakukan berikutnya.' },
+];
+
+function tautanPortofolioAman(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !url.username && !url.password ? url.href : '';
+  } catch {
+    return '';
+  }
 }
 
 const formKosong = (path, label) => ({
@@ -66,8 +189,46 @@ function unduhCsv(items, namaFile) {
 
 export default function TeacherWorkspacePage({ grup, item }) {
   const { user, role, activeRole, tenantId } = useAuth();
+  const isPersonalTask = TASK_PATHS.has(item.path);
+  const isSchoolAdmin = ['admin', 'admin_sekolah'].includes(activeRole || role);
+  const isReflection = item.path === REFLECTION_PATH;
+  const isImprovementPlan = item.path === IMPROVEMENT_PATH;
+  const isJournal = item.path === JOURNAL_PATH;
+  const isDevelopmentPlan = item.path === DEVELOPMENT_PATH;
+  const isObservation = item.path === OBSERVATION_PATH;
+  const isPortfolio = item.path === PORTFOLIO_PATH;
+  const isClassIntervention = item.path === INTERVENTION_PATH;
+  const isDifferentiation = item.path === DIFFERENTIATION_PATH;
+  const isImplementation = item.path === IMPLEMENTATION_PATH;
+  const isQuickNote = item.path === QUICK_NOTE_PATH;
+  const isStructuredNote = isReflection || isImprovementPlan || isJournal || isDevelopmentPlan || isObservation || isPortfolio || isClassIntervention || isDifferentiation || isImplementation || isQuickNote;
+  const fieldsTerstruktur = isReflection
+    ? REFLECTION_FIELDS
+    : isImprovementPlan
+      ? IMPROVEMENT_FIELDS
+      : isJournal
+        ? JOURNAL_FIELDS
+        : isDevelopmentPlan
+          ? DEVELOPMENT_FIELDS
+          : isObservation
+            ? OBSERVATION_FIELDS
+            : isPortfolio
+              ? PORTFOLIO_FIELDS
+              : isClassIntervention
+                ? INTERVENTION_FIELDS
+                : isDifferentiation ? DIFFERENTIATION_FIELDS : isImplementation ? IMPLEMENTATION_FIELDS : QUICK_NOTE_FIELDS;
   const [catatan, setCatatan] = useState([]);
   const [form, setForm] = useState(() => formKosong(item.path, item.label));
+  const [refleksi, setRefleksi] = useState(kosongkanRefleksi);
+  const [rencanaPerbaikan, setRencanaPerbaikan] = useState(kosongkanRencanaPerbaikan);
+  const [jurnal, setJurnal] = useState(kosongkanJurnalMengajar);
+  const [rencanaKompetensi, setRencanaKompetensi] = useState(kosongkanRencanaKompetensi);
+  const [observasi, setObservasi] = useState(kosongkanCatatanObservasi);
+  const [portofolio, setPortofolio] = useState(kosongkanPortofolioGuru);
+  const [intervensiKelas, setIntervensiKelas] = useState(kosongkanRencanaIntervensiKelas);
+  const [diferensiasi, setDiferensiasi] = useState(kosongkanRencanaDiferensiasi);
+  const [realisasi, setRealisasi] = useState(kosongkanRealisasiRencana);
+  const [catatanCepat, setCatatanCepat] = useState(kosongkanCatatanKelasCepat);
   const [editId, setEditId] = useState('');
   const [cari, setCari] = useState('');
   const [loading, setLoading] = useState(true);
@@ -79,13 +240,33 @@ export default function TeacherWorkspacePage({ grup, item }) {
   const loadRequest = useRef(0);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const canUse = adalahPeranGuru(activeRole || role) && Boolean(user?.uid && tenantId);
+  const canUse = (adalahPeranGuru(activeRole || role) || (isPersonalTask && isSchoolAdmin)) &&
+    Boolean(user?.uid && tenantId);
   const ownerKey = canUse ? `${tenantId}:${user.uid}` : '';
   const [koneksi, setKoneksi] = useState(() => sesiGoogleWorkspacePerPengguna(user?.uid));
   const [identitasVault, setIdentitasVault] = useState(() => identitasEnkripsiDriveDalamSesi(user?.uid));
   const tokenAktif = koneksi?.expiresAt > Date.now() ? koneksi.accessToken : '';
   const vaultSiap = Boolean(tokenAktif && identitasVault);
   const [catatanOwnerKey, setCatatanOwnerKey] = useState('');
+  const draftTerstruktur = isReflection
+    ? refleksi
+    : isImprovementPlan
+      ? rencanaPerbaikan
+      : isJournal
+        ? jurnal
+        : isDevelopmentPlan
+          ? rencanaKompetensi
+          : isObservation
+            ? observasi
+            : isPortfolio
+              ? portofolio
+              : isClassIntervention
+                ? intervensiKelas
+                : isDifferentiation ? diferensiasi : isImplementation ? realisasi : catatanCepat;
+  const jumlahKarakterTerstruktur = fieldsTerstruktur.reduce(
+    (total, field) => total + draftTerstruktur[field.key].length,
+    0,
+  );
 
   const muat = useCallback(async ({ berikutnya = false } = {}) => {
     const requestId = ++loadRequest.current;
@@ -146,6 +327,16 @@ export default function TeacherWorkspacePage({ grup, item }) {
 
   useEffect(() => {
     setForm(formKosong(item.path, item.label));
+    setRefleksi(kosongkanRefleksi());
+    setRencanaPerbaikan(kosongkanRencanaPerbaikan());
+    setJurnal(kosongkanJurnalMengajar());
+    setRencanaKompetensi(kosongkanRencanaKompetensi());
+    setObservasi(kosongkanCatatanObservasi());
+    setPortofolio(kosongkanPortofolioGuru());
+    setIntervensiKelas(kosongkanRencanaIntervensiKelas());
+    setDiferensiasi(kosongkanRencanaDiferensiasi());
+    setRealisasi(kosongkanRealisasiRencana());
+    setCatatanCepat(kosongkanCatatanKelasCepat());
     setEditId('');
     setError('');
     setNotice('');
@@ -190,6 +381,24 @@ export default function TeacherWorkspacePage({ grup, item }) {
       isi: entry.isi,
       status: entry.status,
     });
+    setRefleksi(isReflection ? uraikanIsiRefleksi(entry.isi) : kosongkanRefleksi());
+    setRencanaPerbaikan(isImprovementPlan
+      ? uraikanIsiRencanaPerbaikan(entry.isi)
+      : kosongkanRencanaPerbaikan());
+    setJurnal(isJournal ? uraikanIsiJurnalMengajar(entry.isi) : kosongkanJurnalMengajar());
+    setRencanaKompetensi(isDevelopmentPlan
+      ? uraikanIsiRencanaKompetensi(entry.isi)
+      : kosongkanRencanaKompetensi());
+    setObservasi(isObservation ? uraikanIsiCatatanObservasi(entry.isi) : kosongkanCatatanObservasi());
+    setPortofolio(isPortfolio ? uraikanIsiPortofolioGuru(entry.isi) : kosongkanPortofolioGuru());
+    setIntervensiKelas(isClassIntervention
+      ? uraikanIsiRencanaIntervensiKelas(entry.isi)
+      : kosongkanRencanaIntervensiKelas());
+    setDiferensiasi(isDifferentiation
+      ? uraikanIsiRencanaDiferensiasi(entry.isi)
+      : kosongkanRencanaDiferensiasi());
+    setRealisasi(isImplementation ? uraikanIsiRealisasiRencana(entry.isi) : kosongkanRealisasiRencana());
+    setCatatanCepat(isQuickNote ? uraikanIsiCatatanKelasCepat(entry.isi) : kosongkanCatatanKelasCepat());
     setEditId(entry.id);
     setError('');
     setNotice('');
@@ -197,6 +406,16 @@ export default function TeacherWorkspacePage({ grup, item }) {
 
   function batalEdit() {
     setForm(formKosong(item.path, item.label));
+    setRefleksi(kosongkanRefleksi());
+    setRencanaPerbaikan(kosongkanRencanaPerbaikan());
+    setJurnal(kosongkanJurnalMengajar());
+    setRencanaKompetensi(kosongkanRencanaKompetensi());
+    setObservasi(kosongkanCatatanObservasi());
+    setPortofolio(kosongkanPortofolioGuru());
+    setIntervensiKelas(kosongkanRencanaIntervensiKelas());
+    setDiferensiasi(kosongkanRencanaDiferensiasi());
+    setRealisasi(kosongkanRealisasiRencana());
+    setCatatanCepat(kosongkanCatatanKelasCepat());
     setEditId('');
     setError('');
   }
@@ -208,6 +427,31 @@ export default function TeacherWorkspacePage({ grup, item }) {
     setError('');
     setNotice('');
     try {
+      const payload = {
+        ...form,
+        isi: isReflection
+          ? susunIsiRefleksi(refleksi)
+          : isImprovementPlan
+            ? susunIsiRencanaPerbaikan(rencanaPerbaikan)
+            : isJournal
+              ? susunIsiJurnalMengajar(jurnal)
+              : isDevelopmentPlan
+                ? susunIsiRencanaKompetensi(rencanaKompetensi)
+                : isObservation
+                  ? susunIsiCatatanObservasi(observasi)
+                  : isPortfolio
+                    ? susunIsiPortofolioGuru(portofolio)
+                    : isClassIntervention
+                      ? susunIsiRencanaIntervensiKelas(intervensiKelas)
+                      : isDifferentiation
+                        ? susunIsiRencanaDiferensiasi(diferensiasi)
+                        : isImplementation
+                          ? susunIsiRealisasiRencana(realisasi)
+                          : isQuickNote ? susunIsiCatatanKelasCepat(catatanCepat) : form.isi,
+      };
+      if (isJournal && (!form.kelas.trim() || !form.mapel.trim())) {
+        throw new Error('Kelas dan mata pelajaran wajib dipilih untuk jurnal mengajar.');
+      }
       if (editId) {
         const existing = catatan.find((entry) => entry.id === editId);
         if (!existing) throw new Error('Catatan yang akan diperbarui tidak tersedia pada halaman ini.');
@@ -217,16 +461,26 @@ export default function TeacherWorkspacePage({ grup, item }) {
           user.uid,
           identitasVault,
           editId,
-          form,
+          payload,
           existing.createdAt,
           existing.ciphertextSha256,
         );
         setNotice('Catatan berhasil diperbarui.');
       } else {
-        await tambahCatatanGuruDrive(tokenAktif, tenantId, user.uid, identitasVault, form);
+        await tambahCatatanGuruDrive(tokenAktif, tenantId, user.uid, identitasVault, payload);
         setNotice('Catatan berhasil disimpan.');
       }
       setForm(formKosong(item.path, item.label));
+      setRefleksi(kosongkanRefleksi());
+      setRencanaPerbaikan(kosongkanRencanaPerbaikan());
+      setJurnal(kosongkanJurnalMengajar());
+      setRencanaKompetensi(kosongkanRencanaKompetensi());
+      setObservasi(kosongkanCatatanObservasi());
+      setPortofolio(kosongkanPortofolioGuru());
+      setIntervensiKelas(kosongkanRencanaIntervensiKelas());
+      setDiferensiasi(kosongkanRencanaDiferensiasi());
+      setRealisasi(kosongkanRealisasiRencana());
+      setCatatanCepat(kosongkanCatatanKelasCepat());
       setEditId('');
       await muat();
     } catch (err) {
@@ -241,7 +495,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
 
   async function hapus(entry) {
     if (!canUse || !vaultSiap ||
-        !window.confirm(`Hapus catatan “${entry.judul}”? Tindakan ini tidak dapat dibatalkan.`)) return;
+      !window.confirm(`Hapus catatan “${entry.judul}”? Tindakan ini tidak dapat dibatalkan.`)) return;
     setError('');
     setNotice('');
     try {
@@ -257,14 +511,38 @@ export default function TeacherWorkspacePage({ grup, item }) {
 
   function ekspor() {
     const nama = item.path.split('/').filter(Boolean).join('-');
-    unduhCsv(catatanModul, `catatan-${nama}.csv`);
+    const items = isStructuredNote
+      ? catatanModul.map((entry) => ({
+        ...entry,
+        isi: isReflection
+          ? tampilkanIsiRefleksi(entry.isi)
+          : isImprovementPlan
+            ? tampilkanIsiRencanaPerbaikan(entry.isi)
+            : isJournal
+              ? tampilkanIsiJurnalMengajar(entry.isi)
+              : isDevelopmentPlan
+                ? tampilkanIsiRencanaKompetensi(entry.isi)
+                : isObservation
+                  ? tampilkanIsiCatatanObservasi(entry.isi)
+                  : isPortfolio
+                    ? tampilkanIsiPortofolioGuru(entry.isi)
+                    : isClassIntervention
+                      ? tampilkanIsiRencanaIntervensiKelas(entry.isi)
+                      : isDifferentiation
+                        ? tampilkanIsiRencanaDiferensiasi(entry.isi)
+                        : isImplementation
+                          ? tampilkanIsiRealisasiRencana(entry.isi)
+                          : isQuickNote ? tampilkanIsiCatatanKelasCepat(entry.isi) : entry.isi,
+      }))
+      : catatanModul;
+    unduhCsv(items, `catatan-${nama}.csv`);
   }
 
   if (!canUse) {
     return (
       <section className="ale-kartu teacher-workspace-denied" role="alert">
         <h1>{item.label}</h1>
-        <p>Ruang kerja ini hanya tersedia bagi guru yang sudah terhubung dengan sekolah.</p>
+        <p>Ruang kerja ini hanya tersedia bagi guru atau Admin Sekolah yang sudah terhubung dengan tenant.</p>
       </section>
     );
   }
@@ -275,7 +553,29 @@ export default function TeacherWorkspacePage({ grup, item }) {
         <div>
           <p className="teacher-workspace-kicker"><Ikon nama={grup.ikon} /> {grup.label}</p>
           <h1>{item.label}</h1>
-          <p>Simpan dan kelola catatan kerja pribadi untuk modul ini.</p>
+          <p>{isPersonalTask
+            ? 'Kelola daftar tugas pribadi dengan tenggat dan tandai selesai saat beres. Tugas tidak diberikan kepada siswa atau dibagikan ke sekolah.'
+            : isReflection
+              ? 'Tinjau praktik mengajar dengan bukti belajar dan rencana tindak lanjut yang jelas.'
+              : isImprovementPlan
+                ? 'Ubah hasil refleksi menjadi tindakan kecil yang dapat dicoba dan ditinjau kembali.'
+                : isJournal
+                  ? 'Catat tujuan, kegiatan, capaian umum, dan tindak lanjut untuk satu sesi mengajar.'
+                  : isDevelopmentPlan
+                    ? 'Susun langkah pengembangan profesional yang terukur dan dapat ditinjau kembali.'
+                    : isObservation
+                      ? 'Catat proses pembelajaran secara faktual dan tentukan tindak lanjut pribadi.'
+                      : isPortfolio
+                        ? 'Susun metadata karya dan tautan bukti. Berkas tetap berada di layanan penyimpanan asal.'
+                        : isClassIntervention
+                          ? 'Rancang dukungan tingkat kelas berdasarkan kebutuhan belajar umum dan tinjau hasilnya.'
+                          : isDifferentiation
+                            ? 'Rancang beberapa jalur belajar untuk mencapai tujuan yang sama berdasarkan kebutuhan umum kelas.'
+                            : isImplementation
+                              ? 'Bandingkan rencana dengan pelaksanaan dan catat tindak lanjut berikutnya.'
+                              : isQuickNote
+                                ? 'Catat situasi kelas dan respons yang dilakukan agar tindak lanjut mudah diingat.'
+                                : 'Simpan dan kelola catatan kerja pribadi untuk modul ini.'}</p>
         </div>
         <a className="teacher-workspace-related" href="#/dashboard">
           <Ikon nama="home" /> Kembali ke Dashboard
@@ -295,21 +595,47 @@ export default function TeacherWorkspacePage({ grup, item }) {
         </p>
       </aside>
 
+      {!vaultSiap && (
+        <aside className="teacher-workspace-setup" role="status">
+          <div>
+            <strong>{tokenAktif ? 'Siapkan atau pulihkan kunci vault' : 'Hubungkan Google Drive untuk membuka ruang kerja'}</strong>
+            <p>{tokenAktif
+              ? 'Akses Drive aktif, tetapi kunci vault belum tersedia pada sesi ini. Buka Integrasi Google untuk membuat atau memulihkan kunci.'
+              : 'Catatan disimpan terenkripsi di Drive pribadi. Hubungkan akun Google dan siapkan vault sebelum membuat atau melihat catatan.'}</p>
+          </div>
+          <a className="teacher-workspace-related" href="#/pengaturan/google">
+            <Ikon nama="external" /> Buka Integrasi Google
+          </a>
+        </aside>
+      )}
+
       <aside className="teacher-workspace-privacy" role="note">
         <Ikon nama="badge" />
-        <p>
-          Catatan ini hanya dapat dibaca oleh akun guru Anda. Ini bukan nilai, presensi,
-          laporan resmi, atau komunikasi dengan siswa/orang tua. Hindari memasukkan nama,
-          nomor identitas, maupun informasi pribadi siswa.
-        </p>
+        <p>{isPersonalTask
+          ? 'Tugas ini bersifat pribadi dan tersimpan terenkripsi di vault Drive akun Anda. Saat menambahkan ke Google Calendar, judul dan rincian tugas dikirim ke Google setelah Anda menekan tautannya. Hindari memasukkan nama atau data pribadi siswa.'
+          : isJournal
+            ? 'Jurnal ini adalah catatan pribadi untuk membantu refleksi mengajar, bukan rekam resmi sekolah atau pengganti presensi dan nilai. Hindari memasukkan nama, nomor identitas, maupun informasi pribadi siswa.'
+            : isObservation
+              ? 'Catatan observasi ini hanya dapat dibaca oleh akun guru Anda, bukan evaluasi resmi atau hasil penilaian supervisi formal. Hindari memasukkan nama, identitas, atau informasi sensitif tentang siswa maupun rekan kerja.'
+              : isPortfolio
+                ? 'Entri portofolio dan tautannya disimpan privat dalam vault Anda. Berkas tidak diunggah. Pastikan izin akses materi eksternal sesuai. Hindari memasukkan nama, nomor identitas, atau informasi pribadi siswa.'
+                : isClassIntervention
+                  ? 'Rencana ini adalah catatan kerja pribadi tingkat kelas, bukan daftar kasus atau rekam nilai siswa. Gunakan pola umum. Hindari memasukkan nama maupun identitas siswa.'
+                  : isDifferentiation
+                    ? 'Rencana ini menggunakan kebutuhan umum kelas dan bukan profil individual. Hindari memasukkan nama, nomor identitas, atau informasi pribadi siswa.'
+                    : isImplementation
+                      ? 'Catatan ini membantu refleksi pelaksanaan, bukan laporan resmi. Gunakan capaian tingkat kelas. Hindari memasukkan nama atau data pribadi siswa.'
+                      : isQuickNote
+                        ? 'Catatan singkat ini privat dan hanya untuk pengingat guru. Catat situasi secara umum. Hindari memasukkan nama, nilai, atau kasus individual siswa.'
+                        : 'Catatan ini hanya dapat dibaca oleh akun guru Anda. Ini bukan nilai, presensi, laporan resmi, atau komunikasi dengan siswa/orang tua. Hindari memasukkan nama, nomor identitas, maupun informasi pribadi siswa.'}</p>
       </aside>
 
       <div className="teacher-workspace-grid">
         <section className="ale-kartu teacher-workspace-form" aria-labelledby="teacher-workspace-form-title">
           <div className="teacher-workspace-section-head">
             <div>
-              <p className="teacher-workspace-eyebrow">{editId ? 'Perbarui catatan' : 'Catatan baru'}</p>
-              <h2 id="teacher-workspace-form-title">{editId ? 'Edit catatan kerja' : 'Buat catatan kerja'}</h2>
+              <p className="teacher-workspace-eyebrow">{editId ? 'Perbarui catatan' : isPersonalTask ? 'Tugas baru' : isReflection || isObservation || isQuickNote ? 'Catatan baru' : isImprovementPlan || isDevelopmentPlan || isClassIntervention || isDifferentiation || isImplementation ? 'Rencana baru' : isJournal ? 'Jurnal baru' : isPortfolio ? 'Karya baru' : 'Catatan baru'}</p>
+              <h2 id="teacher-workspace-form-title">{editId ? 'Edit catatan kerja' : isPersonalTask ? 'Tugas pribadi' : isReflection ? 'Refleksi pembelajaran' : isImprovementPlan ? 'Rencana perbaikan' : isJournal ? 'Jurnal mengajar' : isDevelopmentPlan ? 'Rencana pengembangan kompetensi' : isObservation ? 'Catatan supervisi dan observasi' : isPortfolio ? 'Entri portofolio guru' : isClassIntervention ? 'Rencana remedial dan pengayaan' : isDifferentiation ? 'Rencana pembelajaran berdiferensiasi' : isImplementation ? 'Realisasi terhadap Rencana' : isQuickNote ? 'Catatan kelas cepat' : 'Buat catatan kerja'}</h2>
             </div>
             <span className="teacher-workspace-status">{editId ? 'Mengedit' : 'Pribadi'}</span>
           </div>
@@ -320,55 +646,143 @@ export default function TeacherWorkspacePage({ grup, item }) {
               <input
                 required maxLength={120} value={form.judul} disabled={!vaultSiap || saving}
                 onChange={(event) => ubahForm('judul', event.target.value)}
-                placeholder="Contoh: Refleksi pembelajaran pekan ini"
+                placeholder={isPersonalTask
+                  ? 'Contoh: Siapkan bahan rapat kelas'
+                  : isReflection
+                    ? 'Contoh: Refleksi pembelajaran pekan ini'
+                    : isImprovementPlan
+                      ? 'Contoh: Pemerataan diskusi kelas'
+                      : isJournal
+                        ? 'Contoh: Persamaan linear dua variabel'
+                        : isDevelopmentPlan
+                          ? 'Contoh: Asesmen formatif'
+                          : isObservation
+                            ? 'Contoh: Observasi diskusi kelas'
+                            : isPortfolio
+                              ? 'Contoh: Modul ajar berbasis proyek'
+                              : isClassIntervention
+                                ? 'Contoh: Penguatan operasi pecahan'
+                                : isDifferentiation
+                                  ? 'Contoh: Pilihan strategi untuk tujuan belajar'
+                                  : isImplementation
+                                    ? 'Contoh: Realisasi rencana pecahan pekan ini'
+                                    : isQuickNote ? 'Contoh: Diskusi kelompok hari ini' : 'Beri judul catatan'}
               />
             </label>
             <div className="teacher-workspace-form-row">
               <label>
-                Tanggal
+                {isPersonalTask ? 'Tenggat tugas' : isImprovementPlan || isClassIntervention || isImplementation ? 'Tanggal tinjau ulang' : isJournal ? 'Tanggal mengajar' : 'Tanggal'}
                 <input required type="date" value={form.tanggal}
                   disabled={!vaultSiap || saving}
                   onChange={(event) => ubahForm('tanggal', event.target.value)} />
               </label>
               <label>
-                Status
-                <select value={form.status} disabled={!vaultSiap || saving}
-                  onChange={(event) => ubahForm('status', event.target.value)}>
-                  <option value="draf">Draf</option>
-                  <option value="selesai">Selesai</option>
-                </select>
+                {isPersonalTask ? 'Status tugas' : isImplementation ? 'Status pelaksanaan' : 'Status'}
+                {isImplementation ? (
+                  <select value={realisasi.status} disabled={!vaultSiap || saving}
+                    onChange={(event) => setRealisasi((current) => ({ ...current, status: event.target.value }))}>
+                    <option value="belum">Belum dimulai</option>
+                    <option value="sebagian">Terlaksana sebagian</option>
+                    <option value="selesai">Selesai</option>
+                  </select>
+                ) : (
+                  <select value={form.status} disabled={!vaultSiap || saving}
+                    onChange={(event) => ubahForm('status', event.target.value)}>
+                    <option value="draf">{isPersonalTask ? 'Belum selesai' : 'Draf'}</option>
+                    <option value="selesai">Selesai</option>
+                  </select>
+                )}
               </label>
             </div>
-            <div className="teacher-workspace-form-row">
+            {!isPersonalTask && <div className="teacher-workspace-form-row">
               <label>
-                Kelas <span>(opsional)</span>
-                <input maxLength={80} value={form.kelas}
+                Kelas {!isJournal && <span>(opsional)</span>}
+                <input required={isJournal} maxLength={80} value={form.kelas}
                   disabled={!vaultSiap || saving}
                   onChange={(event) => ubahForm('kelas', event.target.value)}
                   placeholder="Contoh: X-1" />
               </label>
               <label>
-                Mata pelajaran <span>(opsional)</span>
-                <input maxLength={80} value={form.mapel}
+                Mata pelajaran {!isJournal && <span>(opsional)</span>}
+                <input required={isJournal} maxLength={80} value={form.mapel}
                   disabled={!vaultSiap || saving}
                   onChange={(event) => ubahForm('mapel', event.target.value)}
                   placeholder="Contoh: Matematika" />
               </label>
-            </div>
-            <label>
-              Catatan kerja
-              <textarea
-                required maxLength={6000} rows={7} value={form.isi} disabled={!vaultSiap || saving}
-                onChange={(event) => ubahForm('isi', event.target.value)}
-                placeholder="Tuliskan rencana, refleksi, atau tindak lanjut pribadi..."
-              />
-              <small>{form.isi.length}/6000 karakter</small>
-            </label>
+            </div>}
+            {isStructuredNote ? (
+              <div className="teacher-workspace-reflection-fields" aria-label={isReflection
+                ? 'Bagian refleksi'
+                : isImprovementPlan
+                  ? 'Bagian rencana perbaikan'
+                  : isJournal
+                    ? 'Bagian jurnal mengajar'
+                    : isDevelopmentPlan
+                      ? 'Bagian pengembangan kompetensi'
+                      : isObservation
+                        ? 'Bagian supervisi dan observasi'
+                        : isPortfolio
+                          ? 'Bagian portofolio guru'
+                          : isClassIntervention
+                            ? 'Rencana remedial dan pengayaan kelas'
+                            : isDifferentiation
+                              ? 'Rencana pembelajaran berdiferensiasi'
+                              : isImplementation ? 'Realisasi rencana' : 'Bagian catatan kelas cepat'}>
+                {fieldsTerstruktur.map((field) => (
+                  <label key={field.key}>
+                    {field.label}
+                    {field.type === 'url' ? (
+                      <input
+                        type="url" maxLength={1000} value={draftTerstruktur[field.key]} disabled={!vaultSiap || saving}
+                        onChange={(event) => setPortofolio((current) => ({ ...current, [field.key]: event.target.value }))}
+                        placeholder={field.placeholder}
+                      />
+                    ) : (
+                      <textarea
+                        required={field.required} maxLength={1400} rows={4} value={draftTerstruktur[field.key]} disabled={!vaultSiap || saving}
+                        onChange={(event) => {
+                          const setter = isReflection
+                            ? setRefleksi
+                            : isImprovementPlan
+                              ? setRencanaPerbaikan
+                              : isJournal
+                                ? setJurnal
+                                : isDevelopmentPlan
+                                  ? setRencanaKompetensi
+                                  : isObservation
+                                    ? setObservasi
+                                    : isPortfolio
+                                      ? setPortofolio
+                                      : isClassIntervention
+                                        ? setIntervensiKelas
+                                        : isDifferentiation
+                                          ? setDiferensiasi
+                                          : isImplementation ? setRealisasi : setCatatanCepat;
+                          setter((current) => ({ ...current, [field.key]: event.target.value }));
+                        }}
+                        placeholder={field.placeholder}
+                      />
+                    )}
+                  </label>
+                ))}
+                <small>{jumlahKarakterTerstruktur}/5600 karakter. Isi setidaknya satu bagian.</small>
+              </div>
+            ) : (
+              <label>
+                {isPersonalTask ? 'Rincian tugas' : 'Catatan kerja'}
+                <textarea
+                  required maxLength={6000} rows={7} value={form.isi} disabled={!vaultSiap || saving}
+                  onChange={(event) => ubahForm('isi', event.target.value)}
+                  placeholder={isPersonalTask ? 'Tuliskan langkah atau bahan yang perlu disiapkan...' : 'Tuliskan rencana, refleksi, atau tindak lanjut pribadi...'}
+                />
+                <small>{form.isi.length}/6000 karakter</small>
+              </label>
+            )}
             {error && <p className="teacher-workspace-error" role="alert">{error}</p>}
             {notice && <p className="teacher-workspace-notice" role="status">{notice}</p>}
             <div className="teacher-workspace-actions">
               <button type="submit" disabled={saving || !vaultSiap}>
-                <Ikon nama="check" /> {saving ? 'Menyimpan…' : editId ? 'Simpan perubahan' : 'Simpan catatan'}
+                <Ikon nama="check" /> {saving ? 'Menyimpan…' : editId ? 'Simpan perubahan' : isPersonalTask ? 'Simpan tugas' : isJournal ? 'Simpan jurnal' : isPortfolio ? 'Simpan entri portofolio' : isClassIntervention || isDifferentiation || isImplementation ? 'Simpan rencana kelas' : isQuickNote ? 'Simpan catatan cepat' : 'Simpan catatan'}
               </button>
               {editId && <button type="button" className="teacher-workspace-secondary" onClick={batalEdit}>Batal</button>}
             </div>
@@ -384,7 +798,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
           <div className="teacher-workspace-section-head">
             <div>
               <p className="teacher-workspace-eyebrow">Tersimpan di akun ini</p>
-              <h2 id="teacher-workspace-list-title">Catatan {item.label}</h2>
+              <h2 id="teacher-workspace-list-title">{isPersonalTask ? 'Tugas pribadi' : `Catatan ${item.label}`}</h2>
             </div>
             <button type="button" className="teacher-workspace-icon-button" onClick={() => muat()}
               disabled={loading} aria-label="Muat ulang catatan">
@@ -396,7 +810,7 @@ export default function TeacherWorkspacePage({ grup, item }) {
             <label>
               <span className="sr-only">Cari catatan</span>
               <input type="search" value={cari} onChange={(event) => setCari(event.target.value)}
-                placeholder="Cari judul, kelas, atau isi" />
+                placeholder={isPersonalTask ? 'Cari tugas pribadi' : 'Cari judul, kelas, atau isi'} />
             </label>
             <button type="button" className="teacher-workspace-secondary"
               onClick={ekspor} disabled={catatanModul.length === 0}>
@@ -414,37 +828,77 @@ export default function TeacherWorkspacePage({ grup, item }) {
           {!loading && vaultSiap && catatanModul.length === 0 && (
             <div className="teacher-workspace-empty">
               <Ikon nama="file" />
-              <h3>{cari ? 'Tidak ada catatan yang cocok' : 'Belum ada catatan pada modul ini'}</h3>
+              <h3>{isPersonalTask
+                ? cari ? 'Tidak ada tugas yang cocok' : 'Belum ada tugas pribadi'
+                : cari ? 'Tidak ada catatan yang cocok' : 'Belum ada catatan pada modul ini'}</h3>
               <p>{cari ? 'Coba kata kunci lain.' : 'Catatan yang disimpan akan tampil di sini.'}</p>
             </div>
           )}
           <ul className="teacher-workspace-entries">
-            {catatanModul.map((entry) => (
-              <li key={entry.id} className="teacher-workspace-entry">
-                <div className="teacher-workspace-entry-top">
-                  <div>
-                    <span className={`teacher-workspace-tag is-${entry.status}`}>
-                      {entry.status === 'selesai' ? 'Selesai' : 'Draf'}
-                    </span>
-                    <h3>{entry.judul}</h3>
+            {catatanModul.map((entry) => {
+              const portfolioUrl = isPortfolio
+                ? tautanPortofolioAman(uraikanIsiPortofolioGuru(entry.isi).tautan)
+                : '';
+              const calendarUrl = isPersonalTask && entry.status !== 'selesai'
+                ? buatTautanKalenderTugas({
+                  judul: entry.judul,
+                  tanggal: entry.tanggal,
+                  deskripsi: entry.isi,
+                })
+                : '';
+              return (
+                <li key={entry.id} className="teacher-workspace-entry">
+                  <div className="teacher-workspace-entry-top">
+                    <div>
+                      <span className={`teacher-workspace-tag is-${entry.status}`}>
+                        {entry.status === 'selesai' ? 'Selesai' : isPersonalTask ? 'Belum selesai' : 'Draf'}
+                      </span>
+                      <h3>{entry.judul}</h3>
+                    </div>
+                    <span className="teacher-workspace-date">{tanggalTampil(entry.tanggal)}</span>
                   </div>
-                  <span className="teacher-workspace-date">{tanggalTampil(entry.tanggal)}</span>
-                </div>
-                {(entry.kelas || entry.mapel) && (
-                  <p className="teacher-workspace-context">
-                    {[entry.kelas, entry.mapel].filter(Boolean).join(' · ')}
+                  {(entry.kelas || entry.mapel) && (
+                    <p className="teacher-workspace-context">
+                      {[entry.kelas, entry.mapel].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  <p className="teacher-workspace-entry-body">
+                    {isReflection
+                      ? tampilkanIsiRefleksi(entry.isi)
+                      : isImprovementPlan
+                        ? tampilkanIsiRencanaPerbaikan(entry.isi)
+                        : isJournal
+                          ? tampilkanIsiJurnalMengajar(entry.isi)
+                          : isDevelopmentPlan
+                            ? tampilkanIsiRencanaKompetensi(entry.isi)
+                            : isObservation
+                              ? tampilkanIsiCatatanObservasi(entry.isi)
+                              : isPortfolio
+                                ? tampilkanIsiPortofolioGuru(entry.isi)
+                                : isClassIntervention
+                                  ? tampilkanIsiRencanaIntervensiKelas(entry.isi)
+                                  : isDifferentiation ? tampilkanIsiRencanaDiferensiasi(entry.isi) : entry.isi}
                   </p>
-                )}
-                <p className="teacher-workspace-entry-body">{entry.isi}</p>
-                <div className="teacher-workspace-entry-footer">
-                  <small>Diperbarui {waktuTampil(entry.updatedAt)}</small>
-                  <div>
-                    <button type="button" onClick={() => mulaiEdit(entry)}>Edit</button>
-                    <button type="button" className="is-danger" onClick={() => hapus(entry)}>Hapus</button>
+                  {calendarUrl && (
+                    <a className="teacher-workspace-related" href={calendarUrl} target="_blank" rel="noopener noreferrer">
+                      <Ikon nama="calendar" /> Tambahkan ke Google Calendar
+                    </a>
+                  )}
+                  {portfolioUrl && (
+                    <a className="teacher-workspace-related" href={portfolioUrl} target="_blank" rel="noopener noreferrer">
+                      Buka bukti eksternal
+                    </a>
+                  )}
+                  <div className="teacher-workspace-entry-footer">
+                    <small>Diperbarui {waktuTampil(entry.updatedAt)}</small>
+                    <div>
+                      <button type="button" onClick={() => mulaiEdit(entry)}>Edit</button>
+                      <button type="button" className="is-danger" onClick={() => hapus(entry)}>Hapus</button>
+                    </div>
                   </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
           {hasMore && (
             <button type="button" className="teacher-workspace-load-more"

@@ -33,12 +33,13 @@ export default {
   'detail.prasyarat': 'Selesaikan dahulu: {daftar}.', 'detail.sumber': 'Sumber: {sumber}', 'detail.tabLabel': 'Dokumen perencanaan',
   'detail.tidakDitemukan': 'Paket tidak ditemukan atau Anda tidak memiliki akses.', 'detail.ubahKonteks': 'Ubah data paket',
   'detail.dokumenKhususGuru': 'Dokumen RPE–Modul dibuat dan diperbarui dari akun guru.',
-  'detail.aiNonaktif': 'Pembuatan berbantuan AI tidak aktif dalam mode tanpa billing.',
+  'detail.aiKeterangan': 'Aktifkan provider pada menu AI & Layanan. Konteks paket yang diperlukan dikirim langsung ke provider hanya setelah Anda menekan Buat dengan AI. Draf disimpan terenkripsi di Google Drive; tinjau sebelum digunakan.',
+  'detail.aiBerhasil': 'Draf AI tersimpan terenkripsi di Google Drive. Tinjau isi dan kesesuaiannya sebelum digunakan.',
   'detail.manualGratis': 'Susun dan simpan dokumen ini secara manual tanpa provider AI atau biaya penggunaan.',
   'detail.usang': 'Dokumen ini dibuat dari versi sebelumnya dari dokumen induknya. Buat ulang agar tetap sinkron.',
 
   /* identitas & tanda tangan */
-  'identitas.judul': 'Identitas dokumen', 'identitas.sekolah': 'Satuan pendidikan', 'identitas.guru': 'Nama guru', 'identitas.mapel': 'Mata pelajaran',
+  'identitas.judul': 'Identitas dokumen', 'identitas.sekolah': 'Satuan pendidikan', 'identitas.npsn': 'NPSN', 'identitas.alamat': 'Alamat sekolah', 'identitas.guru': 'Nama guru', 'identitas.mapel': 'Mata pelajaran',
   'identitas.kelasFase': 'Kelas / Fase', 'identitas.tahunAjaran': 'Tahun ajaran', 'identitas.nip': 'NIP', 'identitas.kepsek': 'Kepala sekolah',
   'identitas.nipKepsek': 'NIP kepala sekolah', 'identitas.lokasi': 'Tempat penandatanganan',
   'ttd.kepsek': 'Mengetahui, Kepala Sekolah', 'ttd.guru': 'Guru Mata Pelajaran',

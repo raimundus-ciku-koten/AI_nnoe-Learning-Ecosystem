@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
+import MathEquationInput, { MathEquationDisplay } from '../components/MathEquationInput.jsx';
 import {
   hapusSoalBank, muatBankSoal, tambahSoalBank, ubahSoalBank,
 } from '../services/questionBank.js';
+import { buatCsvSoalCanva } from '../services/questionBankExport.js';
 import { buatDrafSoalAI } from '../services/aiIntegrations.js';
 import '../styles/question-bank.css';
 
@@ -18,18 +21,23 @@ const FORM_AWAL = {
 };
 
 const batasi = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+const batasiIsi = (value, max) => String(value ?? '')
+  .replace(/\r\n?/g, '\n')
+  .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '')
+  .trim()
+  .slice(0, max);
 
 function siapkanSoal(form) {
   const jenis = form.jenis === 'uraian' ? 'uraian' : 'pilihan_ganda';
   const pilihan = jenis === 'pilihan_ganda'
     ? form.pilihan.split(/\r?\n/).map((item) => batasi(item, 300)).filter(Boolean)
     : [];
-  const jawaban = batasi(form.jawaban, 1000);
-  if (!batasi(form.mapel, 80) || !batasi(form.kelas, 30) || !batasi(form.pertanyaan, 2000)) {
+  const jawaban = jenis === 'uraian' ? batasiIsi(form.jawaban, 1000) : batasi(form.jawaban, 1000);
+  if (!batasi(form.mapel, 80) || !batasi(form.kelas, 30) || !batasiIsi(form.pertanyaan, 2000)) {
     throw new Error('Mata pelajaran, kelas, dan pertanyaan wajib diisi.');
   }
   if (jenis === 'pilihan_ganda' &&
-      (pilihan.length < 2 || pilihan.length > 5 || new Set(pilihan).size !== pilihan.length)) {
+    (pilihan.length < 2 || pilihan.length > 5 || new Set(pilihan).size !== pilihan.length)) {
     throw new Error('Pilihan ganda harus memiliki 2–5 pilihan yang berbeda.');
   }
   if (!jawaban || (jenis === 'pilihan_ganda' && !pilihan.includes(jawaban))) {
@@ -41,10 +49,10 @@ function siapkanSoal(form) {
     mapel: batasi(form.mapel, 80),
     kelas: batasi(form.kelas, 30),
     jenis,
-    pertanyaan: batasi(form.pertanyaan, 2000),
+    pertanyaan: batasiIsi(form.pertanyaan, 2000),
     pilihan,
     jawaban,
-    pembahasan: batasi(form.pembahasan, 2000),
+    pembahasan: batasiIsi(form.pembahasan, 2000),
   };
 }
 
@@ -56,6 +64,8 @@ function formatTanggal(value) {
 }
 
 export default function QuestionBankPage() {
+  const { pathname } = useLocation();
+  const generatorMode = pathname === '/asesmen/generator-ai';
   const { user, role, tenantId } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -208,6 +218,24 @@ export default function QuestionBankPage() {
     }
   }
 
+  function exportForCanva() {
+    setError('');
+    setNotice('');
+    try {
+      const csv = buatCsvSoalCanva(visibleItems);
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'bank-soal-canva.csv';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setNotice(`${visibleItems.length} soal diekspor sebagai CSV. Unggah file di Canva untuk menggunakannya sebagai data Bulk Create.`);
+    } catch (exportError) {
+      console.error('[question-bank] Gagal mengekspor soal untuk Canva:', exportError);
+      setError(exportError?.message || 'Soal tidak dapat diekspor.');
+    }
+  }
+
   const pilihanForm = form.jenis === 'pilihan_ganda'
     ? form.pilihan.split(/\r?\n/).map((item) => batasi(item, 300)).filter(Boolean)
     : [];
@@ -238,8 +266,10 @@ export default function QuestionBankPage() {
     <main className="question-bank-page">
       <header className="question-bank-header">
         <p className="question-bank-kicker"><Ikon nama="clipboard" /> Asesmen dan Penilaian</p>
-        <h1>Bank Soal</h1>
-        <p>Simpan soal per mata pelajaran dan kelas. Kunci jawaban hanya dapat dilihat oleh staf yang berwenang.</p>
+        <h1>{generatorMode ? 'Generator Soal AI' : 'Bank Soal'}</h1>
+        <p>{generatorMode
+          ? 'Buat draf soal dengan provider yang Anda aktifkan, tinjau hasilnya, lalu simpan ke bank soal.'
+          : 'Simpan soal per mata pelajaran dan kelas. Kunci jawaban hanya dapat dilihat oleh staf yang berwenang.'}</p>
       </header>
 
       {error && <p className="question-bank-message is-error" role="alert">{error}</p>}
@@ -248,6 +278,9 @@ export default function QuestionBankPage() {
       {canEdit && (
         <section className="ale-kartu question-bank-editor">
           <h2>{editId ? 'Ubah soal' : 'Tambah soal'}</h2>
+          <p className="question-bank-ai-note">
+            Draf AI bersifat opsional. Jika Anda meminta draf, mata pelajaran, kelas, topik, dan bentuk soal akan dikirim ke provider yang dipilih; jangan masukkan identitas atau data pribadi siswa. Provider dapat mengenakan biaya.
+          </p>
           <form onSubmit={save}>
             <div className="question-bank-fields">
               <label className="question-bank-wide">
@@ -273,10 +306,15 @@ export default function QuestionBankPage() {
                 {aiBusy ? 'Membuat draf…' : 'Buat draf dengan AI'}
               </button>
             </div>
-            <label className="question-bank-wide">
-              Pertanyaan
-              <textarea value={form.pertanyaan} maxLength={2000} rows={4} required onChange={(e) => setForm({ ...form, pertanyaan: e.target.value })} />
-            </label>
+            <div className="question-bank-wide">
+              <MathEquationInput
+                value={form.pertanyaan}
+                maxLength={2000}
+                label="Persamaan pada pertanyaan"
+                textLabel="Pertanyaan"
+                onChange={(value) => setForm((current) => ({ ...current, pertanyaan: value }))}
+              />
+            </div>
             {form.jenis === 'pilihan_ganda' && (
               <>
                 <label className="question-bank-wide">
@@ -293,10 +331,15 @@ export default function QuestionBankPage() {
               </>
             )}
             {form.jenis === 'uraian' && (
-              <label className="question-bank-wide">
-                Contoh jawaban / pedoman penilaian
-                <textarea value={form.jawaban} maxLength={1000} rows={3} required onChange={(e) => setForm({ ...form, jawaban: e.target.value })} />
-              </label>
+              <div className="question-bank-wide">
+                <MathEquationInput
+                  value={form.jawaban}
+                  maxLength={1000}
+                  label="Persamaan pada pedoman jawaban"
+                  textLabel="Contoh jawaban / pedoman penilaian"
+                  onChange={(value) => setForm((current) => ({ ...current, jawaban: value }))}
+                />
+              </div>
             )}
             <label className="question-bank-wide">
               Pembahasan (opsional)
@@ -317,7 +360,18 @@ export default function QuestionBankPage() {
             <span className="sr-only">Cari soal</span>
             <input type="search" value={search} placeholder="Cari mapel, kelas, atau pertanyaan" onChange={(e) => setSearch(e.target.value)} />
           </label>
+          {canEdit && (
+            <button type="button" className="question-bank-export" disabled={!visibleItems.length} onClick={exportForCanva}>
+              Ekspor CSV untuk Canva
+            </button>
+          )}
         </div>
+        {canEdit && (
+          <p className="question-bank-canva-note">
+            Ekspor mengikuti hasil pencarian yang sedang tampil dan tidak menyertakan identitas siswa.
+            Canva AI tidak dihubungkan langsung; file CSV dapat diunggah pada <a href="https://www.canva.com/" target="_blank" rel="noopener noreferrer">Canva</a>.
+          </p>
+        )}
         {loading ? <p className="question-bank-empty" role="status">Memuat soal…</p> : null}
         {!loading && visibleItems.length === 0 && (
           <p className="question-bank-empty">{items.length ? 'Tidak ada soal yang cocok dengan pencarian.' : 'Belum ada soal. Tambahkan soal pertama melalui formulir di atas.'}</p>
@@ -328,7 +382,7 @@ export default function QuestionBankPage() {
               <span>{item.mapel} · Kelas {item.kelas}</span>
               <span>{item.jenis === 'uraian' ? 'Uraian' : 'Pilihan ganda'} · {formatTanggal(item.updatedAt)}</span>
             </div>
-            <h3>{item.pertanyaan}</h3>
+            <h3><MathEquationDisplay value={item.pertanyaan} /></h3>
             {item.jenis === 'pilihan_ganda' && (
               <ol type="A">{(item.pilihan || []).map((option) => <li key={option}>{option}</li>)}</ol>
             )}

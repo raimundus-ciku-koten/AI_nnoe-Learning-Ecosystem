@@ -4,6 +4,7 @@ import Ikon from '../components/Ikon.jsx';
 import { usePlatformControls } from '../context/PlatformControlContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { tanyaAsisten } from '../services/aiAssistant.js';
+import { BROWSER_AI_CAPABILITIES } from '../services/browserAi.js';
 
 const SARAN = [
   'Buat ide kegiatan pembuka pembelajaran yang menarik.',
@@ -11,12 +12,20 @@ const SARAN = [
   'Susun pertanyaan refleksi untuk siswa setelah belajar.',
 ];
 const MAKS_RIWAYAT_TAMPIL = 100;
-const NAMA_PROVIDER = { gemini: 'Gemini', deepseek: 'DeepSeek', groq: 'Groq', cerebras: 'Cerebras' };
+const NAMA_PROVIDER = {
+  gemini: 'Gemini',
+  deepseek: 'DeepSeek',
+  groq: 'Groq',
+  local: 'AI_nnoe Lokal',
+};
 
 export default function AsistenPage() {
   const { features } = usePlatformControls();
   const { user } = useAuth();
-  const aiEnabled = features.aiAssistant;
+  const aiEnabled = features.aiAssistant && BROWSER_AI_CAPABILITIES.assistant;
+  const disabledMessage = features.aiAssistant
+    ? 'Asisten AI belum tersedia pada rilis ini; pesan tidak dikirim ke provider.'
+    : 'Asisten AI sedang dinonaktifkan oleh administrator.';
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
@@ -34,7 +43,7 @@ export default function AsistenPage() {
     const pertanyaan = teks.trim();
     if (!pertanyaan || busy) return;
     if (!aiEnabled) {
-      setError('Asisten AI sedang dinonaktifkan oleh administrator.');
+      setError(disabledMessage);
       return;
     }
     const berikutnya = [...messages, { role: 'user', text: pertanyaan }].slice(-MAKS_RIWAYAT_TAMPIL);
@@ -45,7 +54,9 @@ export default function AsistenPage() {
     try {
       const hasil = await tanyaAsisten(user?.uid, berikutnya.slice(-16).map(({ role, text }) => ({ role, text })));
       setMessages((lama) => [...lama, { role: 'assistant', text: hasil.answer }].slice(-MAKS_RIWAYAT_TAMPIL));
-      setProvider(NAMA_PROVIDER[hasil.penyedia] || hasil.penyedia);
+      setProvider(hasil.fallback
+        ? 'AI_nnoe Lokal (fallback otomatis)'
+        : NAMA_PROVIDER[hasil.penyedia] || hasil.penyedia);
     } catch (err) {
       console.error('[asisten] Permintaan AI gagal:', err);
       setError(err.message || 'Permintaan AI gagal. Silakan coba lagi.');
@@ -58,7 +69,7 @@ export default function AsistenPage() {
   async function ulangiPermintaan() {
     if (busy || !messages.length) return;
     if (!aiEnabled) {
-      setError('Asisten AI sedang dinonaktifkan oleh administrator.');
+      setError(disabledMessage);
       return;
     }
     setError('');
@@ -66,7 +77,9 @@ export default function AsistenPage() {
     try {
       const hasil = await tanyaAsisten(user?.uid, messages.slice(-16).map(({ role, text }) => ({ role, text })));
       setMessages((lama) => [...lama, { role: 'assistant', text: hasil.answer }].slice(-MAKS_RIWAYAT_TAMPIL));
-      setProvider(NAMA_PROVIDER[hasil.penyedia] || hasil.penyedia);
+      setProvider(hasil.fallback
+        ? 'AI_nnoe Lokal (fallback otomatis)'
+        : NAMA_PROVIDER[hasil.penyedia] || hasil.penyedia);
     } catch (err) {
       console.error('[asisten] Pengulangan permintaan AI gagal:', err);
       setError(err.message || 'Permintaan AI gagal. Silakan coba lagi.');
@@ -115,11 +128,17 @@ export default function AsistenPage() {
       <div className="ai-chat-card">
         <div className="ai-chat-meta">
           <span className="ai-status"><span aria-hidden="true" /> {aiEnabled ? 'Siap membantu' : 'Layanan dinonaktifkan'}</span>
-          <span>Provider mengikuti pilihan akun: Gemini, DeepSeek, atau Groq</span>
+          <span>{aiEnabled ? 'Provider eksternal mengikuti preferensi AI & Layanan' : 'Asisten dinonaktifkan oleh administrator'}</span>
         </div>
 
         {!aiEnabled && (
-          <p className="ai-error" role="status">Asisten AI sementara dinonaktifkan oleh administrator.</p>
+          <p className="ai-error" role="status">{disabledMessage}</p>
+        )}
+        {aiEnabled && (
+          <p className="ai-local-disclosure" role="note">
+            AI_nnoe Lokal memberi panduan berbasis pola tanpa mengirim pesan. Jawaban generatif memakai provider hanya sesuai preferensi akun.
+            {' '}<a href="#/pengaturan/api-ai">Pengaturan AI &amp; Layanan</a>
+          </p>
         )}
 
         <div className="ai-messages" ref={daftarRef} aria-live="polite" aria-relevant="additions text">

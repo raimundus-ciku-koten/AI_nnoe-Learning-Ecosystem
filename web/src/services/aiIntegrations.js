@@ -15,3 +15,4 @@ export const hapusKunciPribadiAI = (uid, provider) =>
 export const simpanPreferensiAI = (uid, workflow, provider) =>
   setBrowserAiPreference(uid, workflow, provider);
 export { generateBrowserQuestion as buatDrafSoalAI } from './browserAi.js';
+export { generateBrowserQuestionsFromSource as buatDrafSoalDariPDF } from './browserAi.js';

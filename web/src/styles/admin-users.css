@@ -1,50 +1,326 @@
-.ale-admin-users { display: grid; gap: 1rem; max-width: 1160px; margin: 0 auto; }
-.ale-admin-users-heading { display: grid; gap: .45rem; padding: clamp(1.2rem, 3vw, 1.8rem); border: 1px solid #dce7f2; border-radius: 1.1rem; background: linear-gradient(135deg, #fff, #f4f8ff 65%, #f0fbfa); }
-.ale-admin-users-kicker { color: #0f766e; font-size: .78rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
-.ale-admin-users-heading h2 { color: #18233d; font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.2; }
-.ale-admin-users-heading > p:last-child { max-width: 72ch; color: #59677d; line-height: 1.6; }
-.ale-admin-users-card { display: grid; gap: 1rem; min-width: 0; padding: clamp(1rem, 2.5vw, 1.4rem); border: 1px solid #e1e8f0; border-radius: 1rem; background: #fff; box-shadow: 0 8px 24px rgb(20 36 72 / .045); }
-.ale-admin-users-toolbar { display: flex; align-items: end; gap: .8rem; flex-wrap: wrap; }
-.ale-admin-users-toolbar > div { margin-right: auto; }
-.ale-admin-users-toolbar h3 { color: #24334b; font-size: 1rem; }
-.ale-admin-users-toolbar p { margin-top: .2rem; color: #68768b; font-size: .82rem; }
-.ale-admin-users-search { display: grid; gap: .3rem; width: min(100%, 18rem); color: #42516a; font-size: .78rem; font-weight: 700; }
-.ale-admin-users-search input { min-height: 2.65rem; padding: .55rem .75rem; border: 1px solid #cbd5e1; border-radius: .65rem; background: #fff; color: #0f172a; font: inherit; font-size: .9rem; }
-.ale-admin-users-search input:focus-visible { outline: 3px solid rgb(20 184 166 / .25); border-color: #0f766e; }
-.ale-admin-users-button { min-height: 2.65rem; padding: .55rem .9rem; border: 1px solid #3730a3; border-radius: .65rem; background: #3730a3; color: #fff; font-size: .86rem; font-weight: 750; }
-.ale-admin-users-button.secondary { border-color: #cbd5e1; background: #fff; color: #334155; }
-.ale-admin-users-button:hover:not(:disabled) { filter: brightness(.96); }
-.ale-admin-users-button:disabled { opacity: .6; cursor: progress; }
-.ale-admin-users-button:focus-visible { outline: 3px solid rgb(20 184 166 / .32); outline-offset: 2px; }
-.ale-admin-users-table-wrap { overflow-x: auto; border: 1px solid #e5eaf1; border-radius: .7rem; }
-.ale-admin-users-table { width: 100%; border-collapse: collapse; text-align: left; font-size: .88rem; }
-.ale-admin-users-table th, .ale-admin-users-table td { padding: .8rem .9rem; border-bottom: 1px solid #edf1f6; vertical-align: middle; }
-.ale-admin-users-table thead th { background: #f8fafc; color: #53627a; font-size: .75rem; font-weight: 800; letter-spacing: .035em; text-transform: uppercase; }
-.ale-admin-users-table tbody th { color: #24334b; font-weight: 700; }
-.ale-admin-users-table tbody td { color: #58677c; }
-.ale-admin-users-table tbody tr:last-child th, .ale-admin-users-table tbody tr:last-child td { border-bottom: 0; }
-.ale-admin-users-status { display: inline-flex; padding: .22rem .55rem; border-radius: 999px; font-size: .75rem; font-weight: 750; white-space: nowrap; }
-.ale-admin-users-status.is-active { background: #ecfdf5; color: #047857; }
-.ale-admin-users-status.is-inactive { background: #fef2f2; color: #b91c1c; }
-.ale-admin-users-status.is-unknown { background: #f1f5f9; color: #52647e; }
-.ale-admin-users-empty { padding: 1.2rem; border: 1px dashed #cbd5e1; border-radius: .7rem; color: #58677c; text-align: center; }
-.ale-admin-users-error { padding: .8rem 1rem; border: 1px solid #fecaca; border-radius: .7rem; background: #fef2f2; color: #991b1b; }
-.ale-admin-users-more { display: flex; justify-content: center; }
-.ale-admin-users-note { padding: .85rem 1rem; border-radius: .7rem; background: #f8fafc; color: #58677c; font-size: .86rem; line-height: 1.55; }
-.ale-admin-users-card > div > h2 { color: #24334b; font-size: 1.05rem; }
-.ale-admin-users-card > div > p { margin-top: .25rem; color: #68768b; font-size: .84rem; line-height: 1.5; }
-.ale-platform-user-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
-.ale-platform-user-form label { display: grid; gap: .35rem; color: #42516a; font-size: .8rem; font-weight: 750; }
-.ale-platform-user-form input, .ale-platform-user-form select { width: 100%; min-height: 2.65rem; padding: .55rem .75rem; border: 1px solid #cbd5e1; border-radius: .65rem; background: #fff; color: #0f172a; font: inherit; font-size: .9rem; }
-.ale-platform-user-form input:focus-visible, .ale-platform-user-form select:focus-visible { outline: 3px solid rgb(20 184 166 / .25); border-color: #0f766e; }
-.ale-platform-user-form-actions, .ale-platform-user-form > .ale-admin-users-error, .ale-platform-user-form > .ale-admin-users-notice { grid-column: 1 / -1; }
-.ale-platform-user-form-actions { display: flex; justify-content: flex-end; }
-.ale-admin-users-notice { padding: .8rem 1rem; border: 1px solid #a7f3d0; border-radius: .7rem; background: #ecfdf5; color: #065f46; line-height: 1.5; }
+.ale-admin-users {
+  display: grid;
+  gap: 1rem;
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.ale-admin-users-heading {
+  display: grid;
+  gap: .45rem;
+  padding: clamp(1.2rem, 3vw, 1.8rem);
+  border: 1px solid #dce7f2;
+  border-radius: 1.1rem;
+  background: linear-gradient(135deg, #fff, #f4f8ff 65%, #f0fbfa);
+}
+
+.ale-admin-users-kicker {
+  color: #0f766e;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.ale-admin-users-heading h2 {
+  color: #18233d;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.2;
+}
+
+.ale-admin-users-heading>p:last-child {
+  max-width: 72ch;
+  color: #59677d;
+  line-height: 1.6;
+}
+
+.ale-admin-users-card {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding: clamp(1rem, 2.5vw, 1.4rem);
+  border: 1px solid #e1e8f0;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(20 36 72 / .045);
+}
+
+.ale-admin-users-toolbar {
+  display: flex;
+  align-items: end;
+  gap: .8rem;
+  flex-wrap: wrap;
+}
+
+.ale-admin-users-toolbar>div {
+  margin-right: auto;
+}
+
+.ale-admin-users-toolbar h3 {
+  color: #24334b;
+  font-size: 1rem;
+}
+
+.ale-admin-users-toolbar p {
+  margin-top: .2rem;
+  color: #68768b;
+  font-size: .82rem;
+}
+
+.ale-admin-users-search {
+  display: grid;
+  gap: .3rem;
+  width: min(100%, 18rem);
+  color: #42516a;
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.ale-admin-users-search input {
+  min-height: 2.65rem;
+  padding: .55rem .75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .65rem;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-size: .9rem;
+}
+
+.ale-admin-users-search input:focus-visible {
+  outline: 3px solid rgb(20 184 166 / .25);
+  border-color: #0f766e;
+}
+
+.ale-admin-users-button {
+  min-height: 2.65rem;
+  padding: .55rem .9rem;
+  border: 1px solid #3730a3;
+  border-radius: .65rem;
+  background: #3730a3;
+  color: #fff;
+  font-size: .86rem;
+  font-weight: 750;
+}
+
+.ale-admin-users-button.secondary {
+  border-color: #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+
+.ale-admin-users-button:hover:not(:disabled) {
+  filter: brightness(.96);
+}
+
+.ale-admin-users-button:disabled {
+  opacity: .6;
+  cursor: progress;
+}
+
+.ale-admin-users-button:focus-visible {
+  outline: 3px solid rgb(20 184 166 / .32);
+  outline-offset: 2px;
+}
+
+.ale-admin-users-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e5eaf1;
+  border-radius: .7rem;
+}
+
+.ale-admin-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: .88rem;
+}
+
+.ale-admin-users-table th,
+.ale-admin-users-table td {
+  padding: .8rem .9rem;
+  border-bottom: 1px solid #edf1f6;
+  vertical-align: middle;
+}
+
+.ale-admin-users-table thead th {
+  background: #f8fafc;
+  color: #53627a;
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+}
+
+.ale-admin-users-table tbody th {
+  color: #24334b;
+  font-weight: 700;
+}
+
+.ale-admin-users-table tbody td {
+  color: #58677c;
+}
+
+.ale-admin-users-table tbody tr:last-child th,
+.ale-admin-users-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ale-admin-users-status {
+  display: inline-flex;
+  padding: .22rem .55rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.ale-admin-users-status.is-active {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.ale-admin-users-status.is-inactive {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.ale-admin-users-status.is-unknown {
+  background: #f1f5f9;
+  color: #52647e;
+}
+
+.ale-admin-users-empty {
+  padding: 1.2rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: .7rem;
+  color: #58677c;
+  text-align: center;
+}
+
+.ale-admin-users-error {
+  padding: .8rem 1rem;
+  border: 1px solid #fecaca;
+  border-radius: .7rem;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.ale-admin-users-more {
+  display: flex;
+  justify-content: center;
+}
+
+.ale-admin-users-note {
+  padding: .85rem 1rem;
+  border-radius: .7rem;
+  background: #f8fafc;
+  color: #58677c;
+  font-size: .86rem;
+  line-height: 1.55;
+}
+
+.ale-admin-users-card>div>h2 {
+  color: #24334b;
+  font-size: 1.05rem;
+}
+
+.ale-admin-users-card>div>p {
+  margin-top: .25rem;
+  color: #68768b;
+  font-size: .84rem;
+  line-height: 1.5;
+}
+
+.ale-platform-user-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .85rem;
+}
+
+.ale-platform-user-form label {
+  display: grid;
+  gap: .35rem;
+  color: #42516a;
+  font-size: .8rem;
+  font-weight: 750;
+}
+
+.ale-platform-user-form input,
+.ale-platform-user-form select,
+.ale-platform-user-form textarea {
+  width: 100%;
+  min-height: 2.65rem;
+  padding: .55rem .75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .65rem;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-size: .9rem;
+}
+
+.ale-platform-user-form textarea {
+  min-height: 10rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.ale-platform-user-form input:focus-visible,
+.ale-platform-user-form select:focus-visible,
+.ale-platform-user-form textarea:focus-visible {
+  outline: 3px solid rgb(20 184 166 / .25);
+  border-color: #0f766e;
+}
+
+.ale-platform-user-form-actions,
+.ale-platform-user-form>.ale-admin-users-error,
+.ale-platform-user-form>.ale-admin-users-notice {
+  grid-column: 1 / -1;
+}
+
+.ale-platform-user-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.academic-assignment-teacher,
+.academic-assignment-values,
+.academic-assignment-help {
+  grid-column: 1 / -1;
+}
+
+.ale-admin-users-notice {
+  padding: .8rem 1rem;
+  border: 1px solid #a7f3d0;
+  border-radius: .7rem;
+  background: #ecfdf5;
+  color: #065f46;
+  line-height: 1.5;
+}
+
 @media (max-width: 640px) {
-  .ale-admin-users-toolbar { align-items: stretch; }
-  .ale-admin-users-search { width: 100%; }
-  .ale-admin-users-button { width: 100%; }
-  .ale-admin-users-table { min-width: 650px; }
-  .ale-platform-user-form { grid-template-columns: 1fr; }
-  .ale-platform-user-form-actions { justify-content: stretch; }
+  .ale-admin-users-toolbar {
+    align-items: stretch;
+  }
+
+  .ale-admin-users-search {
+    width: 100%;
+  }
+
+  .ale-admin-users-button {
+    width: 100%;
+  }
+
+  .ale-admin-users-table {
+    min-width: 650px;
+  }
+
+  .ale-platform-user-form {
+    grid-template-columns: 1fr;
+  }
+
+  .ale-platform-user-form-actions {
+    justify-content: stretch;
+  }
 }

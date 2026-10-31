@@ -7,6 +7,14 @@ const migrationPath = new URL(
   import.meta.url,
 );
 const migration = await readFile(migrationPath, 'utf8');
+const schoolAdminOverviewMigration = await readFile(new URL(
+  '../../supabase/migrations/20261030000300_school_admin_exam_overview.sql',
+  import.meta.url,
+), 'utf8');
+const examRecipientsMigration = await readFile(new URL(
+  '../../supabase/migrations/20261030001600_exam_recipients_and_custom_questions.sql',
+  import.meta.url,
+), 'utf8');
 const studentPagePath = new URL(
   '../src/pages/OnlineAssessmentPage.jsx',
   import.meta.url,
@@ -66,4 +74,26 @@ test('keeps a pending idempotent submission retryable after the client deadline'
   assert.match(studentPage, /disabled=\{busy \|\| \(expired && !active\.submissionId\)\}/);
   assert.match(studentPage, /retry jika pengumpulan sebelumnya sudah diterima/);
   assert.match(studentPage, /\{expired && !active\.submissionId && \(/);
+});
+
+test('exposes an admin-only tenant exam overview without student answers or identities', () => {
+  assert.match(schoolAdminOverviewMigration, /create or replace function public\.school_admin_online_exam_overview\(\)/);
+  assert.match(schoolAdminOverviewMigration, /public\.current_app_role\(\)\) <> 'admin_sekolah'/);
+  assert.match(schoolAdminOverviewMigration, /exam\.tenant_id = \(select public\.current_tenant_id\(\)\)/);
+  assert.match(schoolAdminOverviewMigration, /tenant\.active = true/);
+  assert.match(schoolAdminOverviewMigration, /count\(distinct link\.student_id\)::integer/);
+  assert.match(schoolAdminOverviewMigration, /attempt\.grade_pending/);
+  assert.match(schoolAdminOverviewMigration, /revoke all on function public\.school_admin_online_exam_overview\(\)[\s\S]*?from public, anon/);
+  assert.doesNotMatch(schoolAdminOverviewMigration, /student\.nama|student\.nisn|attempt\.answers|correct_answer|essay_responses/);
+});
+
+test('limits teacher-authored custom exams to assigned tenant classes and subjects', () => {
+  assert.match(examRecipientsMigration, /create or replace function public\.create_teacher_online_exam_from_questions/);
+  assert.match(examRecipientsMigration, /create or replace function public\.create_online_exam\([\s\S]*?return public\.create_teacher_online_exam_from_questions\(/);
+  assert.match(examRecipientsMigration, /revoke all on function public\.create_online_exam\(text, text, timestamptz, timestamptz, integer, uuid\[\]\) from public, anon/);
+  assert.match(examRecipientsMigration, /profile\.tenant_id = \(select public\.current_tenant_id\(\)\)/);
+  assert.match(examRecipientsMigration, /btrim\(p_kelas\) = any\(teacher_profile\.kelas_ids\)/);
+  assert.match(examRecipientsMigration, /subject = any\(teacher_profile\.mapel_ids\)/);
+  assert.match(examRecipientsMigration, /question_class is distinct from btrim\(p_kelas\)/);
+  assert.match(examRecipientsMigration, /revoke all on function public\.create_teacher_online_exam_from_questions/);
 });

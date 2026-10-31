@@ -18,7 +18,7 @@ import { muatJadwalGuruDrive } from '../services/teacherScheduleDrive.js';
 import { getState } from '../state.js';
 import { perbaruiHeader } from '../components/sidebar.js';
 import { LINK_PERENCANAAN } from '../config.js';
-import { menuUntukPeran } from '../navigasi.js';
+import { adalahPeranGuru, menuUntukPeran } from '../navigasi.js';
 import { sesiUntukHari } from './dataDasar/jadwalUtil.js';
 import {
   esc, ikon, inisial, namaDariUser, sapaanWaktu, formatWaktu,
@@ -43,22 +43,37 @@ function tileStat(id, kelas, ikonNama, label, denganBar) {
       <strong class="ale-stat-nilai">–</strong>
       <span class="ale-stat-foot">Memuat…</span>
       ${denganBar
-        ? `<div class="ale-bar" role="progressbar" aria-label="${label}"
+      ? `<div class="ale-bar" role="progressbar" aria-label="${label}"
                 aria-valuemin="0" aria-valuemax="100" hidden><span></span></div>`
-        : ''}
+      : ''}
     </div>`;
 }
 
-function aksiCepat() {
+function aksiCepat(role, disabledMenuKeys = []) {
+  const menuTersedia = menuUntukPeran(role, disabledMenuKeys);
+  const semuaItem = menuTersedia.flatMap((group) => group.item);
+  const shortcutPaths = adalahPeranGuru(role)
+    ? ['/asesmen/ujian-online', '/asesmen/generator-ai', '/pelaksanaan/ruang-siswa']
+      .filter((path) => semuaItem.some((entry) => entry.path === path))
+    : semuaItem
+      .filter((entry) => entry.path !== '/dashboard')
+      .slice(0, 3)
+      .map((entry) => entry.path);
   const item = [
-    { href: '#/chat', ikon: 'chat', warna: 'teal', judul: 'Chat',
-      ket: 'Percakapan realtime dengan guru dan orang tua' },
-    linkLuarAman(LINK_PERENCANAAN) && {
+    adalahPeranGuru(role) && linkLuarAman(LINK_PERENCANAAN) && {
       href: LINK_PERENCANAAN, luar: true, ikon: 'buku', warna: 'indigo',
       judul: 'Perencanaan pembelajaran', ket: 'ATP, Prota, Prosem, dan Modul Ajar',
     },
-    { segera: true, ikon: 'ujian',    judul: 'Ujian online',      ket: 'Segera hadir' },
-    { segera: true, ikon: 'otomatis', judul: 'Generator soal AI', ket: 'Segera hadir' },
+    ...shortcutPaths.map((path) => {
+      const entry = semuaItem.find((item) => item.path === path);
+      return entry && {
+        href: `#${entry.path}${entry.search || ''}`,
+        ikon: entry.ikon,
+        warna: 'teal',
+        judul: entry.label,
+        ket: `Buka ${entry.label.toLocaleLowerCase('id')}`,
+      };
+    }),
   ].filter(Boolean);
 
   return item.map((a) => {
@@ -68,9 +83,6 @@ function aksiCepat() {
         <strong>${esc(a.judul)}</strong><small>${esc(a.ket)}</small>
       </span>`;
 
-    if (a.segera) {
-      return `<div class="ale-aksi is-soon" aria-disabled="true">${isi}</div>`;
-    }
     return a.luar
       ? `<a class="ale-aksi ale-aksi-${a.warna}" href="${esc(a.href)}"
              target="_blank" rel="noopener noreferrer">${isi}
@@ -82,8 +94,8 @@ function aksiCepat() {
 // ============================================================================
 // STRUKTUR MARKUP — hanya isi <main>, tanpa shell
 // ============================================================================
-function tampilan({ sapa, nama, peran, subjudul, sekarang }) {
-  const hari  = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(sekarang);
+function tampilan({ sapa, nama, role, peran, subjudul, sekarang, disabledMenuKeys = [] }) {
+  const hari = new Intl.DateTimeFormat('id-ID', { weekday: 'long' }).format(sekarang);
   const bulan = new Intl.DateTimeFormat('id-ID', { month: 'short', year: 'numeric' }).format(sekarang);
   const penuh = new Intl.DateTimeFormat('id-ID', { dateStyle: 'full' }).format(sekarang);
 
@@ -115,7 +127,7 @@ function tampilan({ sapa, nama, peran, subjudul, sekarang }) {
       <div class="ale-kartu-kepala">
         <h2 class="ale-kartu-judul" id="hAksi">${ikon('otomatis')}Akses cepat</h2>
       </div>
-      <div class="ale-aksi-grid">${aksiCepat()}</div>
+      <div class="ale-aksi-grid">${aksiCepat(role, disabledMenuKeys)}</div>
     </section>
 
     <div class="ale-grid">
@@ -129,9 +141,9 @@ function tampilan({ sapa, nama, peran, subjudul, sekarang }) {
             </button>
           </div>
           <div class="ale-stat-grid">
-            ${tileStat('aleStJadwal',  'ale-stat-sky',   'kalender', 'Jadwal hari ini',  false)}
-            ${tileStat('aleStTugas',   'ale-stat-grape', 'tugas',    'Tugas tertunda',   false)}
-            ${tileStat('aleStProgres', 'ale-stat-mint',  'progres',  'Progres semester', true)}
+            ${tileStat('aleStJadwal', 'ale-stat-sky', 'kalender', 'Jadwal hari ini', false)}
+            ${tileStat('aleStTugas', 'ale-stat-grape', 'tugas', 'Tugas tertunda', false)}
+            ${tileStat('aleStProgres', 'ale-stat-mint', 'progres', 'Progres semester', true)}
           </div>
         </section>
 
@@ -220,8 +232,11 @@ const AKSI_SUPERADMIN = [
   },
 ];
 
-function aksiAdmin(items) {
-  return items.map((item) => `
+function aksiAdmin(items, role, disabledMenuKeys = []) {
+  const availablePaths = new Set(menuUntukPeran(role, disabledMenuKeys)
+    .flatMap((group) => group.item)
+    .map((item) => item.path));
+  return items.filter((item) => availablePaths.has(item.href.slice(1).split('?')[0])).map((item) => `
     <a class="ale-admin-aksi" href="${item.href}">
       <span class="ale-admin-aksi-ikon">${ikon(item.ikon)}</span>
       <span class="ale-admin-aksi-teks">
@@ -232,7 +247,7 @@ function aksiAdmin(items) {
     </a>`).join('');
 }
 
-function tampilanAdmin({ role, nama, sekolah }) {
+function tampilanAdmin({ role, nama, sekolah, disabledMenuKeys = [] }) {
   const superadmin = role === 'superadmin';
   const peran = LABEL_PERAN[role] || 'Administrator';
   const aksi = superadmin ? AKSI_SUPERADMIN : AKSI_ADMIN_SEKOLAH;
@@ -269,7 +284,7 @@ function tampilanAdmin({ role, nama, sekolah }) {
           </div>
           <span class="ale-admin-pill">${superadmin ? 'Lintas tenant' : 'Tenant terbatas'}</span>
         </div>
-        <div class="ale-admin-aksi-grid">${aksiAdmin(aksi)}</div>
+        <div class="ale-admin-aksi-grid">${aksiAdmin(aksi, role, disabledMenuKeys)}</div>
       </section>
 
       <section class="ale-kartu ale-admin-prinsip" aria-labelledby="aleAdminPrinsip">
@@ -280,10 +295,10 @@ function tampilanAdmin({ role, nama, sekolah }) {
         </div>
         <div class="ale-admin-prinsip-grid">
           ${superadmin
-            ? `<p><strong>Direktori platform.</strong> Tinjau sekolah dan admin sekolah secara baca-saja; perubahan langganan dan peran harus melalui backend tepercaya.</p>
+      ? `<p><strong>Direktori platform.</strong> Tinjau sekolah dan admin sekolah secara baca-saja; perubahan langganan dan peran harus melalui backend tepercaya.</p>
                <p><strong>Rahasia dan infrastruktur.</strong> API key AI dikelola di server. Jangan memasukkan rahasia layanan ke aplikasi browser.</p>
                <p><strong>Statistik dan audit.</strong> Gunakan laporan sesuai sumber dan rentang data; ringkasan bukan telemetry historis atau metrik biaya.</p>`
-            : `<p><strong>Akun sesuai kewenangan.</strong> Kelola guru, siswa, dan orang tua dalam tenant sekolah; persetujuan serta perubahan akun mengikuti alur resmi.</p>
+      : `<p><strong>Akun sesuai kewenangan.</strong> Kelola guru, siswa, dan orang tua dalam tenant sekolah; persetujuan serta perubahan akun mengikuti alur resmi.</p>
                <p><strong>Dokumen dan asesmen.</strong> Tinjau status perangkat ajar yang diunggah serta monitoring ujian untuk kebutuhan operasional sekolah.</p>
                <p><strong>Privasi komunikasi.</strong> Gunakan ringkasan agregat dan laporan; isi percakapan pribadi bukan untuk dipantau bebas.</p>`}
         </div>
@@ -291,7 +306,7 @@ function tampilanAdmin({ role, nama, sekolah }) {
     </div>`;
 }
 
-function tampilanPortal({ role, nama }) {
+function tampilanPortal({ role, nama, disabledMenuKeys = [] }) {
   const peran = LABEL_PERAN[role] || role || 'Pengguna';
   const ringkasan = role === 'siswa'
     ? 'Akses jadwal, materi, ujian, nilai, dan komunikasi yang disediakan sekolah untuk akun Anda.'
@@ -307,7 +322,7 @@ function tampilanPortal({ role, nama }) {
       : role === 'operator'
         ? 'Akses operator dibatasi oleh peran dan tenant sekolah. Halaman panduan tidak mengubah data; gunakan hanya modul yang memang tersedia untuk akun Anda.'
         : 'Beberapa modul akademik masih menunggu integrasi data sekolah. Halaman tetap menampilkan statusnya dengan jelas dan tidak mengubah data sebelum fitur tersebut tersedia.';
-  const grup = menuUntukPeran(role);
+  const grup = menuUntukPeran(role, disabledMenuKeys);
   const daftarMenu = grup.map((bagian) => `
     <section class="ale-kartu ale-aksen-sky" aria-labelledby="portal-${escapeAttr(bagian.id)}">
       <div class="ale-kartu-kepala">
@@ -341,23 +356,25 @@ function tampilanPortal({ role, nama }) {
 // ============================================================================
 // LOGIKA INSIALISASI
 // ============================================================================
-export async function halamanDashboard(wadah) {
-  const { user, role, profile } = getState();
-  if (!user) return () => {};
+export async function halamanDashboard(wadah, { disabledMenuKeys = [] } = {}) {
+  const { user, role, activeRole, profile } = getState();
+  if (!user) return () => { };
   const uid = user.uid;
+  const roleAktif = activeRole || role;
 
-  const sekarang   = new Date();
+  const sekarang = new Date();
   const profilAwal = ambilProfil(uid);
-  const namaAwal   = (profilAwal && profilAwal.nama) || namaDariUser(user);
+  const namaAwal = (profilAwal && profilAwal.nama) || namaDariUser(user);
   if (profile || profilAwal) perbaruiHeader(profile || profilAwal);
 
-  const peran = String(role || '').toLowerCase().trim();
+  const peran = String(roleAktif || '').toLowerCase().trim();
   if (peran === 'admin_sekolah' || peran === 'admin' || peran === 'superadmin') {
     const roleDashboard = peran === 'admin' ? 'admin_sekolah' : peran;
     wadah.innerHTML = tampilanAdmin({
       role: roleDashboard,
       nama: namaAwal,
       sekolah: profile?.sekolah || profilAwal?.sekolah || '',
+      disabledMenuKeys,
     });
     document.title = `${LABEL_PERAN[roleDashboard]} · AI_nnoe Learning Ecosystem`;
 
@@ -368,54 +385,56 @@ export async function halamanDashboard(wadah) {
         wadah.querySelector('#aleAdminSekolah').textContent = profil.sekolah;
       }
     }
-    return () => {};
+    return () => { };
   }
 
   if (peran === 'operator' || peran === 'siswa' || peran === 'ortu' || peran === 'orang_tua' ||
-      !['guru', 'operator', 'demo'].includes(peran)) {
-    wadah.innerHTML = tampilanPortal({ role, nama: namaAwal });
-    document.title = `${LABEL_PERAN[role] || 'Ruang kerja'} · AI_nnoe Learning Ecosystem`;
-    return () => {};
+    (!adalahPeranGuru(peran) && peran !== 'demo')) {
+    wadah.innerHTML = tampilanPortal({ role: peran, nama: namaAwal, disabledMenuKeys });
+    document.title = `${LABEL_PERAN[peran] || 'Ruang kerja'} · AI_nnoe Learning Ecosystem`;
+    return () => { };
   }
 
   wadah.innerHTML = tampilan({
-    sapa:     sapaanWaktu(sekarang),
-    nama:     namaAwal,
-    peran:    LABEL_PERAN[role] || 'Pengguna',
-    subjudul: SUBJUDUL_PERAN[role] || 'Ringkasan aktivitas Anda hari ini.',
+    sapa: sapaanWaktu(sekarang),
+    nama: namaAwal,
+    role: peran,
+    peran: LABEL_PERAN[peran] || 'Pengguna',
+    subjudul: SUBJUDUL_PERAN[peran] || SUBJUDUL_PERAN.guru,
     sekarang,
+    disabledMenuKeys,
   });
   document.title = 'Dasbor · AI_nnoe Learning Ecosystem';
 
   // `wadah` = #slot-halaman (di-render router). Tidak ada shell di sini.
-  const utama       = wadah;
+  const utama = wadah;
   const tombolUlang = utama.querySelector('#aleMuatUlang');
 
   const st = {
-    jadwal:  utama.querySelector('#aleStJadwal'),
-    tugas:   utama.querySelector('#aleStTugas'),
+    jadwal: utama.querySelector('#aleStJadwal'),
+    tugas: utama.querySelector('#aleStTugas'),
     progres: utama.querySelector('#aleStProgres'),
   };
   const kartu = {
-    jadwal:  utama.querySelector('#aleKartuJadwal'),
-    tugas:   utama.querySelector('#aleKartuTugas'),
-    chat:    utama.querySelector('#aleKartuChat'),
+    jadwal: utama.querySelector('#aleKartuJadwal'),
+    tugas: utama.querySelector('#aleKartuTugas'),
+    chat: utama.querySelector('#aleKartuChat'),
     progres: utama.querySelector('#aleKartuStatus'),
     riwayat: utama.querySelector('#aleKartuRiwayat'),
   };
   const isi = {
-    jadwal:  kartu.jadwal.querySelector('[data-isi]'),
-    tugas:   kartu.tugas.querySelector('[data-isi]'),
-    chat:    kartu.chat.querySelector('[data-isi]'),
+    jadwal: kartu.jadwal.querySelector('[data-isi]'),
+    tugas: kartu.tugas.querySelector('[data-isi]'),
+    chat: kartu.chat.querySelector('[data-isi]'),
     riwayat: kartu.riwayat.querySelector('[data-isi]'),
   };
-  const chipChat   = utama.querySelector('#aleChipChat');
+  const chipChat = utama.querySelector('#aleChipChat');
   const chipJadwal = utama.querySelector('#aleChipJadwal');
 
   const isiStat = (el, nilai, foot) => {
     if (!el) return;
     el.querySelector('.ale-stat-nilai').textContent = nilai;
-    el.querySelector('.ale-stat-foot').textContent  = foot;
+    el.querySelector('.ale-stat-foot').textContent = foot;
   };
   const isiBar = (el, persen) => {
     if (!el) return;
@@ -511,8 +530,8 @@ export async function halamanDashboard(wadah) {
             </span>
             <span class="ale-chat-meta">
               <time>${esc(formatWaktu(c.lastAt))}</time>${Number(c.unread) > 0
-                ? `<span class="ale-badge">${esc(c.unread)}</span>`
-                : ''}
+          ? `<span class="ale-badge">${esc(c.unread)}</span>`
+          : ''}
             </span>
           </a>
         </li>`
@@ -527,9 +546,9 @@ export async function halamanDashboard(wadah) {
   };
 
   function tampilGalat(nama, err) {
-    const kode    = err && err.code ? String(err.code) : '';
+    const kode = err && err.code ? String(err.code) : '';
     const ditolak = /permission[-_]denied/i.test(kode);
-    const pesan   = ditolak
+    const pesan = ditolak
       ? 'Akses ke data ini belum diizinkan. Hubungi admin sekolah Anda.'
       : 'Data tidak dapat dimuat. Periksa koneksi internet Anda.';
 
@@ -560,7 +579,7 @@ export async function halamanDashboard(wadah) {
 
   function siapkanUlang(nama) {
     if (isi[nama]) isi[nama].innerHTML = SKELETON;
-    if (st[nama])  { isiStat(st[nama], '–', 'Memuat…'); isiBar(st[nama], null); }
+    if (st[nama]) { isiStat(st[nama], '–', 'Memuat…'); isiBar(st[nama], null); }
   }
 
   async function muatSemua() {
@@ -582,5 +601,5 @@ export async function halamanDashboard(wadah) {
   await muatSemua();
 
   // Cleanup: halaman ini tidak memasang listener global, jadi no-op.
-  return () => {};
+  return () => { };
 }

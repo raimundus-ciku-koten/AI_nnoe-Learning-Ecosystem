@@ -53,12 +53,15 @@ export const GRUP_MENU = [
     id: 'pelaksanaan', label: 'Pelaksanaan Pembelajaran', ikon: 'book',
     item: [
       tautan('Jurnal Mengajar Harian', '/pelaksanaan/jurnal', 'file'),
+      tautan('Jadwal & Materi untuk Siswa', '/pelaksanaan/ruang-siswa', 'book'),
       tautan('Presensi Siswa', '/pelaksanaan/presensi', 'check'),
       tautan('Program BK & Kegiatan', '/program-kegiatan', 'file'),
       tautan('Realisasi terhadap Rencana', '/pelaksanaan/realisasi', 'chart'),
       tautan('Pembelajaran Berdiferensiasi', '/pelaksanaan/berdiferensiasi', 'users'),
       tautan('Kegiatan Kelas Khusus', '/pelaksanaan/kelas-khusus', 'users'),
       tautan('Catatan Kelas Cepat', '/pelaksanaan/catatan-cepat', 'file'),
+      tautan('Tugas Pribadi', '/pelaksanaan/tugas', 'check'),
+      tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
     ],
   },
   {
@@ -151,7 +154,7 @@ const MENU_SISWA = [
     tautan('Dashboard', '/dashboard', 'home'),
   ]),
   grup('siswa-belajar', 'Ruang Belajar', 'book', [
-    tautan('Jadwal dan Tugas', '/siswa/jadwal', 'calendar'),
+    tautan('Jadwal Kelas', '/siswa/jadwal', 'calendar'),
     tautan('Materi', '/siswa/materi', 'book'),
     tautan('Ujian Saya', '/siswa/ujian', 'check'),
     tautan('Nilai Saya', '/siswa/nilai', 'chart'),
@@ -160,6 +163,7 @@ const MENU_SISWA = [
     tautan('Paket dan Langganan', '/purchase', 'badge'),
   ]),
   grup('siswa-chat', 'Komunikasi', 'chat', [
+    tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
     tautan('Grup', '/chat/grup', 'users'),
@@ -174,13 +178,35 @@ const MENU_ORTU = [
     tautan('Nilai dan Kehadiran', '/orang-tua/nilai-kehadiran', 'chart'),
   ]),
   grup('ortu-komunikasi', 'Komunikasi', 'chat', [
+    tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
   ]),
 ];
-const MENU_KONTEKS_TERBATAS = [
+export const MENU_WALI_KELAS = [
   grup('beranda', 'Dashboard', 'home', [
     tautan('Dashboard', '/dashboard', 'home'),
+  ]),
+  grup('wali-akademik', 'Leger Nilai dan Rapor', 'chart', [
+    tautan('Leger Nilai Ujian', '/wali-kelas/leger', 'chart'),
+    tautan('Rapor Kelas', '/wali-kelas/rapor', 'file'),
+  ]),
+  grup('wali-komunikasi', 'Komunikasi Kelas', 'chat', [
+    tautan('Percakapan', '/chat', 'chat'),
+    tautan('Pengumuman Sekolah', '/pengumuman', 'file'),
+  ]),
+];
+export const MENU_KEPALA_SEKOLAH = [
+  grup('beranda', 'Dashboard', 'home', [
+    tautan('Dashboard', '/dashboard', 'home'),
+  ]),
+  grup('kepala-supervisi', 'Supervisi Akademik', 'check', [
+    tautan('Program Supervisi', '/kepala-sekolah/supervisi', 'check'),
+    tautan('Jadwal Supervisi', '/kepala-sekolah/supervisi/jadwal', 'calendar'),
+    tautan('Pra-Observasi', '/kepala-sekolah/supervisi/pra-observasi', 'file'),
+    tautan('Observasi Kelas', '/kepala-sekolah/supervisi/observasi', 'eye'),
+    tautan('Pasca-Observasi dan RTL', '/kepala-sekolah/supervisi/tindak-lanjut', 'refresh'),
+    tautan('Rekapitulasi Supervisi', '/kepala-sekolah/supervisi/rekap', 'chart'),
   ]),
 ];
 export const MENU_OPERATOR = [
@@ -193,6 +219,7 @@ export const MENU_OPERATOR = [
     tautan('Presensi', '/pelaksanaan/presensi', 'check'),
   ]),
   grup('operator-komunikasi', 'Komunikasi', 'chat', [
+    tautan('Kanal Pengumuman', '/pengumuman', 'file'),
     tautan('Percakapan', '/chat', 'chat'),
     tautan('Kontak', '/chat/kontak', 'users'),
     tautan('Grup', '/chat/grup', 'users'),
@@ -203,15 +230,18 @@ export const MENU_ADMIN_SEKOLAH = [
   grup('admin-dashboard', 'Dashboard Admin', 'chart', [
     tautan('Ringkasan Statistik', '/dashboard', 'chart'),
   ]),
+  grup('admin-workspace', 'Ruang Kerja Pribadi', 'calendar', [
+    tautan('Tugas Pribadi', '/admin/tugas', 'check'),
+    tautan('Google Workspace', '/pengaturan/google', 'external'),
+  ]),
   grup('admin-monitoring', 'Monitoring', 'chart', [
     tautan('Aktivitas Terbaru', '/admin/aktivitas', 'file'),
     tautan('Monitoring Ujian', '/admin/dashboard/ujian', 'check'),
     tautan('Monitoring Chat', '/admin/dashboard/chat', 'chat'),
   ]),
   grup('admin-instansi', 'Manajemen Instansi', 'database', [
-    tautan('Profil Sekolah', '/admin/instansi/profil', 'user'),
-    tautan('Tahun Ajaran', '/admin/instansi/tahun-ajaran', 'calendar'),
-    tautan('Semester', '/admin/instansi/semester', 'calendar'),
+    tautan('Profil Sekolah', '/datadasar/profil', 'user'),
+    tautan('Tahun Ajaran & Semester', '/datadasar/ta', 'calendar'),
     tautan('Unit dan Jenjang', '/admin/instansi/unit', 'book'),
   ]),
   grup('admin-chat', 'Chat', 'chat', [
@@ -224,6 +254,7 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Siswa', '/admin/pengguna/siswa', 'users'),
     tautan('Tautkan akun siswa ke roster', '/admin/pengguna/tautkan-siswa', 'users'),
     tautan('Orang Tua', '/admin/pengguna/orang-tua', 'users'),
+    tautan('Tautkan orang tua ke siswa', '/admin/pengguna/tautkan-wali', 'users'),
     tautan('Admin Sekolah', '/admin/pengguna/admin', 'user'),
     tautan('Peran dan Hak Akses', '/admin/pengguna/peran', 'settings'),
   ]),
@@ -241,6 +272,7 @@ export const MENU_ADMIN_SEKOLAH = [
   ]),
   grup('admin-asesmen', 'Manajemen Asesmen', 'check', [
     tautan('Bank Soal', '/asesmen/bank-soal', 'book'),
+    tautan('Buat Ujian Sekolah', '/admin/asesmen/buat', 'check'),
     tautan('Paket Ujian', '/admin/asesmen/paket', 'file'),
     tautan('Jadwal Ujian', '/admin/asesmen/jadwal', 'calendar'),
     tautan('Monitoring Ujian', '/admin/asesmen/monitoring', 'chart'),
@@ -252,7 +284,7 @@ export const MENU_ADMIN_SEKOLAH = [
     tautan('Perpustakaan Digital', '/admin/konten/perpustakaan', 'file'),
   ]),
   grup('admin-komunikasi', 'Manajemen Komunikasi', 'chat', [
-    tautan('Kanal Pengumuman', '/admin/komunikasi/pengumuman', 'file'),
+    tautan('Kanal Pengumuman', '/pengumuman', 'file'),
     tautan('Broadcast', '/admin/komunikasi/broadcast', 'users'),
     tautan('Monitoring Agregat', '/admin/komunikasi/monitoring', 'chart'),
     tautan('Moderasi Testimoni', '/testimoni', 'chat'),
@@ -307,11 +339,11 @@ export const MENU_SUPERADMIN = [
   ]),
   grup('platform-fitur', 'Manajemen Menu dan Fitur', 'settings', [
     tautan('Menu Builder', '/platform/fitur/menu', 'file'),
+    tautan('Menu per Pengguna', '/platform/fitur/menu-pengguna', 'users'),
     tautan('Feature Flags', '/platform/fitur/flags', 'settings'),
     tautan('Izin Peran', '/platform/fitur/izin', 'users'),
   ]),
   grup('platform-konten', 'Manajemen Konten Global', 'file', [
-    tautan('Paket Guru', '/admin/perencanaan/paket', 'users'),
     tautan('Template Perangkat', '/platform/konten/template', 'file'),
     tautan('Bank Soal Global', '/platform/konten/bank-soal', 'book'),
     tautan('Modul', '/platform/konten/modul', 'book'),
@@ -350,21 +382,32 @@ function cocokJenis(item, path, search) {
   return path.startsWith(`${item.path}/`) && path.endsWith(`/${jenis}`);
 }
 
-export function menuUntukPeran(role) {
-  const peran = String(role || '').trim().toLowerCase();
-  if (peran === 'admin_sekolah' || peran === 'admin') return MENU_ADMIN_SEKOLAH;
-  if (peran === 'superadmin') return MENU_SUPERADMIN;
-  if (peran === 'siswa') return MENU_SISWA;
-  if (peran === 'ortu' || peran === 'orang_tua') return MENU_ORTU;
-  if (peran === 'operator') return MENU_OPERATOR;
-  if (peran === 'demo') return MENU_DEMO;
-  if (['kepala_sekolah', 'wali_kelas'].includes(peran)) return MENU_KONTEKS_TERBATAS;
-  if (adalahPeranGuru(peran)) return GRUP_MENU;
-  return MENU_TANPA_PERAN;
+export function kunciMenu(grup, item) {
+  if (!grup?.id || !item?.path) return '';
+  return `${grup.id}|${item.path}${item.search || ''}`;
 }
 
-export function cariMenu(path, search = '', role = 'guru') {
-  for (const grup of menuUntukPeran(role)) {
+export function menuUntukPeran(role, disabledMenuKeys = []) {
+  const peran = String(role || '').trim().toLowerCase();
+  const catalog = peran === 'admin_sekolah' || peran === 'admin' ? MENU_ADMIN_SEKOLAH
+    : peran === 'superadmin' ? MENU_SUPERADMIN
+      : peran === 'siswa' ? MENU_SISWA
+        : peran === 'ortu' || peran === 'orang_tua' ? MENU_ORTU
+          : peran === 'operator' ? MENU_OPERATOR
+            : peran === 'demo' ? MENU_DEMO
+              : peran === 'kepala_sekolah' ? MENU_KEPALA_SEKOLAH
+                : peran === 'wali_kelas' ? MENU_WALI_KELAS
+                  : adalahPeranGuru(peran) ? GRUP_MENU : MENU_TANPA_PERAN;
+  const disabled = new Set(disabledMenuKeys);
+  if (!disabled.size) return catalog;
+  return catalog.map((group) => ({
+    ...group,
+    item: group.item.filter((item) => !disabled.has(kunciMenu(group, item))),
+  })).filter((group) => group.item.length);
+}
+
+export function cariMenu(path, search = '', role = 'guru', disabledMenuKeys = []) {
+  for (const grup of menuUntukPeran(role, disabledMenuKeys)) {
     const item = grup.item
       .filter((calon) =>
         calon.path && (path === calon.path || path.startsWith(`${calon.path}/`)) &&

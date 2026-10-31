@@ -13,6 +13,7 @@ import PRICING from '../../../functions/shared/pricing.json';
 const TURNSTILE_SITE_KEY = import.meta.env?.VITE_TURNSTILE_SITE_KEY?.trim() || '';
 const DEMO_TRIAL_ENABLED = import.meta.env?.VITE_PUBLIC_DEMO_TRIAL_ENABLED?.trim().toLowerCase() === 'true'
   && Boolean(TURNSTILE_SITE_KEY);
+const POST_LOGIN_RETURN_KEY = 'ale-post-login-return';
 const PESAN_AUTH = {
   invalid_credentials: 'Email atau kata sandi tidak sesuai.',
   invalid_email: 'Format email tidak valid.',
@@ -37,6 +38,19 @@ function pesanLogin(error, google = false) {
       : 'Tidak dapat masuk saat ini. Silakan coba lagi.');
   const diagnostic = code ? ` (kode: ${code})` : '';
   return `${message}${diagnostic}`;
+}
+
+function tujuanSetelahLogin() {
+  try {
+    const destination = window.sessionStorage.getItem(POST_LOGIN_RETURN_KEY) || '';
+    window.sessionStorage.removeItem(POST_LOGIN_RETURN_KEY);
+    if (/^#\/siswa\/ujian\?examId=[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(destination)) {
+      return destination;
+    }
+  } catch (error) {
+    console.error('[login] Tautan tujuan ujian tidak dapat dipulihkan:', error);
+  }
+  return '#/dashboard';
 }
 
 const formatRupiah = (value) => new Intl.NumberFormat('id-ID', {
@@ -567,7 +581,7 @@ export function halamanLogin(wadah) {
     try {
       await login(email.value.trim(), sandi.value, await ambilCaptchaToken());
       toast('Berhasil masuk. Mengalihkan...', 'success', 3000);
-      window.location.hash = '#/dashboard';
+      window.location.hash = tujuanSetelahLogin();
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     } catch (err) {
       console.error('[login]', err);
@@ -594,7 +608,7 @@ export function halamanLogin(wadah) {
     try {
       await masukGoogle(await ambilCaptchaToken());
       toast('Login Google berhasil. Mengalihkan...', 'success', 2000);
-      window.location.hash = '#/dashboard';
+      window.location.hash = tujuanSetelahLogin();
       window.dispatchEvent(new HashChangeEvent('hashchange'));
     } catch (err) {
       console.error('[login] Google:', err);

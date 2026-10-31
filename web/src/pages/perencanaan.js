@@ -28,6 +28,7 @@ import {
   buatPaket, dengarDaftarPaket, hapusPaket, pilihPaketAdminDrive,
 } from './perencanaan/services/repository.js';
 import { daftarGuruPerencanaan } from './perencanaan/services/directory.js';
+import { muatIdentitasDokumen } from './perencanaan/services/planningIdentity.js';
 import { BATAS, JENIS } from './perencanaan/constants.js';
 
 const PERAN_BOLEH = new Set(['guru', 'admin_sekolah']);
@@ -42,17 +43,17 @@ function halamanPlaceholder(wadah) {
       <h1>Perencanaan</h1>
       <p>Halaman perencanaan sedang dikembangkan.</p>
     </section>`;
-  return () => {};
+  return () => { };
 }
 
 function modulSiap() {
   return typeof h === 'function'
-      && typeof bukaFormPaket === 'function'
-      && typeof halamanDetail === 'function'
-      && typeof dengarDaftarPaket === 'function'
-      && typeof buatPaket === 'function'
-      && typeof hapusPaket === 'function'
-      && typeof BATAS === 'object';
+    && typeof bukaFormPaket === 'function'
+    && typeof halamanDetail === 'function'
+    && typeof dengarDaftarPaket === 'function'
+    && typeof buatPaket === 'function'
+    && typeof hapusPaket === 'function'
+    && typeof BATAS === 'object';
 }
 
 // ============================================================================
@@ -80,7 +81,7 @@ export function halamanPerencanaan(wadah, arg = {}) {
     wadah.append(
       h('p', { class: 'kotak kotak-galat', role: 'alert' }, t('hub.peranTidakBoleh'))
     );
-    return () => {};
+    return () => { };
   }
 
   const koneksiDrive = sesiGoogleWorkspacePerPengguna(user.uid);
@@ -118,7 +119,7 @@ export function halamanPerencanaan(wadah, arg = {}) {
           href: '#/pengaturan/google',
         }, 'Buka pengaturan Google Workspace untuk membuka atau membuat kunci vault')),
     );
-    return () => {};
+    return () => { };
   }
 
   if (PERAN_ADMIN.has(role)) {
@@ -137,7 +138,7 @@ export function halamanPerencanaan(wadah, arg = {}) {
 
 function halamanPerencanaanAdmin(wadah, arg, { role, tenantId }) {
   let aktif = true;
-  let cleanup = () => {};
+  let cleanup = () => { };
   const params = arg.params || {};
   const guruUid = new URLSearchParams(arg.search || '').get('guru') || '';
   const baseRoute = '#/admin/perencanaan/paket';
@@ -222,22 +223,38 @@ function halamanHub(wadah, arg, { uid, tenantId, admin, guruNama, baseRoute, gur
   let daftar = null;
   const isi = h('div', null);
 
-  const baru = () => bukaFormPaket({
-    judul: t('hub.paketBaru'),
-    awal: {
-      ...KONTEKS_BAWAAN,
-      identitas: { ...KONTEKS_BAWAAN.identitas, guru: guruNama },
-    },
-    onSimpan: async (konteks) => {
-      const id = await buatPaket({
-        uid,
-        tenantId,
-        konteks,
-        jumlahPaketSaatIni: daftar?.length ?? 0,
+  const baru = async () => {
+    try {
+      const resmi = await muatIdentitasDokumen({ ownerUid: uid, tenantId });
+      bukaFormPaket({
+        judul: t('hub.paketBaru'),
+        awal: {
+          ...KONTEKS_BAWAAN,
+          tahunAjaran: resmi.tahunAjaran || KONTEKS_BAWAAN.tahunAjaran,
+          identitas: resmi.identitas,
+        },
+        onSimpan: async (konteks) => {
+          const identitas = await muatIdentitasDokumen({ ownerUid: uid, tenantId });
+          const id = await buatPaket({
+            uid,
+            tenantId,
+            konteks: {
+              ...konteks,
+              identitas: {
+                ...identitas.identitas,
+                lokasi: String(konteks.identitas?.lokasi || '').trim(),
+              },
+            },
+            jumlahPaketSaatIni: daftar?.length ?? 0,
+          });
+          location.hash = tautanPaket(id, jenisPilihan).slice(1);
+        },
       });
-      location.hash = tautanPaket(id, jenisPilihan).slice(1);
-    },
-  });
+    } catch (error) {
+      console.error('[perencanaan] Gagal memuat identitas resmi:', error);
+      toast(error?.message || 'Identitas resmi belum dapat diverifikasi.', 'galat');
+    }
+  };
 
   const pemilik = !admin;
   const kartu = (p) => h('li', { class: 'kartu kartu-paket' },

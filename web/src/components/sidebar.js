@@ -26,7 +26,7 @@
  *   terapkanGulir()          → scroll ke kartu Dasbor (?k=...)
  */
 import { getState } from '../state.js';
-import { LINK_PERENCANAAN } from '../config.js';
+import { LINK_PERENCANAAN, WEB_PUSH_PUBLIC_KEY } from '../config.js';
 import { menuUntuk } from '../menu.js';
 import { logout } from '../auth.js';
 import { hentikanChat } from '../services/chatSync.js';
@@ -40,16 +40,16 @@ import {
 // KONFIGURASI & FALLBACK
 // ============================================================================
 const GULIR = {
-  jadwal:  'aleKartuJadwal',
-  tugas:   'aleKartuTugas',
-  kelas:   'aleKartuKelas',
+  jadwal: 'aleKartuJadwal',
+  tugas: 'aleKartuTugas',
+  kelas: 'aleKartuKelas',
   progres: 'aleKartuStatus',
-  akses:   'aleKartuAkses',
+  akses: 'aleKartuAkses',
 };
 
 const grupTerbuka = new Set(['x-chat']);
-let posisiSisi   = 0;
-let terpasang    = false;
+let posisiSisi = 0;
+let terpasang = false;
 let sedangKeluar = false;
 
 /**
@@ -62,36 +62,46 @@ const ik = (nama, kelas = '') =>
 
 // Fallback menu bila menu.js belum termuat / mengembalikan bentuk tidak valid.
 const MENU_FALLBACK = [
-  { id: 'dasbor', judul: 'Dashboard', ikon: 'speedometer2', items: [
-    { status: 'rute', judul: 'Beranda', href: '#/dashboard' },
-  ]},
-  { id: 'datadasar', judul: 'Data Dasar', ikon: 'database', items: [
-    { status: 'rute', judul: 'Profil Guru & Sekolah',   href: '#/datadasar/profil'  },
-    { status: 'rute', judul: 'Tahun Ajaran & Semester', href: '#/datadasar/ta'      },
-    { status: 'rute', judul: 'Kelas & Mapel Saya',      href: '#/datadasar/kelas'   },
-    { status: 'rute', judul: 'Data Siswa',              href: '#/datadasar/siswa'   },
-    { status: 'rute', judul: 'Barcode & Kartu Absensi', href: '#/datadasar/barcode' },
-    { status: 'rute', judul: 'Jadwal Mengajar',         href: '#/datadasar/jadwal'  },
-    { status: 'rute', judul: 'Kelompok & Denah Duduk',  href: '#/datadasar/denah'   },
-  ]},
-  { id: 'perencanaan', judul: 'Perencanaan', ikon: 'layers', items: [
-    { status: 'rute', judul: 'RPE',    href: '#/perencanaan/rpe'    },
-    { status: 'rute', judul: 'ATP',    href: '#/perencanaan/atp'    },
-    { status: 'rute', judul: 'Prota',  href: '#/perencanaan/prota'  },
-    { status: 'rute', judul: 'Prosem', href: '#/perencanaan/prosem' },
-    { status: 'rute', judul: 'KKTP',   href: '#/perencanaan/kktp'   },
-    { status: 'rute', judul: 'Modul',  href: '#/perencanaan/modul'  },
-    { status: 'rute', judul: 'Cover',  href: '#/perencanaan/cover'  },
-  ]},
-  { id: 'x-chat', judul: 'Chat', ikon: 'chat-dots', items: [
-    { status: 'rute', judul: 'Semua Percakapan', href: '#/chat'        },
-    { status: 'rute', judul: 'Kontak',           href: '#/chat/kontak' },
-    { status: 'rute', judul: 'Grup',             href: '#/chat/grup'   },
-  ]},
-  { id: 'riwayat', judul: 'Riwayat', ikon: 'file-earmark-text', items: [
-    { status: 'rute', judul: 'Hasil Perencanaan', href: '#/hasil'  },
-    { status: 'rute', judul: 'Profil',            href: '#/profil' },
-  ]},
+  {
+    id: 'dasbor', judul: 'Dashboard', ikon: 'speedometer2', items: [
+      { status: 'rute', judul: 'Beranda', href: '#/dashboard' },
+    ]
+  },
+  {
+    id: 'datadasar', judul: 'Data Dasar', ikon: 'database', items: [
+      { status: 'rute', judul: 'Profil Guru & Sekolah', href: '#/datadasar/profil' },
+      { status: 'rute', judul: 'Tahun Ajaran & Semester', href: '#/datadasar/ta' },
+      { status: 'rute', judul: 'Kelas & Mapel Saya', href: '#/datadasar/kelas' },
+      { status: 'rute', judul: 'Data Siswa', href: '#/datadasar/siswa' },
+      { status: 'rute', judul: 'Barcode & Kartu Absensi', href: '#/datadasar/barcode' },
+      { status: 'rute', judul: 'Jadwal Mengajar', href: '#/datadasar/jadwal' },
+      { status: 'rute', judul: 'Kelompok & Denah Duduk', href: '#/datadasar/denah' },
+    ]
+  },
+  {
+    id: 'perencanaan', judul: 'Perencanaan', ikon: 'layers', items: [
+      { status: 'rute', judul: 'RPE', href: '#/perencanaan/rpe' },
+      { status: 'rute', judul: 'ATP', href: '#/perencanaan/atp' },
+      { status: 'rute', judul: 'Prota', href: '#/perencanaan/prota' },
+      { status: 'rute', judul: 'Prosem', href: '#/perencanaan/prosem' },
+      { status: 'rute', judul: 'KKTP', href: '#/perencanaan/kktp' },
+      { status: 'rute', judul: 'Modul', href: '#/perencanaan/modul' },
+      { status: 'rute', judul: 'Cover', href: '#/perencanaan/cover' },
+    ]
+  },
+  {
+    id: 'x-chat', judul: 'Chat', ikon: 'chat-dots', items: [
+      { status: 'rute', judul: 'Semua Percakapan', href: '#/chat' },
+      { status: 'rute', judul: 'Kontak', href: '#/chat/kontak' },
+      { status: 'rute', judul: 'Grup', href: '#/chat/grup' },
+    ]
+  },
+  {
+    id: 'riwayat', judul: 'Riwayat', ikon: 'file-earmark-text', items: [
+      { status: 'rute', judul: 'Hasil Perencanaan', href: '#/hasil' },
+      { status: 'rute', judul: 'Profil', href: '#/profil' },
+    ]
+  },
 ];
 
 // ============================================================================
@@ -151,9 +161,9 @@ async function prosesKeluar(tombol) {
 // NAVIGASI INTERAKTIF
 // ============================================================================
 function setBuka(terbuka, kembaliFokus = false) {
-  const sisi   = document.getElementById('ale-side');
+  const sisi = document.getElementById('ale-side');
   const tombol = document.getElementById('aleMenuBtn');
-  const tirai  = document.getElementById('aleTirai');
+  const tirai = document.getElementById('aleTirai');
 
   if (!sisi || !tombol) {
     document.body.classList.remove('ale-kunci');
@@ -177,7 +187,7 @@ const POP = { aleMenuUlasan: 'aleKebab', aleMenuProfil: 'aleProfilBtn' };
 
 function tutupPop(kembaliFokus = false) {
   Object.entries(POP).forEach(([idMenu, idTombol]) => {
-    const menu   = document.getElementById(idMenu);
+    const menu = document.getElementById(idMenu);
     const tombol = document.getElementById(idTombol);
     if (menu && !menu.hidden) {
       menu.hidden = true;
@@ -191,7 +201,7 @@ function tutupPop(kembaliFokus = false) {
 
 function bukaPop(idMenu) {
   tutupPop();
-  const menu   = document.getElementById(idMenu);
+  const menu = document.getElementById(idMenu);
   const tombol = document.getElementById(POP[idMenu]);
   if (!menu || !tombol) return;
   menu.hidden = false;
@@ -247,9 +257,9 @@ function pasangPenangan() {
     const picu = t.closest('[data-pop]');
     if (picu) {
       const idMenu = picu.dataset.pop;
-      const menu   = document.getElementById(idMenu);
+      const menu = document.getElementById(idMenu);
       if (menu && !menu.hidden) tutupPop(true);
-      else                      bukaPop(idMenu);
+      else bukaPop(idMenu);
       return;
     }
 
@@ -278,7 +288,7 @@ function pasangPenangan() {
       const panel = document.getElementById(grup.getAttribute('aria-controls'));
       if (panel) panel.hidden = !buka;
       if (buka) grupTerbuka.add(grup.dataset.grup);
-      else      grupTerbuka.delete(grup.dataset.grup);
+      else grupTerbuka.delete(grup.dataset.grup);
       return;
     }
 
@@ -287,7 +297,7 @@ function pasangPenangan() {
     if (gulir) {
       setBuka(false);
       if (rute().path === '/dashboard' &&
-          document.getElementById(GULIR[gulir.dataset.gulir])) {
+        document.getElementById(GULIR[gulir.dataset.gulir])) {
         e.preventDefault();
         document.querySelectorAll('#ale-side .ale-sub').forEach((a) => {
           a.classList.remove('aktif');
@@ -317,9 +327,9 @@ function pasangPenangan() {
         const i = butir.indexOf(document.activeElement);
         let n = i;
         if (e.key === 'ArrowDown') n = (i + 1) % butir.length;
-        if (e.key === 'ArrowUp')   n = (i - 1 + butir.length) % butir.length;
-        if (e.key === 'Home')      n = 0;
-        if (e.key === 'End')       n = butir.length - 1;
+        if (e.key === 'ArrowUp') n = (i - 1 + butir.length) % butir.length;
+        if (e.key === 'Home') n = 0;
+        if (e.key === 'End') n = butir.length - 1;
         e.preventDefault();
         if (butir[n]) butir[n].focus();
         return;
@@ -396,7 +406,7 @@ function htmlMenu(role, { path, query, k }) {
       const m = daftarItem[0];
       const [mPath, mQuery] = (m.href || '').replace('#', '').split('?');
       const mParams = new URLSearchParams(mQuery || '');
-      const pathMatch  = mPath === path;
+      const pathMatch = mPath === path;
       const queryMatch = Array.from(mParams.entries())
         .every(([kk, vv]) => (query ? query.get(kk) : null) === vv);
       const aktif = pathMatch && queryMatch && !k;
@@ -418,7 +428,7 @@ function htmlMenu(role, { path, query, k }) {
       if (m.status === 'rute') {
         const [mPath, mQuery] = (m.href || '').replace('#', '').split('?');
         const mParams = new URLSearchParams(mQuery || '');
-        const pathMatch  = mPath === path;
+        const pathMatch = mPath === path;
         const queryMatch = Array.from(mParams.entries())
           .every(([kk, vv]) => (query ? query.get(kk) : null) === vv);
 
@@ -482,13 +492,15 @@ function htmlMenu(role, { path, query, k }) {
 // KOMPONEN TOPBAR
 // ============================================================================
 export function topbar() {
-  const { user, role } = getState();
+  const { user, role, activeRole } = getState();
   const profil = (user && ambilProfil(user.uid)) || {};
-  const nama   = profil.nama || namaDariUser(user);
-  const peran  = LABEL_PERAN[role] || 'Pengguna';
-  const sub    = profil.sekolah || peran;
-  const foto   = user?.photoURL && /^https:\/\//i.test(user.photoURL) ? user.photoURL : '';
-  const logo   = /^https:\/\//i.test(profil.logoSekolah || '') ? profil.logoSekolah : '';
+  const nama = profil.nama || namaDariUser(user);
+  const peran = LABEL_PERAN[role] || 'Pengguna';
+  const sub = profil.sekolah || peran;
+  const foto = user?.photoURL && /^https:\/\//i.test(user.photoURL) ? user.photoURL : '';
+  const logo = /^https:\/\//i.test(profil.logoSekolah || '') ? profil.logoSekolah : '';
+  const tautanPeran = menuUntuk(activeRole || role).flatMap((group) => group.items || []);
+  const memilikiTautan = (path) => tautanPeran.some((entry) => entry.href === `#${path}`);
 
   const item = (aksi, ikNama, teks, warna) =>
     `<button type="button" class="ale-pop-item ale-pw-${warna}"
@@ -526,7 +538,7 @@ export function topbar() {
           <img class="ale-logo-sekolah" id="aleLogoSekolah" alt="Logo sekolah"
                width="40" height="40"${logo ? ` src="${esc(logo)}"` : ' hidden'}>
 
-          <div class="ale-menu-wrap">
+          ${memilikiTautan('/testimoni') ? `<div class="ale-menu-wrap">
             <button type="button" class="ale-ikon-btn" id="aleKebab"
                     data-pop="aleMenuUlasan" aria-haspopup="menu"
                     aria-expanded="false" aria-controls="aleMenuUlasan"
@@ -537,7 +549,7 @@ export function topbar() {
                  aria-label="Opsi lainnya" hidden>
               ${item('ulasan', 'ulasan', 'Beri ulasan aplikasi', 'sky')}
             </div>
-          </div>
+          </div>` : ''}
 
           <div class="ale-menu-wrap">
             <button type="button" class="ale-akun" id="aleProfilBtn"
@@ -554,15 +566,12 @@ export function topbar() {
             <div class="ale-pop ale-pop-profil" id="aleMenuProfil"
                  role="menu" aria-label="Menu profil" hidden>
               <p class="ale-pop-judul" role="presentation">Profil</p>
-              ${item('foto-tambah', 'unggah',  'Ubah foto profil',           'sky')}
-              ${item('notif',       'lonceng', 'Aktifkan notifikasi',        'amber')}
-              ${item('foto-hapus',  'sampah',  'Hapus foto profil',          'rose')}
+              ${WEB_PUSH_PUBLIC_KEY ? item('notif', 'lonceng', 'Aktifkan notifikasi', 'amber') : ''}
+              ${memilikiTautan('/datadasar/kelas') ? item('kelas-mapel', 'kartuid', 'Kelas & mapel saya', 'sky') : ''}
+              ${memilikiTautan('/pengaturan/api-ai') ? item('api-key', 'kunciapi', 'AI & Layanan', 'cyan') : ''}
+              ${memilikiTautan('/pengaturan/google') ? item('google', 'google', 'Hubungkan Google', 'indigo') : ''}
               <hr class="ale-pop-sekat" role="separator">
-              ${item('kelas-mapel', 'kartuid', 'Kelas & mapel saya',         'sky')}
-              ${item('api-key',     'kunciapi','AI & Layanan',              'cyan')}
-              ${item('google',      'google',  'Hubungkan Google',           'indigo')}
-              <hr class="ale-pop-sekat" role="separator">
-              ${item('tutup',       'tutup',   'Tutup',                      'sky')}
+              ${item('tutup', 'tutup', 'Tutup', 'sky')}
             </div>
           </div>
 
@@ -584,8 +593,8 @@ export function sidebar() {
 
   const { user, role } = getState();
   const profil = (user && ambilProfil(user.uid)) || {};
-  const nama   = profil.nama || namaDariUser(user);
-  const peran  = LABEL_PERAN[role] || 'Pengguna';
+  const nama = profil.nama || namaDariUser(user);
+  const peran = LABEL_PERAN[role] || 'Pengguna';
 
   requestAnimationFrame(() => {
     const s = document.getElementById('ale-side');
@@ -619,6 +628,6 @@ export function pasangShell() {
 /** Kembalikan elemen <main id="slot-halaman"> tempat halaman di-mount. */
 export function slotKonten() {
   return document.getElementById('slot-halaman')
-      || document.getElementById('app')
-      || null;
+    || document.getElementById('app')
+    || null;
 }

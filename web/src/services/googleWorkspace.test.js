@@ -7,6 +7,7 @@ import {
   buatRuangGoogleMeet,
   buatSpreadsheetDenganData,
   buatTautanGoogleCalendar,
+  buatTautanKalenderTugas,
   daftarPaketPerencanaanTerenkripsiDrive,
   simpanFotoProfilDiDrive,
   unduhPdfCapaianDrive,
@@ -35,6 +36,26 @@ test('Google Calendar menolak waktu atau judul acara yang tidak valid', () => {
       selesai: '2026-10-18T09:00',
     }),
     /waktu selesai setelah waktu mulai/,
+  );
+});
+
+test('tugas dapat ditambahkan ke Google Calendar sebagai acara pribadi pada tanggal tenggat', () => {
+  const url = new URL(buatTautanKalenderTugas({
+    judul: 'Siapkan bahan kelas',
+    tanggal: '2026-10-30',
+    deskripsi: 'Tinjau lembar kegiatan.',
+  }));
+
+  assert.equal(url.searchParams.get('action'), 'TEMPLATE');
+  assert.equal(url.searchParams.get('text'), 'Tugas: Siapkan bahan kelas');
+  assert.match(url.searchParams.get('dates'), /^\d{8}T\d{6}Z\/\d{8}T\d{6}Z$/);
+  assert.match(url.searchParams.get('details'), /Batas waktu: 2026-10-30/);
+});
+
+test('tautan kalender tugas menolak tenggat yang tidak valid', () => {
+  assert.throws(
+    () => buatTautanKalenderTugas({ judul: 'Tugas', tanggal: '2026-02-30' }),
+    /Tanggal tenggat tugas tidak valid/,
   );
 });
 

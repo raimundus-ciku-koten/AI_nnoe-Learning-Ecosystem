@@ -58,6 +58,10 @@ function emailRedirectUrl() {
   return `${window.location.origin}${window.location.pathname}#/platform/supabase-users`;
 }
 
+function invitationRedirectUrl() {
+  return `${window.location.origin}${window.location.pathname}#/login`;
+}
+
 function formatAuthError(error) {
   if (error?.status === 429) return 'Batas email sementara tercapai. Tunggu sebelum mengirim tautan masuk lagi.';
   if (error?.message?.toLowerCase().includes('redirect')) {
@@ -270,6 +274,7 @@ export default function SupabasePlatformUsersPage() {
     setNotice('');
 
     let roleSaved = false;
+    let invitationAttempted = false;
     try {
       const selectedRoles = supportsRoleAssignments
         ? [...new Set([...form.roles, form.role])]
@@ -303,7 +308,18 @@ export default function SupabasePlatformUsersPage() {
       roleSaved = true;
 
       if (data?.invitation_required) {
-        setNotice(`Peran ${displayRole(request.p_role, selectedRoles)} disimpan pada allowlist untuk ${request.p_email}. Undangan tidak dikirim otomatis; buat atau undang identitas melalui Supabase Auth, lalu konfirmasikan email agar akses aplikasi dapat aktif.`);
+        invitationAttempted = true;
+        const { error: invitationError } = await supabase.functions.invoke('platform-invite-user', {
+          body: {
+            email: request.p_email,
+            nama: request.p_nama,
+            redirectTo: invitationRedirectUrl(),
+          },
+        });
+        if (invitationError) {
+          throw new Error(`Akses ${request.p_email} sudah tersimpan, tetapi status undangan belum terkonfirmasi: ${invitationError.message || 'periksa audit dan direktori sebelum mencoba kembali.'}`);
+        }
+        setNotice(`Undangan dikirim ke ${request.p_email}. Pengguna harus mengonfirmasi email sebelum akses aplikasi aktif.`);
       } else {
         setNotice(`Profil ${request.p_email} berhasil diperbarui. Perubahan hak akses berlaku pada token sesi baru pengguna.`);
       }
@@ -314,7 +330,9 @@ export default function SupabasePlatformUsersPage() {
     } catch (saveError) {
       console.error('[supabase-platform-users] Gagal menyimpan perubahan akun:', saveError);
       if (roleSaved) {
-        setNotice('Perubahan peran sudah tersimpan, tetapi direktori gagal dimuat ulang. Muat ulang halaman untuk memverifikasi hasilnya.');
+        setNotice(invitationAttempted
+          ? 'Akses pengguna sudah tersimpan. Status undangan belum terkonfirmasi; periksa audit platform dan direktori sebelum mencoba kembali.'
+          : 'Perubahan peran sudah tersimpan, tetapi direktori gagal dimuat ulang. Muat ulang halaman untuk memverifikasi hasilnya.');
         setError(formatAuthError(saveError));
       } else {
         setError(formatAuthError(saveError));

@@ -1,0 +1,286 @@
+.school-reports {
+    display: grid;
+    gap: 1rem;
+    max-width: 72rem;
+    margin: 0 auto;
+}
+
+.school-reports-header {
+    padding: 1.2rem 0 1rem;
+    border-bottom: 1px solid var(--ale-line);
+}
+
+.school-reports-header>p {
+    margin: 0 0 0.35rem;
+    color: #0f766e;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.school-reports-header h1 {
+    margin: 0 0 0.35rem;
+    color: var(--ale-judul);
+    font-size: 1.55rem;
+    line-height: 1.2;
+}
+
+.school-reports-header>span {
+    color: var(--ale-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.school-report-note,
+.school-report-error,
+.school-report-empty,
+.school-report-footnote {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.school-report-note {
+    padding: 0.7rem 0.8rem;
+    border-left: 3px solid #0f766e;
+    background: #f0fdfa;
+    color: #115e59;
+}
+
+.school-report-error {
+    padding: 0.7rem 0.8rem;
+    border-radius: 0.55rem;
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.school-report-empty,
+.school-report-footnote {
+    color: var(--ale-muted);
+}
+
+.school-report-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.7rem;
+}
+
+.school-report-stats article {
+    display: grid;
+    gap: 0.45rem;
+    min-height: 6rem;
+    align-content: space-between;
+    padding: 0.9rem;
+    border: 1px solid var(--ale-line);
+    border-top: 3px solid #0f766e;
+    border-radius: 0.7rem;
+    background: #fff;
+}
+
+.school-report-stats span {
+    color: var(--ale-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.school-report-stats strong {
+    color: var(--ale-judul);
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+.school-report-card {
+    display: grid;
+    gap: 0.8rem;
+    padding: 1rem;
+    border: 1px solid var(--ale-line);
+    border-radius: 0.75rem;
+    background: #fff;
+}
+
+.school-report-section-title {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 0.8rem;
+}
+
+.school-report-section-title p {
+    margin: 0 0 0.25rem;
+    color: #0f766e;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.school-report-section-title h2 {
+    margin: 0;
+    color: var(--ale-judul);
+    font-size: 1rem;
+}
+
+.school-report-table-wrap {
+    overflow-x: auto;
+}
+
+.school-report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.school-report-table th,
+.school-report-table td {
+    min-width: 7rem;
+    padding: 0.65rem;
+    border-bottom: 1px solid var(--ale-line);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.school-report-table thead th {
+    color: var(--ale-muted);
+    font-size: 0.69rem;
+    text-transform: uppercase;
+}
+
+.school-report-table tbody th {
+    color: var(--ale-ink);
+    font-weight: 700;
+}
+
+.school-report-table small {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--ale-muted);
+    font-size: 0.68rem;
+    font-weight: 500;
+}
+
+.school-report-button {
+    width: fit-content;
+    min-height: 2.45rem;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid #0f766e;
+    border-radius: 0.55rem;
+    background: #0f766e;
+    color: #fff;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.school-report-button:hover {
+    background: #115e59;
+}
+
+.school-report-button.secondary {
+    border-color: var(--ale-line);
+    background: #fff;
+    color: var(--ale-judul);
+}
+
+.school-report-button.secondary:hover {
+    background: #f8fafc;
+}
+
+.school-report-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.school-report-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 0.7rem;
+    padding: 0.8rem;
+    border: 1px solid var(--ale-line);
+    border-radius: 0.7rem;
+    background: #fff;
+}
+
+.school-report-filters label {
+    display: grid;
+    gap: 0.3rem;
+    color: var(--ale-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.school-report-filters input,
+.school-report-filters select {
+    min-height: 2.45rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--ale-line);
+    border-radius: 0.5rem;
+    background: #fff;
+    color: var(--ale-ink);
+    font: inherit;
+}
+
+.school-report-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.school-report-pagination p {
+    margin: 0;
+    color: var(--ale-muted);
+    font-size: 0.78rem;
+}
+
+.school-report-status {
+    display: inline-flex;
+    padding: 0.22rem 0.48rem;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.7rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.school-report-status.is-paid {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.school-report-status.is-pending,
+.school-report-status.is-creating,
+.school-report-status.is-paid_review {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.school-report-status.is-failed {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+@media (max-width: 560px) {
+    .school-report-filters {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .school-report-filters input,
+    .school-report-filters select,
+    .school-report-filters button {
+        width: 100%;
+    }
+
+    .school-report-card {
+        padding: 0.75rem;
+    }
+
+    .school-report-table th,
+    .school-report-table td {
+        padding: 0.5rem;
+    }
+}

@@ -21,6 +21,7 @@ import {
   simpanDokumen, simpanModul, perbaruiPaket
 } from '../services/repository.js';
 import { daftarAdminKunciTenant } from '../../../services/encryptionKeyDirectory.js';
+import { muatIdentitasDokumen } from '../services/planningIdentity.js';
 import { getState } from '../../../state.js';
 import { renderRpe } from './render/rpe.js';
 import { renderCp } from './render/cp.js';
@@ -32,6 +33,7 @@ import { buatAtpEditor } from './atp-editor.js';
 import { buatKktpEditor } from './kktp-editor.js';
 import { buatModulEditor } from './modul-editor.js';
 import { bukaFormPaket } from './form-paket.js';
+import { buatDenganAi } from '../services/ai.js';
 import { sesiGoogleWorkspacePerPengguna } from '../../../services/googleWorkspaceAuth.js';
 import {
   bukaPemilihPdfCapaianDrive,
@@ -74,8 +76,11 @@ export function halamanDetail(wadah, {
   let editor = null;       // { el, ambil } untuk ATP, KKTP, atau Modul Ajar
   let editorJenis = null;
   let editorKotor = false;
-  let dimuat = { paket: false, dokumen: false, modul: false };
+  let dimuat = { paket: false, dokumen: false, modul: false, identitas: false };
   let adminTenant = null;
+  let identitasResmi = null;
+  let errorIdentitas = '';
+  let aktif = true;
   const pemilikPaket = getState().user?.uid === uid;
 
   const akar = h('div', { class: 'perencanaan-detail' });
@@ -84,6 +89,22 @@ export function halamanDetail(wadah, {
   /* ------------------------------ Turunan data ------------------------------ */
 
   const rev = (jenis) => dokumen[jenis]?.rev ?? null;
+
+  function konteksDokumen() {
+    const identitas = identitasResmi?.identitas || {};
+    return {
+      ...paket,
+      identitas: {
+        sekolah: identitas.sekolah || '',
+        npsn: identitas.npsn || '',
+        guru: identitas.guru || '',
+        nipGuru: identitas.nipGuru || '',
+        kepsek: identitas.kepsek || '',
+        nipKepsek: identitas.nipKepsek || '',
+        lokasi: String(paket?.identitas?.lokasi || '').trim(),
+      },
+    };
+  }
 
   /** Rev dependensi saat ini; null bila ada dependensi yang belum ada. */
   function depRev(jenis) {
@@ -143,6 +164,36 @@ export function halamanDetail(wadah, {
   const simpan = (jenis, payload, sumber) => simpanDokumen({
     uid, tenantId, paketId, jenis, payload, sumber, sumberRev: depRev(jenis), revDasar: rev(jenis) ?? 0
   });
+
+  async function buatDokumenDenganAi(jenis, noUnit) {
+    const key = noUnit ? `ai:${jenis}:${noUnit}` : `ai:${jenis}`;
+    const existing = jenis === JENIS.MODUL ? modul[String(noUnit)] : dokumen[jenis];
+    if (existing && !(await konfirmasi(t('umum.konfirmasiTimpa'), { ya: t('umum.timpa'), bahaya: true }))) return;
+    await tandaiSibuk(key, async () => {
+      const { payload } = await buatDenganAi({ paketId, jenis, noUnit });
+      if (jenis === JENIS.MODUL) {
+        await simpanModul({
+          uid, tenantId, paketId, noUnit, payload, sumber: SUMBER.AI,
+          sumberRev: depRev(JENIS.MODUL), revDasar: modul[String(noUnit)]?.rev ?? 0,
+        });
+      } else {
+        await simpan(jenis, payload, SUMBER.AI);
+      }
+      toast(t('detail.aiBerhasil'), 'sukses');
+    });
+  }
+
+  function tombolAi(jenis, noUnit) {
+    const kurang = prasyaratKurang(jenis);
+    const key = noUnit ? `ai:${jenis}:${noUnit}` : `ai:${jenis}`;
+    const bekerja = sibuk.has(key);
+    const existing = jenis === JENIS.MODUL ? modul[String(noUnit)] : dokumen[jenis];
+    return h('button', {
+      type: 'button', class: 'tombol', disabled: kurang.length > 0 || bekerja || (sibuk.size > 0 && !bekerja),
+      'aria-busy': bekerja ? 'true' : null,
+      onClick: () => buatDokumenDenganAi(jenis, noUnit),
+    }, bekerja ? t('umum.membuat') : existing ? t('umum.buatUlangAi') : t('umum.buatAi'));
+  }
 
   const konteksMesin = () => ({
     jpPerPekan: paket.jpPerPekan, hariPembelajaran: paket.hariPembelajaran, ganjil: paket.ganjil,
@@ -313,9 +364,18 @@ export function halamanDetail(wadah, {
   function ubahKonteks() {
     bukaFormPaket({
       judul: t('detail.ubahKonteks'),
-      awal: paket,
+      awal: { ...paket, identitas: konteksDokumen().identitas },
       onSimpan: async (konteks) => {
-        await perbaruiPaket({ uid, paketId, konteks, revDasar: paket.rev });
+        const resmi = await muatIdentitasDokumen({ ownerUid: uid, tenantId });
+        await perbaruiPaket({
+          uid,
+          paketId,
+          konteks: {
+            ...konteks,
+            identitas: { ...resmi.identitas, lokasi: String(konteks.identitas?.lokasi || '').trim() },
+          },
+          revDasar: paket.rev,
+        });
         toast(t('detail.konteksTersimpan'), 'sukses');
       },
     });
@@ -407,8 +467,8 @@ export function halamanDetail(wadah, {
     const label = jenis === JENIS.CP
       ? (bekerja ? t('cp.memuat') : t('cp.impor'))
       : bekerja ? (ai ? t('umum.membuat') : t('umum.menghitung'))
-      : status === STATUS.BELUM ? (ai ? t('umum.buatAi') : t('umum.hitung'))
-        : (ai ? t('umum.buatUlangAi') : t('umum.hitungUlang'));
+        : status === STATUS.BELUM ? (ai ? t('umum.buatAi') : t('umum.hitung'))
+          : (ai ? t('umum.buatUlangAi') : t('umum.hitungUlang'));
     return h('button', {
       type: 'button', class: 'tombol', disabled: kurang.length > 0 || bekerja || (sibuk.size > 0 && !bekerja),
       'aria-busy': bekerja ? 'true' : null, onClick: aksi[jenis]
@@ -430,7 +490,7 @@ export function halamanDetail(wadah, {
     return h('div', null,
       !canGenerateDocuments ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.dokumenKhususGuru')) : null,
       bilah,
-      DOKUMEN_AI.includes(jenis) ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.aiNonaktif')) : null,
+      DOKUMEN_AI.includes(jenis) ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.aiKeterangan')) : null,
       kurang.length ? peringatan(t('detail.prasyarat', { daftar: kurang.map((k) => t(`dok.${k}`)).join(', ') })) : null,
       status === STATUS.USANG && dok ? peringatan(t('detail.usang')) : null,
       dok ? isiDokumen : (kurang.length ? null : kosong ?? h('p', { class: 'kosong' }, t('detail.belumAda'))));
@@ -462,16 +522,20 @@ export function halamanDetail(wadah, {
       }, t('atpEditor.simpanSemua'));
       return h('div', null,
         h('div', { class: 'bilah-aksi no-print' }, tombolSimpanAtp,
-          h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: async () => {
-            if (editorKotor && !(await konfirmasi(t('atpEditor.buangPerubahan'), { bahaya: true }))) return;
-            editor = null; editorJenis = null; editorKotor = false; gambar();
-          } }, t('atpEditor.selesai'))),
+          h('button', {
+            type: 'button', class: 'tombol tombol-sekunder', onClick: async () => {
+              if (editorKotor && !(await konfirmasi(t('atpEditor.buangPerubahan'), { bahaya: true }))) return;
+              editor = null; editorJenis = null; editorKotor = false; gambar();
+            }
+          }, t('atpEditor.selesai'))),
         editor.el);
     }
     const kurang = prasyaratKurang(JENIS.ATP);
     return h('div', null,
       !canGenerateDocuments ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.dokumenKhususGuru')) : null,
+      canGenerateDocuments ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.aiKeterangan')) : null,
       h('div', { class: 'bilah-aksi no-print' },
+        canGenerateDocuments && !kurang.length ? tombolAi(JENIS.ATP) : null,
         canGenerateDocuments ? h('button', {
           type: 'button',
           class: 'tombol',
@@ -482,7 +546,7 @@ export function halamanDetail(wadah, {
         dok ? h('span', { class: 'meta' }, t('detail.sumber', { sumber: t(`sumber.${dok.sumber}`) })) : null),
       kurang.length ? peringatan(t('detail.prasyarat', { daftar: kurang.map((k) => t(`dok.${k}`)).join(', ') })) : null,
       statusDok(JENIS.ATP) === STATUS.USANG && dok ? peringatan(t('detail.usang')) : null,
-      dok ? renderAtp(dok.payload, paket)
+      dok ? renderAtp(dok.payload, konteksDokumen())
         : kurang.length ? null : h('p', { class: 'kosong' }, t('atpEditor.drafKosong')));
   }
 
@@ -493,7 +557,7 @@ export function halamanDetail(wadah, {
     const dok = dokumen[JENIS.CP];
     return panelUmum(
       JENIS.CP,
-      dok ? renderCp(dok.payload, paket) : null,
+      dok ? renderCp(dok.payload, konteksDokumen()) : null,
       intro,
     );
   }
@@ -508,8 +572,9 @@ export function halamanDetail(wadah, {
     }
     return h('div', null,
       !canGenerateDocuments ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.dokumenKhususGuru')) : null,
-      h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.manualGratis')),
+      h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.aiKeterangan')),
       h('div', { class: 'bilah-aksi no-print' },
+        canGenerateDocuments && !kurang.length ? tombolAi(JENIS.KKTP) : null,
         canGenerateDocuments && !kurang.length ? h('button', {
           type: 'button', class: 'tombol', disabled: sibuk.size > 0,
           onClick: () => { mulaiEditorKktp(); gambar(); },
@@ -518,7 +583,7 @@ export function halamanDetail(wadah, {
         dok ? h('span', { class: 'meta' }, t('detail.sumber', { sumber: t(`sumber.${dok.sumber}`) })) : null),
       kurang.length ? peringatan(t('detail.prasyarat', { daftar: kurang.map((k) => t(`dok.${k}`)).join(', ') })) : null,
       statusDok(JENIS.KKTP) === STATUS.USANG && dok ? peringatan(t('detail.usang')) : null,
-      dok && dokumen[JENIS.ATP] ? renderKktp(dok.payload, dokumen[JENIS.ATP].payload, paket)
+      dok && dokumen[JENIS.ATP] ? renderKktp(dok.payload, dokumen[JENIS.ATP].payload, konteksDokumen())
         : kurang.length ? null : h('p', { class: 'kosong' }, t('detail.belumAda')));
   }
 
@@ -533,7 +598,7 @@ export function halamanDetail(wadah, {
     if (kurang.length) {
       return h('div', null,
         !canGenerateDocuments ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.dokumenKhususGuru')) : null,
-        h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.manualGratis')),
+        h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.aiKeterangan')),
         bilah,
         peringatan(t('detail.prasyarat', { daftar: kurang.map((k) => t(`dok.${k}`)).join(', ') }))
       );
@@ -566,11 +631,12 @@ export function halamanDetail(wadah, {
               type: 'button', class: 'tombol', disabled: sibuk.size > 0,
               onClick: () => { mulaiEditorModul(u); gambar(); },
             }, d ? t('atpEditor.mulai') : t('atpEditor.susun')) : null,
+            canGenerateDocuments ? tombolAi(JENIS.MODUL, u.no) : null,
             d ? h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: cetak }, t('umum.cetak')) : null),
           d ? renderModul(
             d.payload,
             u,
-            paket,
+            konteksDokumen(),
             dokumen[JENIS.ATP]?.payload,
             dokumen[JENIS.PROTA]?.payload,
             dokumen[JENIS.PROSEM]?.payload,
@@ -584,11 +650,11 @@ export function halamanDetail(wadah, {
 
   function panel() {
     switch (tab) {
-      case JENIS.RPE: return panelUmum(tab, dokumen.rpe ? renderRpe(dokumen.rpe.payload, paket) : null);
+      case JENIS.RPE: return panelUmum(tab, dokumen.rpe ? renderRpe(dokumen.rpe.payload, konteksDokumen()) : null);
       case JENIS.CP: return panelCp();
       case JENIS.ATP: return panelAtp();
-      case JENIS.PROTA: return panelUmum(tab, dokumen.prota ? renderProta(dokumen.prota.payload, paket) : null);
-      case JENIS.PROSEM: return panelUmum(tab, dokumen.prosem ? renderProsem(dokumen.prosem.payload, paket) : null);
+      case JENIS.PROTA: return panelUmum(tab, dokumen.prota ? renderProta(dokumen.prota.payload, konteksDokumen()) : null);
+      case JENIS.PROSEM: return panelUmum(tab, dokumen.prosem ? renderProsem(dokumen.prosem.payload, konteksDokumen()) : null);
       case JENIS.KKTP: return panelKktp();
       default: return panelModul();
     }
@@ -604,7 +670,7 @@ export function halamanDetail(wadah, {
           tabindex: j === tab ? '0' : '-1', class: `tab ${j === tab ? 'aktif' : ''}`,
           onClick: () => pindahTab(j)
         }, h('span', { class: 'tab-no' }, String(i + 1)), h('span', null, t(`dok.${j}`)),
-        lencana(st, sm && sm.total ? `${sm.siap}/${sm.total}` : ''));
+          lencana(st, sm && sm.total ? `${sm.siap}/${sm.total}` : ''));
       }));
     daftar.addEventListener('keydown', (e) => {
       const i = URUTAN_DOKUMEN.indexOf(tab);
@@ -628,7 +694,7 @@ export function halamanDetail(wadah, {
   }
 
   function gambar() {
-    if (!(dimuat.paket && dimuat.dokumen && dimuat.modul)) {
+    if (!(dimuat.paket && dimuat.dokumen && dimuat.modul && dimuat.identitas)) {
       kosongkan(akar).append(h('p', { class: 'memuat', role: 'status' }, t('umum.memuat')));
       return;
     }
@@ -645,6 +711,7 @@ export function halamanDetail(wadah, {
         h('h2', null, paket.mapel),
         h('p', { class: 'meta' }, `${t('umum.kelas')} ${paket.kelas} · ${t('umum.fase')} ${paket.fase} · ${paket.tahunAjaran} · ${paket.jpPerPekan} JP/${t('umum.pekan')}`),
         canEditPackage ? h('button', { type: 'button', class: 'tombol tombol-sekunder tombol-kecil', onClick: ubahKonteks }, t('detail.ubahKonteks')) : null),
+      errorIdentitas ? h('p', { class: 'kotak kotak-peringatan', role: 'alert' }, errorIdentitas) : null,
       panelAkses(), barisTab(), konten);
     if (fokusAktif && fokusAktif.startsWith('tab-')) document.getElementById(fokusAktif)?.focus();
   }
@@ -664,6 +731,22 @@ export function halamanDetail(wadah, {
     dengarModul(uid, tenantId, paketId, (m) => { modul = m; dimuat.modul = true; muatUlang(); }, galatLangganan)
   ];
 
+  muatIdentitasDokumen({ ownerUid: uid, tenantId })
+    .then((identitas) => {
+      if (!aktif) return;
+      identitasResmi = identitas;
+    })
+    .catch((error) => {
+      if (!aktif) return;
+      console.error('[perencanaan] Gagal memuat identitas resmi dokumen:', error);
+      errorIdentitas = 'Identitas resmi belum dapat diverifikasi. Nama sekolah/guru dan NIP tidak akan diambil dari isian paket.';
+    })
+    .finally(() => {
+      if (!aktif) return;
+      dimuat.identitas = true;
+      gambar();
+    });
+
   /** Jangan menimpa penyunting ATP yang sedang dikerjakan saat data masuk. */
   function muatUlang() {
     if (editor && editorKotor) return;
@@ -677,6 +760,7 @@ export function halamanDetail(wadah, {
   gambar();
 
   return () => {
+    aktif = false;
     berhenti.forEach((fn) => fn());
     akar.remove();
   };

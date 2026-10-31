@@ -1,0 +1,348 @@
+.guardian-page {
+    display: grid;
+    gap: 1rem;
+    max-width: 68rem;
+    margin: 0 auto;
+}
+
+.guardian-header {
+    padding: 1.25rem 0 1rem;
+    border-bottom: 1px solid var(--ale-line);
+}
+
+.guardian-header>p,
+.guardian-section-heading p,
+.guardian-child-card>p {
+    margin: 0 0 0.35rem;
+    color: #0f766e;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.guardian-header h1 {
+    margin: 0 0 0.35rem;
+    color: var(--ale-judul);
+    font-size: 1.55rem;
+    line-height: 1.2;
+}
+
+.guardian-header>span {
+    color: var(--ale-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.guardian-card {
+    display: grid;
+    gap: 0.8rem;
+    padding: 1.15rem;
+    border: 1px solid var(--ale-line);
+    border-radius: 0.75rem;
+    background: #fff;
+}
+
+.guardian-section-heading,
+.guardian-links-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 0.8rem;
+}
+
+.guardian-section-heading h2 {
+    margin: 0;
+    color: var(--ale-judul);
+    font-size: 1rem;
+}
+
+.guardian-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+    gap: 0.75rem;
+}
+
+.guardian-form label,
+.guardian-search,
+.guardian-child-select {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+    color: var(--ale-ink);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.guardian-form select,
+.guardian-search input,
+.guardian-child-select select {
+    width: 100%;
+    min-height: 2.6rem;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--ale-line);
+    border-radius: 0.55rem;
+    background: #fff;
+    color: var(--ale-ink);
+    font: inherit;
+    font-weight: 500;
+}
+
+.guardian-form select:focus-visible,
+.guardian-search input:focus-visible,
+.guardian-child-select select:focus-visible {
+    outline: 3px solid rgb(13 148 136 / 0.25);
+    border-color: #0f766e;
+}
+
+.guardian-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.45rem;
+    width: fit-content;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid #0f766e;
+    border-radius: 0.55rem;
+    background: #0f766e;
+    color: #fff;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.guardian-button:hover:not(:disabled) {
+    background: #115e59;
+    color: #fff;
+}
+
+.guardian-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.guardian-button.is-secondary {
+    border-color: var(--ale-line);
+    background: #fff;
+    color: #334155;
+}
+
+.guardian-button.is-danger {
+    border-color: #fecaca;
+    background: #fff;
+    color: #b91c1c;
+}
+
+.guardian-message {
+    margin: 0;
+    padding: 0.7rem 0.8rem;
+    border-radius: 0.55rem;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.guardian-message.is-error {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.guardian-message.is-notice {
+    background: #ecfdf5;
+    color: #065f46;
+}
+
+.guardian-empty,
+.guardian-footnote {
+    margin: 0;
+    color: var(--ale-muted);
+    font-size: 0.8rem;
+    line-height: 1.5;
+}
+
+.guardian-table-wrap {
+    overflow-x: auto;
+}
+
+.guardian-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+
+.guardian-table th,
+.guardian-table td {
+    padding: 0.7rem;
+    border-bottom: 1px solid var(--ale-line);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.guardian-table thead th {
+    color: var(--ale-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+}
+
+.guardian-table tbody th {
+    color: var(--ale-ink);
+    font-weight: 700;
+}
+
+.guardian-table small {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--ale-muted);
+    font-size: 0.72rem;
+    font-weight: 500;
+}
+
+.guardian-search {
+    width: min(18rem, 100%);
+}
+
+.guardian-tabs {
+    display: flex;
+    gap: 0.4rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--ale-line);
+}
+
+.guardian-tabs a {
+    flex: none;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 2px solid transparent;
+    color: var(--ale-muted);
+    font-size: 0.84rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.guardian-tabs a[aria-current="page"] {
+    border-color: #0f766e;
+    color: #0f766e;
+}
+
+.guardian-child-select {
+    width: min(24rem, 100%);
+}
+
+.guardian-child-card {
+    align-content: start;
+}
+
+.guardian-child-card h2 {
+    margin: 0;
+    color: var(--ale-judul);
+    font-size: 1.3rem;
+}
+
+.guardian-child-card dl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    margin: 0;
+}
+
+.guardian-child-card dl div {
+    min-width: 8rem;
+}
+
+.guardian-child-card dt {
+    color: var(--ale-muted);
+    font-size: 0.72rem;
+}
+
+.guardian-child-card dd {
+    margin: 0.15rem 0 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.guardian-record-list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.guardian-record-list li {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 0;
+    border-top: 1px solid var(--ale-line);
+}
+
+.guardian-record-list li>span {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.guardian-record-list strong {
+    overflow-wrap: anywhere;
+    font-size: 0.86rem;
+}
+
+.guardian-record-list small,
+.guardian-record-list time {
+    color: var(--ale-muted);
+    font-size: 0.75rem;
+}
+
+.guardian-record-list b {
+    flex: none;
+    font-size: 0.82rem;
+    text-align: right;
+}
+
+.chat-monitoring-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: 0.75rem;
+}
+
+.chat-monitoring-stat {
+    display: grid;
+    gap: 0.45rem;
+    min-height: 7rem;
+    align-content: space-between;
+    padding: 1rem;
+    border: 1px solid var(--ale-line);
+    border-top: 3px solid #0f766e;
+    border-radius: 0.7rem;
+    background: #fff;
+}
+
+.chat-monitoring-stat span {
+    color: var(--ale-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.chat-monitoring-stat strong {
+    color: var(--ale-judul);
+    font-size: 1.65rem;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 700px) {
+    .guardian-form {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .guardian-card {
+        padding: 0.9rem;
+    }
+
+    .guardian-record-list li {
+        gap: 0.5rem;
+    }
+}

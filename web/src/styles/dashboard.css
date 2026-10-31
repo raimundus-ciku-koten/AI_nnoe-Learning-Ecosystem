@@ -46,69 +46,71 @@
    ========================================================= */
 :root {
   /* Ukuran shell */
-  --ale-topbar-h:     4.25rem;
-  --ale-side-w:       clamp(15rem, 20vw, 24rem);  /* ≈ 1/5 lebar layar laptop */
-  --ale-kiri-tutup-w: 7.75rem;                    /* zona brand saat sidebar disembunyikan */
-  --ale-gutter:       clamp(1rem, 2vw, 1.75rem);
-  --ale-dur:          0.28s;
-  --ale-ease:         cubic-bezier(0.4, 0, 0.2, 1);
+  --ale-topbar-h: 4.25rem;
+  --ale-side-w: clamp(15rem, 20vw, 24rem);
+  /* ≈ 1/5 lebar layar laptop */
+  --ale-kiri-tutup-w: 7.75rem;
+  /* zona brand saat sidebar disembunyikan */
+  --ale-gutter: clamp(1rem, 2vw, 1.75rem);
+  --ale-dur: 0.28s;
+  --ale-ease: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Warna dasar */
-  --ale-ink:      #0f172a;
-  --ale-muted:    #475569;
-  --ale-line:     #e2e8f0;
-  --ale-bg:       #ffffff;
-  --ale-latar:    #f8fafc;
-  --ale-kartu:    #ffffff;
-  --ale-garis:    #e2e8f0;
-  --ale-teks:     #1f2937;
-  --ale-teks-2:   #6b7280;
+  --ale-ink: #0f172a;
+  --ale-muted: #475569;
+  --ale-line: #e2e8f0;
+  --ale-bg: #ffffff;
+  --ale-latar: #f8fafc;
+  --ale-kartu: #ffffff;
+  --ale-garis: #e2e8f0;
+  --ale-teks: #1f2937;
+  --ale-teks-2: #6b7280;
 
   /* Brand ALE (sampel dari logo) */
   --ale-indigo-950: #172554;
-  --ale-indigo:     #3730a3;
-  --ale-teal-500:   #14b8a6;
-  --ale-teal-700:   #0f766e;
-  --ale-hijau:      #039f6f;
-  --ale-tinta:      #164e63;
-  --ale-mint:       #99f6e4;
-  --ale-judul:      #1e1b4b;
+  --ale-indigo: #3730a3;
+  --ale-teal-500: #14b8a6;
+  --ale-teal-700: #0f766e;
+  --ale-hijau: #039f6f;
+  --ale-tinta: #164e63;
+  --ale-mint: #99f6e4;
+  --ale-judul: #1e1b4b;
 
-  --ale-ungu:      #4f46e5;
-  --ale-ungu-2:    #4338ca;
-  --ale-teal:      #0f766e;
-  --ale-amber:     #f59e0b;
-  --ale-grape:     #7c3aed;
-  --ale-hero:      linear-gradient(118deg, #1e1b4b 0%, #334155 55%, #0f766e 100%);
-  --ale-brand:     linear-gradient(135deg, #1e1b4b 0%, #3730a3 56%, #0f766e 100%);
+  --ale-ungu: #4f46e5;
+  --ale-ungu-2: #4338ca;
+  --ale-teal: #0f766e;
+  --ale-amber: #f59e0b;
+  --ale-grape: #7c3aed;
+  --ale-hero: linear-gradient(118deg, #1e1b4b 0%, #334155 55%, #0f766e 100%);
+  --ale-brand: linear-gradient(135deg, #1e1b4b 0%, #3730a3 56%, #0f766e 100%);
   --ale-garis-brand: linear-gradient(90deg, #3730a3 0%, #334155 55%, #14b8a6 100%);
 
   /* Sidebar: gradien gelap; warna atas = warna zona brand di topbar */
   --ale-side-top: #172554;
-  --ale-side-bg: linear-gradient(
-    180deg,
-    #172554 0%,
-    #1e293b 34%,
-    #253859 68%,
-    #164e63 100%
-  );
+  --ale-side-bg: linear-gradient(180deg,
+      #172554 0%,
+      #1e293b 34%,
+      #253859 68%,
+      #164e63 100%);
 
   /* Warna teks sidebar (dipakai lintas komponen) */
-  --ale-side-teks:      rgb(255 255 255 / 0.92);
+  --ale-side-teks: rgb(255 255 255 / 0.92);
   --ale-side-teks-soft: rgb(255 255 255 / 0.86);
-  --ale-side-teks-dim:  rgb(255 255 255 / 0.58);
-  --ale-side-garis:     rgb(255 255 255 / 0.12);
+  --ale-side-teks-dim: rgb(255 255 255 / 0.58);
+  --ale-side-garis: rgb(255 255 255 / 0.12);
 
   /* Radius & bayangan */
-  --ale-radius:    1.125rem;
-  --ale-bayangan:  0 1px 2px rgb(15 23 42 / 0.05), 0 10px 26px -14px rgb(15 23 42 / 0.16);
-  --ale-shadow:    0 1px 2px rgb(15 23 42 / 0.05), 0 10px 26px -14px rgb(15 23 42 / 0.16);
+  --ale-radius: 1.125rem;
+  --ale-bayangan: 0 1px 2px rgb(15 23 42 / 0.05), 0 10px 26px -14px rgb(15 23 42 / 0.16);
+  --ale-shadow: 0 1px 2px rgb(15 23 42 / 0.05), 0 10px 26px -14px rgb(15 23 42 / 0.16);
 }
 
 /* =========================================================
    2. RESET RINGAN
    ========================================================= */
-body.ale-kunci { overflow: hidden; }
+body.ale-kunci {
+  overflow: hidden;
+}
 
 /* =========================================================
    3. LAYOUT SHELL
@@ -120,7 +122,9 @@ body.ale-kunci { overflow: hidden; }
              Status tersimpan → <html class="ale-side-tutup">.
    Mobile  : sidebar menjadi offcanvas (lihat bagian 21).
    ========================================================= */
-.ale-shell { min-height: 100vh; }
+.ale-shell {
+  min-height: 100vh;
+}
 
 .app {
   min-height: 100vh;
@@ -131,12 +135,14 @@ body.ale-kunci { overflow: hidden; }
   background: var(--ale-bg);
   transition: grid-template-columns var(--ale-dur) var(--ale-ease);
 }
-.app > .main,
-.app > .ale-main {
+
+.app>.main,
+.app>.ale-main {
   min-width: 0;
   max-width: 108rem;
   padding: clamp(1rem, 2vw, 1.5rem) var(--ale-gutter) 2.5rem;
 }
+
 .ale-ad-footer {
   position: fixed;
   z-index: 55;
@@ -153,25 +159,39 @@ body.ale-kunci { overflow: hidden; }
   border-top: 1px solid var(--ale-line);
   background: rgb(255 255 255 / 0.97);
 }
+
 .ale-ad-label {
   align-self: flex-start;
   color: var(--ale-muted);
   font-size: 0.65rem;
   line-height: 1;
 }
-.ale-main-with-ad { padding-bottom: calc(2.5rem + clamp(4.5rem, 12vh, 7.5rem)); }
+
+.ale-main-with-ad {
+  padding-bottom: calc(2.5rem + clamp(4.5rem, 12vh, 7.5rem));
+}
 
 @media (min-width: 961px) {
+
   /* Sidebar disembunyikan: kolom menyusut ke 0, konten melebar penuh */
-  html.ale-side-tutup .app { grid-template-columns: 0 minmax(0, 1fr); }
+  html.ale-side-tutup .app {
+    grid-template-columns: 0 minmax(0, 1fr);
+  }
+
   html.ale-side-tutup .ale-side {
     transform: translateX(-100%);
     visibility: hidden;
     transition: transform var(--ale-dur) var(--ale-ease),
-                visibility 0s linear var(--ale-dur);
+      visibility 0s linear var(--ale-dur);
   }
-  html.ale-side-tutup .ale-topbar-kiri { width: var(--ale-kiri-tutup-w); }
-  html.ale-side-tutup .ale-topbar-brand-teks { display: none; }
+
+  html.ale-side-tutup .ale-topbar-kiri {
+    width: var(--ale-kiri-tutup-w);
+  }
+
+  html.ale-side-tutup .ale-topbar-brand-teks {
+    display: none;
+  }
 }
 
 /* =========================================================
@@ -182,17 +202,22 @@ body.ale-kunci { overflow: hidden; }
    ========================================================= */
 .site-header.ale-topbar {
   position: fixed;
-  top: 0; left: 0; right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 60;
   background: rgb(255 255 255 / 0.9);
   -webkit-backdrop-filter: saturate(160%) blur(14px);
   backdrop-filter: saturate(160%) blur(14px);
   box-shadow: 0 8px 24px -18px rgb(27 15 77 / 0.55);
 }
+
 .ale-topbar::after {
   content: "";
   position: absolute;
-  left: 0; right: 0; bottom: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   height: 3px;
   background: var(--ale-garis-brand);
   pointer-events: none;
@@ -227,7 +252,8 @@ body.ale-kunci { overflow: hidden; }
   display: inline-grid;
   place-items: center;
   flex: none;
-  width: 2.75rem; height: 2.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
   padding: 0;
   background: rgb(255 255 255 / 0.08);
   color: #fff;
@@ -236,18 +262,31 @@ body.ale-kunci { overflow: hidden; }
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
+
 .ale-menu-btn:hover {
   background: rgb(255 255 255 / 0.16);
   border-color: rgb(255 255 255 / 0.28);
 }
+
 .ale-menu-btn:focus-visible {
   outline: 3px solid var(--ale-mint);
   outline-offset: 2px;
   border-radius: 0.75rem;
 }
-.ale-menu-svg { width: 1.3rem; height: 1.3rem; }
-.ale-menu-panel { opacity: 0; transition: opacity 0.2s; }
-.ale-menu-btn[aria-expanded="true"] .ale-menu-panel { opacity: 0.55; }
+
+.ale-menu-svg {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.ale-menu-panel {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.ale-menu-btn[aria-expanded="true"] .ale-menu-panel {
+  opacity: 0.55;
+}
 
 /* Brand block: logo + wordmark */
 .ale-topbar-brand {
@@ -261,14 +300,20 @@ body.ale-kunci { overflow: hidden; }
   color: inherit;
   transition: background 0.15s;
 }
-.ale-topbar-brand:hover { background: rgb(255 255 255 / 0.08); }
+
+.ale-topbar-brand:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+
 .ale-topbar-brand:focus-visible {
   outline: 3px solid var(--ale-mint);
   outline-offset: 2px;
   border-radius: 0.85rem;
 }
+
 .ale-topbar-brand-logo {
-  width: 3.25rem; height: 2.5rem;
+  width: 3.25rem;
+  height: 2.5rem;
   flex: none;
   padding: 0.15rem 0.25rem;
   border-radius: 0.65rem;
@@ -276,6 +321,7 @@ body.ale-kunci { overflow: hidden; }
   background: transparent;
   filter: brightness(0) invert(1);
 }
+
 .ale-topbar-brand-teks {
   display: flex;
   flex-direction: column;
@@ -283,12 +329,14 @@ body.ale-kunci { overflow: hidden; }
   min-width: 0;
   white-space: nowrap;
 }
+
 .ale-topbar-brand-teks strong {
   font-size: 1.08rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #fff;
 }
+
 .ale-topbar-brand-teks small {
   font-size: 0.64rem;
   font-weight: 700;
@@ -309,14 +357,18 @@ body.ale-kunci { overflow: hidden; }
   padding-left: 0.85rem;
   line-height: 1.15;
 }
+
 .ale-topbar-judul::before {
   content: "";
   position: absolute;
-  left: 0; top: 0.1rem; bottom: 0.1rem;
+  left: 0;
+  top: 0.1rem;
+  bottom: 0.1rem;
   width: 4px;
   border-radius: 4px;
   background: linear-gradient(180deg, var(--ale-indigo) 0%, var(--ale-teal-500) 100%);
 }
+
 .ale-judul-induk {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -327,6 +379,7 @@ body.ale-kunci { overflow: hidden; }
   text-transform: uppercase;
   color: var(--ale-teal-700);
 }
+
 .ale-judul-teks {
   margin: 0;
   overflow: hidden;
@@ -363,10 +416,16 @@ body.ale-kunci { overflow: hidden; }
   font-weight: 700;
   white-space: nowrap;
 }
-.ale-langganan .ale-ikon { width: 1.05rem; height: 1.05rem; color: #047857; }
+
+.ale-langganan .ale-ikon {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: #047857;
+}
 
 .ale-logo-sekolah {
-  width: 2.5rem; height: 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
   flex: none;
   padding: 0.15rem;
   object-fit: contain;
@@ -379,7 +438,8 @@ body.ale-kunci { overflow: hidden; }
   position: relative;
   display: grid;
   place-items: center;
-  width: 2.75rem; height: 2.75rem;
+  width: 2.75rem;
+  height: 2.75rem;
   flex: none;
   padding: 0;
   background: #fff;
@@ -389,16 +449,28 @@ body.ale-kunci { overflow: hidden; }
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
+
 .ale-ikon-btn::after {
   content: "";
   position: absolute;
   inset: -0.25rem;
   border-radius: 50%;
 }
-.ale-ikon-btn .ale-ikon { width: 1.1rem; height: 1.1rem; }
+
+.ale-ikon-btn .ale-ikon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
 .ale-ikon-btn:hover,
-.ale-ikon-btn[aria-expanded="true"] { background: #f1f5f9; border-color: #cbd5e1; }
-.ale-ikon-btn:focus-visible { border-radius: 50%; }
+.ale-ikon-btn[aria-expanded="true"] {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.ale-ikon-btn:focus-visible {
+  border-radius: 50%;
+}
 
 .ale-akun {
   display: flex;
@@ -416,13 +488,18 @@ body.ale-kunci { overflow: hidden; }
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
+
 .ale-akun:hover,
 .ale-akun[aria-expanded="true"] {
   background: #f8fafc;
   border-color: #cbd5e1;
   box-shadow: 0 6px 16px -12px rgb(27 15 77 / 0.5);
 }
-.ale-akun:focus-visible { border-radius: 9999px; }
+
+.ale-akun:focus-visible {
+  border-radius: 9999px;
+}
+
 .ale-akun-teks {
   display: flex;
   flex-direction: column;
@@ -430,6 +507,7 @@ body.ale-kunci { overflow: hidden; }
   min-width: 0;
   max-width: 14rem;
 }
+
 .ale-akun-teks strong {
   font-size: 0.9rem;
   font-weight: 800;
@@ -438,6 +516,7 @@ body.ale-kunci { overflow: hidden; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .ale-akun-teks span {
   font-size: 0.76rem;
   font-weight: 600;
@@ -446,13 +525,18 @@ body.ale-kunci { overflow: hidden; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ale-avatar-wrap { display: inline-flex; flex: none; }
+
+.ale-avatar-wrap {
+  display: inline-flex;
+  flex: none;
+}
 
 .ale-avatar {
   display: grid;
   place-items: center;
   flex: none;
-  width: 3rem; height: 3rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 50%;
   background: var(--ale-brand);
   color: #fff;
@@ -461,16 +545,28 @@ body.ale-kunci { overflow: hidden; }
   object-fit: cover;
   box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgb(19 185 171 / 0.45);
 }
-img.ale-avatar { background: var(--ale-latar); }
-.ale-akun .ale-avatar { width: 2.4rem; height: 2.4rem; font-size: 0.85rem; }
+
+img.ale-avatar {
+  background: var(--ale-latar);
+}
+
+.ale-akun .ale-avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  font-size: 0.85rem;
+}
 
 .ale-chev {
-  width: 1rem; height: 1rem;
+  width: 1rem;
+  height: 1rem;
   flex: none;
   color: var(--ale-muted);
   transition: transform 0.18s;
 }
-.ale-akun[aria-expanded="true"] .ale-chev { transform: rotate(180deg); }
+
+.ale-akun[aria-expanded="true"] .ale-chev {
+  transform: rotate(180deg);
+}
 
 .btn.ale-keluar {
   display: inline-flex;
@@ -485,15 +581,23 @@ img.ale-avatar { background: var(--ale-latar); }
   font-weight: 700;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
+
 .btn.ale-keluar:hover {
   color: #991b1b;
   background: #fef2f2;
   border-color: #fca5a5;
 }
-.ale-keluar .ale-ikon { width: 1.1rem; height: 1.1rem; }
+
+.ale-keluar .ale-ikon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
 
 /* Menu popover (ulasan & profil) */
-.ale-menu-wrap { position: relative; }
+.ale-menu-wrap {
+  position: relative;
+}
+
 .ale-pop {
   position: absolute;
   top: calc(100% + 0.6rem);
@@ -507,6 +611,7 @@ img.ale-avatar { background: var(--ale-latar); }
   border-radius: 1rem;
   box-shadow: 0 18px 44px -12px rgb(15 23 42 / 0.28);
 }
+
 .ale-pop::before {
   content: "";
   position: absolute;
@@ -514,18 +619,326 @@ img.ale-avatar { background: var(--ale-latar); }
   height: 4px;
   background: var(--ale-garis-brand);
 }
-.ale-pop:not(.ale-pop-profil)::before { display: none; }
-.ale-pop:not([hidden]) { animation: ale-pop-masuk 0.16s ease-out; }
-@keyframes ale-pop-masuk {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: none; }
+
+.ale-pop:not(.ale-pop-profil)::before {
+  display: none;
 }
+
+.ale-pop:not([hidden]) {
+  animation: ale-pop-masuk 0.16s ease-out;
+}
+
+@keyframes ale-pop-masuk {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .ale-pop-profil {
   min-width: 17rem;
   max-height: calc(100dvh - var(--ale-topbar-h) - 1rem);
   overflow-y: auto;
   padding-top: 0.75rem;
 }
+
+.ale-pop-search {
+  width: min(27rem, calc(100vw - 1rem));
+  min-width: min(19rem, calc(100vw - 1rem));
+  max-height: min(70vh, 34rem);
+  padding: 1rem;
+}
+
+.ale-aktivitas-btn {
+  position: relative;
+}
+
+.ale-aktivitas-badge {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.2rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.2rem;
+  border: 2px solid #fff;
+  border-radius: 9999px;
+  background: #be123c;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ale-pop-activity {
+  width: min(28rem, calc(100vw - 1rem));
+  min-width: min(20rem, calc(100vw - 1rem));
+  max-height: min(75vh, 38rem);
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.ale-activity-heading,
+.ale-activity-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ale-activity-heading {
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--ale-line);
+}
+
+.ale-activity-heading p {
+  margin: 0 0 0.15rem;
+  color: var(--ale-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.ale-activity-heading h2 {
+  margin: 0;
+  font-size: 1.08rem;
+  line-height: 1.25;
+}
+
+.ale-activity-count {
+  flex: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  background: #fff1f2;
+  color: #9f1239;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.ale-activity-section {
+  padding-top: 0.85rem;
+}
+
+.ale-activity-section+.ale-activity-section {
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--ale-line);
+}
+
+.ale-activity-section-head {
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.ale-activity-section-head h3 {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.ale-activity-section-head>a {
+  color: #0f766e;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ale-activity-section-head>a:hover {
+  text-decoration: underline;
+}
+
+.ale-activity-list {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ale-activity-list a {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.55rem;
+  border-radius: 0.55rem;
+  color: var(--ale-ink);
+  text-decoration: none;
+}
+
+.ale-activity-list a:hover,
+.ale-activity-list a:focus-visible {
+  outline: none;
+  background: #f0fdfa;
+}
+
+.ale-activity-list a>span {
+  display: grid;
+  gap: 0.14rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.ale-activity-list strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+
+.ale-activity-list small {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ale-muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ale-activity-list b {
+  flex: none;
+  min-width: 1.35rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 9999px;
+  background: #e0f2fe;
+  color: #075985;
+  text-align: center;
+  font-size: 0.68rem;
+}
+
+.ale-activity-announcements time {
+  flex: none;
+  color: var(--ale-muted);
+  font-size: 0.66rem;
+}
+
+.ale-activity-state {
+  margin: 0;
+  padding: 0.6rem;
+  color: var(--ale-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.ale-pencarian-label {
+  display: block;
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--ale-muted);
+}
+
+.ale-pencarian-input {
+  width: 100%;
+  min-height: 2.8rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--ale-line);
+  border-radius: 0.65rem;
+  background: #fff;
+  color: var(--ale-ink);
+  font: inherit;
+}
+
+.ale-pencarian-input:focus-visible {
+  outline: 3px solid rgb(13 148 136 / 0.28);
+  border-color: #0f766e;
+}
+
+.ale-pencarian-hasil {
+  display: grid;
+  gap: 0.2rem;
+  max-height: min(48vh, 23rem);
+  overflow-y: auto;
+  margin: 0.65rem -0.3rem 0;
+}
+
+.ale-pencarian-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.6rem;
+  border-radius: 0.6rem;
+  color: var(--ale-ink);
+  text-decoration: none;
+}
+
+.ale-pencarian-item:hover,
+.ale-pencarian-item:focus-visible {
+  background: #f0fdfa;
+  outline: none;
+}
+
+.ale-pencarian-ikon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.55rem;
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.ale-pencarian-ikon .ale-ikon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.ale-pencarian-teks {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.ale-pencarian-teks strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+}
+
+.ale-pencarian-teks small {
+  color: var(--ale-muted);
+  font-size: 0.75rem;
+}
+
+.ale-pencarian-panah {
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-left: auto;
+  color: var(--ale-muted);
+}
+
+.ale-pencarian-kosong {
+  margin: 0;
+  padding: 0.75rem 0.55rem;
+  color: var(--ale-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.ale-pencarian-bantuan {
+  margin: 0.5rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--ale-line);
+  color: var(--ale-muted);
+  font-size: 0.72rem;
+}
+
+.ale-pencarian-bantuan kbd {
+  padding: 0.1rem 0.3rem;
+  border: 1px solid var(--ale-line);
+  border-radius: 0.3rem;
+  background: #f8fafc;
+  font: inherit;
+}
+
 .ale-pop-judul {
   margin: 0.4rem 0.75rem 0.3rem;
   font-size: 0.8rem;
@@ -534,11 +947,13 @@ img.ale-avatar { background: var(--ale-latar); }
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+
 .ale-pop-sekat {
   margin: 0.4rem 0.5rem;
   border: 0;
   border-top: 1px solid var(--ale-line);
 }
+
 .ale-pop-item {
   --pw: #0369a1;
   display: flex;
@@ -556,19 +971,50 @@ img.ale-avatar { background: var(--ale-latar); }
   cursor: pointer;
   white-space: nowrap;
 }
-.ale-pop-item .ale-ikon { color: var(--pw); }
+
+.ale-pop-item .ale-ikon {
+  color: var(--pw);
+}
+
 .ale-pop-item:hover,
-.ale-pop-item:focus-visible { background: #f1f5f9; }
-.ale-pop-item:focus-visible { border-radius: 0.7rem; }
-.ale-pw-sky    { --pw: #0369a1; }
-.ale-pw-amber  { --pw: #b45309; }
-.ale-pw-teal   { --pw: #0f766e; }
-.ale-pw-rose   { --pw: #be123c; }
-.ale-pw-cyan   { --pw: #0e7490; }
-.ale-pw-indigo { --pw: #4f46e5; }
+.ale-pop-item:focus-visible {
+  background: #f1f5f9;
+}
+
+.ale-pop-item:focus-visible {
+  border-radius: 0.7rem;
+}
+
+.ale-pw-sky {
+  --pw: #0369a1;
+}
+
+.ale-pw-amber {
+  --pw: #b45309;
+}
+
+.ale-pw-teal {
+  --pw: #0f766e;
+}
+
+.ale-pw-rose {
+  --pw: #be123c;
+}
+
+.ale-pw-cyan {
+  --pw: #0e7490;
+}
+
+.ale-pw-indigo {
+  --pw: #4f46e5;
+}
 
 /* Ikon umum */
-.ale-ikon { width: 1.25rem; height: 1.25rem; flex: none; }
+.ale-ikon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+}
 
 /* =========================================================
    5. SIDEBAR — tema gelap (palet logo ALE)
@@ -594,7 +1040,8 @@ img.ale-avatar { background: var(--ale-latar); }
   height: calc(100vh - var(--ale-topbar-h));
   height: calc(100dvh - var(--ale-topbar-h));
   padding: 0.9rem 0 0;
-  overflow: hidden;                             /* scroll hanya di .ale-nav */
+  overflow: hidden;
+  /* scroll hanya di .ale-nav */
   background: var(--ale-side-bg);
   color: #e6ecf5;
   box-shadow:
@@ -604,7 +1051,9 @@ img.ale-avatar { background: var(--ale-latar); }
 }
 
 /* Brand-block: TIDAK dipakai lagi (brand di topbar) */
-.ale-side-head { display: none !important; }
+.ale-side-head {
+  display: none !important;
+}
 
 /* Area menu yang bergulir — hanya ini yang menggeser */
 .ale-nav {
@@ -618,14 +1067,23 @@ img.ale-avatar { background: var(--ale-latar); }
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgb(255 255 255 / 0.2) transparent;
-  scrollbar-gutter: stable;                     /* hindari layout shift saat scrollbar muncul */
+  scrollbar-gutter: stable;
+  /* hindari layout shift saat scrollbar muncul */
 }
-.ale-nav::-webkit-scrollbar { width: 8px; }
+
+.ale-nav::-webkit-scrollbar {
+  width: 8px;
+}
+
 .ale-nav::-webkit-scrollbar-thumb {
   background: rgb(255 255 255 / 0.16);
   border-radius: 4px;
 }
-.ale-nav::-webkit-scrollbar-track { background: transparent; }
+
+.ale-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .ale-nav:focus-visible {
   outline: 3px solid var(--ale-mint);
   outline-offset: -3px;
@@ -633,7 +1091,9 @@ img.ale-avatar { background: var(--ale-latar); }
 }
 
 /* Grup menu */
-.ale-grup-menu + .ale-grup-menu { margin-top: 3px; }
+.ale-grup-menu+.ale-grup-menu {
+  margin-top: 3px;
+}
 
 .ale-grup-btn {
   --nav-c: inherit;
@@ -654,8 +1114,9 @@ img.ale-avatar { background: var(--ale-latar); }
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
+
 /* Ikon grup dalam "ubin" membulat */
-.ale-grup-btn > .ale-ikon:first-child {
+.ale-grup-btn>.ale-ikon:first-child {
   box-sizing: content-box;
   display: block;
   width: 1.15rem;
@@ -666,16 +1127,22 @@ img.ale-avatar { background: var(--ale-latar); }
   color: var(--ale-mint);
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
+
 .ale-grup-btn:hover {
   background: rgb(255 255 255 / 0.09);
   color: #fff;
 }
-.ale-grup-btn:hover > .ale-ikon:first-child { background: rgb(255 255 255 / 0.15); }
+
+.ale-grup-btn:hover>.ale-ikon:first-child {
+  background: rgb(255 255 255 / 0.15);
+}
+
 .ale-grup-btn:focus-visible {
   outline: 3px solid var(--ale-mint);
   outline-offset: 2px;
   border-radius: 0.8rem;
 }
+
 .ale-grup-teks {
   flex: 1;
   min-width: 0;
@@ -683,7 +1150,11 @@ img.ale-avatar { background: var(--ale-latar); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ale-grup-btn[aria-expanded="true"] .ale-chev { transform: rotate(180deg); }
+
+.ale-grup-btn[aria-expanded="true"] .ale-chev {
+  transform: rotate(180deg);
+}
+
 .ale-grup-btn .ale-chev {
   width: 0.95rem;
   height: 0.95rem;
@@ -691,13 +1162,14 @@ img.ale-avatar { background: var(--ale-latar); }
 }
 
 /* Grup yang berisi halaman aktif */
-.has-aktif > .ale-grup-btn {
+.has-aktif>.ale-grup-btn {
   background: linear-gradient(90deg,
-    rgb(94 234 212 / 0.16) 0%,
-    rgb(94 234 212 / 0.02) 100%);
+      rgb(94 234 212 / 0.16) 0%,
+      rgb(94 234 212 / 0.02) 100%);
   color: #fff;
 }
-.has-aktif > .ale-grup-btn > .ale-ikon:first-child {
+
+.has-aktif>.ale-grup-btn>.ale-ikon:first-child {
   background: linear-gradient(135deg, var(--ale-teal-500), var(--ale-hijau));
   color: #fff;
   box-shadow: 0 6px 14px -6px rgb(19 185 171 / 0.7);
@@ -724,6 +1196,7 @@ img.ale-avatar { background: var(--ale-latar); }
   text-decoration: none;
   transition: background 0.14s, color 0.14s;
 }
+
 .ale-sub-teks {
   flex: 1;
   min-width: 0;
@@ -731,23 +1204,27 @@ img.ale-avatar { background: var(--ale-latar); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 a.ale-sub:hover {
   background: rgb(255 255 255 / 0.09);
   color: #fff;
 }
+
 .ale-sub:focus-visible {
   outline: 3px solid var(--ale-mint);
   outline-offset: 2px;
   border-radius: 0.6rem;
 }
+
 .ale-sub.aktif,
 .ale-sub[aria-current="page"] {
   background: linear-gradient(90deg,
-    rgb(94 234 212 / 0.24) 0%,
-    rgb(94 234 212 / 0.05) 100%);
+      rgb(94 234 212 / 0.24) 0%,
+      rgb(94 234 212 / 0.05) 100%);
   color: #fff;
   font-weight: 700;
 }
+
 .ale-sub.aktif::before,
 .ale-sub[aria-current="page"]::before {
   content: "";
@@ -760,16 +1237,19 @@ a.ale-sub:hover {
   background: var(--ale-mint);
   box-shadow: 0 0 10px rgb(94 234 212 / 0.6);
 }
+
 .ale-sub-luar {
   width: 0.85rem;
   height: 0.85rem;
   color: rgb(255 255 255 / 0.5);
 }
+
 .ale-sub.is-soon {
   color: var(--ale-side-teks-dim);
   font-weight: 500;
   cursor: default;
 }
+
 .ale-tag {
   flex: none;
   padding: 0.05rem 0.45rem;
@@ -792,11 +1272,13 @@ a.ale-sub:hover {
   background: rgb(0 0 0 / 0.2);
   line-height: 1.3;
 }
+
 .ale-foot-avatar {
   display: grid;
   place-items: center;
   flex: none;
-  width: 2.4rem; height: 2.4rem;
+  width: 2.4rem;
+  height: 2.4rem;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--ale-teal-500), var(--ale-hijau));
   color: #fff;
@@ -804,7 +1286,11 @@ a.ale-sub:hover {
   font-weight: 800;
   box-shadow: 0 0 0 2px rgb(255 255 255 / 0.18);
 }
-.ale-foot-teks { min-width: 0; }
+
+.ale-foot-teks {
+  min-width: 0;
+}
+
 .ale-side-foot small {
   display: block;
   font-size: 0.66rem;
@@ -813,6 +1299,7 @@ a.ale-sub:hover {
   letter-spacing: 0.08em;
   color: rgb(255 255 255 / 0.55);
 }
+
 .ale-side-foot strong {
   display: block;
   margin-top: 0.1rem;
@@ -823,6 +1310,7 @@ a.ale-sub:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .ale-side-foot #sidebarUserRole {
   font-size: 0.76rem;
   color: rgb(255 255 255 / 0.68);
@@ -832,24 +1320,58 @@ a.ale-sub:hover {
 }
 
 /* Warna aksen grup menu guru (dipatok per id agar stabil) */
-.ale-grup-menu:has(> .ale-grup-btn[data-grup="x-chat"])       { --nav-c: #4f46e5; }
-.ale-grup-menu:has(> .ale-grup-btn[data-grup="datadasar"])    { --nav-c: #0e7490; }
-.ale-grup-menu:has(> .ale-grup-btn[data-grup="perencanaan"])  { --nav-c: #0f766e; }
-.ale-grup-menu:has(> .ale-grup-btn[data-grup="pelaksanaan"])  { --nav-c: #047857; }
-.ale-grup-menu:has(> .ale-grup-btn[data-grup="asesmen"])      { --nav-c: #4d7c0f; }
-.ale-grup-menu:has(> .ale-grup-btn[data-grup="pemantauan"])   { --nav-c: #b45309; }
-.ale-grup-menu:has(> .ale-grup-btn[data-grup="refleksi"])     { --nav-c: #c2410c; }
-.ale-grup-menu:has(> .ale-grup-btn[data-grup="laporan"])      { --nav-c: #be123c; }
-.ale-grup-menu:has(> .ale-grup-btn[data-grup="kolaborasi"])   { --nav-c: #a21caf; }
-.ale-grup-menu:has(> .ale-grup-btn[data-grup="pengaturan"])   { --nav-c: #6d28d9; }
+.ale-grup-menu:has(> .ale-grup-btn[data-grup="x-chat"]) {
+  --nav-c: #4f46e5;
+}
+
+.ale-grup-menu:has(> .ale-grup-btn[data-grup="datadasar"]) {
+  --nav-c: #0e7490;
+}
+
+.ale-grup-menu:has(> .ale-grup-btn[data-grup="perencanaan"]) {
+  --nav-c: #0f766e;
+}
+
+.ale-grup-menu:has(> .ale-grup-btn[data-grup="pelaksanaan"]) {
+  --nav-c: #047857;
+}
+
+.ale-grup-menu:has(> .ale-grup-btn[data-grup="asesmen"]) {
+  --nav-c: #4d7c0f;
+}
+
+.ale-grup-menu:has(> .ale-grup-btn[data-grup="pemantauan"]) {
+  --nav-c: #b45309;
+}
+
+.ale-grup-menu:has(> .ale-grup-btn[data-grup="refleksi"]) {
+  --nav-c: #c2410c;
+}
+
+.ale-grup-menu:has(> .ale-grup-btn[data-grup="laporan"]) {
+  --nav-c: #be123c;
+}
+
+.ale-grup-menu:has(> .ale-grup-btn[data-grup="kolaborasi"]) {
+  --nav-c: #a21caf;
+}
+
+.ale-grup-menu:has(> .ale-grup-btn[data-grup="pengaturan"]) {
+  --nav-c: #6d28d9;
+}
 
 /* Tirai offcanvas (mobile) — default tersembunyi */
-.ale-tirai { display: none; }
+.ale-tirai {
+  display: none;
+}
 
 /* =========================================================
    6. KONTEN UTAMA
    ========================================================= */
-.ale-main { outline: none; scroll-margin-top: calc(var(--ale-topbar-h) + 1rem); }
+.ale-main {
+  outline: none;
+  scroll-margin-top: calc(var(--ale-topbar-h) + 1rem);
+}
 
 /* =========================================================
    7. HERO DASHBOARD
@@ -868,6 +1390,7 @@ a.ale-sub:hover {
   background: var(--ale-hero);
   box-shadow: 0 18px 40px -18px rgb(48 23 117 / 0.38);
 }
+
 .ale-hero::before,
 .ale-hero::after {
   content: "";
@@ -876,16 +1399,27 @@ a.ale-sub:hover {
   pointer-events: none;
   background: rgb(255 255 255 / 0.1);
 }
+
 .ale-hero::before {
-  right: -4.5rem; top: -5rem;
-  width: 17rem; height: 17rem;
+  right: -4.5rem;
+  top: -5rem;
+  width: 17rem;
+  height: 17rem;
   background: rgb(255 255 255 / 0.13);
 }
+
 .ale-hero::after {
-  left: -3.5rem; bottom: -7rem;
-  width: 14rem; height: 14rem;
+  left: -3.5rem;
+  bottom: -7rem;
+  width: 14rem;
+  height: 14rem;
 }
-.ale-hero-teks { position: relative; z-index: 1; min-width: 0; }
+
+.ale-hero-teks {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
 
 .ale-kicker {
   display: inline-flex;
@@ -899,7 +1433,11 @@ a.ale-sub:hover {
   font-size: 0.82rem;
   font-weight: 700;
 }
-.ale-kicker .ale-ikon { width: 1rem; height: 1rem; }
+
+.ale-kicker .ale-ikon {
+  width: 1rem;
+  height: 1rem;
+}
 
 .ale-hero h1 {
   font-size: clamp(1.45rem, 2.8vw, 2.1rem);
@@ -908,13 +1446,18 @@ a.ale-sub:hover {
   letter-spacing: -0.025em;
   overflow-wrap: anywhere;
 }
-.ale-nama { color: #fde68a; }
+
+.ale-nama {
+  color: #fde68a;
+}
+
 .ale-hero p {
   margin-top: 0.5rem;
   max-width: 40rem;
   font-size: 0.95rem;
   color: rgb(255 255 255 / 0.95);
 }
+
 .ale-tanggal {
   position: relative;
   z-index: 1;
@@ -928,7 +1471,13 @@ a.ale-sub:hover {
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
-.ale-tanggal span { display: block; font-size: 0.82rem; font-weight: 700; }
+
+.ale-tanggal span {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .ale-tanggal strong {
   display: block;
   margin: 0.05rem 0;
@@ -939,16 +1488,25 @@ a.ale-sub:hover {
 }
 
 /* Dashboard admin: fokus manajemen sekolah atau operasional platform */
-.ale-admin-dashboard { display: grid; gap: 1.25rem; }
-.ale-admin-dashboard .ale-hero { margin-bottom: 0; }
+.ale-admin-dashboard {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.ale-admin-dashboard .ale-hero {
+  margin-bottom: 0;
+}
+
 .ale-admin-dashboard.is-admin-sekolah .ale-admin-hero {
   background: linear-gradient(120deg, #075985 0%, #0f766e 58%, #059669 100%);
   box-shadow: 0 18px 40px -18px rgb(15 118 110 / 0.55);
 }
+
 .ale-admin-dashboard.is-superadmin .ale-admin-hero {
   background: linear-gradient(120deg, #172554 0%, #3730a3 55%, #0f766e 100%);
   box-shadow: 0 18px 40px -18px rgb(48 23 117 / 0.42);
 }
+
 .ale-admin-cakupan {
   position: relative;
   z-index: 1;
@@ -961,8 +1519,12 @@ a.ale-sub:hover {
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
+
 .ale-admin-cakupan span,
-.ale-admin-cakupan strong { display: block; }
+.ale-admin-cakupan strong {
+  display: block;
+}
+
 .ale-admin-cakupan span {
   margin-bottom: 0.25rem;
   color: rgb(255 255 255 / 0.82);
@@ -971,9 +1533,21 @@ a.ale-sub:hover {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.ale-admin-cakupan strong { color: #fff; font-size: 1rem; overflow-wrap: anywhere; }
-.ale-admin-modul { border-top: 4px solid #0f766e; }
-.is-superadmin .ale-admin-modul { border-top-color: #4338ca; }
+
+.ale-admin-cakupan strong {
+  color: #fff;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.ale-admin-modul {
+  border-top: 4px solid #0f766e;
+}
+
+.is-superadmin .ale-admin-modul {
+  border-top-color: #4338ca;
+}
+
 .ale-admin-kicker {
   margin: 0 0 0.3rem;
   color: var(--ale-teal-700);
@@ -982,8 +1556,15 @@ a.ale-sub:hover {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.is-superadmin .ale-admin-kicker { color: #4338ca; }
-.ale-admin-modul .ale-kartu-kepala { align-items: center; }
+
+.is-superadmin .ale-admin-kicker {
+  color: #4338ca;
+}
+
+.ale-admin-modul .ale-kartu-kepala {
+  align-items: center;
+}
+
 .ale-admin-pill {
   flex: none;
   padding: 0.35rem 0.7rem;
@@ -993,12 +1574,18 @@ a.ale-sub:hover {
   font-size: 0.75rem;
   font-weight: 800;
 }
-.is-superadmin .ale-admin-pill { background: #f0fdfa; color: #115e59; }
+
+.is-superadmin .ale-admin-pill {
+  background: #f0fdfa;
+  color: #115e59;
+}
+
 .ale-admin-aksi-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
 }
+
 .ale-admin-aksi {
   display: flex;
   align-items: flex-start;
@@ -1013,17 +1600,26 @@ a.ale-sub:hover {
   text-decoration: none;
   transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
 }
+
 .ale-admin-aksi:hover {
   transform: translateY(-2px);
   border-color: #0f766e;
   box-shadow: 0 10px 24px -14px rgb(15 23 42 / 0.35);
 }
-.is-superadmin .ale-admin-aksi:hover { border-color: #4338ca; }
+
+.is-superadmin .ale-admin-aksi:hover {
+  border-color: #4338ca;
+}
+
 .ale-admin-aksi:focus-visible {
   outline: 3px solid #0f766e;
   outline-offset: 2px;
 }
-.is-superadmin .ale-admin-aksi:focus-visible { outline-color: #4338ca; }
+
+.is-superadmin .ale-admin-aksi:focus-visible {
+  outline-color: #4338ca;
+}
+
 .ale-admin-aksi-ikon {
   display: grid;
   place-items: center;
@@ -1035,26 +1631,57 @@ a.ale-sub:hover {
   color: #0f766e;
   font-size: 1.1rem;
 }
-.is-superadmin .ale-admin-aksi-ikon { background: #eef2ff; color: #4338ca; }
-.ale-admin-aksi-teks { flex: 1; min-width: 0; }
+
+.is-superadmin .ale-admin-aksi-ikon {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.ale-admin-aksi-teks {
+  flex: 1;
+  min-width: 0;
+}
+
 .ale-admin-aksi-teks strong,
-.ale-admin-aksi-teks small { display: block; }
-.ale-admin-aksi-teks strong { font-size: 0.9rem; line-height: 1.3; }
+.ale-admin-aksi-teks small {
+  display: block;
+}
+
+.ale-admin-aksi-teks strong {
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
 .ale-admin-aksi-teks small {
   margin-top: 0.25rem;
   color: var(--ale-muted);
   font-size: 0.78rem;
   line-height: 1.4;
 }
-.ale-admin-aksi-panah { flex: none; color: #64748b; }
-.ale-admin-aksi-panah .bi { font-size: 0.85rem; }
-.ale-admin-prinsip { border-left: 4px solid #0f766e; }
-.is-superadmin .ale-admin-prinsip { border-left-color: #4338ca; }
+
+.ale-admin-aksi-panah {
+  flex: none;
+  color: #64748b;
+}
+
+.ale-admin-aksi-panah .bi {
+  font-size: 0.85rem;
+}
+
+.ale-admin-prinsip {
+  border-left: 4px solid #0f766e;
+}
+
+.is-superadmin .ale-admin-prinsip {
+  border-left-color: #4338ca;
+}
+
 .ale-admin-prinsip-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
 }
+
 .ale-admin-prinsip-grid p {
   margin: 0;
   padding: 0.85rem;
@@ -1064,7 +1691,12 @@ a.ale-sub:hover {
   font-size: 0.84rem;
   line-height: 1.55;
 }
-.ale-admin-prinsip-grid strong { display: block; margin-bottom: 0.25rem; color: var(--ale-ink); }
+
+.ale-admin-prinsip-grid strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--ale-ink);
+}
 
 /* Grid & kolom */
 .ale-grid {
@@ -1073,7 +1705,12 @@ a.ale-sub:hover {
   gap: 1.25rem;
   align-items: start;
 }
-.ale-kolom { display: grid; gap: 1.25rem; min-width: 0; }
+
+.ale-kolom {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
 
 /* =========================================================
    8. KARTU UMUM
@@ -1090,6 +1727,7 @@ a.ale-sub:hover {
   box-shadow: var(--ale-bayangan);
   scroll-margin-top: calc(var(--ale-topbar-h) + 1rem);
 }
+
 .ale-kartu::before {
   content: "";
   position: absolute;
@@ -1097,12 +1735,30 @@ a.ale-sub:hover {
   height: 3px;
   background: var(--aksen);
 }
-.ale-aksen-sky     { --aksen: #0369a1; }
-.ale-aksen-indigo  { --aksen: #4f46e5; }
-.ale-aksen-teal    { --aksen: #0f766e; }
-.ale-aksen-emerald { --aksen: #047857; }
-.ale-aksen-amber   { --aksen: #b45309; }
-.ale-aksen-grape   { --aksen: #7c3aed; }
+
+.ale-aksen-sky {
+  --aksen: #0369a1;
+}
+
+.ale-aksen-indigo {
+  --aksen: #4f46e5;
+}
+
+.ale-aksen-teal {
+  --aksen: #0f766e;
+}
+
+.ale-aksen-emerald {
+  --aksen: #047857;
+}
+
+.ale-aksen-amber {
+  --aksen: #b45309;
+}
+
+.ale-aksen-grape {
+  --aksen: #7c3aed;
+}
 
 .ale-kartu-kepala {
   display: flex;
@@ -1112,6 +1768,7 @@ a.ale-sub:hover {
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
+
 .ale-kartu-judul {
   display: flex;
   align-items: center;
@@ -1122,13 +1779,17 @@ a.ale-sub:hover {
   color: var(--ale-teks);
   margin: 0;
 }
-.ale-kartu-judul .ale-ikon { color: var(--aksen); }
+
+.ale-kartu-judul .ale-ikon {
+  color: var(--aksen);
+}
 
 .card__header {
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--ale-garis);
   margin-bottom: 0.9rem;
 }
+
 .ale-sub-judul {
   margin: 0.4rem 0 0.6rem;
   font-size: 0.95rem;
@@ -1150,14 +1811,39 @@ a.ale-sub:hover {
   color: #075985;
   font: 700 0.78rem var(--font-sans, system-ui, sans-serif);
 }
-.ale-chip .ale-ikon { width: 0.9rem; height: 0.9rem; }
-.ale-chip-aksi { min-height: 2.75rem; cursor: pointer; }
-.ale-chip-aksi:hover:not(:disabled) { background: #bae6fd; }
-.ale-chip-aksi:disabled { cursor: progress; opacity: 0.75; }
-.ale-chip-aksi:disabled .ale-ikon { animation: spin 0.8s linear infinite; }
 
-.ale-chip-admin { background: #dbeafe; color: #1e40af; }
-.ale-chip-kunci { background: #fee2e2; color: #991b1b; }
+.ale-chip .ale-ikon {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.ale-chip-aksi {
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.ale-chip-aksi:hover:not(:disabled) {
+  background: #bae6fd;
+}
+
+.ale-chip-aksi:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.ale-chip-aksi:disabled .ale-ikon {
+  animation: spin 0.8s linear infinite;
+}
+
+.ale-chip-admin {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.ale-chip-kunci {
+  background: #fee2e2;
+  color: #991b1b;
+}
 
 /* =========================================================
    10. STAT
@@ -1167,6 +1853,7 @@ a.ale-sub:hover {
   grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
   gap: 0.875rem;
 }
+
 .ale-stat {
   --g: linear-gradient(135deg, #0369a1, #0e7490);
   --tint: #f0f9ff;
@@ -1179,20 +1866,43 @@ a.ale-sub:hover {
   border-radius: 1rem;
   background: linear-gradient(180deg, #fff 0%, var(--tint) 100%);
 }
-.ale-stat-sky   { --g: linear-gradient(135deg, #0369a1, #0e7490); --tint: #f0f9ff; --sh: rgb(3 105 161 / 0.35); }
-.ale-stat-grape { --g: linear-gradient(135deg, #4f46e5, #6d28d9); --tint: #f5f3ff; --sh: rgb(79 70 229 / 0.35); }
-.ale-stat-mint  { --g: linear-gradient(135deg, #059669, #047857); --tint: #ecfdf5; --sh: rgb(4 120 87 / 0.35); }
+
+.ale-stat-sky {
+  --g: linear-gradient(135deg, #0369a1, #0e7490);
+  --tint: #f0f9ff;
+  --sh: rgb(3 105 161 / 0.35);
+}
+
+.ale-stat-grape {
+  --g: linear-gradient(135deg, #4f46e5, #6d28d9);
+  --tint: #f5f3ff;
+  --sh: rgb(79 70 229 / 0.35);
+}
+
+.ale-stat-mint {
+  --g: linear-gradient(135deg, #059669, #047857);
+  --tint: #ecfdf5;
+  --sh: rgb(4 120 87 / 0.35);
+}
+
 .ale-stat-ikon {
   display: grid;
   place-items: center;
-  width: 2.5rem; height: 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
   margin-bottom: 0.5rem;
   border-radius: 0.8rem;
   background: var(--g);
   color: #fff;
   box-shadow: 0 6px 14px -6px var(--sh);
 }
-.ale-stat-label { font-size: 0.82rem; font-weight: 600; color: var(--ale-muted); }
+
+.ale-stat-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ale-muted);
+}
+
 .ale-stat-nilai {
   font-size: 1.75rem;
   font-weight: 800;
@@ -1200,7 +1910,11 @@ a.ale-sub:hover {
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-.ale-stat-foot { font-size: 0.78rem; color: var(--ale-muted); }
+
+.ale-stat-foot {
+  font-size: 0.78rem;
+  color: var(--ale-muted);
+}
 
 .ale-bar {
   height: 0.4rem;
@@ -1209,9 +1923,11 @@ a.ale-sub:hover {
   border-radius: 9999px;
   background: rgb(15 23 42 / 0.1);
 }
-.ale-bar > span {
+
+.ale-bar>span {
   display: block;
-  width: 0; height: 100%;
+  width: 0;
+  height: 100%;
   border-radius: inherit;
   background: var(--g);
   transition: width 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -1220,7 +1936,9 @@ a.ale-sub:hover {
 /* =========================================================
    11. TIMELINE JADWAL (dashboard)
    ========================================================= */
-.ale-jadwal-utama { margin-bottom: 1.25rem; }
+.ale-jadwal-utama {
+  margin-bottom: 1.25rem;
+}
 
 .ale-timeline {
   margin: 0;
@@ -1228,14 +1946,18 @@ a.ale-sub:hover {
   list-style: none;
   position: relative;
 }
+
 .ale-timeline::before {
   content: "";
   position: absolute;
-  left: 82px; top: 18px; bottom: 18px;
+  left: 82px;
+  top: 18px;
+  bottom: 18px;
   width: 2px;
   background: linear-gradient(180deg, #e2e8f0 0%, #e2e8f0 60%, transparent 100%);
   z-index: 0;
 }
+
 .ale-timeline-item {
   display: grid;
   grid-template-columns: 70px 24px minmax(0, 1fr) auto;
@@ -1245,19 +1967,24 @@ a.ale-sub:hover {
   position: relative;
   z-index: 1;
 }
-.ale-timeline-item + .ale-timeline-item { border-top: 1px solid #eef2f7; }
+
+.ale-timeline-item+.ale-timeline-item {
+  border-top: 1px solid #eef2f7;
+}
 
 .ale-timeline-waktu {
   text-align: right;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
+
 .ale-timeline-waktu strong {
   display: block;
   font-size: 0.98rem;
   font-weight: 800;
   color: #0f172a;
 }
+
 .ale-timeline-waktu span {
   display: block;
   font-size: 0.78rem;
@@ -1267,12 +1994,15 @@ a.ale-sub:hover {
 .ale-timeline-dot {
   display: grid;
   place-items: center;
-  width: 24px; height: 24px;
+  width: 24px;
+  height: 24px;
   position: relative;
 }
+
 .ale-timeline-dot::before {
   content: "";
-  width: 12px; height: 12px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #cbd5e1;
   box-shadow: 0 0 0 4px #fff;
@@ -1285,13 +2015,18 @@ a.ale-sub:hover {
   flex-direction: column;
   gap: 2px;
 }
+
 .ale-timeline-judul {
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--ale-ink);
   overflow-wrap: anywhere;
 }
-.ale-timeline-kelas { font-size: 0.82rem; color: var(--ale-muted); }
+
+.ale-timeline-kelas {
+  font-size: 0.82rem;
+  color: var(--ale-muted);
+}
 
 .ale-timeline-status {
   font-size: 0.72rem;
@@ -1301,35 +2036,61 @@ a.ale-sub:hover {
   white-space: nowrap;
   letter-spacing: 0.02em;
 }
+
 .ale-timeline-item.sekarang .ale-timeline-dot::before {
   background: #10b981;
   box-shadow: 0 0 0 4px #fff, 0 0 0 6px rgba(16, 185, 129, 0.28);
   animation: ale-pulse 2s ease-in-out infinite;
 }
+
 .ale-timeline-item.sekarang .ale-timeline-status {
   background: #d1fae5;
   color: #065f46;
 }
-.ale-timeline-item.selesai .ale-timeline-dot::before { background: #94a3b8; }
+
+.ale-timeline-item.selesai .ale-timeline-dot::before {
+  background: #94a3b8;
+}
+
 .ale-timeline-item.selesai .ale-timeline-status {
   background: #f1f5f9;
   color: #64748b;
 }
-.ale-timeline-item.selesai .ale-timeline-judul { color: var(--ale-muted); }
-.ale-timeline-item.akan-datang .ale-timeline-dot::before { background: #4f46e5; }
+
+.ale-timeline-item.selesai .ale-timeline-judul {
+  color: var(--ale-muted);
+}
+
+.ale-timeline-item.akan-datang .ale-timeline-dot::before {
+  background: #4f46e5;
+}
+
 .ale-timeline-item.akan-datang .ale-timeline-status {
   background: #e0e7ff;
   color: #3730a3;
 }
+
 @keyframes ale-pulse {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.15); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
 }
 
 /* =========================================================
    12. DAFTAR & BARIS CHAT
    ========================================================= */
-.ale-lini { margin: 0; padding: 0; list-style: none; }
+.ale-lini {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .ale-lini li {
   display: grid;
   grid-template-columns: 4.25rem minmax(0, 1fr);
@@ -1339,15 +2100,24 @@ a.ale-sub:hover {
   font-size: 0.92rem;
   overflow-wrap: anywhere;
 }
-.ale-lini li + li { border-top: 1px solid #eef2f7; }
+
+.ale-lini li+li {
+  border-top: 1px solid #eef2f7;
+}
+
 .ale-jam {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: #4338ca;
 }
 
-.ale-daftar { margin: 0; padding: 0; list-style: none; }
-.ale-daftar > li {
+.ale-daftar {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ale-daftar>li {
   display: flex;
   align-items: flex-start;
   gap: 0.7rem;
@@ -1355,15 +2125,24 @@ a.ale-sub:hover {
   font-size: 0.92rem;
   overflow-wrap: anywhere;
 }
-.ale-daftar > li + li { border-top: 1px solid #eef2f7; }
+
+.ale-daftar>li+li {
+  border-top: 1px solid #eef2f7;
+}
+
 .ale-cek {
   flex: none;
-  width: 1.1rem; height: 1.1rem;
+  width: 1.1rem;
+  height: 1.1rem;
   margin-top: 0.2rem;
   border: 2px solid #94a3b8;
   border-radius: 50%;
 }
-.ale-daftar > li:has(> .ale-chat-baris) { padding: 0; }
+
+.ale-daftar>li:has(> .ale-chat-baris) {
+  padding: 0;
+}
+
 .ale-chat-baris {
   display: grid;
   grid-template-columns: 2.5rem minmax(0, 1fr) auto;
@@ -1375,29 +2154,37 @@ a.ale-sub:hover {
   color: var(--ale-ink);
   text-decoration: none;
 }
-.ale-chat-baris:hover { background: #f8fafc; }
+
+.ale-chat-baris:hover {
+  background: #f8fafc;
+}
+
 .ale-avatar-kecil {
   display: grid;
   place-items: center;
-  width: 2.5rem; height: 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
   background: linear-gradient(135deg, #0f766e, #0e7490);
   color: #fff;
   font-size: 0.82rem;
   font-weight: 800;
 }
+
 .ale-chat-isi {
   display: flex;
   flex-direction: column;
   min-width: 0;
   line-height: 1.3;
 }
+
 .ale-chat-isi strong {
   font-size: 0.9rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .ale-chat-isi span {
   font-size: 0.82rem;
   color: var(--ale-muted);
@@ -1405,6 +2192,7 @@ a.ale-sub:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .ale-chat-meta {
   display: flex;
   flex-direction: column;
@@ -1413,6 +2201,7 @@ a.ale-sub:hover {
   font-size: 0.75rem;
   color: var(--ale-muted);
 }
+
 .ale-badge {
   min-width: 1.4rem;
   padding: 0.1rem 0.45rem;
@@ -1436,18 +2225,30 @@ a.ale-sub:hover {
   font-weight: 700;
   text-decoration: none;
 }
-.ale-tautan:hover { text-decoration: underline; text-underline-offset: 3px; }
-.ale-tautan .ale-ikon { width: 1rem; height: 1rem; }
+
+.ale-tautan:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ale-tautan .ale-ikon {
+  width: 1rem;
+  height: 1rem;
+}
 
 /* =========================================================
    13. AKSES CEPAT
    ========================================================= */
-.ale-akses { margin-bottom: 1.25rem; }
+.ale-akses {
+  margin-bottom: 1.25rem;
+}
+
 .ale-aksi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: 0.75rem;
 }
+
 .ale-aksi {
   --qa: #0f766e;
   display: flex;
@@ -1461,22 +2262,32 @@ a.ale-sub:hover {
   text-decoration: none;
   transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
 }
-.ale-aksi-teal   { --qa: #0f766e; }
-.ale-aksi-indigo { --qa: #4f46e5; }
+
+.ale-aksi-teal {
+  --qa: #0f766e;
+}
+
+.ale-aksi-indigo {
+  --qa: #4f46e5;
+}
+
 .ale-aksi-ikon {
   display: grid;
   place-items: center;
   flex: none;
-  width: 2.5rem; height: 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 0.8rem;
   background: var(--qa);
   color: #fff;
 }
+
 .ale-aksi-teks strong {
   display: block;
   font-size: 0.9rem;
   line-height: 1.3;
 }
+
 .ale-aksi-teks small {
   display: block;
   margin-top: 0.15rem;
@@ -1484,21 +2295,31 @@ a.ale-sub:hover {
   line-height: 1.4;
   color: var(--ale-muted);
 }
+
 a.ale-aksi:hover {
   transform: translateY(-2px);
   border-color: var(--qa);
   box-shadow: 0 10px 24px -12px rgb(15 23 42 / 0.25);
 }
+
 .ale-aksi.is-soon {
   background: #f8fafc;
   border-style: dashed;
 }
-.ale-aksi.is-soon .ale-aksi-ikon { background: #e2e8f0; color: #475569; }
+
+.ale-aksi.is-soon .ale-aksi-ikon {
+  background: #e2e8f0;
+  color: #475569;
+}
 
 /* =========================================================
    14. SKELETON / KOSONG / GALAT
    ========================================================= */
-.ale-skel { display: grid; gap: 0.65rem; }
+.ale-skel {
+  display: grid;
+  gap: 0.65rem;
+}
+
 .ale-skel span {
   display: block;
   height: 0.95rem;
@@ -1507,11 +2328,23 @@ a.ale-aksi:hover {
   background-image: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 37%, #eef2f7 63%);
   animation: ale-kilau 1.4s ease infinite;
 }
-.ale-skel span:nth-child(2) { width: 82%; }
-.ale-skel span:nth-child(3) { width: 58%; }
+
+.ale-skel span:nth-child(2) {
+  width: 82%;
+}
+
+.ale-skel span:nth-child(3) {
+  width: 58%;
+}
+
 @keyframes ale-kilau {
-  0%   { background-position: 100% 0; }
-  100% { background-position: 0 0; }
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: 0 0;
+  }
 }
 
 .ale-kosong {
@@ -1523,8 +2356,16 @@ a.ale-aksi:hover {
   color: var(--ale-muted);
   text-align: left;
 }
-.ale-kosong .ale-ikon { width: 1.4rem; height: 1.4rem; color: #94a3b8; }
-.ale-memuat { opacity: 0.6; }
+
+.ale-kosong .ale-ikon {
+  width: 1.4rem;
+  height: 1.4rem;
+  color: #94a3b8;
+}
+
+.ale-memuat {
+  opacity: 0.6;
+}
 
 .ale-galat {
   display: flex;
@@ -1540,6 +2381,7 @@ a.ale-aksi:hover {
   font-size: 0.88rem;
   font-weight: 500;
 }
+
 .ale-ulang {
   min-height: 2.25rem;
   padding: 0.3rem 0.2rem;
@@ -1560,11 +2402,13 @@ a.ale-aksi:hover {
   flex-direction: column;
   gap: 0.3rem;
 }
+
 .field label {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--ale-teks-2);
 }
+
 .input {
   width: 100%;
   padding: 0.55rem 0.7rem;
@@ -1574,15 +2418,18 @@ a.ale-aksi:hover {
   background: #fff;
   color: var(--ale-teks);
 }
+
 .input:focus {
   outline: 2px solid var(--ale-teal);
   outline-offset: 1px;
   border-color: var(--ale-teal);
 }
+
 .input[disabled] {
   background: #f1f5f9;
   cursor: not-allowed;
 }
+
 textarea.input {
   resize: vertical;
   min-height: 90px;
@@ -1593,18 +2440,25 @@ textarea.input {
   flex-direction: column;
   gap: 0.75rem;
 }
+
 .ale-form-grid {
   display: grid;
   gap: 0.75rem;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
+
 .ale-form-aksi {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
   flex-wrap: wrap;
 }
-.ale-info-teks { color: var(--ale-teks-2); font-size: 0.85rem; margin: 0; }
+
+.ale-info-teks {
+  color: var(--ale-teks-2);
+  font-size: 0.85rem;
+  margin: 0;
+}
 
 /* Toolbar form */
 .ale-toolbar {
@@ -1614,7 +2468,11 @@ textarea.input {
   align-items: flex-end;
   margin-bottom: 0.85rem;
 }
-.ale-toolbar .field { flex: 1 1 180px; }
+
+.ale-toolbar .field {
+  flex: 1 1 180px;
+}
+
 .ale-toolbar-aksi {
   display: flex;
   gap: 0.5rem;
@@ -1640,10 +2498,12 @@ textarea.input {
   border: 1px solid var(--ale-garis);
   background: #fff;
 }
+
 .ale-tabel {
   width: 100%;
   border-collapse: collapse;
 }
+
 .ale-tabel th,
 .ale-tabel td {
   padding: 0.6rem 0.75rem;
@@ -1651,6 +2511,7 @@ textarea.input {
   border-bottom: 1px solid var(--ale-garis);
   font-size: 0.9rem;
 }
+
 .ale-tabel thead th {
   background: var(--ale-latar);
   font-size: 0.78rem;
@@ -1658,7 +2519,11 @@ textarea.input {
   letter-spacing: 0.03em;
   color: var(--ale-teks-2);
 }
-.ale-tabel tbody tr:hover { background: rgba(34, 175, 167, 0.06); }
+
+.ale-tabel tbody tr:hover {
+  background: rgba(34, 175, 167, 0.06);
+}
+
 .ale-tabel-aksi {
   display: flex;
   gap: 0.35rem;
@@ -1670,10 +2535,25 @@ textarea.input {
    ========================================================= */
 
 /* Definisi list */
-.ale-dl { display: grid; gap: 0.5rem; }
-.ale-dl > div { display: grid; grid-template-columns: 160px 1fr; gap: 0.5rem; }
-.ale-dl dt { color: var(--ale-teks-2); font-size: 0.82rem; }
-.ale-dl dd { margin: 0; }
+.ale-dl {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.ale-dl>div {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 0.5rem;
+}
+
+.ale-dl dt {
+  color: var(--ale-teks-2);
+  font-size: 0.82rem;
+}
+
+.ale-dl dd {
+  margin: 0;
+}
 
 /* Grid mapel */
 .ale-grid-mapel {
@@ -1681,6 +2561,7 @@ textarea.input {
   gap: 0.6rem;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
+
 .ale-card-item {
   display: flex;
   flex-direction: column;
@@ -1690,12 +2571,27 @@ textarea.input {
   border-radius: 10px;
   background: #fff;
 }
-.ale-card-item span { color: var(--ale-teks-2); font-size: 0.85rem; }
+
+.ale-card-item span {
+  color: var(--ale-teks-2);
+  font-size: 0.85rem;
+}
 
 /* Tombol tambahan */
-.btn-sm { min-height: 2.75rem; padding: 0.3rem 0.6rem; font-size: 0.8rem; }
-.ale-btn-bahaya { color: #b91c1c; border-color: #fecaca; }
-.ale-btn-bahaya:hover { background: #fee2e2; }
+.btn-sm {
+  min-height: 2.75rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.ale-btn-bahaya {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.ale-btn-bahaya:hover {
+  background: #fee2e2;
+}
 
 /* Kartu chat compat (dipanggil dari chat.js lama) */
 .kartu {
@@ -1705,6 +2601,7 @@ textarea.input {
   border-radius: var(--ale-radius);
   box-shadow: var(--ale-bayangan);
 }
+
 .tombol {
   display: inline-flex;
   align-items: center;
@@ -1719,8 +2616,16 @@ textarea.input {
   cursor: pointer;
   font: 600 0.9rem var(--font-sans, system-ui, sans-serif);
 }
-.tombol:hover:not(:disabled) { color: #fff; filter: brightness(1.08); }
-.tombol:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.tombol:hover:not(:disabled) {
+  color: #fff;
+  filter: brightness(1.08);
+}
+
+.tombol:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* =========================================================
    18. DIALOG ULASAN
@@ -1733,17 +2638,23 @@ textarea.input {
   color: var(--ale-ink);
   box-shadow: 0 30px 70px -20px rgb(15 23 42 / 0.5);
 }
-.ale-dialog::backdrop { background: rgb(15 23 42 / 0.5); }
+
+.ale-dialog::backdrop {
+  background: rgb(15 23 42 / 0.5);
+}
+
 .ale-dialog h2 {
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
+
 .ale-dialog-ket {
   margin: 0.35rem 0 1.1rem;
   font-size: 0.9rem;
   color: var(--ale-muted);
 }
+
 .ale-bintang {
   display: flex;
   flex-wrap: wrap;
@@ -1754,6 +2665,7 @@ textarea.input {
   border: 0;
   min-width: 0;
 }
+
 .ale-bintang legend {
   width: 100%;
   margin-bottom: 0.35rem;
@@ -1762,6 +2674,7 @@ textarea.input {
   font-weight: 600;
   color: #1e293b;
 }
+
 .ale-bintang-item {
   position: relative;
   display: grid;
@@ -1770,28 +2683,37 @@ textarea.input {
   height: 2.75rem;
   cursor: pointer;
 }
+
 .ale-bintang-item input {
   position: absolute;
   inset: 0;
   opacity: 0;
   cursor: pointer;
 }
+
 .ale-bintang-ikon .ale-ikon {
   width: 1.9rem;
   height: 1.9rem;
   color: #94a3b8;
   transition: color 0.12s;
 }
-.ale-bintang-item.on .ale-ikon { color: #b45309; fill: #fbbf24; }
-.ale-bintang-item input:focus-visible + .ale-bintang-ikon {
+
+.ale-bintang-item.on .ale-ikon {
+  color: #b45309;
+  fill: #fbbf24;
+}
+
+.ale-bintang-item input:focus-visible+.ale-bintang-ikon {
   outline: 3px solid #2563eb;
   outline-offset: 2px;
   border-radius: 0.5rem;
 }
+
 .ale-dialog textarea.input {
   resize: vertical;
   min-height: 6rem;
 }
+
 .ale-dialog-aksi {
   display: flex;
   justify-content: flex-end;
@@ -1825,6 +2747,7 @@ textarea.input {
   max-width: min(360px, 92vw);
   pointer-events: none;
 }
+
 .ale-toast {
   pointer-events: auto;
   display: flex;
@@ -1842,8 +2765,16 @@ textarea.input {
   opacity: 0;
   transition: transform 0.18s ease, opacity 0.18s ease;
 }
-.ale-toast--masuk  { transform: translateY(0);    opacity: 1; }
-.ale-toast--keluar { transform: translateY(8px);  opacity: 0; }
+
+.ale-toast--masuk {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.ale-toast--keluar {
+  transform: translateY(8px);
+  opacity: 0;
+}
 
 .ale-toast__ikon {
   flex: none;
@@ -1853,8 +2784,18 @@ textarea.input {
   display: inline-grid;
   place-items: center;
 }
-.ale-toast__ikon svg { width: 100%; height: 100%; }
-.ale-toast__teks { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+.ale-toast__ikon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ale-toast__teks {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .ale-toast__tutup {
   flex: none;
   padding: 0 0.35rem;
@@ -1867,8 +2808,12 @@ textarea.input {
   opacity: 0.7;
   border-radius: 0.4rem;
 }
+
 .ale-toast__tutup:hover,
-.ale-toast__tutup:focus-visible { opacity: 1; }
+.ale-toast__tutup:focus-visible {
+  opacity: 1;
+}
+
 .ale-toast__tutup:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
@@ -1876,21 +2821,40 @@ textarea.input {
 
 /* Warna per jenis (menerima nama kanonik & alias) */
 .ale-toast--success,
-.ale-toast--ok         { background: #065f46; }
+.ale-toast--ok {
+  background: #065f46;
+}
+
 .ale-toast--error,
-.ale-toast--galat      { background: #991b1b; }
+.ale-toast--galat {
+  background: #991b1b;
+}
+
 .ale-toast--warning,
-.ale-toast--peringatan { background: #92400e; }
-.ale-toast--info       { background: #1e3a8a; }
+.ale-toast--peringatan {
+  background: #92400e;
+}
+
+.ale-toast--info {
+  background: #1e3a8a;
+}
 
 /* =========================================================
    20. FOKUS TAMBAHAN
    Mengembalikan radius asli komponen yang di-override style.css
    ========================================================= */
 .ale-menu-btn:focus-visible,
-.ale-chat-baris:focus-visible { border-radius: 0.75rem; }
-.ale-aksi:focus-visible      { border-radius: 1rem; }
-.ale-chip:focus-visible      { border-radius: 9999px; }
+.ale-chat-baris:focus-visible {
+  border-radius: 0.75rem;
+}
+
+.ale-aksi:focus-visible {
+  border-radius: 1rem;
+}
+
+.ale-chip:focus-visible {
+  border-radius: 9999px;
+}
 
 /* =========================================================
    21. RESPONSIF
@@ -1898,9 +2862,14 @@ textarea.input {
 
 /* Turunkan grid dashboard 2 kolom → 1 kolom */
 @media (max-width: 1180px) {
-  .ale-grid { grid-template-columns: minmax(0, 1fr); }
+  .ale-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   /* beri ruang lebih untuk judul halaman di topbar */
-  .ale-langganan { display: none; }
+  .ale-langganan {
+    display: none;
+  }
 }
 
 /* Mobile: sidebar offcanvas, app jadi 1 kolom */
@@ -1909,17 +2878,32 @@ textarea.input {
     grid-template-columns: minmax(0, 1fr);
     transition: none;
   }
-  .app > .main,
-  .app > .ale-main { padding: 1rem 1rem 2rem; }
 
-  .ale-topbar-inner { padding-right: 0.75rem; }
+  .app>.main,
+  .app>.ale-main {
+    padding: 1rem 1rem 2rem;
+  }
+
+  .ale-topbar-inner {
+    padding-right: 0.75rem;
+  }
+
   .ale-topbar-kiri {
     width: auto;
     padding: 0 0.6rem 0 0.75rem;
     transition: none;
   }
-  .ale-topbar-judul { margin-left: 0.85rem; padding-left: 0.7rem; }
-  .ale-topbar-aksi { gap: 0.5rem; max-width: 45%; padding-left: 0.5rem; }
+
+  .ale-topbar-judul {
+    margin-left: 0.85rem;
+    padding-left: 0.7rem;
+  }
+
+  .ale-topbar-aksi {
+    gap: 0.5rem;
+    max-width: 45%;
+    padding-left: 0.5rem;
+  }
 
   /* Sidebar = offcanvas */
   .ale-side {
@@ -1935,23 +2919,34 @@ textarea.input {
     visibility: hidden;
     transition: transform 0.25s ease, visibility 0s linear 0.25s;
   }
+
   .ale-side.is-open {
     transform: none;
     visibility: visible;
     transition-delay: 0s;
   }
+
   .ale-admin-aksi-grid,
-  .ale-admin-prinsip-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ale-admin-prinsip-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .ale-tirai {
     position: fixed;
     inset: var(--ale-topbar-h) 0 0 0;
     z-index: 65;
     background: rgb(15 23 42 / 0.45);
   }
-  .ale-tirai:not([hidden]) { display: block; }
+
+  .ale-tirai:not([hidden]) {
+    display: block;
+  }
 
   /* Timeline jadwal jadi lebih ringkas */
-  .ale-timeline::before { left: 60px; }
+  .ale-timeline::before {
+    left: 60px;
+  }
+
   .ale-timeline-item {
     grid-template-columns: 54px 20px minmax(0, 1fr);
     grid-template-areas:
@@ -1960,52 +2955,118 @@ textarea.input {
     row-gap: 4px;
     padding: 14px 0;
   }
-  .ale-timeline-waktu  { grid-area: waktu; }
-  .ale-timeline-dot    { grid-area: dot; align-self: start; margin-top: 2px; }
-  .ale-timeline-isi    { grid-area: isi; }
-  .ale-timeline-status { grid-area: status; justify-self: start; }
+
+  .ale-timeline-waktu {
+    grid-area: waktu;
+  }
+
+  .ale-timeline-dot {
+    grid-area: dot;
+    align-self: start;
+    margin-top: 2px;
+  }
+
+  .ale-timeline-isi {
+    grid-area: isi;
+  }
+
+  .ale-timeline-status {
+    grid-area: status;
+    justify-self: start;
+  }
 }
 
 @media (max-width: 820px) {
-  .ale-akun-teks { display: none; }
-  .ale-logo-sekolah { display: none; }
-  .ale-akun { padding: 0.15rem; border-color: transparent; background: none; }
+  .ale-akun-teks {
+    display: none;
+  }
+
+  .ale-logo-sekolah {
+    display: none;
+  }
+
+  .ale-akun {
+    padding: 0.15rem;
+    border-color: transparent;
+    background: none;
+  }
 }
 
 /* Ponsel sedang: sembunyikan elemen sekunder di topbar */
 @media (max-width: 720px) {
+
   .ale-langganan,
   .ale-logo-sekolah,
   .ale-akun-teks,
-  .ale-akun > .ale-chev { display: none; }
+  .ale-akun>.ale-chev {
+    display: none;
+  }
 
-  .ale-topbar-brand-teks { display: none; }
-  .ale-topbar-kiri { gap: 0.35rem; }
+  .ale-topbar-brand-teks {
+    display: none;
+  }
 
-  .ale-judul-induk { display: none; }
-  .ale-judul-teks { font-size: 1.05rem; }
+  .ale-topbar-kiri {
+    gap: 0.35rem;
+  }
 
-  .ale-akun { padding: 0.15rem; border-color: transparent; background: none; }
-  .ale-akun .ale-avatar { width: 2.4rem; height: 2.4rem; font-size: 0.85rem; }
+  .ale-judul-induk {
+    display: none;
+  }
 
-  .ale-stat-grid { grid-template-columns: minmax(0, 1fr); }
+  .ale-judul-teks {
+    font-size: 1.05rem;
+  }
+
+  .ale-akun {
+    padding: 0.15rem;
+    border-color: transparent;
+    background: none;
+  }
+
+  .ale-akun .ale-avatar {
+    width: 2.4rem;
+    height: 2.4rem;
+    font-size: 0.85rem;
+  }
+
+  .ale-stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .ale-stat {
     display: grid;
     grid-template-columns: 2.5rem minmax(0, 1fr);
     column-gap: 0.9rem;
     align-items: center;
   }
-  .ale-stat > :not(.ale-stat-ikon) { grid-column: 2; }
+
+  .ale-stat> :not(.ale-stat-ikon) {
+    grid-column: 2;
+  }
+
   .ale-stat-ikon {
     grid-row: 1 / span 4;
     margin: 0;
     align-self: start;
   }
 
-  .ale-hero { flex-direction: column; align-items: flex-start; }
-  .ale-admin-cakupan { flex-basis: auto; width: 100%; box-sizing: border-box; }
+  .ale-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ale-admin-cakupan {
+    flex-basis: auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
   .ale-admin-aksi-grid,
-  .ale-admin-prinsip-grid { grid-template-columns: minmax(0, 1fr); }
+  .ale-admin-prinsip-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .ale-tanggal {
     display: flex;
     align-items: baseline;
@@ -2013,21 +3074,30 @@ textarea.input {
     min-width: 0;
     padding: 0.5rem 0.9rem;
   }
-  .ale-tanggal strong { font-size: 1.4rem; margin: 0; }
+
+  .ale-tanggal strong {
+    font-size: 1.4rem;
+    margin: 0;
+  }
 
   /* Tabel jadi kartu */
-  .ale-tabel thead { display: none; }
+  .ale-tabel thead {
+    display: none;
+  }
+
   .ale-tabel tr {
     display: block;
     border-bottom: 1px solid var(--ale-garis);
     padding: 0.5rem 0;
   }
+
   .ale-tabel td {
     display: grid;
     grid-template-columns: 40% 1fr;
     border: 0;
     padding: 0.25rem 0.75rem;
   }
+
   .ale-tabel td::before {
     content: attr(data-label);
     font-weight: 600;
@@ -2037,36 +3107,48 @@ textarea.input {
 
 /* Ponsel kecil: sembunyikan label tombol */
 @media (max-width: 420px) {
+
   .ale-keluar span,
   .ale-menu-btn span {
     position: absolute;
-    width: 1px; height: 1px;
+    width: 1px;
+    height: 1px;
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
   }
-  .ale-keluar { padding-inline: 0.7rem; }
+
+  .ale-keluar {
+    padding-inline: 0.7rem;
+  }
 }
 
 /* =========================================================
    22. PREFERS-REDUCED-MOTION
    ========================================================= */
 @media (prefers-reduced-motion: reduce) {
+
   .ale-skel span,
   .ale-chip-aksi:disabled .ale-ikon,
-  .ale-timeline-item.sekarang .ale-timeline-dot::before { animation: none; }
+  .ale-timeline-item.sekarang .ale-timeline-dot::before {
+    animation: none;
+  }
 
   .app,
   .ale-topbar-kiri,
   .ale-menu-panel,
   .ale-side,
-  .ale-bar > span,
+  .ale-bar>span,
   .ale-aksi,
   .ale-toast,
   .ale-chev,
-  .ale-pop:not([hidden]) { transition: none; }
+  .ale-pop:not([hidden]) {
+    transition: none;
+  }
 
-  a.ale-aksi:hover { transform: none; }
+  a.ale-aksi:hover {
+    transform: none;
+  }
 }
 
 /* =========================================================
@@ -2082,6 +3164,7 @@ textarea.input {
   box-shadow: 0 20px 50px -20px rgb(15 23 42 / 0.25);
   border: 1px solid #e2e8f0;
 }
+
 .scan-ikon {
   display: inline-grid;
   place-items: center;
@@ -2094,15 +3177,30 @@ textarea.input {
   font-size: 2rem;
   font-weight: 900;
 }
-.scan-hasil--sukses .scan-ikon { background: #d1fae5; color: #065f46; }
-.scan-hasil--gagal  .scan-ikon { background: #fee2e2; color: #991b1b; }
+
+.scan-hasil--sukses .scan-ikon {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.scan-hasil--gagal .scan-ikon {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .scan-hasil h1 {
   margin: 0 0 0.5rem;
   font-size: 1.35rem;
   font-weight: 800;
   color: #0f172a;
 }
-.scan-hasil p { margin: 0 0 0.75rem; color: #475569; font-size: 0.9rem; }
+
+.scan-hasil p {
+  margin: 0 0 0.75rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
 .scan-detail {
   display: grid;
   gap: 0.35rem;
@@ -2112,21 +3210,54 @@ textarea.input {
   border-radius: 0.6rem;
   text-align: left;
 }
-.scan-detail > div { display: grid; grid-template-columns: 90px 1fr; gap: 0.5rem; }
-.scan-detail dt { color: #64748b; font-size: 0.82rem; }
-.scan-detail dd { margin: 0; font-weight: 600; font-size: 0.9rem; }
-.scan-info { font-size: 0.82rem !important; color: #64748b; }
-.scan-sisa { margin-top: 1rem; font-size: 0.78rem; color: #94a3b8; }
+
+.scan-detail>div {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 0.5rem;
+}
+
+.scan-detail dt {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.scan-detail dd {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.scan-info {
+  font-size: 0.82rem !important;
+  color: #64748b;
+}
+
+.scan-sisa {
+  margin-top: 1rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
 .scan-spinner {
   display: inline-block;
-  width: 3rem; height: 3rem;
+  width: 3rem;
+  height: 3rem;
   border: 4px solid #e2e8f0;
   border-top-color: #14b8a6;
   border-radius: 50%;
   animation: scan-spin 0.8s linear infinite;
   margin-bottom: 1rem;
 }
-@keyframes scan-spin { to { transform: rotate(360deg); } }
+
+@keyframes scan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .scan-spinner { animation: none; }
+  .scan-spinner {
+    animation: none;
+  }
 }

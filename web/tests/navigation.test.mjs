@@ -90,9 +90,20 @@ test('spesialis guru memakai menu guru; kepala sekolah dan wali kelas tidak menj
   }
   assert.equal(adalahPeranGuru('guru'), true);
   assert.equal(adalahPeranGuru(' admin_sekolah '), false);
-  for (const role of ['kepala_sekolah', 'wali_kelas']) {
+  for (const [role, expectedPaths] of [
+    ['kepala_sekolah', [
+      '/dashboard',
+      '/kepala-sekolah/supervisi',
+      '/kepala-sekolah/supervisi/jadwal',
+      '/kepala-sekolah/supervisi/pra-observasi',
+      '/kepala-sekolah/supervisi/observasi',
+      '/kepala-sekolah/supervisi/tindak-lanjut',
+      '/kepala-sekolah/supervisi/rekap',
+    ]],
+    ['wali_kelas', ['/dashboard', '/wali-kelas/leger', '/wali-kelas/rapor', '/chat', '/pengumuman']],
+  ]) {
     const paths = menuUntukPeran(role).flatMap((group) => group.item.map((item) => item.path));
-    assert.deepEqual(paths, ['/dashboard']);
+    assert.deepEqual(paths, expectedPaths);
     assert.equal(cariMenu('/platform/tenant/sekolah', '', role), null);
     assert.equal(cariMenu('/admin/pengguna/guru', '', role), null);
   }
@@ -122,6 +133,7 @@ test('menu operator dibatasi pada dashboard, operasional sekolah, dan komunikasi
     '/datadasar/siswa',
     '/datadasar/barcode',
     '/pelaksanaan/presensi',
+    '/pengumuman',
     '/chat',
     '/chat/kontak',
     '/chat/grup',
@@ -139,10 +151,11 @@ test('peran yang tidak dikenal tidak menerima menu guru, admin, atau platform', 
 });
 
 test('admin sekolah dan superadmin mendapat menu sesuai ruang lingkupnya', () => {
-  assert.equal(MENU_ADMIN_SEKOLAH.length - 1, 13, '13 grup administrasi sekolah di luar grup Chat');
+  assert.equal(MENU_ADMIN_SEKOLAH.length - 1, 14, '14 grup administrasi sekolah di luar grup Chat');
   assert.equal(MENU_SUPERADMIN.length, 11, '10 grup pengelolaan platform dan grup chat dukungan');
   assert.ok(!MENU_SUPERADMIN.some((group) => group.id === 'platform-firebase'));
   assert.ok(!MENU_SUPERADMIN.some((group) => group.item.some((item) => item.path === '/platform/keamanan/app-check')));
+  assert.ok(!MENU_SUPERADMIN.some((group) => group.item.some((item) => item.path === '/admin/perencanaan/paket')));
   assert.equal(menuUntukPeran('admin_sekolah'), MENU_ADMIN_SEKOLAH);
   assert.equal(menuUntukPeran('superadmin'), MENU_SUPERADMIN);
 
@@ -161,6 +174,10 @@ test('admin sekolah dan superadmin mendapat menu sesuai ruang lingkupnya', () =>
   assert.equal(cariMenu('/testimoni', '', 'guru')?.item.label, 'Testimoni');
   assert.equal(cariMenu('/purchase', '', 'admin_sekolah')?.item.label, 'Purchase Lisensi');
   assert.equal(cariMenu('/asesmen/bank-soal', '', 'admin_sekolah')?.item.label, 'Bank Soal');
+
+  const instansi = menuUntukPeran('admin_sekolah').find((group) => group.id === 'admin-instansi');
+  assert.equal(instansi.item.find((item) => item.label === 'Profil Sekolah')?.path, '/datadasar/profil');
+  assert.equal(instansi.item.find((item) => item.label === 'Tahun Ajaran & Semester')?.path, '/datadasar/ta');
 
   for (const menu of [MENU_ADMIN_SEKOLAH, MENU_SUPERADMIN]) {
     const rute = menu.flatMap((bagian) => bagian.item.map((item) => item.path));

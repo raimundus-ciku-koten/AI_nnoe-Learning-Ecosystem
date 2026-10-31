@@ -147,32 +147,32 @@ async function bukaPemilihDrive(accessToken, {
         .setTitle(title);
       if (multiple) builder.enableFeature(pickerApi.Feature.MULTISELECT_ENABLED);
       const picker = builder.setCallback((data) => {
-          if (data.action === pickerApi.Action.CANCEL) {
-            resolve(multiple ? [] : null);
-            return;
-          }
-          if (data.action !== pickerApi.Action.PICKED || !Array.isArray(data.docs)) return;
-          if (!data.docs.length || (!multiple && data.docs.length !== 1)) {
-            reject(new Error('Pilih tepat satu PDF sumber Capaian Pembelajaran.'));
-            return;
-          }
-          const selected = data.docs.map((file) => ({
-            id: file?.id,
-            name: file?.name,
-            mimeType: file?.mimeType,
-          }));
-          if (selected.some((file) => typeof file.id !== 'string' ||
-              !/^[A-Za-z0-9_-]{1,256}$/.test(file.id) ||
-              (includeMetadata && (typeof file.name !== 'string' ||
-                file.name.length > 255 ||
-                file.mimeType !== 'application/pdf')))) {
-            reject(new Error('Google Picker mengembalikan pilihan berkas yang tidak valid.'));
-            return;
-          }
-          resolve(multiple
-            ? [...new Set(selected.map((file) => file.id))]
-            : includeMetadata ? selected[0] : selected[0].id);
-        })
+        if (data.action === pickerApi.Action.CANCEL) {
+          resolve(multiple ? [] : null);
+          return;
+        }
+        if (data.action !== pickerApi.Action.PICKED || !Array.isArray(data.docs)) return;
+        if (!data.docs.length || (!multiple && data.docs.length !== 1)) {
+          reject(new Error('Pilih tepat satu PDF sumber Capaian Pembelajaran.'));
+          return;
+        }
+        const selected = data.docs.map((file) => ({
+          id: file?.id,
+          name: file?.name,
+          mimeType: file?.mimeType,
+        }));
+        if (selected.some((file) => typeof file.id !== 'string' ||
+          !/^[A-Za-z0-9_-]{1,256}$/.test(file.id) ||
+          (includeMetadata && (typeof file.name !== 'string' ||
+            file.name.length > 255 ||
+            file.mimeType !== 'application/pdf')))) {
+          reject(new Error('Google Picker mengembalikan pilihan berkas yang tidak valid.'));
+          return;
+        }
+        resolve(multiple
+          ? [...new Set(selected.map((file) => file.id))]
+          : includeMetadata ? selected[0] : selected[0].id);
+      })
         .build();
       picker.setVisible(true);
     } catch (error) {
@@ -191,8 +191,8 @@ export async function unduhPdfCapaianDrive(accessToken, fileId) {
   );
   const size = Number(metadata.size);
   if (metadata.trashed || metadata.mimeType !== 'application/pdf' ||
-      typeof metadata.name !== 'string' || !metadata.name.toLowerCase().endsWith('.pdf') ||
-      !Number.isSafeInteger(size) || size < 1 || size > BATAS_BERKAS) {
+    typeof metadata.name !== 'string' || !metadata.name.toLowerCase().endsWith('.pdf') ||
+    !Number.isSafeInteger(size) || size < 1 || size > BATAS_BERKAS) {
     throw new Error('Pilih PDF sumber yang valid dan berukuran maksimal 10 MB.');
   }
   const bytes = await requestGoogleBytes(
@@ -201,7 +201,7 @@ export async function unduhPdfCapaianDrive(accessToken, fileId) {
     BATAS_BERKAS,
   );
   if (bytes.length !== size || bytes.length < 5 ||
-      new TextDecoder().decode(bytes.subarray(0, 5)) !== '%PDF-') {
+    new TextDecoder().decode(bytes.subarray(0, 5)) !== '%PDF-') {
     bytes.fill(0);
     throw new Error('Isi file yang dipilih bukan PDF yang valid.');
   }
@@ -307,8 +307,8 @@ async function requestGoogleBytes(url, token, maxBytes = BATAS_CIPHERTEXT, signa
 
 function parseVaultDescription(file) {
   if (!file || file.appProperties?.aleKind !== VAULT_KIND ||
-      !/^[0-9a-f-]{36}$/i.test(file.appProperties?.aleRecord || '') ||
-      typeof file.description !== 'string' || file.description.length > 24000) {
+    !/^[0-9a-f-]{36}$/i.test(file.appProperties?.aleRecord || '') ||
+    typeof file.description !== 'string' || file.description.length > 24000) {
     throw new Error('Metadata vault Drive tidak valid.');
   }
   let manifest;
@@ -322,26 +322,26 @@ function parseVaultDescription(file) {
     : [manifest?.keyEnvelope];
   const envelopeIds = new Set();
   if (manifest?.version !== 1 ||
-      typeof manifest.iv !== 'string' ||
-      !/^[a-f0-9]{64}$/.test(manifest.ciphertextSha256 || '') ||
-      !Number.isInteger(manifest.ciphertextSizeBytes) ||
-      manifest.ciphertextSizeBytes < 1 ||
-      manifest.ciphertextSizeBytes > BATAS_CIPHERTEXT ||
-      envelopes.length < 1 || envelopes.length > 101 ||
-      envelopes.some((envelope) => {
-        if (!envelope || typeof envelope.wrappedDataKey !== 'string' ||
-            typeof envelope.recipientKeyFingerprint !== 'string' ||
-            !/^[a-f0-9]{64}$/.test(envelope.recipientKeyFingerprint) ||
-            !Number.isInteger(envelope.keyVersion) || envelope.keyVersion < 1 ||
-            (envelope.userId !== undefined &&
-              (typeof envelope.userId !== 'string' ||
-                envelope.userId.length < 1 || envelope.userId.length > 128 ||
-                envelopeIds.has(envelope.userId)))) {
-          return true;
-        }
-        if (envelope.userId) envelopeIds.add(envelope.userId);
-        return false;
-      })) {
+    typeof manifest.iv !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(manifest.ciphertextSha256 || '') ||
+    !Number.isInteger(manifest.ciphertextSizeBytes) ||
+    manifest.ciphertextSizeBytes < 1 ||
+    manifest.ciphertextSizeBytes > BATAS_CIPHERTEXT ||
+    envelopes.length < 1 || envelopes.length > 101 ||
+    envelopes.some((envelope) => {
+      if (!envelope || typeof envelope.wrappedDataKey !== 'string' ||
+        typeof envelope.recipientKeyFingerprint !== 'string' ||
+        !/^[a-f0-9]{64}$/.test(envelope.recipientKeyFingerprint) ||
+        !Number.isInteger(envelope.keyVersion) || envelope.keyVersion < 1 ||
+        (envelope.userId !== undefined &&
+          (typeof envelope.userId !== 'string' ||
+            envelope.userId.length < 1 || envelope.userId.length > 128 ||
+            envelopeIds.has(envelope.userId)))) {
+        return true;
+      }
+      if (envelope.userId) envelopeIds.add(envelope.userId);
+      return false;
+    })) {
     throw new Error('Metadata kunci vault Drive tidak valid.');
   }
   const envelope = manifest.keyEnvelope || envelopes[0];
@@ -357,11 +357,11 @@ function parseVaultDescription(file) {
 
 export async function simpanCadanganKunciDrive(accessToken, backup) {
   if (!backup || backup.version !== 1 ||
-      backup.algorithm !== 'RSA-OAEP-3072-SHA256' ||
-      backup.kdf !== 'HKDF-SHA256' ||
-      !/^[a-f0-9]{64}$/.test(backup.fingerprint || '') ||
-      typeof backup.publicKey !== 'string' ||
-      typeof backup.ciphertext !== 'string') {
+    backup.algorithm !== 'RSA-OAEP-3072-SHA256' ||
+    backup.kdf !== 'HKDF-SHA256' ||
+    !/^[a-f0-9]{64}$/.test(backup.fingerprint || '') ||
+    typeof backup.publicKey !== 'string' ||
+    typeof backup.ciphertext !== 'string') {
     throw new TypeError('Cadangan kunci enkripsi tidak valid.');
   }
   const metadata = new Blob([JSON.stringify({
@@ -399,8 +399,8 @@ export async function pulihkanCadanganKunciDariDrive(accessToken, driveFileId) {
     accessToken,
   );
   if (metadata.trashed ||
-      metadata.appProperties?.aleKind !== KEY_BACKUP_KIND ||
-      !/^[a-f0-9]{64}$/.test(metadata.appProperties?.aleFingerprint || '')) {
+    metadata.appProperties?.aleKind !== KEY_BACKUP_KIND ||
+    !/^[a-f0-9]{64}$/.test(metadata.appProperties?.aleFingerprint || '')) {
     throw new Error('File bukan cadangan kunci AI_nnoe yang masih tersedia.');
   }
   const bytes = await requestGoogleBytes(
@@ -439,7 +439,7 @@ export async function unggahBerkasTerenkripsiDrive(
     throw new TypeError('Kategori berkas terenkripsi tidak valid.');
   }
   if (!identity?.publicKey || !identity?.fingerprint ||
-      !Number.isInteger(identity.keyVersion) || identity.keyVersion < 1) {
+    !Number.isInteger(identity.keyVersion) || identity.keyVersion < 1) {
     throw new TypeError('Pulihkan identitas enkripsi Drive terlebih dahulu.');
   }
   let recordId;
@@ -458,10 +458,10 @@ export async function unggahBerkasTerenkripsiDrive(
       (envelope) => envelope.userId === ownerId,
     ) || existingManifest.keyEnvelope;
     if (existing.trashed ||
-        existing.appProperties?.aleCategory !== category ||
-        ownerEnvelope.recipientKeyFingerprint !== identity.fingerprint ||
-        ownerEnvelope.keyVersion !== identity.keyVersion ||
-        existingManifest.ciphertextSha256 !== expectedCiphertextSha256) {
+      existing.appProperties?.aleCategory !== category ||
+      ownerEnvelope.recipientKeyFingerprint !== identity.fingerprint ||
+      ownerEnvelope.keyVersion !== identity.keyVersion ||
+      existingManifest.ciphertextSha256 !== expectedCiphertextSha256) {
       throw new Error('Berkas Drive tidak cocok dengan kategori atau kunci pemilik aktif.');
     }
     if (!/^[a-f0-9]{64}$/.test(expectedCiphertextSha256)) {
@@ -472,8 +472,8 @@ export async function unggahBerkasTerenkripsiDrive(
     destination = `${BASE_UPLOAD}/files/${encodeURIComponent(fileId)}?uploadType=multipart&fields=id,name,createdTime,size,description,appProperties`;
   } else {
     if (requestedRecordId !== null &&
-        (typeof requestedRecordId !== 'string' ||
-          !/^[0-9a-f-]{36}$/i.test(requestedRecordId))) {
+      (typeof requestedRecordId !== 'string' ||
+        !/^[0-9a-f-]{36}$/i.test(requestedRecordId))) {
       throw new TypeError('ID rekaman vault tidak valid.');
     }
     recordId = requestedRecordId || globalThis.crypto?.randomUUID?.();
@@ -489,7 +489,7 @@ export async function unggahBerkasTerenkripsiDrive(
       keyVersion: identity.keyVersion,
     }];
     if (!Array.isArray(daftarPenerima) ||
-        !daftarPenerima.some((recipient) => recipient?.userId === ownerId)) {
+      !daftarPenerima.some((recipient) => recipient?.userId === ownerId)) {
       throw new TypeError('Pemilik wajib menjadi penerima kunci berkas terenkripsi.');
     }
     encrypted = await enkripsiBerkasDrive({
@@ -581,12 +581,12 @@ export async function daftarCatatanKerjaTerenkripsiDrive(accessToken, identity, 
           'isi', 'status', 'createdAt', 'updatedAt',
         ];
         if (!entry || typeof entry !== 'object' || Array.isArray(entry) ||
-            Object.keys(entry).sort().join(',') !== fields.slice().sort().join(',') ||
-            typeof entry.createdAt !== 'string' ||
-            typeof entry.updatedAt !== 'string' ||
-            !Number.isFinite(Date.parse(entry.createdAt)) ||
-            !Number.isFinite(Date.parse(entry.updatedAt)) ||
-            Date.parse(entry.createdAt) > Date.parse(entry.updatedAt)) {
+          Object.keys(entry).sort().join(',') !== fields.slice().sort().join(',') ||
+          typeof entry.createdAt !== 'string' ||
+          typeof entry.updatedAt !== 'string' ||
+          !Number.isFinite(Date.parse(entry.createdAt)) ||
+          !Number.isFinite(Date.parse(entry.updatedAt)) ||
+          Date.parse(entry.createdAt) > Date.parse(entry.updatedAt)) {
           throw new Error('Isi catatan kerja terenkripsi tidak valid.');
         }
         return {
@@ -616,9 +616,9 @@ export async function daftarPaketPerencanaanTerenkripsiDrive(
   { includeCreatedFiles = true } = {},
 ) {
   if (!Array.isArray(selectedFileIds) || selectedFileIds.length > 200 ||
-      selectedFileIds.some((id) => typeof id !== 'string' ||
-        !/^[A-Za-z0-9_-]{1,256}$/.test(id)) ||
-      typeof includeCreatedFiles !== 'boolean') {
+    selectedFileIds.some((id) => typeof id !== 'string' ||
+      !/^[A-Za-z0-9_-]{1,256}$/.test(id)) ||
+    typeof includeCreatedFiles !== 'boolean') {
     throw new TypeError('Daftar paket Drive pilihan tidak valid.');
   }
   const files = [];
@@ -669,7 +669,7 @@ export async function daftarPaketPerencanaanTerenkripsiDrive(
 
 export async function bagikanBerkasDrive(accessToken, driveFileId, email) {
   if (typeof driveFileId !== 'string' || !/^[A-Za-z0-9_-]{1,256}$/.test(driveFileId) ||
-      typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new TypeError('Berkas atau alamat email penerima tidak valid.');
   }
   return requestGoogle(
@@ -685,10 +685,10 @@ export async function bagikanBerkasDrive(accessToken, driveFileId, email) {
 
 export async function unggahLampiranChatDrive(accessToken, ownerId, identity, file, recipients) {
   if (!Array.isArray(recipients) || recipients.length < 1 ||
-      recipients.length > 49 ||
-      recipients.some((recipient) => !recipient || recipient.userId === ownerId ||
-        typeof recipient.email !== 'string' ||
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email))) {
+    recipients.length > 49 ||
+    recipients.some((recipient) => !recipient || recipient.userId === ownerId ||
+      typeof recipient.email !== 'string' ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.email))) {
     throw new TypeError('Penerima lampiran chat tidak valid.');
   }
 
@@ -766,7 +766,7 @@ export async function hapusLampiranChatDriveSetelahGagal(accessToken, driveFileI
       envelope.keyVersion === identity?.keyVersion,
   );
   if (metadata.trashed || metadata.appProperties?.aleCategory !== 'communication' ||
-      !ownerEnvelope) {
+    !ownerEnvelope) {
     throw new Error('Lampiran Drive tidak cocok dengan identitas enkripsi pemilik.');
   }
   await requestGoogle(`${BASE_DRIVE}/files/${encodeURIComponent(driveFileId)}`, accessToken, {
@@ -790,7 +790,7 @@ export async function daftarIzinBerkasDrive(accessToken, driveFileId) {
 
 export async function cabutBagikanBerkasDrive(accessToken, driveFileId, permissionId) {
   if (typeof driveFileId !== 'string' || !/^[A-Za-z0-9_-]{1,256}$/.test(driveFileId) ||
-      typeof permissionId !== 'string' || !/^[A-Za-z0-9_-]{1,256}$/.test(permissionId)) {
+    typeof permissionId !== 'string' || !/^[A-Za-z0-9_-]{1,256}$/.test(permissionId)) {
     throw new TypeError('Berkas atau izin Drive tidak valid.');
   }
   await requestGoogle(
@@ -802,7 +802,7 @@ export async function cabutBagikanBerkasDrive(accessToken, driveFileId, permissi
 
 export async function hapusBerkasVaultDrive(accessToken, driveFileId, category, identity) {
   if (typeof driveFileId !== 'string' || !/^[A-Za-z0-9_-]{1,256}$/.test(driveFileId) ||
-      category !== 'planning-package') {
+    category !== 'planning-package') {
     throw new TypeError('Berkas vault yang akan dihapus tidak valid.');
   }
   const metadata = await requestGoogle(
@@ -863,10 +863,10 @@ export async function daftarJadwalTerenkripsiDrive(accessToken, identity) {
       throw new Error('Jadwal terenkripsi tidak dapat dibaca.', { cause });
     }
     if (!schedule || typeof schedule !== 'object' || Array.isArray(schedule) ||
-        Object.keys(schedule).sort().join(',') !== 'diperbarui,entri' ||
-        !Array.isArray(schedule.entri) ||
-        typeof schedule.diperbarui !== 'string' ||
-        !Number.isFinite(Date.parse(schedule.diperbarui))) {
+      Object.keys(schedule).sort().join(',') !== 'diperbarui,entri' ||
+      !Array.isArray(schedule.entri) ||
+      typeof schedule.diperbarui !== 'string' ||
+      !Number.isFinite(Date.parse(schedule.diperbarui))) {
       throw new Error('Isi jadwal terenkripsi tidak valid.');
     }
     const normalized = normalisasiEntri(schedule.entri, bersihBawaan);
@@ -901,10 +901,10 @@ export async function daftarDenahTerenkripsiDrive(accessToken, identity) {
       throw new Error('Denah terenkripsi tidak dapat dibaca.', { cause });
     }
     if (!seating || typeof seating !== 'object' || Array.isArray(seating) ||
-        Object.keys(seating).sort().join(',') !== 'denah,diperbarui' ||
-        !Array.isArray(seating.denah) ||
-        typeof seating.diperbarui !== 'string' ||
-        !Number.isFinite(Date.parse(seating.diperbarui))) {
+      Object.keys(seating).sort().join(',') !== 'denah,diperbarui' ||
+      !Array.isArray(seating.denah) ||
+      typeof seating.diperbarui !== 'string' ||
+      !Number.isFinite(Date.parse(seating.diperbarui))) {
       throw new Error('Isi denah terenkripsi tidak valid.');
     }
     return {
@@ -928,9 +928,9 @@ export async function hapusJadwalTerenkripsiDrive(accessToken, driveFileId, iden
   );
   const manifest = parseVaultDescription(metadata);
   if (metadata.trashed ||
-      metadata.appProperties?.aleCategory !== 'teacher-schedule' ||
-      manifest.keyEnvelope.recipientKeyFingerprint !== identity?.fingerprint ||
-      manifest.keyEnvelope.keyVersion !== identity?.keyVersion) {
+    metadata.appProperties?.aleCategory !== 'teacher-schedule' ||
+    manifest.keyEnvelope.recipientKeyFingerprint !== identity?.fingerprint ||
+    manifest.keyEnvelope.keyVersion !== identity?.keyVersion) {
     throw new Error('Jadwal Drive tidak cocok dengan kunci pemilik aktif.');
   }
   await requestGoogle(`${BASE_DRIVE}/files/${encodeURIComponent(driveFileId)}`, accessToken, {
@@ -948,9 +948,9 @@ export async function hapusCatatanKerjaTerenkripsiDrive(accessToken, driveFileId
   );
   const manifest = parseVaultDescription(metadata);
   if (metadata.trashed ||
-      metadata.appProperties?.aleCategory !== 'teacher-workspace' ||
-      manifest.keyEnvelope.recipientKeyFingerprint !== identity?.fingerprint ||
-      manifest.keyEnvelope.keyVersion !== identity?.keyVersion) {
+    metadata.appProperties?.aleCategory !== 'teacher-workspace' ||
+    manifest.keyEnvelope.recipientKeyFingerprint !== identity?.fingerprint ||
+    manifest.keyEnvelope.keyVersion !== identity?.keyVersion) {
     throw new Error('Catatan Drive tidak cocok dengan kunci pemilik aktif.');
   }
   await requestGoogle(`${BASE_DRIVE}/files/${encodeURIComponent(driveFileId)}`, accessToken, {
@@ -971,13 +971,13 @@ export async function unduhBerkasTerenkripsiDrive(
       envelope.keyVersion === identity?.keyVersion,
   );
   if (driveFile.trashed ||
-      typeof driveFile.id !== 'string' ||
-      !/^[A-Za-z0-9_-]{1,256}$/.test(driveFile.id) ||
-      !keyEnvelope) {
+    typeof driveFile.id !== 'string' ||
+    !/^[A-Za-z0-9_-]{1,256}$/.test(driveFile.id) ||
+    !keyEnvelope) {
     throw new Error('Berkas ini tidak memiliki key-envelope untuk kunci aktif.');
   }
   if (!Number.isSafeInteger(maxCiphertextSize) ||
-      manifest.ciphertextSizeBytes > maxCiphertextSize) {
+    manifest.ciphertextSizeBytes > maxCiphertextSize) {
     throw new Error('Berkas terenkripsi melebihi batas ukuran yang diizinkan.');
   }
   const ciphertext = await requestGoogleBytes(
@@ -1011,11 +1011,11 @@ export async function unduhLampiranChatDrive(
   signal,
 ) {
   if (typeof driveFileId !== 'string' || !/^[A-Za-z0-9_-]{1,256}$/.test(driveFileId) ||
-      !expected || !/^[a-f0-9]{64}$/.test(expected.ciphertextSha256 || '') ||
-      !Number.isSafeInteger(expected.ciphertextSizeBytes) ||
-      !Number.isSafeInteger(expected.fileSize) ||
-      expected.fileSize < 1 || expected.fileSize > MAKS_BERKAS ||
-      !['image', 'file'].includes(expected.type)) {
+    !expected || !/^[a-f0-9]{64}$/.test(expected.ciphertextSha256 || '') ||
+    !Number.isSafeInteger(expected.ciphertextSizeBytes) ||
+    !Number.isSafeInteger(expected.fileSize) ||
+    expected.fileSize < 1 || expected.fileSize > MAKS_BERKAS ||
+    !['image', 'file'].includes(expected.type)) {
     throw new TypeError('Metadata lampiran chat tidak valid.');
   }
 
@@ -1028,12 +1028,12 @@ export async function unduhLampiranChatDrive(
     (candidate) => candidate.userId === identity?.userId,
   );
   if (metadata.trashed ||
-      metadata.appProperties?.aleCategory !== 'communication' ||
-      manifest.ciphertextSha256 !== expected.ciphertextSha256 ||
-      manifest.ciphertextSizeBytes !== expected.ciphertextSizeBytes ||
-      manifest.version !== expected.encryptionVersion ||
-      !envelope ||
-      envelope.wrappedDataKey !== expected.wrappedDataKey) {
+    metadata.appProperties?.aleCategory !== 'communication' ||
+    manifest.ciphertextSha256 !== expected.ciphertextSha256 ||
+    manifest.ciphertextSizeBytes !== expected.ciphertextSizeBytes ||
+    manifest.version !== expected.encryptionVersion ||
+    !envelope ||
+    envelope.wrappedDataKey !== expected.wrappedDataKey) {
     throw new Error('Lampiran Drive tidak cocok dengan metadata chat atau kunci penerima.');
   }
 
@@ -1049,9 +1049,9 @@ export async function unduhLampiranChatDrive(
   );
   const allowedTypes = expected.type === 'image' ? TIPE_GAMBAR : TIPE_DOKUMEN;
   if (content.bytes.length !== expected.fileSize ||
-      !allowedTypes.includes(content.mimeType) ||
-      typeof content.name !== 'string' || !content.name.trim() ||
-      content.name.length > 200) {
+    !allowedTypes.includes(content.mimeType) ||
+    typeof content.name !== 'string' || !content.name.trim() ||
+    content.name.length > 200) {
     content.bytes.fill(0);
     throw new Error('Isi lampiran tidak cocok dengan jenis atau ukuran pesan chat.');
   }
@@ -1128,6 +1128,23 @@ export function buatTautanGoogleCalendar({ judul, mulai, selesai, deskripsi = ''
   return calendarUrl.href;
 }
 
+export function buatTautanKalenderTugas({ judul, tanggal, deskripsi = '' }) {
+  const deadline = typeof tanggal === 'string' ? tanggal.trim() : '';
+  const mulai = new Date(`${deadline}T08:00:00`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(deadline) || Number.isNaN(mulai.getTime()) ||
+    mulai.getFullYear() !== Number(deadline.slice(0, 4)) ||
+    mulai.getMonth() + 1 !== Number(deadline.slice(5, 7)) ||
+    mulai.getDate() !== Number(deadline.slice(8, 10))) {
+    throw new Error('Tanggal tenggat tugas tidak valid.');
+  }
+  return buatTautanGoogleCalendar({
+    judul: `Tugas: ${judul}`,
+    mulai,
+    selesai: new Date(mulai.getTime() + 60 * 60 * 1000),
+    deskripsi: `Batas waktu: ${deadline}\n\n${deskripsi}`,
+  });
+}
+
 export async function buatRuangGoogleMeet(accessToken) {
   const ruang = await requestGoogle(`${BASE_MEET}/spaces`, accessToken, {
     method: 'POST',
@@ -1174,7 +1191,7 @@ export async function buatSpreadsheetDenganData(accessToken, { judul, values }) 
   });
   const sheet = spreadsheet.sheets?.[0]?.properties;
   if (typeof spreadsheet.spreadsheetId !== 'string' || !spreadsheet.spreadsheetId ||
-      !Number.isInteger(sheet?.sheetId)) {
+    !Number.isInteger(sheet?.sheetId)) {
     throw new Error('Google Sheets tidak mengembalikan identitas spreadsheet yang valid.');
   }
 

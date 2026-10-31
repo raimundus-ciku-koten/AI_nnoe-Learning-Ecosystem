@@ -330,6 +330,8 @@ from unnest(array[
   'attendance_records',
   'testimonials',
   'school_announcements',
+  'school_module_actions',
+  'school_units',
   'chat_conversations',
   'chat_messages',
   'chat_read_receipts',
@@ -347,7 +349,14 @@ from unnest(array[
   'student_account_link_audit',
   'online_exams',
   'online_exam_items',
+  'online_exam_recipients',
   'online_exam_attempts',
+  'student_class_schedule',
+  'student_learning_materials',
+  'student_guardian_links',
+  'student_guardian_link_audit',
+  'platform_content_catalog',
+  'platform_user_menu_overrides',
   'trial_registrations'
 ]) as feature(name)
 

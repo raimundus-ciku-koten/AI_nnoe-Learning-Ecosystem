@@ -25,6 +25,22 @@ describe('catatan kerja pribadi guru', () => {
     assert.throws(() => siapkanCatatanGuru({ ...CATATAN_VALID, judul: 'x'.repeat(121) }), /maksimal 120/);
   });
 
+  it('menerima task admin pribadi tanpa membuka path admin lainnya', () => {
+    const task = siapkanCatatanGuru({
+      ...CATATAN_VALID,
+      modulePath: '/admin/tugas',
+      moduleLabel: 'Tugas Pribadi',
+      kelas: '',
+      mapel: '',
+      isi: 'Siapkan agenda rapat.',
+    });
+    assert.equal(task.modulePath, '/admin/tugas');
+    assert.throws(
+      () => siapkanCatatanGuru({ ...CATATAN_VALID, modulePath: '/admin/pengguna' }),
+      /Modul catatan/,
+    );
+  });
+
   it('menghasilkan CSV dengan escaping untuk tanda kutip dan baris baru', () => {
     const csv = catatanKeCsv([{ ...CATATAN_VALID, judul: 'Rencana, "A"', isi: 'Baris satu\nBaris dua' }]);
     assert.match(csv, /"Rencana, ""A"""/);

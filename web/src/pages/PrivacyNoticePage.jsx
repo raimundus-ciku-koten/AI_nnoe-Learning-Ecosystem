@@ -4,9 +4,11 @@ import '../styles/privacy-notice.css';
 const dataGroups = [
   ['Akun dan keamanan', 'Alamat email, nama profil, peran, sekolah, status akun, dan token autentikasi.'],
   ['Pendaftaran uji coba', 'Alamat email terverifikasi dan nama tampilan untuk mencegah penggunaan uji coba berulang; pilihan persona demo tidak menjadi peran akun.'],
-  ['Data pembelajaran', 'Data siswa, kelas, kehadiran, bank soal, nilai atau asesmen, dan dokumen yang dimasukkan oleh sekolah atau pengguna.'],
+  ['Data pembelajaran', 'Data siswa, kelas, kehadiran, bank soal, nilai atau asesmen, dan dokumen yang dimasukkan oleh sekolah atau pengguna. Akun orang tua hanya dapat melihat siswa yang ditautkan resmi oleh admin sekolah, termasuk kelas, catatan hadir hasil scan, dan nilai ujian akhir yang telah tersedia.'],
+  ['Riwayat lisensi sekolah', 'Ringkasan pesanan paket sekolah yang tercatat di backend dapat dibaca admin sekolah tenant terkait. Halaman tidak mengumpulkan detail kartu atau rekening, dan tidak memproses checkout.'],
   ['Komunikasi', 'Pesan, metadata percakapan, lampiran yang dipilih pengguna, dan token notifikasi perangkat bila notifikasi diaktifkan.'],
-  ['Integrasi pilihan pengguna', 'Berkas Drive/Sheets yang dibuat atau dipilih langsung oleh pengguna. Token Google Workspace hanya disimpan sementara di memori halaman.'],
+  ['Integrasi pilihan pengguna', 'Berkas Drive/Sheets yang dibuat atau dipilih langsung oleh pengguna. Ekspor nilai dapat memuat nama siswa, kelas, waktu pengumpulan, dan nilai; spreadsheet baru berada pada akun Google pengguna dan privat sampai dibagikan. Token Google Workspace hanya disimpan sementara di memori halaman.'],
+  ['Provider AI pribadi (opsional)', 'Jika guru memasukkan kunci sendiri dan meminta draf soal, mata pelajaran, kelas, topik, serta jenis soal dikirim langsung dari browser ke Gemini, DeepSeek, atau Groq yang dipilih. Kunci hanya disimpan di memori tab dan tidak dikirim ke server aplikasi. Provider dapat menerapkan syarat, biaya, kuota, dan retensi datanya sendiri; jangan masukkan identitas atau data pribadi siswa.'],
   ['Draf program BK dan kegiatan', 'Draf program hanya berada di memori halaman hingga ditutup. Gunakan cetak atau Simpan sebagai PDF untuk membuat salinan lokal; jangan masukkan identitas siswa atau isi konseling.'],
 ];
 
@@ -33,6 +35,13 @@ export default function PrivacyNoticePage() {
           yang dipilih pengguna. Akses seharusnya dibatasi menurut peran dan sekolah; jangan memasukkan data
           yang tidak diperlukan. Jangan membagikan tautan rapat, berkas, atau informasi siswa kepada pihak
           yang tidak berwenang.
+        </p>
+        <p>
+          AI_nnoe Lokal menggunakan panduan berbasis pola di browser dan tidak mengirim pesan ke jaringan.
+          Provider AI pribadi bersifat opsional; setelah kunci diaktifkan, pesan asisten atau konteks pembuatan
+          draf dapat dikirim langsung dari browser ke provider sesuai preferensi akun. Kunci browser dapat
+          diakses skrip pada halaman tersebut. Tinjau ketentuan, retensi data, dan kemungkinan biaya provider;
+          tidak ada jaminan kuota gratis.
         </p>
         <h2>Penyimpanan dan layanan terkait</h2>
         <p>
@@ -63,7 +72,7 @@ export default function PrivacyNoticePage() {
           Sebelum halaman ini diterbitkan sebagai kebijakan final, pemilik layanan wajib menambahkan nama badan
           hukum, alamat/kontak privasi resmi, serta proses eskalasi dan tenggat respons.
         </p>
-        <p className="privacy-notice-updated">Terakhir diperbarui: 19 Oktober 2026 · Informasi operasional, bukan nasihat hukum.</p>
+        <p className="privacy-notice-updated">Terakhir diperbarui: 30 Oktober 2026 · Informasi operasional, bukan nasihat hukum.</p>
         <a href="#/login">Kembali ke halaman masuk</a>
       </article>
     </main>
