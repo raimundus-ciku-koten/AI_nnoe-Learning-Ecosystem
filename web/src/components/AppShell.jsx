@@ -40,6 +40,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   const daftarMenu = menuUntukPeran(role);
   const menu = cariMenu(path, search, role);
   const judulAktif = judulHalaman || menu?.item.label || 'Halaman';
+  const grupChat = daftarMenu.find((grup) => grup.item.some((item) => item.disabled));
 
   const [sideTutup, setSideTutup] = useState(sideTutupTersimpan);
   const [mobileBuka, setMobileBuka] = useState(false);
@@ -47,7 +48,8 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   const [keluar, setKeluar] = useState(false);
   const [menggantiPeran, setMenggantiPeran] = useState(false);
   const [aksiProfil, setAksiProfil] = useState('');
-  const [grupBuka, setGrupBuka] = useState(() => new Set([menu?.grup.id || 'beranda']));
+  const [grupBuka, setGrupBuka] = useState(() =>
+    new Set([menu?.grup.id || 'beranda', grupChat?.id].filter(Boolean)));
   const profilRef = useRef(null);
   const profilBtnRef = useRef(null);
   const avatarRef = useRef(null);
@@ -74,6 +76,9 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
   useEffect(() => {
     if (menu?.grup.id) setGrupBuka((groups) => new Set(groups).add(menu.grup.id));
   }, [menu?.grup.id]);
+  useEffect(() => {
+    if (grupChat?.id) setGrupBuka((groups) => new Set(groups).add(grupChat.id));
+  }, [grupChat?.id]);
   // Pindah ke desktop → pastikan offcanvas tertutup.
   useEffect(() => { if (desktop) setMobileBuka(false); }, [desktop]);
 
@@ -297,7 +302,7 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
               const idPanel = `ale-panel-${grup.id}`;
               return (
                 <div key={grup.id} className={`ale-grup-menu${aktif ? ' has-aktif' : ''}`}>
-                  {grup.item.length === 1 ? (
+                  {grup.item.length === 1 && grup.item[0].path && !grup.item[0].disabled ? (
                     <a className="ale-grup-btn ale-grup-link"
                        href={`#${grup.item[0].path}${grup.item[0].search || ''}`}
                        aria-current={menu?.item === grup.item[0] ? 'page' : undefined}>
@@ -334,9 +339,10 @@ export default function AppShell({ path, search = '', judulHalaman, children }) 
                           );
                         }
                         return (
-                          <span key={it.label} className="ale-sub is-soon" aria-disabled="true">
+                          <span key={it.label} className="ale-sub is-soon" aria-disabled="true"
+                                title={it.availabilityMessage}>
                             <span className="ale-sub-teks">{it.label}</span>
-                            <span className="ale-tag">Segera</span>
+                            <span className="ale-tag">{it.statusLabel || 'Segera'}</span>
                           </span>
                         );
                       })}
