@@ -10,6 +10,7 @@ import { hitungProsem } from '../src/pages/perencanaan/engine/prosem.js';
 import { validasiKonteks, validasiAtp } from '../src/pages/perencanaan/engine/validator.js';
 import { pekanDalamBulan } from '../src/pages/perencanaan/ui/render/format.js';
 import { renderRpe } from '../src/pages/perencanaan/ui/render/rpe.js';
+import { renderProta } from '../src/pages/perencanaan/ui/render/prota-prosem.js';
 
 /* ---------- Data uji: pola contoh Matematika Kelas X (5 unit, 16 TP, 114 JP) ---------- */
 const buatAtp = () => {
@@ -35,6 +36,45 @@ const konteksDasar = {
   genap: { mulai: '2027-01-05', selesai: '2027-06-19' },
   kalender: []
 };
+
+function denganDomUji(fn) {
+  const propertiNode = Object.getOwnPropertyDescriptor(globalThis, 'Node');
+  const propertiDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  class NodeUji {
+    constructor(tag, text = '') {
+      this.tagName = tag;
+      this.text = text;
+      this.children = [];
+      this.attributes = {};
+      this.className = '';
+    }
+
+    append(...children) { this.children.push(...children); }
+    setAttribute(name, value) { this.attributes[name] = String(value); }
+    addEventListener() {}
+    get textContent() { return this.tagName === '#text' ? this.text : this.children.map((child) => child.textContent).join(''); }
+    querySelectorAll(tag) {
+      return this.children.flatMap((child) => [
+        ...(child.tagName === tag ? [child] : []),
+        ...child.querySelectorAll(tag)
+      ]);
+    }
+  }
+
+  globalThis.Node = NodeUji;
+  globalThis.document = {
+    createElement: (tag) => new NodeUji(tag),
+    createTextNode: (text) => new NodeUji('#text', String(text))
+  };
+  try {
+    return fn();
+  } finally {
+    if (propertiNode) Object.defineProperty(globalThis, 'Node', propertiNode);
+    else delete globalThis.Node;
+    if (propertiDocument) Object.defineProperty(globalThis, 'document', propertiDocument);
+    else delete globalThis.document;
+  }
+}
 
 /* ---------- Tanggal ---------- */
 test('urai menolak tanggal mustahil dan menerima tanggal kabisat', () => {
@@ -117,35 +157,7 @@ test('RPE: totalJP resmi guru menjadi acuan, selisih dilaporkan', () => {
 });
 
 test('render RPE menyajikan tujuh bagian dan tabel mingguan serta pekan non-efektif', () => {
-  class NodeUji {
-    constructor(tag, text = '') {
-      this.tagName = tag;
-      this.text = text;
-      this.children = [];
-      this.attributes = {};
-      this.className = '';
-    }
-
-    append(...children) { this.children.push(...children); }
-    setAttribute(name, value) { this.attributes[name] = String(value); }
-    addEventListener() {}
-    get textContent() { return this.tagName === '#text' ? this.text : this.children.map((child) => child.textContent).join(''); }
-    querySelectorAll(tag) {
-      return this.children.flatMap((child) => [
-        ...(child.tagName === tag ? [child] : []),
-        ...child.querySelectorAll(tag)
-      ]);
-    }
-  }
-
-  const propertiNode = Object.getOwnPropertyDescriptor(globalThis, 'Node');
-  const propertiDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
-  globalThis.Node = NodeUji;
-  globalThis.document = {
-    createElement: (tag) => new NodeUji(tag),
-    createTextNode: (text) => new NodeUji('#text', String(text))
-  };
-  try {
+  denganDomUji(() => {
     const rpe = hitungRpe({
       jpPerPekan: 5,
       hariPembelajaran: [1, 2, 3, 4, 5],
@@ -185,12 +197,7 @@ test('render RPE menyajikan tujuh bagian dan tabel mingguan serta pekan non-efek
     assert.equal(pekanPertama[4], 'Tidak efektif');
     assert.equal(pekanPertama[5], '0');
     assert.match(tabelNonEfektif.textContent, /Libur sekolah/);
-  } finally {
-    if (propertiNode) Object.defineProperty(globalThis, 'Node', propertiNode);
-    else delete globalThis.Node;
-    if (propertiDocument) Object.defineProperty(globalThis, 'document', propertiDocument);
-    else delete globalThis.document;
-  }
+  });
 });
 
 /* ---------- Pembagian proporsional ---------- */
@@ -273,6 +280,63 @@ test('Prota: semester dibelah menurut JP bila ATP tidak konsisten', () => {
   const p = hitungProta({ atp: sel.atp, totalJP: 114, jpPerPekan: 4, jumlahHari: 2 });
   assert.ok(p.program[1].modul.length > 0 && p.program[2].modul.length > 0);
   assert.equal(p.program[1].jp + p.program[2].jp, 114);
+});
+
+test('render Prota menyusun tujuh bagian dan seluruh rekap tetap sesuai Total JP', () => {
+  denganDomUji(() => {
+    const selaras = selaraskanJpAtp(buatAtp(), 114, 4);
+    const prota = hitungProta({ atp: selaras.atp, totalJP: 114, jpPerPekan: 4, jumlahHari: 2 });
+    const rpe = hitungRpe({ ...konteksDasar, totalJP: 114 });
+    const konteks = {
+      mapel: 'Matematika',
+      kelas: 'X',
+      fase: 'E',
+      tahunAjaran: '2026/2027',
+      identitas: {}
+    };
+    const artikel = renderProta(prota, konteks, rpe);
+    const bagian = artikel.querySelectorAll('section');
+    const tabel = artikel.querySelectorAll('table');
+    const tabelDistribusi = tabel.find((item) => item.className.includes('tbl-prota-distribusi'));
+    const tabelGanjil = tabel.find((item) => item.className === 'tbl tbl-prota' &&
+      item.textContent.includes('Ulangan Harian Modul'));
+    const tabelMatriks = tabel.find((item) => item.className.includes('tbl-prota-matriks'));
+    const tabelRekap = tabel.find((item) => item.className.includes('tbl-prota-rekap'));
+
+    assert.equal(bagian.length, 7);
+    assert.deepEqual(bagian.map((item) => item.children[0].textContent), [
+      '1. Informasi umum dan komponen program tahunan',
+      '2. Distribusi alokasi waktu tahunan',
+      '3. Program Semester Ganjil',
+      '4. Program Semester Genap',
+      '5. Matriks Program Tahunan',
+      '6. Rekapitulasi alokasi waktu tahunan',
+      '7. Catatan pelaksanaan dan tindak lanjut'
+    ]);
+    assert.equal(tabelDistribusi.querySelectorAll('thead')[0].querySelectorAll('th').length, 7);
+    assert.equal(tabelGanjil.querySelectorAll('thead')[0].querySelectorAll('th').length, 8);
+    assert.equal(tabelMatriks.querySelectorAll('thead')[0].querySelectorAll('th').length, 6);
+    assert.match(tabelRekap.textContent, /114 JP/);
+    assert.match(artikel.textContent, /PERLU KONFIRMASI/);
+
+    const protaSatuSemester = hitungProta({
+      atp: {
+        unit: [{
+          no: 1,
+          nama: 'Bilangan',
+          elemen: 'Bilangan',
+          semester: 1,
+          tp: [{ kode: 'E.1', rumusan: 'Mengenali bilangan.', materi: '', jp: 4 }]
+        }]
+      },
+      totalJP: 20,
+      jpPerPekan: 4,
+      jumlahHari: 2
+    });
+    const artikelSatuSemester = renderProta(protaSatuSemester, konteks);
+    assert.match(artikelSatuSemester.textContent, /Tidak ada modul teralokasi pada semester ini/);
+    assert.match(artikelSatuSemester.textContent, /PERLU KONFIRMASI/);
+  });
 });
 
 /* ---------- Prosem ---------- */

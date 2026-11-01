@@ -748,7 +748,13 @@ export function halamanDetail(wadah, {
       case JENIS.RPE: return panelUmum(tab, dokumen.rpe ? renderRpe(dokumen.rpe.payload, paket) : null);
       case JENIS.CP: return panelCp();
       case JENIS.ATP: return panelAtp();
-      case JENIS.PROTA: return panelUmum(tab, dokumen.prota ? renderProta(dokumen.prota.payload, paket) : null);
+      case JENIS.PROTA: return panelUmum(tab, dokumen.prota
+        ? renderProta(
+          dokumen.prota.payload,
+          paket,
+          statusDok(JENIS.RPE) === STATUS.SIAP ? dokumen.rpe?.payload : null,
+        )
+        : null);
       case JENIS.PROSEM: return panelUmum(tab, dokumen.prosem ? renderProsem(dokumen.prosem.payload, paket) : null);
       case JENIS.KKTP: return panelKktp();
       default: return panelModul();

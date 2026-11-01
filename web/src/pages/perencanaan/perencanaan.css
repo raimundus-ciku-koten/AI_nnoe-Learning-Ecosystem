@@ -137,6 +137,12 @@ legend { font-weight: 700; padding: 0 6px; }
   .dokumen-rpe .kop-sub, .dokumen-rpe .tbl-identitas { font-size: 9pt; }
   .dokumen-rpe .rpe-bagian { break-inside: auto; }
   .dokumen-rpe .rumus, .dokumen-rpe .ttd { break-inside: avoid; }
+  .dokumen-prota { font-size: 12pt; line-height: 1; }
+  .dokumen-prota .kop-judul, .dokumen-prota h2 { font-size: 14pt; }
+  .dokumen-prota .tbl { font-size: 11pt; }
+  .dokumen-prota .kop-sub, .dokumen-prota .tbl-identitas { font-size: 9pt; }
+  .dokumen-prota .prota-bagian { break-inside: auto; }
+  .dokumen-prota .rumus, .dokumen-prota .ttd { break-inside: avoid; }
   .dokumen-atp { font-size: 12pt; line-height: 1; }
   .dokumen-atp h1 { font-size: 14pt; }
   .dokumen-atp h2 { font-size: 12pt; }
