@@ -15,8 +15,11 @@ import {
   getBrowserAiConnections,
   generateBrowserPlanning,
   generateBrowserQuestion,
+  generateBrowserQuestionBankAnswers,
+  generateBrowserQuestionBankQuestions,
   setBrowserAiPreference,
   testAndSaveBrowserKey,
+  validasiInputBankSoal,
 } from './browserAi.js';
 
 const atpPayload = {
@@ -127,6 +130,157 @@ describe('local AI provider integrations', () => {
       topik: 'Bilangan',
       jenis: 'pilihan_ganda',
     })).rejects.toThrow('Pilihan ganda harus berisi empat pilihan unik dan kunci yang cocok.');
+  });
+
+  it('validates Bank Soal input ranges and supplies a title when omitted', () => {
+    expect(validasiInputBankSoal({
+      mapel: 'Matematika',
+      kelas: 'X',
+      topik: 'Persamaan linear',
+      kategori: 'latihan',
+      judul: '',
+      jenisSoal: 'Campuran',
+      levelSoal: 'HOTS',
+      jumlahPG: '50',
+      jumlahUraian: '0',
+    })).toMatchObject({
+      kategori: 'Latihan Soal',
+      judul: 'Latihan Soal — Persamaan linear',
+      jumlahPG: 50,
+      jumlahUraian: 0,
+    });
+    expect(() => validasiInputBankSoal({
+      mapel: 'Matematika', kelas: 'X', topik: 'Persamaan',
+      kategori: 'latihan', jenisSoal: 'Campuran', levelSoal: 'LOT',
+      jumlahPG: 51, jumlahUraian: 0,
+    })).toThrow('Jumlah pilihan ganda harus berupa bilangan bulat 1–50.');
+    expect(() => validasiInputBankSoal({
+      mapel: 'Matematika', kelas: 'X', topik: 'Persamaan',
+      kategori: 'latihan', jenisSoal: 'Campuran', levelSoal: 'LOT',
+      jumlahPG: 1, jumlahUraian: -1,
+    })).toThrow('Jumlah uraian harus berupa bilangan bulat 0–20.');
+    expect(routeAiRequest).not.toHaveBeenCalled();
+  });
+
+  it('generates exact Bank Soal question counts and validates the paired explanations', async () => {
+    const input = {
+      mapel: 'Matematika',
+      kelas: 'X',
+      topik: 'Persamaan linear',
+      kategori: 'latihan',
+      judul: 'Persamaan Linear',
+      jenisSoal: 'Campuran',
+      levelSoal: 'Campuran LOT-MOT-HOT',
+      jumlahPG: 1,
+      jumlahUraian: 1,
+    };
+    const questionsPayload = {
+      pilihanGanda: [{
+        nomor: 1,
+        pertanyaan: 'Berapakah hasil 2 + 2?',
+        pilihan: ['3', '4', '5', '6'],
+      }],
+      uraian: [{ nomor: 1, pertanyaan: 'Jelaskan langkah menyelesaikan 2x = 8.' }],
+    };
+    const answersPayload = {
+      pilihanGanda: [{
+        nomor: 1,
+        jawaban: '4',
+        pembahasan: 'Dua ditambah dua sama dengan empat.',
+        caraCepat: 'Hitung langsung.',
+      }],
+      uraian: [{
+        nomor: 1,
+        jawaban: 'Bagi kedua ruas dengan 2 sehingga x = 4.',
+        pembahasan: 'Operasi yang sama pada kedua ruas mempertahankan persamaan.',
+      }],
+    };
+    routeAiRequest
+      .mockImplementationOnce(async ({ validateResponse }) => ({
+        provider: 'local',
+        model: 'llama3.2:1b',
+        fallbackUsed: true,
+        validated: validateResponse(JSON.stringify(questionsPayload)),
+      }))
+      .mockImplementationOnce(async ({ validateResponse }) => ({
+        provider: 'local',
+        model: 'llama3.2:3b',
+        validated: validateResponse(JSON.stringify(answersPayload)),
+      }));
+
+    const questionResult = await generateBrowserQuestionBankQuestions('teacher-1', input);
+    expect(questionResult.questions).toHaveLength(2);
+    expect(questionResult.questions[0]).toMatchObject({
+      jenis: 'pilihan_ganda',
+      nomor: 1,
+      pilihan: ['3', '4', '5', '6'],
+    });
+    expect(questionResult).toMatchObject({ fallbackUsed: true, model: 'llama3.2:1b' });
+
+    const answerResult = await generateBrowserQuestionBankAnswers(
+      'teacher-1',
+      questionResult.input,
+      questionResult.questions,
+    );
+    expect(answerResult.answers).toHaveLength(2);
+    expect(answerResult.answers[0]).toMatchObject({
+      jenis: 'pilihan_ganda',
+      jawaban: '4',
+      pembahasan: 'Dua ditambah dua sama dengan empat.',
+    });
+    expect(answerResult.answers[1]).toMatchObject({
+      jenis: 'uraian',
+      jawaban: 'Bagi kedua ruas dengan 2 sehingga x = 4.',
+    });
+    expect(routeAiRequest).toHaveBeenCalledTimes(2);
+    expect(routeAiRequest.mock.calls[0][0]).toMatchObject({
+      uid: 'teacher-1',
+      workflow: 'questions',
+    });
+  });
+
+  it('rejects incomplete Bank Soal output and answer keys that do not match an option', async () => {
+    const input = {
+      mapel: 'Matematika',
+      kelas: 'X',
+      topik: 'Persamaan linear',
+      kategori: 'latihan',
+      jenisSoal: 'Multiple choice',
+      levelSoal: 'LOT',
+      jumlahPG: 1,
+      jumlahUraian: 0,
+    };
+    routeAiRequest.mockImplementationOnce(async ({ validateResponse }) => ({
+      validated: validateResponse(JSON.stringify({
+        pilihanGanda: [{
+          nomor: 1,
+          pertanyaan: 'Berapakah 2 + 2?',
+          pilihan: ['3', '4', '5', '5'],
+        }],
+        uraian: [],
+      })),
+    }));
+    await expect(generateBrowserQuestionBankQuestions('teacher-1', input))
+      .rejects.toThrow('Pilihan ganda nomor 1 harus memiliki empat pilihan unik.');
+
+    const questions = [{
+      jenis: 'pilihan_ganda',
+      nomor: 1,
+      pertanyaan: 'Berapakah 2 + 2?',
+      pilihan: ['3', '4', '5', '6'],
+    }];
+    routeAiRequest.mockImplementationOnce(async ({ validateResponse }) => ({
+      validated: validateResponse(JSON.stringify({
+        pilihanGanda: [{
+          nomor: 1,
+          jawaban: '7',
+          pembahasan: 'Pembahasan lengkap.',
+        }],
+        uraian: [],
+      })),
+    }));
+    await expect(generateBrowserQuestionBankAnswers('teacher-1', input, questions))
+      .rejects.toThrow('Kunci pilihan ganda nomor 1 tidak cocok dengan pilihan yang tersedia.');
   });
 
   it('returns an assistant answer without routing personal context to cloud', async () => {
