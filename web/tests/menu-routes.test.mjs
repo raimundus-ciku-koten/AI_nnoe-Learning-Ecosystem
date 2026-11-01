@@ -9,6 +9,7 @@ import {
 } from '../src/services/featureFlags.js';
 
 const appSource = readFileSync(new URL('../src/app/RouteWrapper.jsx', import.meta.url), 'utf8');
+const submenuSource = readFileSync(new URL('../src/pages/SubMenuPage.jsx', import.meta.url), 'utf8');
 const explicitRoutes = [...appSource.matchAll(/<Route\s+path="([^"]+)"/g)]
   .map((match) => match[1]);
 
@@ -125,7 +126,7 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
     assert.match(appSource, /<PrivilegedMfaGate role=\{role\} userId=\{user\.uid\}>/);
   });
 
-  it('gives every active sidebar item an explicit application route', () => {
+  it('routes active sidebar items specifically, allowing only the intentional teacher account fallback', () => {
     for (const role of [
       'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',
       'operator', 'admin_sekolah', 'superadmin', 'siswa', 'ortu',
@@ -135,9 +136,25 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
         if (item.disabled) continue;
 
         assert.ok(item.path, `${role}: ${item.label} tidak memiliki path`);
+        const specificRoutes = explicitRoutes.filter((route) =>
+          route !== '*' && cocokRuteEksplisit(route, item.path));
+        if (specificRoutes.length === 0) {
+          assert.equal(item.path, '/pengaturan/akun', `${role}: ${item.label} hanya ditangani rute fallback`);
+          assert.ok(
+            ['guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'].includes(role),
+            `${role}: fallback profil guru tidak boleh dipakai peran ini`,
+          );
+          assert.match(
+            submenuSource,
+            /adalahPeranGuru\(peranAktif\)\s*&&\s*item\.path\s*===\s*'\/pengaturan\/akun'\s*\)\s*return\s*<TeacherAccountPage\s*\/>/,
+            'fallback akun harus ditangani halaman akun guru, bukan halaman generik',
+          );
+          continue;
+        }
+
         assert.ok(
-          explicitRoutes.some((route) => cocokRuteEksplisit(route, item.path)),
-          `${role}: ${item.label} tidak memiliki rute eksplisit (${item.path})`,
+          specificRoutes.some((route) => cocokRuteEksplisit(route, item.path)),
+          `${role}: ${item.label} tidak memiliki handler rute khusus (${item.path})`,
         );
       }
     }

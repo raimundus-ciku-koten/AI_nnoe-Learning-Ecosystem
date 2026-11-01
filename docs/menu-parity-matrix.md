@@ -21,9 +21,10 @@ agar grup khusus komunikasi tidak hilang.
   aktif non-guru yang jatuh ke `SubMenuPage`, halaman menampilkan panduan baca-saja dan secara
   eksplisit menyatakan bahwa modul tersebut belum mengubah data. Rute `/platform/*` juga
   memakai satu handler wildcard; handler itu perlu ditinjau per submenu.
-- `web/tests/menu-routes.test.mjs` menguji status nonaktif dan bahwa path menu dicocokkan oleh
-  deklarasi rute. Pencocoknya menerima `*`, sehingga tes ini tidak membuktikan komponen tujuan,
-  penyimpanan, otorisasi server, ataupun alur end-to-end.
+- `web/tests/menu-routes.test.mjs` menguji status nonaktif dan mewajibkan item aktif memiliki
+  handler rute selain fallback global `*`; pengecualian akun guru harus ditangani eksplisit oleh
+  halaman akun. Rute `/platform/*` tetap merupakan satu handler bersama. Tes rute tidak
+  membuktikan keseluruhan alur komponen, penyimpanan, otorisasi server, ataupun end-to-end.
 - Referensi pelaksanaan lama tersedia di `D:\New folder (3)\ainnoe-pelaksanaan\`:
   `web/src/menu.js`, `web/src/pages/jurnal.js`, `web/src/pages/presensi.js`, dan
   `web/src/lib/pelaksanaan.js`. Sumber tersebut hanya dibaca.
