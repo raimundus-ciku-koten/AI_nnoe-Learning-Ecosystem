@@ -131,6 +131,12 @@ legend { font-weight: 700; padding: 0 6px; }
   body, .app, .main { background: #fff !important; display: block !important; padding: 0 !important; }
   .dokumen { box-shadow: none; padding: 0; font-size: 12pt; }
   .dokumen .tbl { font-size: 10.5pt; }
+  .dokumen-rpe { font-size: 12pt; line-height: 1; }
+  .dokumen-rpe .kop-judul, .dokumen-rpe h2 { font-size: 14pt; }
+  .dokumen-rpe .tbl { font-size: 11pt; }
+  .dokumen-rpe .kop-sub, .dokumen-rpe .tbl-identitas { font-size: 9pt; }
+  .dokumen-rpe .rpe-bagian { break-inside: auto; }
+  .dokumen-rpe .rumus, .dokumen-rpe .ttd { break-inside: avoid; }
   .dokumen-atp { font-size: 12pt; line-height: 1; }
   .dokumen-atp h1 { font-size: 14pt; }
   .dokumen-atp h2 { font-size: 12pt; }

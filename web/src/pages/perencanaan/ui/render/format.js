@@ -2,7 +2,7 @@
  * @file Pemformat tampilan (tanggal, rentang, pekan). Bergantung pada lokal aktif i18n.
  */
 
-import { formatTanggal, namaBulan, namaHari } from '../../engine/tanggal.js';
+import { bulanDariIso, formatTanggal, namaBulan, namaHari, urai } from '../../engine/tanggal.js';
 import { lokal, t } from '../../i18n/index.js';
 
 const SINGKAT = { day: 'numeric', month: 'short' };
@@ -19,6 +19,16 @@ export function rentangTanggal(mulai, selesai) {
 export const tanggalPanjang = (iso) => formatTanggal(iso, lokal());
 export const bulanNama = (n) => namaBulan(n, lokal());
 export const hariNama = (iso) => namaHari(iso, lokal());
+
+/** Nomor pekan dalam bulan dengan pekan yang dimulai pada hari Senin. */
+export function pekanDalamBulan(iso) {
+  const ms = urai(iso);
+  if (ms === null) return 0;
+  const tanggal = new Date(ms);
+  const hariPertama = Date.UTC(tanggal.getUTCFullYear(), bulanDariIso(iso) - 1, 1);
+  const offsetSenin = (new Date(hariPertama).getUTCDay() + 6) % 7;
+  return Math.floor((tanggal.getUTCDate() + offsetSenin - 1) / 7) + 1;
+}
 
 /** "5" atau "5–7" dari {dari, sampai}; "–" bila tidak ada. */
 export function teksPekan(r) {

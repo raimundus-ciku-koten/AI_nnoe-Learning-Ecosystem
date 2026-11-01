@@ -8,6 +8,8 @@ import {
 } from '../src/pages/perencanaan/engine/prota.js';
 import { hitungProsem } from '../src/pages/perencanaan/engine/prosem.js';
 import { validasiKonteks, validasiAtp } from '../src/pages/perencanaan/engine/validator.js';
+import { pekanDalamBulan } from '../src/pages/perencanaan/ui/render/format.js';
+import { renderRpe } from '../src/pages/perencanaan/ui/render/rpe.js';
 
 /* ---------- Data uji: pola contoh Matematika Kelas X (5 unit, 16 TP, 114 JP) ---------- */
 const buatAtp = () => {
@@ -50,6 +52,13 @@ test('seninPekan: Minggu mundur ke Senin sebelumnya', () => {
 
 test('formatTanggal tidak bergeser sehari (UTC)', () => {
   assert.match(formatTanggal('2026-08-17'), /17/);
+});
+
+test('pekanDalamBulan mengikuti pekan Senin dan batas bulan secara deterministik', () => {
+  assert.equal(pekanDalamBulan('2026-08-01'), 1);
+  assert.equal(pekanDalamBulan('2026-08-03'), 2);
+  assert.equal(pekanDalamBulan('2026-08-31'), 6);
+  assert.equal(pekanDalamBulan('2026-02-30'), 0);
 });
 
 /* ---------- Hari ---------- */
@@ -105,6 +114,83 @@ test('RPE: totalJP resmi guru menjadi acuan, selisih dilaporkan', () => {
   const r = hitungRpe({ ...konteksDasar, totalJP: 114 });
   assert.equal(r.totalJP, 114);
   assert.equal(r.selisihDenganResmi, 114 - r.totalJPHitung);
+});
+
+test('render RPE menyajikan tujuh bagian dan tabel mingguan serta pekan non-efektif', () => {
+  class NodeUji {
+    constructor(tag, text = '') {
+      this.tagName = tag;
+      this.text = text;
+      this.children = [];
+      this.attributes = {};
+      this.className = '';
+    }
+
+    append(...children) { this.children.push(...children); }
+    setAttribute(name, value) { this.attributes[name] = String(value); }
+    addEventListener() {}
+    get textContent() { return this.tagName === '#text' ? this.text : this.children.map((child) => child.textContent).join(''); }
+    querySelectorAll(tag) {
+      return this.children.flatMap((child) => [
+        ...(child.tagName === tag ? [child] : []),
+        ...child.querySelectorAll(tag)
+      ]);
+    }
+  }
+
+  const propertiNode = Object.getOwnPropertyDescriptor(globalThis, 'Node');
+  const propertiDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  globalThis.Node = NodeUji;
+  globalThis.document = {
+    createElement: (tag) => new NodeUji(tag),
+    createTextNode: (text) => new NodeUji('#text', String(text))
+  };
+  try {
+    const rpe = hitungRpe({
+      jpPerPekan: 5,
+      hariPembelajaran: [1, 2, 3, 4, 5],
+      ganjil: { mulai: '2026-08-03', selesai: '2026-08-14' },
+      genap: { mulai: '2027-01-04', selesai: '2027-01-15' },
+      kalender: [{ mulai: '2026-08-03', selesai: '2026-08-07', ket: 'Libur sekolah', efektif: false }]
+    });
+    const konteks = {
+      mapel: 'Matematika',
+      kelas: 'X',
+      fase: 'E',
+      tahunAjaran: '2026/2027',
+      identitas: {}
+    };
+    const artikel = renderRpe(rpe, konteks);
+    const bagian = artikel.querySelectorAll('section');
+    const tabel = artikel.querySelectorAll('table');
+    const tabelMingguan = tabel.find((item) => item.className.includes('tbl-rpe') &&
+      !item.className.includes('non-efektif'));
+    const tabelNonEfektif = tabel.find((item) => item.className.includes('tbl-rpe-non-efektif'));
+
+    assert.equal(bagian.length, 7);
+    assert.deepEqual(bagian.map((item) => item.children[0].textContent), [
+      '1. Identitas',
+      '2. Landasan penyusunan',
+      '3. Landasan hitung',
+      '4. Pekan efektif Semester Ganjil',
+      '5. Pekan efektif Semester Genap',
+      '6. Distribusi dan rekapitulasi',
+      '7. Penutup dan pengesahan'
+    ]);
+    assert.equal(tabelMingguan.querySelectorAll('th').length, 7);
+    assert.equal(tabelNonEfektif.querySelectorAll('th').length, 5);
+    const pekanPertama = tabelMingguan.querySelectorAll('tr')[1].children.map((sel) => sel.textContent);
+    assert.equal(pekanPertama[1], 'Agustus');
+    assert.equal(pekanPertama[2], '2');
+    assert.equal(pekanPertama[4], 'Tidak efektif');
+    assert.equal(pekanPertama[5], '0');
+    assert.match(tabelNonEfektif.textContent, /Libur sekolah/);
+  } finally {
+    if (propertiNode) Object.defineProperty(globalThis, 'Node', propertiNode);
+    else delete globalThis.Node;
+    if (propertiDocument) Object.defineProperty(globalThis, 'document', propertiDocument);
+    else delete globalThis.document;
+  }
 });
 
 /* ---------- Pembagian proporsional ---------- */
