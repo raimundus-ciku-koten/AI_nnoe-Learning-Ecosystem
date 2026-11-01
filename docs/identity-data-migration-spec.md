@@ -268,7 +268,7 @@ Perubahan hosting, billing, schema hosted, OAuth consent screen, domain produksi
 | Lokasi kunci pembungkus refresh token yang tidak dapat dibaca bersama ciphertext saat perangkat/akun browser diekspor | **PERLU KONFIRMASI** | Enkripsi token palsu atau token hilang; dampak berupa pengambilalihan sesi atau login ulang. |
 | Identitas stabil lintas perangkat tanpa direktori pusat | **PERLU KONFIRMASI** | Salah menggabungkan akun, kehilangan vault, atau tidak dapat memulihkan file. |
 | Status legal/consent untuk jurnal, roster, nilai, presensi, dan data anak di Drive | **PERLU KONFIRMASI** | Potensi pengumpulan/penyimpanan tidak sesuai; data tersebut dikecualikan dari pilot. |
-| Apakah kebutuhan sharing/admin/ujian bersama benar-benar dihentikan atau didesain ulang | Baseline tahap 5 masih sementara | Model data dan izin dapat berubah material. |
+| Apakah kebutuhan sharing/admin/ujian bersama benar-benar dihentikan atau didesain ulang | Lihat [spesifikasi desain ulang fitur lintas pengguna Tahap 5](./cross-user-features-redesign-stage5-spec.md); kapabilitas rilis awal tetap **PERLU KONFIRMASI** | Model data dan izin dapat berubah material. |
 | Drive quota, storage/user, akses file `drive.file`, dan retensi/penghapusan provider | Verifikasi akun/provider diperlukan | Backup atau sinkronisasi dapat gagal; jangan mengiklankan kapasitas atau durabilitas tertentu. |
 | Integritas audit lokal versus audit terpusat | **PERLU KONFIRMASI** | Catatan lokal dapat dihapus/diubah oleh pengguna/perangkat; bukan bukti kepatuhan atau anti-tamper. |
 | Sumber legacy Supabase yang dapat diekspor pengguna dan dependensi RPC/server-only | Inventaris belum lengkap | Migrasi parsial dapat melewatkan data atau fitur tersembunyi. |
