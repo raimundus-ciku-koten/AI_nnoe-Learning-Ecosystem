@@ -47,7 +47,7 @@ hanya memperoleh Dashboard.
 | Guru | Dashboard | Dashboard | — |
 | Guru | Asisten & Chat | Asisten AI; Testimoni | Chat |
 | Guru | Data Dasar | Profil Guru & Sekolah; Tahun Ajaran & Semester; Kelas & Mapel Saya; Data Siswa; Barcode & Kartu Absensi; Jadwal Mengajar; Kelompok & Denah Duduk | — |
-| Guru | Sumber Perencanaan | Peta Sebaran TP; RPE; ATP; Program Tahunan; Program Semester; KKTP; Modul Ajar; Hasil Perencanaan | Modul Ajar Untuk Siswa; Cover Perangkat |
+| Guru | Sumber Perencanaan | Peta Sebaran TP; RPE; ATP; Program Tahunan; Program Semester; KKTP; Modul Ajar; Cover Perangkat; Hasil Perencanaan | Modul Ajar Untuk Siswa |
 | Guru | Pelaksanaan Pembelajaran | Jurnal Mengajar Harian; Presensi Siswa; Program BK & Kegiatan | Realisasi terhadap Rencana; Pembelajaran Berdiferensiasi; Kegiatan Kelas Khusus; Catatan Kelas Cepat |
 | Guru | Asesmen dan Penilaian | Bank Soal; Ujian Online | Asesmen Diagnostik; Asesmen Formatif; Asesmen Sumatif; Rubrik & Instrumen; Analisis Hasil; Remedial & Pengayaan; Nilai & Capaian Rapor; Generator Soal AI; Penilaian Otomatis |
 | Guru | Pemantauan Siswa | — | Profil Siswa Satu Halaman; Catatan Perkembangan; Penguatan Karakter & Projek; Pendampingan & Tindak Lanjut; Komunikasi dengan Orang Tua |
@@ -95,7 +95,7 @@ hanya memperoleh Dashboard.
 
 | Peran/katalog | Jumlah item | Aktif | Nonaktif |
 |---|---:|---:|---:|
-| Guru dan peran turunan | 71 | 28 | 43 |
+| Guru dan peran turunan | 71 | 29 | 42 |
 | Operator | 5 | 4 | 1 |
 | Admin sekolah (`admin`) | 50 | 11 | 39 |
 | Superadmin | 29 | 10 | 19 |
@@ -109,7 +109,7 @@ hanya memperoleh Dashboard.
 
 | Kelompok | Perilaku lama yang terbukti | Padanan baru | Status | Tindakan berikutnya |
 |---|---|---|---|---|
-| Perencanaan guru | Rantai dan perilaku generator per dokumen dicatat pada matriks khusus. | Menu mengarah ke mesin perencanaan untuk RPE, ATP, Prota, Prosem, KKTP, Modul Ajar, dan arsip; Modul Siswa serta Cover dinonaktifkan. | Sebagian; lihat `docs/parity-matrix.md` | Tutup setiap gap dokumen sebelum menyebut setara. |
+| Perencanaan guru | Rantai dan perilaku generator per dokumen dicatat pada matriks khusus. | Menu mengarah ke mesin perencanaan untuk RPE, ATP, Prota, Prosem, KKTP, Modul Ajar, arsip, dan halaman Cover lokal; Modul Siswa masih dinonaktifkan. | Sebagian; lihat `docs/parity-matrix.md` | Tutup setiap gap dokumen sebelum menyebut setara. |
 | Jurnal mengajar | Jurnal lama menyediakan draf/final, edit/hapus, filter riwayat, pemulihan draf lokal, dan ringkasan presensi sesi. Data utamanya disimpan per UID pada Firebase. | Item `/pelaksanaan/jurnal` dinonaktifkan. Tidak ditemukan tabel Supabase jurnal yang dapat dipakai untuk memigrasikan penyimpanan dengan aman. | Belum | Rancang model Supabase dan RLS pemilik/tenant; port perilaku, tes akses silang, draf, simpan, restore, dan error sebelum mengaktifkan tautan. |
 | Presensi sesi | Presensi lama mengelola roster per sesi, status H/S/I/A, catatan, simpan ulang sesi, hapus, dan riwayat. | `/pelaksanaan/presensi` menampilkan riwayat scan pada `attendance_records`; migrasi itu hanya mendukung hasil scan hadir dan belum menyamakan pengambilan presensi per sesi. UI menyatakan migrasi hosted masih diperlukan. | Sebagian | Putuskan model presensi sesi dan migrasikan schema/RLS sebelum mengklaim paritas atau mengaktifkan pencatatan produksi. |
 | Menu tambahan lintas peran | Sumber `ainnoe-menu-tambahan` mendefinisikan banyak entri sebagai `segera`, bukan implementasi perilaku. | Menu baru tersedia; banyak item masih nonaktif dan sejumlah rute aktif memakai modul operasional terbatas. | PERLU KONFIRMASI per fitur | Telusuri sumber lama per domain dan buktikan layar, layanan, penyimpanan, dan izin sebelum menaikkan status. |

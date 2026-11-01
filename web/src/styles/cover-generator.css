@@ -1,0 +1,488 @@
+.cover-generator {
+  color: #172033;
+  display: grid;
+  gap: 1.25rem;
+  margin: 0 auto;
+  max-width: 90rem;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.cover-generator-heading,
+.cover-form-card,
+.cover-preview-panel,
+.cover-generator-denied {
+  background: #fff;
+  border: 1px solid #d6deea;
+  border-radius: 0.9rem;
+  box-shadow: 0 8px 24px rgb(22 42 74 / 6%);
+}
+
+.cover-generator-heading {
+  padding: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+.cover-generator-heading h1,
+.cover-form-card h2,
+.cover-preview-panel h2 {
+  margin: 0;
+}
+
+.cover-generator-heading h1 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+.cover-generator-heading > p,
+.cover-preview-toolbar p {
+  color: #526179;
+  margin: 0.45rem 0 0;
+}
+
+.cover-generator-kicker {
+  color: #1d4ed8 !important;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cover-storage-notice {
+  background: #eff6ff;
+  border-left: 4px solid #2563eb;
+  border-radius: 0.35rem;
+  margin-top: 1rem !important;
+  padding: 0.75rem 1rem;
+}
+
+.cover-generator-layout {
+  align-items: start;
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(17rem, 22rem) minmax(0, 1fr);
+}
+
+.cover-form-card,
+.cover-preview-panel {
+  min-width: 0;
+  padding: 1.25rem;
+}
+
+.cover-form-card > h2,
+.cover-history h2,
+.cover-preview-toolbar h2 {
+  font-size: 1.1rem;
+}
+
+.cover-form-card form {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.cover-form-card label {
+  color: #25334b;
+  display: grid;
+  font-size: 0.9rem;
+  font-weight: 650;
+  gap: 0.35rem;
+}
+
+.cover-form-card label span {
+  color: #58677e;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.cover-form-card input:not([type="file"]) {
+  background: #fff;
+  border: 1px solid #aebbd0;
+  border-radius: 0.45rem;
+  color: #172033;
+  font: inherit;
+  font-weight: 400;
+  min-height: 2.65rem;
+  padding: 0.5rem 0.65rem;
+  width: 100%;
+}
+
+.cover-form-card input[type="file"] {
+  color: #334155;
+  font: inherit;
+  font-size: 0.84rem;
+  max-width: 100%;
+}
+
+.cover-form-card input:focus-visible,
+.cover-form-actions button:focus-visible,
+.cover-history-item button:focus-visible,
+.cover-preview-toolbar button:focus-visible,
+.cover-logo-selected button:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.cover-form-help {
+  color: #526179;
+  font-size: 0.82rem;
+  margin: -0.5rem 0 0;
+}
+
+.cover-form-actions,
+.cover-preview-toolbar,
+.cover-logo-selected,
+.cover-history-item {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.cover-form-actions button,
+.cover-history-item button,
+.cover-logo-selected button,
+.cover-preview-toolbar button {
+  background: #1d4ed8;
+  border: 1px solid #1d4ed8;
+  border-radius: 0.45rem;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  min-height: 2.55rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.cover-form-actions button:disabled,
+.cover-preview-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.cover-form-actions .is-secondary,
+.cover-history-item button,
+.cover-logo-selected button {
+  background: #fff;
+  border-color: #9aaac1;
+  color: #1e3a5f;
+}
+
+.cover-history-item button.is-danger {
+  border-color: #b42318;
+  color: #b42318;
+}
+
+.cover-feedback {
+  background: #eff6ff;
+  border-radius: 0.4rem;
+  color: #1e3a5f;
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+}
+
+.cover-feedback.is-error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.cover-history {
+  border-top: 1px solid #d6deea;
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1.4rem;
+  padding-top: 1rem;
+}
+
+.cover-history > p {
+  color: #526179;
+  margin: 0;
+}
+
+.cover-history-item {
+  border: 1px solid #d6deea;
+  border-radius: 0.55rem;
+  padding: 0.55rem;
+}
+
+.cover-history-item > div {
+  display: grid;
+  flex: 1 1 8rem;
+  gap: 0.2rem;
+}
+
+.cover-history-item time {
+  color: #526179;
+  font-size: 0.78rem;
+}
+
+.cover-preview-panel {
+  background: #f1f5f9;
+}
+
+.cover-preview-toolbar {
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.cover-preview-empty {
+  background: #fff;
+  border: 1px dashed #9aaac1;
+  border-radius: 0.6rem;
+  color: #526179;
+  margin: 0;
+  padding: 1.25rem;
+}
+
+.cover-print-area {
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+}
+
+.cover-page {
+  background: #fff;
+  box-sizing: border-box;
+  color: #111827;
+  display: flex;
+  flex-direction: column;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  justify-content: space-between;
+  line-height: 1;
+  min-height: 297mm;
+  overflow: hidden;
+  padding: 24mm 22mm;
+  position: relative;
+  width: min(100%, 210mm);
+}
+
+.cover-page h1,
+.cover-page h2,
+.cover-page p {
+  font-family: "Times New Roman", Times, serif;
+  margin: 0;
+}
+
+.cover-page h1 {
+  font-size: 14pt;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cover-page h2 {
+  font-size: 12pt;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cover-front-heading {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 22mm;
+  text-align: center;
+}
+
+.cover-school-logo {
+  height: 22mm;
+  max-width: 55mm;
+  object-fit: contain;
+  width: auto;
+}
+
+.cover-school-name {
+  font-weight: 700;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.cover-label,
+.cover-kurikulum {
+  font-size: 9pt !important;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.cover-label {
+  border: 1px solid #1e3a8a;
+  color: #1e3a8a;
+  padding: 0.45rem 0.7rem;
+}
+
+.cover-front-title {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  text-align: center;
+}
+
+.cover-class {
+  font-weight: 700;
+}
+
+.cover-illustration {
+  height: auto;
+  margin: 0.8rem 0;
+  max-height: 36mm;
+  max-width: 100%;
+  width: 90mm;
+}
+
+.cover-front-meta {
+  display: grid;
+  font-size: 9pt;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.cover-front-meta div {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.cover-front-meta dt {
+  font-weight: 700;
+}
+
+.cover-front-meta dd {
+  margin: 0;
+}
+
+.cover-front-footer {
+  display: grid;
+  font-weight: 700;
+  gap: 0.45rem;
+  text-align: center;
+}
+
+.cover-back {
+  justify-content: center;
+}
+
+.cover-back-content {
+  position: relative;
+  z-index: 1;
+}
+
+.cover-back-content h1,
+.cover-back-content h2 {
+  margin-top: 0.75rem;
+}
+
+.cover-summary {
+  line-height: 1;
+  margin-top: 2rem !important;
+  text-align: justify;
+}
+
+.cover-meta-table {
+  border-collapse: collapse;
+  font-size: 11pt;
+  margin-top: 1.5rem;
+  width: 100%;
+}
+
+.cover-meta-table th,
+.cover-meta-table td {
+  border: 1px solid #334155;
+  font-size: 11pt;
+  font-weight: 400;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.cover-meta-table th {
+  font-weight: 700;
+  width: 36%;
+}
+
+.cover-back-accent {
+  bottom: -30mm;
+  height: 75mm;
+  opacity: 0.18;
+  position: absolute;
+  right: -25mm;
+  width: 75mm;
+}
+
+.cover-generator-denied {
+  margin: 2rem auto;
+  max-width: 50rem;
+  padding: 1.5rem;
+}
+
+.cover-generator-denied h1 {
+  font-size: 1.3rem;
+}
+
+@media (max-width: 900px) {
+  .cover-generator-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .cover-preview-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cover-page {
+    min-height: 0;
+    padding: 1.5rem;
+  }
+}
+
+@media print {
+  @page {
+    margin: 0;
+    size: A4;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .cover-print-area,
+  .cover-print-area * {
+    visibility: visible !important;
+  }
+
+  .cover-print-area {
+    display: block !important;
+    inset: 0 auto auto 0;
+    position: absolute;
+    width: 210mm;
+  }
+
+  .cover-page {
+    border: 0 !important;
+    box-shadow: none !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    min-height: 297mm !important;
+    padding: 24mm 22mm !important;
+    width: 210mm !important;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .cover-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover-generator *,
+  .cover-generator *::before,
+  .cover-generator *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

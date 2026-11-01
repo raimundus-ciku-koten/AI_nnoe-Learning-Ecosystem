@@ -10,7 +10,6 @@ const perencanaan = (label, jenis, ikon) =>
 
 const RUTE_TANPA_ALUR = new Set([
   '/perangkat/modul-siswa',
-  '/perangkat/cover',
   '/pelaksanaan/realisasi',
   '/pelaksanaan/berdiferensiasi',
   '/pelaksanaan/kelas-khusus',
