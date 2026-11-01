@@ -78,6 +78,7 @@ export default {
   'atpEditor.elemenUnit': 'Elemen CP unit {no}', 'atpEditor.selesai': 'Selesai menyunting', 'atpEditor.simpanSemua': 'Simpan perubahan', 'atpEditor.tersimpan': 'Perubahan ATP disimpan.',
   'atpEditor.buangPerubahan': 'Ada perubahan yang belum disimpan. Buang perubahan?', 'atpEditor.tidakValid': 'ATP belum valid',
   'atpEditor.ringkas': 'Σ JP TP: {jpTp} dari target {target} (Ulangan Harian {uh}; total {total} JP)', 'atpEditor.selaraskan': 'Selaraskan JP otomatis',
+  'atpEditor.jpBelumSelaras': 'Jumlah JP TP harus sama dengan target anggaran. Gunakan “Selaraskan JP otomatis” sebelum menyimpan.',
   'atpEditor.ubahTp': 'Ubah TP {kode}', 'atpEditor.hapusTp': 'Hapus TP {kode}', 'atpEditor.hapusUnit': 'Hapus unit', 'atpEditor.tambahTp': 'Tambah TP', 'atpEditor.tambahUnit': 'Tambah unit',
   'atpEditor.unitBaru': 'Unit baru', 'atpEditor.unitKosong': 'Belum ada TP pada unit ini.', 'atpEditor.namaUnit': 'Nama unit {no}', 'atpEditor.semesterUnit': 'Semester unit {no}',
   'atpEditor.tabelUnit': 'TP pada unit {no}: {nama}', 'atpEditor.galatKode': 'Kode TP wajib diisi.', 'atpEditor.galatKodeGanda': 'Kode TP sudah dipakai.',

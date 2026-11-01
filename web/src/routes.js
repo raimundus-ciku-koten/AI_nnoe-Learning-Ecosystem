@@ -24,6 +24,9 @@ export const ROUTES = {
   '/chat':              { page: 'chat',        title: 'Chat' },
   '/chat/baru':         { page: 'chat',        title: 'Percakapan Baru' },
   '/chat/kontak':       { page: 'chat',        title: 'Kontak' },
+  '/chat/grup':         { page: 'chat',        title: 'Grup' },
+  '/chat/telepon':      { page: 'chat',        title: 'Telepon' },
+  '/chat/video':        { page: 'chat',        title: 'Video Call' },
 
   '/datadasar':         { page: 'datadasar',   title: 'Data Dasar' },
   '/profil':            { page: 'profil',      title: 'Profil' },

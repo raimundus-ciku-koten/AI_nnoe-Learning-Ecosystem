@@ -1,46 +1,24 @@
 // src/services/authService.ts
 import { supabase } from '../lib/supabase';
-import { UserDoc, UserRole } from '../types/schema';
 
-export async function loginWithGoogle(): Promise<UserDoc> {
-  const redirectTo = `${window.location.origin}${window.location.pathname}`;
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo },
+export async function loginWithGoogle(): Promise<void> {
+  const response = await fetch('/api/auth/google/start', {
+    method: 'POST',
+    credentials: 'same-origin',
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
   });
-
-  if (error) throw error;
-
-  const user = data?.user;
-  if (!user?.email) throw new Error('Akun Google tidak memiliki alamat email yang valid.');
-
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  if (profileError) throw profileError;
-
-  const role: UserRole = (profile?.role as UserRole) || 'guru';
-  const newUserProfile: UserDoc = {
-    uid: user.id,
-    email: user.email,
-    nama: profile?.nama || user.user_metadata?.full_name || 'Guru Pengguna',
-    role,
-    sekolahId: profile?.tenant_id || 'supabase-default',
-    mapelIds: Array.isArray(profile?.mapel_ids) ? profile.mapel_ids : [],
-    kelasIds: Array.isArray(profile?.kelas_ids) ? profile.kelas_ids : [],
-    fotoUrl: user.user_metadata?.avatar_url || null,
-    telepon: null,
-    aktif: profile?.active === true,
-    lastLogin: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    deletedAt: null,
-  };
-
-  return newUserProfile;
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || 'Login Google tidak dapat dimulai.');
+  const target = new URL(result.authorizationUrl);
+  const supabaseOrigin = import.meta.env.VITE_SUPABASE_URL
+    ? new URL(import.meta.env.VITE_SUPABASE_URL).origin
+    : '';
+  if (!supabaseOrigin || target.origin !== supabaseOrigin || target.pathname !== '/auth/v1/authorize') {
+    throw new Error('URL OAuth Google server tidak valid.');
+  }
+  window.location.assign(target.toString());
 }
 
 export async function logoutUser(): Promise<void> {

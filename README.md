@@ -125,14 +125,31 @@ applied to hosted Supabase. Do not deploy it until the existing hosted schema
 is reconciled and the required backup/staging checks are complete.
 
 Audio/video calls require HTTPS (localhost is also supported) and browser
-microphone/camera permission. Hosting permits microphone access only to the
-same application origin; the browser still requires each user to grant
-permission. Calls use Supabase Realtime for signaling and a
-public STUN server by default. Networks that block direct peer connections
-also need a TURN service. Set `VITE_WEBRTC_ICE_SERVERS` to a JSON array of ICE
-server objects during the web build when TURN is required. Because this
-variable is delivered to browsers, use only short-lived, restricted TURN
-credentials; never put a long-lived provider secret in a `VITE_*` variable.
+microphone/camera permission. Calls use private Supabase Realtime signaling
+and short-lived TURN credentials from the authenticated `chat-turn-credentials`
+Edge Function; configure `TURN_URLS` and `TURN_SHARED_SECRET` only as server
+secrets. Never put TURN provider credentials in a `VITE_*` variable. Direct
+calls are one-to-one; group calls use a full-mesh topology and are limited to
+four total participants. Both are feature-gated and remain disabled until their
+Staging migrations, private-channel configuration, TURN service, and browser
+tests are verified. See `DEPLOYMENT_GUIDE.md` for the release gate.
+
+The communication source now presents five tabs: Chat, Grup, Telepon, Video
+Call, and Kontak. Telepon reads member-scoped call history for the last 90 days
+and supports redial; direct incoming calls are recorded as missed or rejected,
+and group calls with no accepted participants finalize as rejected when all
+invitees decline. Video Call provides a shortcut into an existing conversation.
+The call initiator alone writes the shared call record; other participants see
+it through member-scoped history. The source-only migration includes a
+service-role cleanup function for records older than 90 days, but no retention
+schedule has been configured and the migration has not been applied to hosted
+Supabase.
+Text messages are still plaintext: E2EE, device pairing/recovery, and an
+encrypted offline outbox are not implemented, so this is not an E2EE release.
+The source now refuses to enable chat from `VITE_CHAT_ENABLED` alone; an
+internal E2EE-readiness gate remains false until the protocol and migration
+are implemented and verified. Keep chat/call feature flags disabled until all
+release gates pass.
 
 Migrations `20261016000100` through `20261016000300` and `supabase/seed.sql`
 were applied through the Dashboard SQL Editor. On 2026-10-17,
@@ -903,10 +920,12 @@ access with RLS before wiring application data to Supabase.
 
 ### GitHub and Vercel
 
-Push the repository to GitHub and import it into Vercel. Set the Vercel project
-Root Directory to `web`; `web/vercel.json` supplies the Vite build and output
-settings. The repository-root `vercel.json` also supports the monorepo root by
-installing dependencies from `web/package-lock.json` and building `web/`.
+Push the repository to GitHub and import it into Vercel. For same-origin BFF
+authentication and integration APIs, set the Vercel project Root Directory to
+the repository root; the root `vercel.json` installs/builds the `web/`
+application and deploys the repository-root `api/` functions. Setting Root
+Directory to `web` omits those API functions and is not supported for the BFF
+release unless the functions are moved into that directory.
 Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to all three Vercel
 environments. GitHub Actions runs CI for pull requests and pushes to `main`;
 Vercel's Git integration handles preview and production deployments when the
@@ -1297,3 +1316,55 @@ submission retries, and essay grading end to end.
   reusable backend logic in the active, reviewed Supabase Edge Functions.
 - Validate any data import in a disposable environment before a hosted
   migration.
+
+## OAuth, sync, and AI connection source status
+
+The connection settings screen and same-origin Vercel functions are local
+source changes only. The migration
+`supabase/migrations/20261103000100_integrations_sync.sql` has not been applied
+to Staging or Production, Vercel server secrets have not been configured, and
+no deployment was performed. The API reports an explicit configuration error
+until those prerequisites are completed. Do not treat the feature as active.
+
+- Google consent uses separate Authorization Code + PKCE flows for Drive
+  (`drive.file`), Tasks (`tasks`), and the user's primary owned Calendar events
+  (`calendar.events.owned`). Google refresh tokens are encrypted server-side
+  with versioned AES-256-GCM keys. The service-only tables have RLS enabled and
+  no browser grants.
+- Sync runs on login/session restore, app foreground, reconnect, or manual
+  request. Drive sync stores file metadata, not file contents; Tasks sync
+  covers the default task list; Calendar sync covers the primary calendar.
+  Sync state/cursors and normalized records are server-side. Offline mutations
+  are queued in per-user IndexedDB and retried with bounded exponential delay.
+  Conflicts preserve both snapshots and require a local/Google choice. A PWA
+  cannot guarantee background work while closed.
+- The generic mutation API currently handles metadata for Drive files and
+  records for Tasks/Calendar; it is not yet mapped to all existing application
+  planning, classroom, or calendar records. Verify provider quotas, large
+  pagination, recurring events, time zones, and account revocation in Staging.
+- AI adapters are split into local AI_nnoe/Ollama and an OpenAI-compatible
+  server-side cloud adapter. The local adapter is the default for assistant,
+  question, and planning workflows. Cloud is opt-in per assistant request,
+  uses server-only secrets, blocks explicit sensitive prompts and common
+  identifier patterns, and is capped at 10 requests per user per day by a
+  server-side quota. It never silently falls back to cloud. The identifier
+  check is a guardrail, not comprehensive DLP; do not send personal or student
+  data to cloud. The cloud adapter is unavailable until configured.
+- **Primary Supabase session:** password and Google sign-in, session restore,
+  refresh, password recovery, and logout now use same-origin BFF routes. The
+  Supabase SDK's custom storage is memory-only; its refresh token is held in an
+  HttpOnly, SameSite cookie at the server boundary, and only the short-lived
+  access token is made available to in-memory SDK/RLS queries. Configure
+  `SUPABASE_PUBLISHABLE_KEY` server-side and add the exact callback URLs
+  `/api/auth/google/callback` and `/api/auth/recovery/callback` to the Supabase
+  Auth redirect allowlist. This source implementation is not deployed or
+  validated against hosted Auth, OAuth configuration, or recovery email links.
+  Staging validation is required before claiming production readiness.
+
+Required Vercel server environment variables are documented in `.env.example`.
+Never add them with a `VITE_` prefix. Generate and store encryption keys
+directly in the deployment secret manager; retain old version keys during
+rotation. Before rollout, apply and validate the migration only in a verified
+disposable/Staging project, test OAuth consent/revocation and RLS isolation,
+then separately approve deployment. No MCP or hosted database was touched for
+this source change.

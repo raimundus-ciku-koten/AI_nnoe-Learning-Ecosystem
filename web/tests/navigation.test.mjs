@@ -5,7 +5,8 @@ import {
   menuTanpaChat, menuUntukPeran,
 } from '../src/navigasi.js';
 import {
-  CHAT_CALLS_ENABLED, CHAT_FEATURE_ENABLED, CHAT_UNAVAILABLE_MESSAGE, isChatCallsEnabled,
+  CHAT_CALLS_ENABLED, CHAT_E2EE_READY, CHAT_FEATURE_ENABLED, CHAT_UNAVAILABLE_MESSAGE,
+  CHAT_E2EE_NOT_READY_MESSAGE, assertChatE2EEReady, isChatCallsEnabled,
   isChatFeatureEnabled, isChatFeaturePath,
 } from '../src/services/featureFlags.js';
 
@@ -63,21 +64,23 @@ test('menu memilih rute terdalam untuk chat dan data dasar', () => {
   assert.equal(chat?.disabled, true);
   assert.equal(chat?.path, undefined);
   assert.equal(chat?.statusLabel, 'Nonaktif');
-  assert.match(chat?.availabilityMessage || '', /kebijakan akses sekolah belum terverifikasi/);
+  assert.match(chat?.availabilityMessage || '', /E2EE pesan belum siap/);
   assert.doesNotMatch(chat?.availabilityMessage || '', /akan dibuka|segera hadir/i);
   assert.equal(cariMenu('/datadasar/siswa')?.item.label, 'Data Siswa');
 });
 
 test('chat stays disabled unless explicitly enabled and chat-only paths are identified', () => {
+  assert.equal(CHAT_E2EE_READY, false);
+  assert.throws(assertChatE2EEReady, new RegExp(CHAT_E2EE_NOT_READY_MESSAGE));
   assert.equal(CHAT_FEATURE_ENABLED, false);
   assert.equal(CHAT_CALLS_ENABLED, false);
-  assert.equal(isChatFeatureEnabled({ VITE_CHAT_ENABLED: 'true' }), true);
-  assert.equal(isChatFeatureEnabled({ VITE_CHAT_ENABLED: 'TRUE' }), true);
+  assert.equal(isChatFeatureEnabled({ VITE_CHAT_ENABLED: 'true' }), false);
+  assert.equal(isChatFeatureEnabled({ VITE_CHAT_ENABLED: 'TRUE' }), false);
   assert.equal(isChatFeatureEnabled({ VITE_CHAT_ENABLED: '1' }), false);
   assert.equal(isChatCallsEnabled({
     VITE_CHAT_ENABLED: 'true',
     VITE_CHAT_CALLS_ENABLED: 'true',
-  }), true);
+  }), false);
   assert.equal(isChatCallsEnabled({
     VITE_CHAT_ENABLED: 'false',
     VITE_CHAT_CALLS_ENABLED: 'true',

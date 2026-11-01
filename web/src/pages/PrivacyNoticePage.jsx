@@ -6,7 +6,8 @@ const dataGroups = [
   ['Pendaftaran uji coba', 'Alamat email terverifikasi dan nama tampilan untuk mencegah penggunaan uji coba berulang; pilihan persona demo tidak menjadi peran akun.'],
   ['Data pembelajaran', 'Data siswa, kelas, kehadiran, bank soal, nilai atau asesmen, dan dokumen yang dimasukkan oleh sekolah atau pengguna.'],
   ['Komunikasi', 'Pesan, metadata percakapan, lampiran yang dipilih pengguna, dan token notifikasi perangkat bila notifikasi diaktifkan.'],
-  ['Integrasi pilihan pengguna', 'Berkas Drive/Sheets yang dibuat atau dipilih langsung oleh pengguna. Token Google Workspace hanya disimpan sementara di memori halaman.'],
+  ['Integrasi pilihan pengguna', 'Integrasi Google Workspace lama menyimpan access token sementara di memori halaman. Rancangan koneksi baru mengenkripsi refresh token Google di backend dan menyimpan metadata Drive serta data Tasks/Calendar di Supabase; fitur ini belum aktif sampai migrasi dan environment server diterapkan.'],
+  ['Permintaan AI', 'AI_nnoe mengirim prompt ke Ollama localhost secara default. AI cloud hanya menerima prompt setelah izin eksplisit per permintaan dan pemrosesan data sensitif tetap diblokir; provider cloud belum aktif sampai backend dikonfigurasi.'],
   ['Draf program BK dan kegiatan', 'Draf program hanya berada di memori halaman hingga ditutup. Gunakan cetak atau Simpan sebagai PDF untuk membuat salinan lokal; jangan masukkan identitas siswa atau isi konseling.'],
 ];
 
@@ -37,10 +38,13 @@ export default function PrivacyNoticePage() {
         <h2>Penyimpanan dan layanan terkait</h2>
         <p>
           Aplikasi menggunakan Supabase untuk layanan aplikasi dan autentikasi. Konfigurasi proyek saat ini
-          menunjuk region India Selatan; region ini belum dipindahkan ke Singapura. Integrasi Google Drive
-          atau Sheets hanya berjalan setelah pengguna memilihnya. Cadangan terenkripsi ke R2 baru aktif setelah
+          menunjuk region India Selatan; region ini belum dipindahkan ke Singapura. Integrasi Google lama
+          berjalan setelah pengguna memilihnya; koneksi OAuth server-side, Tasks, Calendar, dan sync metadata
+          masih source-only dan belum diterapkan di hosted environment. Cadangan terenkripsi ke R2 baru aktif setelah
           pemilik mengisi rahasia GitHub Actions dan menguji pemulihan; halaman ini tidak menyatakan bahwa
-          backup produksi sudah berjalan.
+          backup produksi sudah berjalan. Refresh session autentikasi utama kini dirancang memakai cookie
+          HttpOnly melalui endpoint same-origin; implementasi BFF ini belum diuji pada konfigurasi Supabase
+          hosted dan bukan bukti bahwa login/recovery siap produksi.
         </p>
         <h2>Data anak dan retensi</h2>
         <p>

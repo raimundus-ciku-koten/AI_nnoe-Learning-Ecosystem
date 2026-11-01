@@ -1,0 +1,208 @@
+.connection-settings {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.connection-settings__header h1 {
+  margin: .25rem 0;
+}
+
+.connection-settings__header > p:last-child,
+.connection-settings__section > p,
+.connection-settings__card > p,
+.connection-settings__footnote {
+  color: var(--ale-muted, #64748b);
+}
+
+.connection-settings__eyebrow {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  margin: 0;
+  color: var(--ale-primary, #2563eb);
+  font-weight: 700;
+}
+
+.connection-settings__section {
+  display: grid;
+  gap: .75rem;
+}
+
+.connection-settings__section h2 {
+  margin: 0;
+}
+
+.connection-settings__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: 1rem;
+}
+
+.connection-settings__card {
+  display: grid;
+  align-content: start;
+  gap: .8rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--ale-border, #dbe3ef);
+  border-radius: .9rem;
+  background: var(--ale-surface, #fff);
+  box-shadow: 0 8px 28px rgb(15 23 42 / 5%);
+}
+
+.connection-settings__card-heading,
+.connection-settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+
+.connection-settings__card h3 {
+  margin: 0;
+}
+
+.connection-settings__badge {
+  padding: .2rem .55rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: .8rem;
+}
+
+.connection-settings__badge.is-ready {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.connection-settings__card dl {
+  display: grid;
+  gap: .45rem;
+  margin: 0;
+}
+
+.connection-settings__card dl > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, .7fr) minmax(0, 1fr);
+  gap: .5rem;
+}
+
+.connection-settings__card dt {
+  color: var(--ale-muted, #64748b);
+}
+
+.connection-settings__card dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.connection-settings__card code {
+  font-size: .82em;
+}
+
+.connection-settings__field,
+.connection-settings__consent {
+  display: grid;
+  gap: .4rem;
+  font-weight: 600;
+}
+
+.connection-settings__field input,
+.connection-settings__field select,
+.connection-settings__field textarea {
+  width: 100%;
+  min-height: 2.65rem;
+  padding: .5rem .7rem;
+  border: 1px solid var(--ale-border, #cbd5e1);
+  border-radius: .55rem;
+  background: var(--ale-surface, #fff);
+  color: inherit;
+  font: inherit;
+}
+
+.connection-settings__field textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.connection-settings__consent {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  font-size: .9rem;
+  font-weight: 400;
+}
+
+.connection-settings__consent input {
+  margin-top: .2rem;
+}
+
+.connection-settings__result {
+  max-height: 24rem;
+  margin: 0;
+  padding: .8rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-radius: .5rem;
+  background: #f8fafc;
+}
+
+.connection-settings__actions button {
+  min-height: 2.6rem;
+  padding: .5rem .8rem;
+  border: 0;
+  border-radius: .55rem;
+  background: var(--ale-primary, #2563eb);
+  color: #fff;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.connection-settings__actions button.is-secondary {
+  border: 1px solid var(--ale-border, #cbd5e1);
+  background: transparent;
+  color: inherit;
+}
+
+.connection-settings__actions button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.connection-settings__message {
+  padding: .8rem 1rem;
+  border-radius: .6rem;
+  background: #eff6ff;
+}
+
+.connection-settings__message.is-error,
+.connection-settings__inline-error {
+  color: #b91c1c;
+}
+
+.connection-settings__message.is-success {
+  color: #166534;
+  background: #f0fdf4;
+}
+
+.connection-settings__message.is-warning {
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.connection-settings__footnote {
+  font-size: .9rem;
+}
+
+@media (max-width: 540px) {
+  .connection-settings__card dl > div {
+    grid-template-columns: 1fr;
+    gap: .15rem;
+  }
+}

@@ -57,20 +57,26 @@ export async function muatKontak(uid = getState().user?.uid) {
 
 export async function kirimPermintaan(saya, orang) {
   validasiPihak(saya, orang);
-  const { data: existing, error: lookupError } = await supabase
+  const cariRelasi = () => supabase
     .from('chat_contacts')
     .select('id,from_user_id,to_user_id,status')
     .or(`and(from_user_id.eq.${saya.uid},to_user_id.eq.${orang.uid}),and(from_user_id.eq.${orang.uid},to_user_id.eq.${saya.uid})`)
     .maybeSingle();
+  const tanganiRelasi = async (existing) => {
+    if (existing?.status === 'accepted') throw new GalatKontak('Sudah menjadi kontak.');
+    if (existing?.status === 'pending') {
+      if (existing.from_user_id === saya.uid) {
+        throw new GalatKontak('Permintaan sudah dikirim, menunggu persetujuan.');
+      }
+      return terimaPermintaan(saya, existing.id);
+    }
+    return null;
+  };
+  const { data: existing, error: lookupError } = await cariRelasi();
   if (lookupError) throw lookupError;
 
-  if (existing?.status === 'accepted') throw new GalatKontak('Sudah menjadi kontak.');
-  if (existing?.status === 'pending') {
-    if (existing.from_user_id === saya.uid) {
-      throw new GalatKontak('Permintaan sudah dikirim, menunggu persetujuan.');
-    }
-    return terimaPermintaan(saya, existing.id);
-  }
+  const existingResult = await tanganiRelasi(existing);
+  if (existingResult) return existingResult;
 
   const { data, error } = await supabase
     .from('chat_contacts')
@@ -85,6 +91,15 @@ export async function kirimPermintaan(saya, orang) {
     })
     .select('id')
     .single();
+  if (error?.code === '23505') {
+    // The pair-level unique index can win a race against the lookup above.
+    const { data: raced, error: raceLookupError } = await cariRelasi();
+    if (raceLookupError) throw raceLookupError;
+    if (raced) {
+      const raceResult = await tanganiRelasi(raced);
+      if (raceResult) return raceResult;
+    }
+  }
   if (error) throw error;
   return data.id;
 }

@@ -10,7 +10,7 @@ import { h, kosongkan, angka } from './dom.js';
 import { t } from '../i18n/index.js';
 import { BATAS } from '../constants.js';
 import { bersihkanTeks } from '../engine/validator.js';
-import { hitungAnggaran, normKode, selaraskanJpAtp } from '../engine/prota.js';
+import { hitungAnggaran, jumlahJpTp, normKode, selaraskanJpAtp } from '../engine/prota.js';
 
 /**
  * @param {Object} o
@@ -40,7 +40,7 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
   function ringkasan() {
     const unitIsi = draft.unit.filter((u) => u.tp.length);
     const ang = hitungAnggaran(unitIsi.length, totalJP, jpPerPekan, jumlahHari);
-    const jpTp = draft.unit.reduce((s, u) => s + u.tp.reduce((x, y) => x + (y.jp || 0), 0), 0);
+    const jpTp = jumlahJpTp(draft);
     if (!ang.ok) return h('p', { class: 'kotak kotak-galat', role: 'alert' }, t(`galat.${ang.alasan}`));
     const cocok = jpTp === ang.sisaTP;
     return h('div', { class: `ringkas-jp ${cocok ? 'ok' : 'beda'}`, role: 'status', 'aria-live': 'polite' },

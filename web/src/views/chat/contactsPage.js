@@ -20,7 +20,7 @@ import { pesanGalatChat } from '../../utils/chatUtil.js';
 import { mulaiChatPribadi } from '../../services/chat.js';
 import { urlFotoAman } from '../../services/protectedMedia.js';
 import {
-  kirimPermintaan, terimaPermintaan, hapusKontak, muatDirektori
+  GalatKontak, kirimPermintaan, terimaPermintaan, hapusKontak, muatDirektori
 } from '../../services/contacts.js';
 import { buatTabChat } from './chatTabs.js';
 
@@ -128,6 +128,19 @@ export async function tampilkanKontak(wadah) {
     });
   }
 
+  async function terimaDanSiapkanChat(id, peerUid, nama) {
+    await terimaPermintaan(saya, id);
+    try {
+      await mulaiChatPribadi(saya, { uid: peerUid, nama });
+    } catch (error) {
+      console.error('[kontak] permintaan diterima, tetapi ruang chat gagal dibuat:', error);
+      throw new GalatKontak(
+        'Permintaan diterima, tetapi ruang chat gagal dibuat. Anda tetap dapat memulai chat dari tab Kontak.',
+        'kontak/chat-create-failed',
+      );
+    }
+  }
+
   /* ---------- komponen baris ---------- */
   function avatar(nama, foto) {
     const image = urlFotoAman(foto)
@@ -200,11 +213,11 @@ export async function tampilkanKontak(wadah) {
     masuk.forEach((k) => hasil.push(baris({
       nama: k.name || 'Pengguna',
       aksi: [
-        tombol('Terima', 'btn-ale', () => jalankan(`terima:${k.id}`, async () => {
-          await terimaPermintaan(saya, k.id);
-          // Buat ruang chat segera; bila gagal, tetap bisa dibuat dari tab Kontak.
-          try { await mulaiChatPribadi(saya, { uid: k.peerUid, nama: k.name }); } catch { /* abaikan */ }
-        }, 'Permintaan diterima.'), sibuk.has(`terima:${k.id}`)),
+        tombol('Terima', 'btn-ale', () => jalankan(
+          `terima:${k.id}`,
+          () => terimaDanSiapkanChat(k.id, k.peerUid, k.name),
+          'Permintaan diterima.',
+        ), sibuk.has(`terima:${k.id}`)),
         tombol('Tolak', 'btn-outline-secondary', () =>
           jalankan(`tolak:${k.id}`, () => hapusKontak(saya, k.id), 'Permintaan ditolak.'), sibuk.has(`tolak:${k.id}`))
       ]
@@ -238,10 +251,11 @@ export async function tampilkanKontak(wadah) {
       } else if (st?.status === 'pending' && st.arah === 'keluar') {
         aksi = [tombol('Menunggu', 'btn-light', () => {}, true)];
       } else if (st?.status === 'pending' && st.arah === 'masuk') {
-        aksi = [tombol('Terima', 'btn-ale', () => jalankan(`terima:${id}`, async () => {
-          await terimaPermintaan(saya, id);
-          try { await mulaiChatPribadi(saya, { uid: u.uid, nama: u.nama }); } catch { /* abaikan */ }
-        }, 'Permintaan diterima.'), sibuk.has(`terima:${id}`))];
+        aksi = [tombol('Terima', 'btn-ale', () => jalankan(
+          `terima:${id}`,
+          () => terimaDanSiapkanChat(id, u.uid, u.nama),
+          'Permintaan diterima.',
+        ), sibuk.has(`terima:${id}`))];
       } else {
         aksi = [tombol('Tambah', 'btn-outline-primary', () =>
           jalankan(`kirim:${u.uid}`, () => kirimPermintaan(saya, { uid: u.uid, nama: u.nama }), 'Permintaan terkirim.'),

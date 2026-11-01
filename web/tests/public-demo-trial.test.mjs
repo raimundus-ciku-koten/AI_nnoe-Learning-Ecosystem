@@ -8,6 +8,8 @@ const migration = await readFile(
 );
 const auth = await readFile(new URL('../src/auth.js', import.meta.url), 'utf8');
 const authService = await readFile(new URL('../src/services/authService.ts', import.meta.url), 'utf8');
+const authBff = await readFile(new URL('../../api/_lib/auth-session.js', import.meta.url), 'utf8');
+const supabaseClient = await readFile(new URL('../src/lib/supabase.ts', import.meta.url), 'utf8');
 const demoPage = await readFile(new URL('../src/pages/TrialDemoPage.jsx', import.meta.url), 'utf8');
 const loginPage = await readFile(new URL('../src/pages/login.js', import.meta.url), 'utf8');
 
@@ -32,7 +34,10 @@ test('trial tidak dapat memperoleh role lain, akses data, atau tenant sekolah', 
 
 test('signup mewajibkan token CAPTCHA dan tidak menerima klaim peran dari klien', () => {
   assert.match(auth, /if \(!captchaToken\) throw new Error/);
-  assert.match(auth, /captchaToken,\s+emailRedirectTo,\s+data: \{ full_name: nama \}/);
+  assert.match(auth, /\/api\/auth\/signup/);
+  assert.match(authBff, /if \(typeof body\.captchaToken !== 'string' \|\| !body\.captchaToken\)/);
+  assert.match(authBff, /data: \{ full_name: fullName \}/);
+  assert.match(authBff, /gotrue_meta_security: \{ captcha_token: body\.captchaToken \}/);
   assert.doesNotMatch(auth.match(/export async function daftarUjiCoba[\s\S]*?\n}/)?.[0] || '', /role|tenant_id|active_role/);
 });
 
@@ -44,9 +49,23 @@ test('trial publik tersembunyi dan diblokir sampai diaktifkan eksplisit dengan T
   assert.match(loginPage, /if \(!DEMO_TRIAL_ENABLED\) \{\s+tampilkanError/);
 });
 
-test('callback Google tidak menambahkan hash router ke fragmen token OAuth', () => {
-  assert.match(auth, /const redirectTo = `\$\{window\.location\.origin\}\$\{window\.location\.pathname\}`;/);
-  assert.match(authService, /const redirectTo = `\$\{window\.location\.origin\}\$\{window\.location\.pathname\}`;/);
+test('callback Google ditangani server dengan PKCE, tanpa token dalam URL browser', () => {
+  assert.match(auth, /\/api\/auth\/google\/start/);
+  assert.match(authService, /\/api\/auth\/google\/start/);
+  assert.match(authBff, /code_challenge_method', 's256'/);
+  assert.match(authBff, /\/api\/auth\/google\/callback/);
+  assert.match(authBff, /appOrigin\(\)\}\/#\/dashboard/);
+  assert.doesNotMatch(auth, /signInWithOAuth/);
+});
+
+test('refresh session browser dibatasi ke memori dan dipulihkan melalui cookie BFF', () => {
+  assert.match(supabaseClient, /const sessionMemory = new Map/);
+  assert.match(supabaseClient, /fetch\('\/api\/auth\/session'/);
+  assert.match(supabaseClient, /persistSession: true/);
+  assert.match(supabaseClient, /storage: authStorage/);
+  assert.doesNotMatch(supabaseClient, /localStorage/);
+  assert.match(authBff, /HttpOnly; SameSite=Lax/);
+  assert.match(authBff, /refresh_token: REFRESH_SENTINEL/);
 });
 
 test('demo hanya memanipulasi data contoh lokal dengan batas lima item', () => {

@@ -255,6 +255,7 @@ export const GRUP_MENU = [
       tautan('Peran & Hak Akses', '/pengaturan/peran', 'users'),
       tautan('Preferensi', '/pengaturan/preferensi', 'settings'),
       tautan('Cadangan & Pemulihan', '/pengaturan/cadangan', 'file'),
+      tautan('Pengaturan Koneksi', '/pengaturan/koneksi', 'settings'),
       tautan('Integrasi Google', '/pengaturan/google', 'settings'),
       tautan('AI & Layanan', '/pengaturan/api-ai', 'settings'),
       tautan('Pusat Bantuan', '/pengaturan/bantuan', 'chat'),

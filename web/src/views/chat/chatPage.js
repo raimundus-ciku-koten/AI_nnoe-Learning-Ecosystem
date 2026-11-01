@@ -74,7 +74,7 @@ export async function tampilkanChat(outlet, params = {}) {
 
   let berhentiRuang = () => {};
   if (chatId) {
-    berhentiRuang = (await tampilkanRuang(ruangPanel, chatId)) || (() => {});
+    berhentiRuang = (await tampilkanRuang(ruangPanel, chatId, params.callKind)) || (() => {});
   } else {
     ruangPanel.append(
       h('div', { class: 'empty-state m-auto' },

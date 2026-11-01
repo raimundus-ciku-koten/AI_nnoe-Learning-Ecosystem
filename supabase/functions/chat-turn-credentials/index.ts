@@ -76,24 +76,30 @@ Deno.serve(async (request) => {
     console.error('[chat-turn-credentials] Conversation lookup failed:', conversationError.message);
     return jsonResponse(500, { error: 'Tidak dapat memverifikasi percakapan.' });
   }
-  if (!conversation || !conversation.participant_ids.includes(authData.user.id)) {
+  if (!conversation || !Array.isArray(conversation.participant_ids) ||
+      !conversation.participant_ids.includes(authData.user.id)) {
     return jsonResponse(403, { error: 'Akun ini bukan peserta percakapan.' });
   }
-  if (conversation.type !== 'direct' || conversation.participant_ids.length !== 2) {
-    return jsonResponse(403, { error: 'Panggilan grup belum tersedia.' });
+  if (conversation.type === 'direct') {
+    if (conversation.participant_ids.length !== 2) {
+      return jsonResponse(403, { error: 'Percakapan langsung tidak valid.' });
+    }
+    const peerId = conversation.participant_ids.find((id: string) => id !== authData.user.id);
+    const { data: contact, error: contactError } = await supabase
+      .from('chat_contacts')
+      .select('id')
+      .eq('status', 'accepted')
+      .or(`and(from_user_id.eq.${authData.user.id},to_user_id.eq.${peerId}),and(from_user_id.eq.${peerId},to_user_id.eq.${authData.user.id})`)
+      .maybeSingle();
+    if (contactError) {
+      console.error('[chat-turn-credentials] Contact lookup failed:', contactError.message);
+      return jsonResponse(500, { error: 'Tidak dapat memverifikasi kontak.' });
+    }
+    if (!contact) return jsonResponse(403, { error: 'Panggilan hanya tersedia untuk kontak yang disetujui.' });
+  } else if (conversation.type !== 'group' ||
+      conversation.participant_ids.length < 2 || conversation.participant_ids.length > 4) {
+    return jsonResponse(403, { error: 'Panggilan grup dibatasi maksimal 4 peserta.' });
   }
-  const peerId = conversation.participant_ids.find((id: string) => id !== authData.user.id);
-  const { data: contact, error: contactError } = await supabase
-    .from('chat_contacts')
-    .select('id')
-    .eq('status', 'accepted')
-    .or(`and(from_user_id.eq.${authData.user.id},to_user_id.eq.${peerId}),and(from_user_id.eq.${peerId},to_user_id.eq.${authData.user.id})`)
-    .maybeSingle();
-  if (contactError) {
-    console.error('[chat-turn-credentials] Contact lookup failed:', contactError.message);
-    return jsonResponse(500, { error: 'Tidak dapat memverifikasi kontak.' });
-  }
-  if (!contact) return jsonResponse(403, { error: 'Panggilan hanya tersedia untuk kontak yang disetujui.' });
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')

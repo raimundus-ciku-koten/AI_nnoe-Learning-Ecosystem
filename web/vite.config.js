@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   server: {
@@ -24,6 +24,9 @@ export default defineConfig({
         assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
+  },
+  test: {
+    setupFiles: ['./src/testSetup.js'],
   },
   esbuild: {
     drop: ['console', 'debugger'],

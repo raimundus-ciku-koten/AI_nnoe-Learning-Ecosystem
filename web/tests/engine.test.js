@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { urai, keIso, seninPekan, formatTanggal } from '../src/pages/perencanaan/engine/tanggal.js';
 import { normalisasiHari, hitungRpe, bangunPetaKalender } from '../src/pages/perencanaan/engine/rpe.js';
 import {
-  bagiProporsional, hitungAnggaran, selaraskanJpAtp, hitungProta, rekapAtp, ratakanTp
+  bagiProporsional, hitungAnggaran, jumlahJpTp, selaraskanJpAtp, hitungProta, rekapAtp, ratakanTp
 } from '../src/pages/perencanaan/engine/prota.js';
 import { hitungProsem } from '../src/pages/perencanaan/engine/prosem.js';
 import { validasiKonteks, validasiAtp } from '../src/pages/perencanaan/engine/validator.js';
@@ -137,7 +137,8 @@ test('selaraskanJpAtp: Σ JP TP + Σ UH = Total JP tepat; kode/rumusan tak berub
   const r = selaraskanJpAtp(asli, 114, 4, 2);
   assert.ok(r.ok);
   assert.deepEqual(asli, salinan, 'masukan tidak boleh dimutasi');
-  const jpTp = ratakanTp(r.atp).reduce((s, t) => s + t.jp, 0);
+  assert.notEqual(jumlahJpTp(asli), r.anggaran.sisaTP);
+  const jpTp = jumlahJpTp(r.atp);
   assert.equal(jpTp, r.anggaran.sisaTP);
   assert.equal(jpTp + r.anggaran.uhTotal, 114);
   assert.deepEqual(ratakanTp(r.atp).map((t) => t.kode), ratakanTp(asli).map((t) => t.kode));

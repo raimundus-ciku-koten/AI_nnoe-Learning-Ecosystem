@@ -107,7 +107,7 @@ const HalamanTestimoni = lazy(() => import('./pages/TestimonialPage.jsx'));
 const HalamanAdminPengguna = lazy(() => import('./pages/AdminUsersPage.jsx'));
 const HalamanPresensi = lazy(() => import('./pages/AttendancePage.jsx'));
 const HalamanGoogleWorkspace = lazy(() => import('./pages/GoogleWorkspacePage.jsx'));
-const HalamanIntegrasiAI = lazy(() => import('./pages/AIIntegrationsPage.jsx'));
+const HalamanPengaturanKoneksi = lazy(() => import('./pages/ConnectionSettingsPage.jsx'));
 const HalamanBankSoal = lazy(() => import('./pages/QuestionBankPage.jsx'));
 const HalamanUjianOnline = lazy(() => import('./pages/OnlineAssessmentPage.jsx'));
 const HalamanNilaiUjianSiswa = lazy(() => import('./pages/OnlineAssessmentResultsPage.jsx'));
@@ -119,6 +119,7 @@ const HalamanPenggunaSupabase = lazy(() => import('./pages/SupabasePlatformUsers
 const HalamanPrivasi = lazy(() => import('./pages/PrivacyNoticePage.jsx'));
 const HalamanTrial = lazy(() => import('./pages/TrialDemoPage.jsx'));
 const AppShell = lazy(() => import('./components/AppShell.jsx'));
+const IntegrationSyncLifecycle = lazy(() => import('./components/IntegrationSyncLifecycle.jsx'));
 
 function ChatFeatureGate({ children }) {
   if (CHAT_FEATURE_ENABLED) return children;
@@ -190,6 +191,7 @@ function RouteWrapper() {
 
   return (
     <Suspense fallback={<div className="loading-spinner">Memuat...</div>}>
+      <IntegrationSyncLifecycle />
       <Routes>
         <Route path="/login" element={user && !passwordRecovery ? <Navigate to={selectedRole === 'demo' ? '/trial' : '/dashboard'} replace /> : <HalamanLogin />} />
         <Route path="/trial" element={user ? (selectedRole === 'demo' ? <HalamanTrial /> : <Navigate to="/dashboard" replace />) : <Navigate to="/login" replace />} />
@@ -206,7 +208,8 @@ function RouteWrapper() {
         <Route path="/pelaksanaan/presensi" element={<PrivateShell><HalamanPresensi /></PrivateShell>} />
         <Route path="/program-kegiatan" element={<PrivateShell><HalamanProgramKegiatan /></PrivateShell>} />
         <Route path="/pengaturan/google" element={<PrivateShell><HalamanGoogleWorkspace /></PrivateShell>} />
-        <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanIntegrasiAI /></PrivateShell>} />
+        <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanPengaturanKoneksi /></PrivateShell>} />
+        <Route path="/pengaturan/koneksi" element={<PrivateShell><HalamanPengaturanKoneksi /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/ujian" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
@@ -236,6 +239,8 @@ function RouteWrapper() {
         <Route path="/chat/baru" element={<PrivateShell><ChatFeatureGate><HalamanChat /></ChatFeatureGate></PrivateShell>} />
         <Route path="/chat/kontak" element={<PrivateShell><ChatFeatureGate><HalamanChat /></ChatFeatureGate></PrivateShell>} />
         <Route path="/chat/grup" element={<PrivateShell><ChatFeatureGate><HalamanChat /></ChatFeatureGate></PrivateShell>} />
+        <Route path="/chat/telepon" element={<PrivateShell><ChatFeatureGate><HalamanChat /></ChatFeatureGate></PrivateShell>} />
+        <Route path="/chat/video" element={<PrivateShell><ChatFeatureGate><HalamanChat /></ChatFeatureGate></PrivateShell>} />
         <Route path="/chat/:chatId" element={<PrivateShell><ChatFeatureGate><HalamanChat /></ChatFeatureGate></PrivateShell>} /> {/*[cite: 9] */}
         <Route path="/admin/dashboard/chat" element={<PrivateShell><ChatFeatureGate><HalamanSubMenu /></ChatFeatureGate></PrivateShell>} />
         <Route path="/asisten" element={<PrivateShell><HalamanAsisten /></PrivateShell>} />

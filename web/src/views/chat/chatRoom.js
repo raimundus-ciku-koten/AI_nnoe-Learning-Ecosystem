@@ -19,7 +19,13 @@ import {
   pantauBacaan, unggahBerkas, ambilLampiran
 } from '../../services/chat.js';
 import { pantauPresence } from '../../services/presence.js';
-import { ambilIceServers, buatPengendaliPanggilan } from '../../services/chatCalls.js';
+import {
+  ambilIceServers,
+  buatPengendaliPanggilan,
+  buatPengendaliPanggilanGrup,
+  MAKS_ANGGOTA_PANGGILAN_GRUP,
+} from '../../services/chatCalls.js';
+import { catatPanggilan, selesaikanPanggilan } from '../../services/callHistory.js';
 import { CHAT_CALLS_ENABLED } from '../../services/featureFlags.js';
 import { supabase } from '../../lib/supabase.ts';
 import {
@@ -37,7 +43,7 @@ const EMOJI = [
 const JUMLAH_AWAL = 50;
 const JUMLAH_LAMA = 30;
 
-export async function tampilkanRuang(panel, chatId) {
+export async function tampilkanRuang(panel, chatId, initialCallKind = null) {
   const { user } = getState();
   if (!user) return () => {};
   const saya = user.uid;
@@ -68,6 +74,12 @@ export async function tampilkanRuang(panel, chatId) {
 
   let aktif = true;
   const pembatal = [];
+  let callHistoryId = null;
+  let callHistoryStartedBy = null;
+  let callHistoryState = null;
+  let ignoredIncomingCallId = null;
+  let callEndReason = null;
+  let callHistoryQueue = Promise.resolve();
   let semua = [];                 // pesan terurut kronologis
   let bacaan = {};                // uid → waktu terakhir membaca
   const ada = new Set();          // id pesan yang sudah digambar (cegah duplikat)
@@ -106,67 +118,322 @@ export async function tampilkanRuang(panel, chatId) {
   }, 'Terima');
   const akhiriPanggilan = h('button', {
     class: 'btn btn-sm btn-outline-danger', type: 'button', hidden: true,
-    onclick: () => { void pengendaliPanggilan?.akhiri().catch((error) => toast(error.message, 'error')); }
+    onclick: async () => {
+      try {
+        if (pengendaliPanggilan?.state.status === 'incoming') {
+          callEndReason = 'rejected';
+          await pengendaliPanggilan.tolak();
+        } else {
+          callEndReason = pengendaliPanggilan?.state.status === 'connected'
+            ? 'completed'
+            : 'cancelled';
+          await pengendaliPanggilan?.akhiri();
+        }
+      } catch (error) {
+        console.error('[chat] panggilan gagal diakhiri:', error);
+        toast(error.message || 'Panggilan tidak dapat diakhiri.', 'error');
+      }
+    }
   }, 'Akhiri');
+  const bisukanMikrofon = h('button', {
+    class: 'btn btn-sm btn-light', type: 'button', hidden: true,
+    'aria-pressed': 'false',
+    onclick: () => {
+      try { pengendaliPanggilan.toggleAudio(); }
+      catch (error) { toast(error.message || 'Mikrofon belum dapat diubah.', 'error'); }
+    },
+  }, 'Bisukan mikrofon');
+  const toggleKamera = h('button', {
+    class: 'btn btn-sm btn-light', type: 'button', hidden: true,
+    'aria-pressed': 'false',
+    onclick: () => {
+      try { pengendaliPanggilan.toggleVideo(); }
+      catch (error) { toast(error.message || 'Kamera belum dapat diubah.', 'error'); }
+    },
+  }, 'Matikan kamera');
+  const gantiKamera = h('button', {
+    class: 'btn btn-sm btn-light', type: 'button', hidden: true,
+    'aria-label': 'Ganti kamera',
+    onclick: async () => {
+      gantiKamera.disabled = true;
+      try {
+        await pengendaliPanggilan.gantiKamera();
+      } catch (error) {
+        console.error('[chat] kamera gagal diganti:', error);
+        toast(error.message || 'Kamera tidak dapat diganti.', 'error');
+      } finally {
+        gantiKamera.disabled = false;
+      }
+    },
+  }, 'Ganti kamera');
   const videoLokal = h('video', {
     class: 'chat-call__video chat-call__video--local', autoplay: true, playsinline: true, muted: true, hidden: true,
     'aria-label': 'Pratinjau video Anda',
   });
-  const videoJarakJauh = h('video', {
-    class: 'chat-call__video', autoplay: true, playsinline: true, hidden: true,
-    'aria-label': 'Video lawan bicara',
+  const mediaJarakJauh = h('div', { class: 'chat-call__peers' });
+  const elemenMediaJarakJauh = new Map();
+  const pesertaPanggilan = h('small', {
+    class: 'chat-call__participants',
+    role: 'status',
+    'aria-live': 'polite',
+    hidden: true,
   });
-  const audioJarakJauh = h('audio', { autoplay: true, hidden: true });
+  const durasiPanggilan = h('small', {
+    class: 'chat-call__duration',
+    role: 'timer',
+    'aria-label': 'Durasi panggilan',
+    hidden: true,
+  });
+  let intervalDurasi = null;
   const panelPanggilan = h('section', { class: 'chat-call', 'aria-label': 'Panggilan suara dan video', hidden: true },
-    h('div', { class: 'chat-call__media' }, videoJarakJauh, videoLokal, audioJarakJauh),
+    h('div', { class: 'chat-call__media' }, videoLokal, mediaJarakJauh),
     statusPanggilan,
-    h('div', { class: 'chat-call__actions' }, terimaPanggilan, akhiriPanggilan));
+    pesertaPanggilan,
+    durasiPanggilan,
+    h('div', { class: 'chat-call__actions' },
+      terimaPanggilan, bisukanMikrofon, toggleKamera, gantiKamera, akhiriPanggilan));
   const tombolPanggilan = [];
+  const bisaPanggilanGrup = anggota.length >= 2 && anggota.length <= MAKS_ANGGOTA_PANGGILAN_GRUP;
+  const catatanBatasGrup = grup && anggota.length > MAKS_ANGGOTA_PANGGILAN_GRUP
+    ? h('small', { class: 'chat-call__note' },
+      `Panggilan grup tersedia hingga ${MAKS_ANGGOTA_PANGGILAN_GRUP} peserta. Grup ini memiliki ${anggota.length}.`)
+    : null;
   let kontakAktifUntukPanggilan = false;
   let panggilanTerhubung = false;
+  let shortcutCallStarted = false;
+
+  function antreRiwayatPanggilan(operation) {
+    callHistoryQueue = callHistoryQueue
+      .then(operation)
+      .catch((error) => {
+        console.error('[chat] pencatatan riwayat panggilan gagal:', error);
+        if (aktif) toast(error.message || 'Riwayat panggilan tidak dapat diperbarui.', 'error');
+      });
+  }
+
+  function catatPerubahanPanggilan(state) {
+    if (state.status === 'incoming' && state.callId) {
+      ignoredIncomingCallId = state.callId;
+      return;
+    }
+    if (state.callId && state.callId === ignoredIncomingCallId) return;
+    if (state.status === 'idle' && ignoredIncomingCallId) {
+      ignoredIncomingCallId = null;
+      return;
+    }
+
+    if (state.callId && state.callId !== callHistoryId) {
+      callHistoryId = state.callId;
+      callHistoryStartedBy = saya;
+      callHistoryState = state;
+      const peerIds = [
+        ...(state.participantIds || []),
+        ...(state.invitedPeerIds || []),
+        state.peerId,
+        saya,
+      ].filter(Boolean);
+      const participantIds = [...new Set(peerIds)];
+      antreRiwayatPanggilan(() => catatPanggilan(supabase, {
+        id: state.callId,
+        conversationId: chatId,
+        startedBy: callHistoryStartedBy,
+        participantIds,
+        mediaKind: state.kind,
+      }));
+      return;
+    }
+
+    if (state.status === 'idle' && callHistoryId) {
+      const previous = callHistoryState;
+      const outcome = callEndReason ||
+        state.outcome ||
+        (previous?.status === 'connected' ? 'completed'
+          : previous?.status === 'error' ? 'failed'
+            : previous?.status === 'incoming' || previous?.status === 'ringing'
+              ? 'missed'
+              : 'cancelled');
+      const id = callHistoryId;
+      const ownerId = callHistoryStartedBy;
+      const sharedGroupCall = Boolean(previous?.group);
+      callHistoryId = null;
+      callHistoryStartedBy = null;
+      callHistoryState = null;
+      callEndReason = null;
+      if (!sharedGroupCall || ownerId === saya) {
+        antreRiwayatPanggilan(() => selesaikanPanggilan(supabase, id, outcome));
+      }
+      return;
+    }
+
+    if (callHistoryId && state.status !== 'idle') callHistoryState = state;
+  }
+
+  async function mulaiPanggilan(kind) {
+    if (!pengendaliPanggilan) {
+      toast('Panggilan belum tersedia pada perangkat ini.', 'error');
+      return;
+    }
+    try {
+      const iceServers = await ambilIceServers(supabase, chatId);
+      if (grup) await pengendaliPanggilan.mulaiGrup(kind, iceServers);
+      else await pengendaliPanggilan.mulai(kind, lawan, iceServers);
+    } catch (error) {
+      console.error('[chat] memulai panggilan gagal:', error);
+      toast(error.message || 'Panggilan tidak dapat dimulai.', 'error');
+    }
+  }
+
+  function mulaiPanggilanDariTab() {
+    if (!initialCallKind || shortcutCallStarted || !pengendaliPanggilan ||
+        (!grup && !kontakAktifUntukPanggilan)) return;
+    shortcutCallStarted = true;
+    void mulaiPanggilan(initialCallKind);
+  }
+
+  function sinkronkanDurasi(connectedAt) {
+    if (!connectedAt) {
+      clearInterval(intervalDurasi);
+      intervalDurasi = null;
+      durasiPanggilan.hidden = true;
+      durasiPanggilan.textContent = '';
+      return;
+    }
+    const render = () => {
+      const totalDetik = Math.max(0, Math.floor((Date.now() - connectedAt) / 1000));
+      const menit = String(Math.floor(totalDetik / 60)).padStart(2, '0');
+      const detik = String(totalDetik % 60).padStart(2, '0');
+      durasiPanggilan.textContent = `${menit}:${detik}`;
+      durasiPanggilan.hidden = false;
+    };
+    render();
+    if (!intervalDurasi) intervalDurasi = setInterval(render, 1000);
+  }
+
+  function sinkronkanMediaJarakJauh(state) {
+    const remoteStreams = state.remoteStreams ||
+      (state.remoteStream ? [{ peerId: state.peerId, stream: state.remoteStream }] : []);
+    const peerAktif = new Set(remoteStreams.map(({ peerId }) => peerId));
+    for (const [peerId, tile] of elemenMediaJarakJauh) {
+      if (peerAktif.has(peerId)) continue;
+      const media = tile.querySelector('video, audio');
+      if (media) media.srcObject = null;
+      tile.remove();
+      elemenMediaJarakJauh.delete(peerId);
+    }
+    for (const { peerId, stream: remoteStream } of remoteStreams) {
+      let tile = elemenMediaJarakJauh.get(peerId);
+      if (!tile) {
+        const media = state.kind === 'video'
+          ? h('video', {
+            class: 'chat-call__video',
+            autoplay: true,
+            playsinline: true,
+            'aria-label': `Video ${nama(peerId)}`,
+          })
+          : h('audio', { autoplay: true, 'aria-label': `Audio ${nama(peerId)}` });
+        const tombolPutar = h('button', {
+          class: 'chat-call__play btn btn-sm btn-light',
+          type: 'button',
+          hidden: true,
+          'aria-label': `Putar ${state.kind === 'video' ? 'video' : 'audio'} ${nama(peerId)}`,
+          onclick: async () => {
+            try {
+              await media.play();
+              tombolPutar.hidden = true;
+            } catch (error) {
+              console.error('[chat] media jarak jauh gagal diputar:', error);
+              toast('Media belum dapat diputar. Periksa izin browser lalu coba lagi.', 'error');
+            }
+          },
+        }, `Putar ${state.kind === 'video' ? 'video' : 'audio'}`);
+        tile = h('div', { class: 'chat-call__peer' },
+          media,
+          h('small', { class: 'chat-call__peer-name' }, nama(peerId)),
+          tombolPutar);
+        elemenMediaJarakJauh.set(peerId, tile);
+      }
+      const media = tile.querySelector('video, audio');
+      const needsPlayback = media && (media.srcObject !== remoteStream || media.paused);
+      if (media && media.srcObject !== remoteStream) media.srcObject = remoteStream;
+      mediaJarakJauh.append(tile);
+      if (media && needsPlayback) {
+        const tombolPutar = tile.querySelector('.chat-call__play');
+        void media.play()
+          .then(() => { if (tombolPutar) tombolPutar.hidden = true; })
+          .catch((error) => {
+            if (tombolPutar) tombolPutar.hidden = false;
+            console.warn('[chat] pemutaran media jarak jauh memerlukan interaksi pengguna:', error);
+          });
+      }
+    }
+  }
+
   function terapkanPanggilan(state) {
     const active = state.status !== 'idle';
     panelPanggilan.hidden = !active;
     statusPanggilan.hidden = !active;
     terimaPanggilan.hidden = state.status !== 'incoming';
     akhiriPanggilan.hidden = !active;
+    bisukanMikrofon.hidden = !active || state.status === 'incoming' || !state.localStream;
+    toggleKamera.hidden = !active || state.status === 'incoming' ||
+      state.kind !== 'video' || !state.localStream;
+    gantiKamera.hidden = !active || state.status === 'incoming' ||
+      state.kind !== 'video' || !state.localStream;
+    bisukanMikrofon.textContent = state.audioEnabled === false
+      ? 'Aktifkan mikrofon'
+      : 'Bisukan mikrofon';
+    bisukanMikrofon.setAttribute('aria-pressed', String(state.audioEnabled === false));
+    toggleKamera.textContent = state.videoEnabled === false
+      ? 'Aktifkan kamera'
+      : 'Matikan kamera';
+    toggleKamera.setAttribute('aria-pressed', String(state.videoEnabled === false));
     statusPanggilan.textContent = state.status === 'incoming'
-      ? `Panggilan ${state.kind === 'video' ? 'video' : 'suara'} masuk.`
+      ? `${grup ? `Panggilan grup ${state.kind === 'video' ? 'video' : 'suara'} masuk dari ${nama(state.peerId)}.` : `Panggilan ${state.kind === 'video' ? 'video' : 'suara'} masuk.`}`
       : state.status === 'ringing'
-        ? 'Memanggil…'
+        ? grup ? 'Mengundang anggota grup…' : 'Memanggil…'
         : state.status === 'connected'
-          ? 'Panggilan tersambung.'
+          ? grup ? `Panggilan grup tersambung · ${state.participantIds?.length || anggota.length} peserta.` : 'Panggilan tersambung.'
           : state.status === 'error'
             ? state.error?.message || 'Koneksi panggilan bermasalah.'
             : 'Menghubungkan panggilan…';
-    akhiriPanggilan.textContent = state.status === 'incoming' ? 'Tolak panggilan' : 'Akhiri panggilan';
+    akhiriPanggilan.textContent = state.status === 'incoming'
+      ? 'Tolak'
+      : 'Akhiri panggilan';
+    const participantIds = state.participantIds || (state.peerId ? [saya, state.peerId] : []);
+    const names = participantIds.map(nama);
+    const pendingNames = (state.invitedPeerIds || []).map(nama);
+    pesertaPanggilan.hidden = !grup || !active;
+    pesertaPanggilan.textContent = grup
+      ? `Peserta: ${names.join(', ') || 'belum ada'}${pendingNames.length ? ` · Menunggu: ${pendingNames.join(', ')}` : ''}`
+      : '';
+    sinkronkanDurasi(state.status === 'connected' ? state.connectedAt : null);
     videoLokal.hidden = state.kind !== 'video' || !state.localStream;
-    videoJarakJauh.hidden = state.kind !== 'video' || !state.remoteStream;
-    audioJarakJauh.hidden = state.kind !== 'audio' || !state.remoteStream;
     if (state.localStream && videoLokal.srcObject !== state.localStream) videoLokal.srcObject = state.localStream;
-    if (state.remoteStream) {
-      const media = state.kind === 'video' ? videoJarakJauh : audioJarakJauh;
-      if (media.srcObject !== state.remoteStream) media.srcObject = state.remoteStream;
-      void media.play().catch(() => {});
-    } else if (!active) {
+    sinkronkanMediaJarakJauh(state);
+    if (!active) {
       videoLokal.srcObject = null;
-      videoJarakJauh.srcObject = null;
-      audioJarakJauh.srcObject = null;
     }
-    terimaPanggilan.disabled = !kontakAktifUntukPanggilan;
+    terimaPanggilan.disabled = !grup && !kontakAktifUntukPanggilan;
     tombolPanggilan.forEach((button) => {
-      button.disabled = active || !kontakAktifUntukPanggilan;
+      button.disabled = active || (!grup && !kontakAktifUntukPanggilan);
     });
   }
 
-  if (CHAT_CALLS_ENABLED && !grup && lawan && globalThis.navigator?.mediaDevices?.getUserMedia &&
+  if (catatanBatasGrup) kepala.append(catatanBatasGrup);
+  if (CHAT_CALLS_ENABLED && (!grup || bisaPanggilanGrup) &&
+      globalThis.navigator?.mediaDevices?.getUserMedia &&
       typeof globalThis.RTCPeerConnection === 'function') {
-    pengendaliPanggilan = buatPengendaliPanggilan({
+    const peerIds = grup ? anggota.filter((id) => id !== saya) : [lawan];
+    const buatPengendali = grup ? buatPengendaliPanggilanGrup : buatPengendaliPanggilan;
+    pengendaliPanggilan = buatPengendali({
       supabase,
       conversationId: chatId,
       userId: saya,
-      peerIds: [lawan],
-      onChange: terapkanPanggilan,
+      peerIds,
+      onChange: (state) => {
+        catatPerubahanPanggilan(state);
+        terapkanPanggilan(state);
+      },
     });
     for (const [kind, label, icon] of [
       ['audio', 'Panggilan suara', 'bi-telephone'],
@@ -175,20 +442,18 @@ export async function tampilkanRuang(panel, chatId) {
       const button = h('button', {
         class: 'btn btn-sm btn-light', type: 'button', 'aria-label': label,
         title: label,
-        onclick: async () => {
-          button.disabled = true;
-          try {
-            await pengendaliPanggilan.mulai(kind, lawan, await ambilIceServers(supabase, chatId));
-          } catch (error) {
-            console.error('[chat] memulai panggilan gagal:', error);
-            toast(error.message || 'Panggilan tidak dapat dimulai.', 'error');
-          } finally {
-            button.disabled = pengendaliPanggilan.state.status !== 'idle';
-          }
-        }
+        onclick: () => { void mulaiPanggilan(kind); }
       }, h('i', { class: `bi ${icon}`, 'aria-hidden': 'true' }));
       tombolPanggilan.push(button);
       kepala.append(button);
+    }
+    if (grup) {
+      panggilanTerhubung = true;
+      void pengendaliPanggilan.hubungkan().catch((error) => {
+        panggilanTerhubung = false;
+        console.error('[chat] kanal panggilan grup gagal dihubungkan:', error);
+        toast(error.message || 'Panggilan grup belum dapat dihubungkan.', 'error');
+      });
     }
   }
 
@@ -515,7 +780,19 @@ export async function tampilkanRuang(panel, chatId) {
 
   /* Chat pribadi hanya boleh dikirimi bila kontak masih 'accepted' (selaras Rules). */
   function terapkanStatusKontak(s) {
-    if (grup) return;
+    if (grup) {
+      kontakAktifUntukPanggilan = true;
+      mulaiPanggilanDariTab();
+      if (pengendaliPanggilan && !panggilanTerhubung) {
+        panggilanTerhubung = true;
+        void pengendaliPanggilan.hubungkan().catch((error) => {
+          panggilanTerhubung = false;
+          console.error('[chat] kanal panggilan grup gagal dihubungkan:', error);
+          toast(error.message || 'Panggilan grup belum dapat dihubungkan.', 'error');
+        });
+      }
+      return;
+    }
     const aktifKontak = s.kontakSiap &&
       (s.kontak || []).some((k) => k.peerUid === lawan && k.status === 'accepted');
     kontakAktifUntukPanggilan = aktifKontak;
@@ -538,6 +815,7 @@ export async function tampilkanRuang(panel, chatId) {
         toast(error.message || 'Panggilan belum dapat dihubungkan.', 'error');
       });
     }
+    if (aktifKontak) mulaiPanggilanDariTab();
   }
   terapkanStatusKontak(getState());
   pembatal.push(subscribe(terapkanStatusKontak));
@@ -560,6 +838,7 @@ export async function tampilkanRuang(panel, chatId) {
   return () => {
     aktif = false;
     clearTimeout(jadwalBaca);
+    clearInterval(intervalDurasi);
     pengendaliUnduhan.forEach((controller) => controller.abort());
     urlLampiran.forEach((url) => URL.revokeObjectURL(url));
     pembatal.forEach((fn) => { try { fn(); } catch { /* abaikan */ } });

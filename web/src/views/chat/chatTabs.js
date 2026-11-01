@@ -1,46 +1,51 @@
 // web/src/views/chat/chatTabs.js
 /**
- * Tab navigasi antar-bagian chat: Percakapan | Grup | Kontak.
+ * Tab navigasi antar-bagian komunikasi.
  * Lencana (belum dibaca, permintaan masuk) diperbarui realtime dari state.
  *
- * @param {'direct'|'group'|'kontak'} aktif
+ * @param {'direct'|'chat'|'group'|'telepon'|'video'|'kontak'} aktif
  * @returns {{ el: HTMLElement, berhenti: () => void }}
  */
 import { h } from '../../utils/dom.js';
 import { getState, subscribe } from '../../state.js';
 import { jenisChat } from './chatList.js';
 
-const TAB = [
-  { id: 'direct', label: 'Percakapan', href: '#/chat',        ikon: 'bi-chat-dots' },
-  { id: 'group',  label: 'Grup',       href: '#/chat/grup',   ikon: 'bi-people' },
-  { id: 'kontak', label: 'Kontak',     href: '#/chat/kontak', ikon: 'bi-person-lines-fill' }
-];
+export const CHAT_TABS = Object.freeze([
+  { id: 'chat', label: 'Chat', href: '#/chat', ikon: 'bi-chat-dots' },
+  { id: 'group', label: 'Grup', href: '#/chat/grup', ikon: 'bi-people' },
+  { id: 'telepon', label: 'Telepon', href: '#/chat/telepon', ikon: 'bi-telephone' },
+  { id: 'video', label: 'Video Call', href: '#/chat/video', ikon: 'bi-camera-video' },
+  { id: 'kontak', label: 'Kontak', href: '#/chat/kontak', ikon: 'bi-person-lines-fill' },
+]);
 
-function hitung(state) {
+const TAB_ALIAS = { direct: 'chat' };
+
+export function hitungLencanaTab(state) {
   const chats = state.chats || [];
   const unread = (j) => chats.filter((c) => jenisChat(c) === j)
     .reduce((n, c) => n + (Number(c.unread) || 0), 0);
-  return { direct: unread('direct'), group: unread('group'), kontak: state.permintaanMasuk || 0 };
+  return { chat: unread('direct'), group: unread('group'), kontak: state.permintaanMasuk || 0 };
 }
 
 export function buatTabChat(aktif) {
+  const aktifId = TAB_ALIAS[aktif] || aktif;
   const lencana = {};
-  const el = h('nav', { class: 'chat-tab', 'aria-label': 'Bagian chat' },
-    TAB.map((t) => {
+  const el = h('nav', { class: 'chat-tab', 'aria-label': 'Navigasi komunikasi' },
+    CHAT_TABS.map((t) => {
       const b = h('span', { class: 'chat-lencana', hidden: true });
       lencana[t.id] = b;
       return h('a', {
         href: t.href,
-        class: `chat-tab__item${t.id === aktif ? ' aktif' : ''}`,
-        'aria-current': t.id === aktif ? 'page' : null
+        class: `chat-tab__item${t.id === aktifId ? ' aktif' : ''}`,
+        'aria-current': t.id === aktifId ? 'page' : null
       }, h('i', { class: `bi ${t.ikon}`, 'aria-hidden': 'true' }), h('span', {}, t.label), b);
     })
   );
 
   const terapkan = (state) => {
-    const n = hitung(state);
+    const n = hitungLencanaTab(state);
     for (const id of Object.keys(lencana)) {
-      const jumlah = n[id];
+      const jumlah = Number(n[id]) || 0;
       lencana[id].hidden = jumlah <= 0;
       lencana[id].textContent = jumlah > 99 ? '99+' : String(jumlah);
     }

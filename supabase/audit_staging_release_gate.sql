@@ -19,6 +19,14 @@ with expected_feature_relations(name) as (
     ('chat_inbox'),
     ('chat_contacts'),
     ('chat_presence'),
+    ('chat_call_history'),
+    ('oauth_connections'),
+    ('oauth_pending'),
+    ('integration_sync_state'),
+    ('integration_items'),
+    ('integration_conflicts'),
+    ('integration_mutations'),
+    ('integration_ai_usage'),
     ('billing_plans'),
     ('personal_entitlements'),
     ('testimonial_submissions'),
@@ -57,7 +65,8 @@ chat_relations(name) as (
     ('chat_read_receipts'),
     ('chat_inbox'),
     ('chat_contacts'),
-    ('chat_presence')
+    ('chat_presence'),
+    ('chat_call_history')
 )
 select jsonb_pretty(jsonb_build_object(
   'migration_ledger_present',

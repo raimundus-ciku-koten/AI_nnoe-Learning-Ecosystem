@@ -194,6 +194,7 @@ export default function QuestionBankPage() {
         pembahasan: draft.pembahasan,
       }));
       const provider = {
+        local: 'AI_nnoe lokal',
         gemini: 'Gemini',
         deepseek: 'DeepSeek',
         groq: 'Groq',

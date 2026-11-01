@@ -643,7 +643,7 @@ const MANFAAT: ReadonlyArray<{ ikon: NamaIkon; judul: string; ket: string }> = [
   },
 ];
 
-export const LoginScreen: FC<LoginScreenProps> = ({ onLoginSuccess }: LoginScreenProps) => {
+export const LoginScreen: FC<LoginScreenProps> = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [online, setOnline] = useState<boolean>(() => typeof navigator === 'undefined' || navigator.onLine);
@@ -661,15 +661,13 @@ export const LoginScreen: FC<LoginScreenProps> = ({ onLoginSuccess }: LoginScree
     };
   }, []);
 
-  // Penting: loginWithGoogle() harus dipanggil langsung dari klik (tanpa await di depannya),
-  // kalau tidak Safari/iOS memblokir pop-up.
+  // The BFF starts a same-tab redirect, which works in embedded browsers and Safari.
   const handleGoogleLogin = async () => {
     if (loading || !online) return;
     setLoading(true);
     setErrorMessage(null);
     try {
-      const userProfile = await loginWithGoogle();
-      onLoginSuccess(userProfile);
+      await loginWithGoogle();
     } catch (err: unknown) {
       const pesan = pesanLogin(err);
       if (pesan) setErrorMessage(pesan);

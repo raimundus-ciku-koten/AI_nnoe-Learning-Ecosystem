@@ -5,6 +5,8 @@
  *   /chat            → Percakapan (individu)
  *   /chat/grup       → Grup
  *   /chat/kontak     → Kontak (kontak, permintaan, cari orang)
+ *   /chat/telepon    → Riwayat panggilan
+ *   /chat/video      → Mulai panggilan video
  *   /chat/baru       → Buat grup baru
  *   /chat/:chatId    → buka sebuah percakapan (individu atau grup)
  *
@@ -15,8 +17,9 @@ import '../styles/chat.css';
 import { tampilkanChat }     from '../views/chat/chatPage.js';
 import { tampilkanChatBaru } from '../views/chat/newChat.js';
 import { tampilkanKontak }   from '../views/chat/contactsPage.js';
+import { tampilkanHubKomunikasi } from '../views/chat/communicationHub.js';
 
-const RESERVED = new Set(['baru', 'kontak', 'grup']);
+const RESERVED = new Set(['baru', 'kontak', 'grup', 'telepon', 'video']);
 const kosong = () => {};
 
 export async function halamanChat(wadah, ctx = {}) {
@@ -27,6 +30,12 @@ export async function halamanChat(wadah, ctx = {}) {
   if (path === '/chat/baru')   return (await tampilkanChatBaru(wadah)) || kosong;
   if (path === '/chat/kontak') return (await tampilkanKontak(wadah)) || kosong;
   if (path === '/chat/grup')   return (await tampilkanChat(wadah, { jenis: 'group' })) || kosong;
+  if (path === '/chat/telepon') return (await tampilkanHubKomunikasi(wadah, 'telepon')) || kosong;
+  if (path === '/chat/video') return (await tampilkanHubKomunikasi(wadah, 'video')) || kosong;
 
-  return (await tampilkanChat(wadah, { chatId })) || kosong;
+  const callKind = new URLSearchParams(ctx.search || '').get('call');
+  return (await tampilkanChat(wadah, {
+    chatId,
+    callKind: callKind === 'audio' || callKind === 'video' ? callKind : null,
+  })) || kosong;
 }

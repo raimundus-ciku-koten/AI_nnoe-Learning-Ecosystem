@@ -17,6 +17,38 @@ const STATE_KOSONG = Object.freeze({
 
 const teks = (v) => (typeof v === 'string' ? v.trim() : '');
 const KUNCI_PEMULIHAN_SANDI = 'ale-password-recovery';
+const TOKEN_REFRESH_SERVER = 'ale-bff-managed-session';
+
+async function kirimAuthBff(endpoint, body, method = 'POST') {
+  const response = await fetch(endpoint, {
+    method,
+    credentials: 'same-origin',
+    cache: 'no-store',
+    headers: body ? { 'Content-Type': 'application/json' } : {},
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(result.error || 'Permintaan autentikasi gagal.');
+    error.code = result.code || 'auth_request_failed';
+    error.status = response.status;
+    throw error;
+  }
+  return result;
+}
+
+async function terapkanSesiBff(session) {
+  if (!session?.access_token || session.refresh_token !== TOKEN_REFRESH_SERVER) {
+    throw new Error('Respons sesi autentikasi server tidak valid.');
+  }
+  const { data, error } = await supabase.auth.setSession({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+  });
+  if (error) throw error;
+  if (!data.session?.user) throw new Error('Sesi autentikasi tidak memuat identitas pengguna.');
+  return data.session.user;
+}
 
 function ringkasProfil(profil = {}) {
   return {
@@ -75,27 +107,28 @@ async function ambilProfil(uid) {
 }
 
 export async function login(email, sandi, captchaToken) {
-  const credentials = { email, password: sandi };
-  if (captchaToken) credentials.options = { captchaToken };
-  const { data, error } = await supabase.auth.signInWithPassword(credentials);
-  if (error) throw error;
-  return data.user;
+  const { session } = await kirimAuthBff('/api/auth/login', {
+    email,
+    password: sandi,
+    ...(captchaToken ? { captchaToken } : {}),
+  });
+  return terapkanSesiBff(session);
 }
 
 export async function daftarUjiCoba({ nama, email, sandi, captchaToken }) {
   if (!captchaToken) throw new Error('Verifikasi anti-bot wajib diselesaikan untuk mendaftar uji coba.');
-  const emailRedirectTo = `${window.location.origin}${window.location.pathname}`;
-  const { data, error } = await supabase.auth.signUp({
+  const result = await kirimAuthBff('/api/auth/signup', {
     email,
     password: sandi,
-    options: {
-      captchaToken,
-      emailRedirectTo,
-      data: { full_name: nama },
-    },
+    fullName: nama,
+    captchaToken,
   });
-  if (error) throw error;
-  return data;
+  if (result.session) await terapkanSesiBff(result.session);
+  return {
+    user: result.user,
+    session: result.session,
+    confirmationRequired: result.confirmationRequired === true,
+  };
 }
 
 export async function logout() {
@@ -114,6 +147,11 @@ export async function logout() {
   } catch (err) {
     console.warn('[auth] signOut gagal, state tetap dikosongkan:', err?.message || err);
   }
+  try {
+    await kirimAuthBff('/api/auth/session', null, 'DELETE');
+  } catch (err) {
+    console.error('[auth] Sesi server tidak dapat dihapus:', err?.message || err);
+  }
 
   setState({ ...STATE_KOSONG });
 
@@ -123,11 +161,9 @@ export async function logout() {
 }
 
 export function resetPassword(email, captchaToken) {
-  const redirectTo = new URL(window.location.pathname, window.location.origin);
-  redirectTo.searchParams.set('setup-password', '1');
-  redirectTo.hash = '/login';
+  const redirectTo = new URL('/api/auth/recovery/callback', window.location.origin).toString();
   return supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: redirectTo.toString(),
+    redirectTo,
     ...(captchaToken ? { captchaToken } : {}),
   }).then(({ error }) => {
     if (error) throw error;
@@ -144,12 +180,18 @@ export async function buatKataSandi(password) {
 }
 
 export async function masukGoogle(captchaToken) {
-  const redirectTo = `${window.location.origin}${window.location.pathname}`;
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo, ...(captchaToken ? { captchaToken } : {}) },
+  const result = await kirimAuthBff('/api/auth/google/start', {
+    ...(captchaToken ? { captchaToken } : {}),
   });
-  if (error) throw error;
+  const authorizationUrl = new URL(result.authorizationUrl);
+  const configuredOrigin = import.meta.env.VITE_SUPABASE_URL
+    ? new URL(import.meta.env.VITE_SUPABASE_URL).origin
+    : '';
+  if (!configuredOrigin || authorizationUrl.origin !== configuredOrigin
+    || authorizationUrl.pathname !== '/auth/v1/authorize') {
+    throw new Error('URL OAuth Google server tidak valid.');
+  }
+  window.location.assign(authorizationUrl.toString());
 }
 
 export async function switchRole(role) {

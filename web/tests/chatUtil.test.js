@@ -89,5 +89,10 @@ test('ringkas', () => {
 test('pesanGalatChat', () => {
   assert.match(pesanGalatChat({ code: 'PERMISSION_DENIED' }, 'kirim'), /kontak/);
   assert.equal(pesanGalatChat({ name: 'GalatKontak', message: 'Sudah menjadi kontak.' }), 'Sudah menjadi kontak.');
+  assert.match(pesanGalatChat({
+    name: 'GalatKontak',
+    code: 'kontak/chat-create-failed',
+    message: 'Permintaan diterima, tetapi ruang chat gagal dibuat.',
+  }), /Permintaan diterima/);
   assert.equal(pesanGalatChat(null), 'Terjadi kesalahan. Silakan coba lagi.');
 });

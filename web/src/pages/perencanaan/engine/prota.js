@@ -69,6 +69,11 @@ export function ratakanTp(atp) {
   return hasil;
 }
 
+/** Jumlah JP seluruh TP pada ATP. @param {Atp} atp */
+export function jumlahJpTp(atp) {
+  return ratakanTp(atp).reduce((total, tp) => total + (Number.isFinite(tp.jp) ? tp.jp : 0), 0);
+}
+
 /**
  * Ambil CP dan TP kanonis dari ATP untuk ditampilkan tanpa parafrasa pada Modul Ajar.
  * @param {Atp} atp

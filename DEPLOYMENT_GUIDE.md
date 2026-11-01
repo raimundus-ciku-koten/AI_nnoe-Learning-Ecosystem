@@ -79,20 +79,42 @@ TURN service that accepts time-limited HMAC credentials, and Supabase Realtime
 configured to disallow public channels. `TURN_URLS` and `TURN_SHARED_SECRET`
 must be configured as Supabase Edge Function secrets before testing.
 
-The local call controller now discards late microphone/camera permission
-results after hangup or disposal, stops any tracks that arrive late, and
-ignores stale peer-connection callbacks. Regression tests cover outgoing and
-incoming calls and controller disposal. These source changes have passed the
-local web test suite and production build, but have not been published or
-deployed.
+The call controller discards late microphone/camera permission results after
+hangup or disposal, stops tracks that arrive late or end unexpectedly, and
+ignores stale peer-connection callbacks. Direct calls remain one-to-one. Small
+group calls use a full-mesh peer connection between every pair and are hard
+capped at four total participants; mesh bandwidth grows quadratically and is
+not a substitute for an SFU for larger rooms. Regression tests cover the
+three-participant mesh, signaling authorization, and call cleanup. The local
+source changes have passed tests and a production build, but have not been
+published or deployed.
+
+The source now includes five communication tabs (Chat, Grup, Telepon, Video
+Call, Kontak), a call-history page with audio/video redial, and a forward-only
+call-history migration. The call initiator alone writes the shared call record;
+other participants read it through member-scoped history. Explicit rejection
+and unanswered calls receive distinct outcomes. A group call with no accepted
+participants is finalized as rejected after all invitees decline. The migration
+has not been applied to any hosted database. The history query and RLS expose
+only the most recent 90 days, and the migration defines a service-role-only
+cleanup function for older records.
+Physical deletion remains unverified until the migration is applied and a
+scheduled retention job is configured and tested in Staging.
 
 The feature remains off by default. Validate private-topic denial for
-nonparticipants, accepted-contact checks, microphone/camera permission flows,
-audio/video negotiation, ICE relay through TURN, hangup cleanup, browser
-background/refresh behavior, and mobile Safari/Chrome on Staging before
-enabling `VITE_CHAT_CALLS_ENABLED`. The current release candidate supports
-one-to-one calls from an open direct conversation only; it does not provide
-group calls, missed-call history, or ringing when the recipient is offline.
+nonparticipants, accepted-contact checks for direct calls, group membership and
+four-participant limits, microphone/camera permission flows, audio/video
+negotiation, ICE relay through TURN, join/leave/end behavior, hangup cleanup,
+browser background/refresh behavior, and mobile Safari/Chrome on Staging before
+enabling `VITE_CHAT_CALLS_ENABLED`. Group calls ring only members with the
+conversation open; offline ringing is not provided.
+
+Text E2EE, trusted-device enrollment/recovery, encrypted offline outbox, and
+message reply/delete are not implemented. Physical 90-day call-log cleanup has
+a source function but no verified schedule. Existing text messages remain
+plaintext. Do not enable chat or calls as an
+E2EE release until a reviewed browser-compatible protocol, migration, backup
+retention plan, and end-to-end staging tests are complete.
 
 1) Pull request and release branch
 
@@ -163,10 +185,11 @@ Set these environment variables in Vercel (Project Settings → Environment Vari
 
 - VITE_SUPABASE_URL — Supabase HTTP URL (anon client uses only public-safe keys)
 - VITE_SUPABASE_ANON_KEY — Supabase anon/publishable key (frontend)
+- SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY — server-side Auth BFF configuration. `SUPABASE_PUBLISHABLE_KEY` is a public-safe key but must be configured for server auth routes; do not use a service-role key for user password/OAuth endpoints.
 - SUPABASE_SERVICE_ROLE_KEY — (ONLY for server-side functions; never expose to client)
 - VITE_TURNSTILE_SITE_KEY — Cloudflare Turnstile site key (frontend)
 - VITE_CHAT_ENABLED — set to `true` only after the chat schema, RLS policies, tenant isolation, and UAT are verified in the target environment; unset/`false` keeps chat routes, navigation, dashboard requests, and presence sync disabled.
-- VITE_CHAT_CALLS_ENABLED — set to `true` only after `VITE_CHAT_ENABLED`, the private call-signaling migration, private-channel Realtime settings, TURN credentials, and browser-device call tests have passed in Staging. Calls are one-to-one audio/video in this release candidate; group calls and calls when the recipient is offline are not supported.
+- VITE_CHAT_CALLS_ENABLED — set to `true` only after `VITE_CHAT_ENABLED`, both private call-signaling migrations, private-channel Realtime settings, TURN credentials, and browser-device direct/group-call tests have passed in Staging. Group mesh calls are limited to four total participants. Calls when a recipient is offline are not supported.
 - `TURN_URLS` (Supabase Edge Function secret; JSON array of `turn:`/`turns:` URLs) and `TURN_SHARED_SECRET` (server-only coturn shared secret). Deploy `chat-turn-credentials` with JWT verification enabled; never put the shared secret or static TURN credentials in any `VITE_*` setting.
 - VITE_OWNER_WHATSAPP — public WhatsApp contact in international format (for the manual registration PDF flow). This is intentionally unset until the owner approves/configures the recipient; values prefixed `VITE_` are visible in the client bundle.
 - Turnstile secret: configure only in Supabase Auth CAPTCHA settings; never store it in Vercel or frontend environment variables.
@@ -183,6 +206,12 @@ owner WhatsApp contact remain disabled/unset by default.
 Starting the app with this profile does not verify Staging schema parity,
 backup/restore, authentication providers, or deployment readiness. Do not
 apply migrations or submit real user data as part of this setup.
+
+The BFF routes under repository-root `api/auth/` require the Vercel project
+Root Directory to be the repository root (configured by root `vercel.json`).
+The Vite-only `web/vercel.json` deployment does not include these functions.
+Use Vercel's local dev runtime when testing BFF routes; plain `vite` serves the
+frontend only.
 
 Important:
 - The frontend must never receive service_role or other server secrets.
@@ -243,6 +272,16 @@ A signed APK candidate already exists at `android-apk/app/build/outputs/apk/rele
 - Canva support in this release is limited to connecting and disconnecting an account (including remote token revocation). Creating or editing Canva designs from the application is not implemented. The planning-document AI generator is also not connected to this backend yet; do not advertise either capability as available.
 - The AI settings, authenticated assistant, and question-draft flows are wired to these functions in source. The provider IDs have been checked against current provider documentation. The owner reports that provider secrets are configured in the dashboard, but provider requests have not yet been validated in Staging. Planning-document generation and Canva design creation/editing remain unavailable and must not be advertised.
 - These migration and function changes are not deployed to Staging or Production. Follow the backup, schema-parity, staging-validation, and written-approval requirements in section 3 before any hosted migration or Production rollout. Verify the four AI providers, account isolation, disabled-feature behavior, Canva connect/disconnect, and OAuth error paths in Staging first.
+
+12) OAuth connections, sync, and local/cloud AI (source-only)
+
+- The new same-origin Vercel functions live under `api/`; the append-only schema is `supabase/migrations/20261103000100_integrations_sync.sql`. Neither is deployed/applied. No hosted database, Vercel environment, OAuth consent screen, or MCP was touched for this source change.
+- Configure server-only Vercel variables from `.env.example`: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `APP_ORIGIN`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, and `INTEGRATION_TOKEN_ENCRYPTION_KEY`. Set the Google Workspace redirect URI to `https://<app-origin>/api/google/callback`. Add `https://<app-origin>/api/auth/google/callback` and `https://<app-origin>/api/auth/recovery/callback` to the Supabase Auth redirect allowlist. Configure the OAuth URL providers as required by the Supabase Auth Dashboard. Do not add a `VITE_` prefix to any secret. Keep the Supabase key and encryption keys in the project secret manager only.
+- Generate a 32-byte encryption key locally with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"`. Set `INTEGRATION_TOKEN_ENCRYPTION_KEY_VERSION=1`; for rotation, configure the new active key/version and retain each prior `INTEGRATION_TOKEN_ENCRYPTION_KEY_V<n>` until every row has been re-encrypted or revoked. Test rotation and recovery in Staging; losing a key requires users to reconnect.
+- Optional cloud AI requires `CLOUD_AI_API_URL` (HTTPS OpenAI-compatible endpoint), `CLOUD_AI_API_KEY`, and `CLOUD_AI_MODEL`. Leave them unset to keep cloud unavailable. Requests are explicitly opted in per prompt and capped at 10/user/day by the server-side quota table (requires the migration). The UI defaults to local Ollama at `127.0.0.1:11434`; configure `VITE_LOCAL_AI_MODEL` as a non-secret preference and allow the app origin in Ollama CORS.
+- Before applying the migration, reconcile the hosted schema and verify a restorable backup. Apply only to a disposable/Staging project first, inspect advisors/RLS, and test cross-user isolation, OAuth state/PKCE, token encryption/key rotation/revocation, partial pagination/cursor replay, 410 full resync, 429 backoff, conflict resolution, offline outbox, and cloud opt-in. Do not deploy or enable Production without separate written approval.
+- Scope limitations: Drive sync currently covers metadata, not content; Tasks uses the default list; Calendar uses the primary owned calendar. The generic sync API is not yet mapped to all application planning/classroom data, and no PWA background sync is promised while closed.
+- Primary Supabase Auth session routes now use an HttpOnly/SameSite cookie for the refresh token and a memory-only custom SDK store. Password sign-in, Google sign-in, PKCE recovery, auto-refresh, and logout have source implementations. They are **not hosted-validated**: test Auth redirects, Google provider callbacks, CAPTCHA, sign-up confirmation, password recovery, token rotation/revocation, multi-tab behavior, and session expiry on a disposable Staging project before release.
 
 ---
 

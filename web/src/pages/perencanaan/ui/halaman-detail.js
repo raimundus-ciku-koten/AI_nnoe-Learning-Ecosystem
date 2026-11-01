@@ -12,7 +12,7 @@ import { h, kosongkan, toast, konfirmasi } from './dom.js';
 import { t } from '../i18n/index.js';
 import { JENIS, URUTAN_DOKUMEN, PRASYARAT, STATUS, SUMBER, DOKUMEN_AI } from '../constants.js';
 import { hitungRpe } from '../engine/rpe.js';
-import { hitungProta, hitungAnggaran, normKode } from '../engine/prota.js';
+import { hitungProta, hitungAnggaran, jumlahJpTp, normKode } from '../engine/prota.js';
 import { hitungProsem } from '../engine/prosem.js';
 import { validasiAtp } from '../engine/validator.js';
 import { parsePlanningOutput } from '../../../services/planningAiSchema.js';
@@ -214,6 +214,10 @@ export function halamanDetail(wadah, {
     const rpe = dokumen[JENIS.RPE].payload;
     const ang = hitungAnggaran(draft.unit.filter((u) => u.tp.length).length, rpe.totalJP, rpe.jpPerPekan, rpe.hari.length);
     if (!ang.ok) { toast(t(`galat.${ang.alasan}`), 'galat'); return; }
+    if (jumlahJpTp(draft) !== ang.sisaTP) {
+      toast(t('atpEditor.jpBelumSelaras'), 'galat');
+      return;
+    }
     await tandaiSibuk('atp-simpan', async () => {
       const lama = dokumen[JENIS.ATP];
       await simpanDokumen({

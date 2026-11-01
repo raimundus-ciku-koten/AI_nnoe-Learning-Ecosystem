@@ -93,7 +93,7 @@ export default function SupabasePlatformUsersPage() {
         .maybeSingle();
       if (profileError) throw profileError;
       if (ownProfile?.role !== 'superadmin' || ownProfile.active !== true) {
-        await supabase.auth.signOut({ scope: 'local' });
+        await supabase.auth.signOut();
         setSession(null);
         setProfile(null);
         setError('Akses ditolak. Masuklah menggunakan akun superadmin Supabase yang aktif.');

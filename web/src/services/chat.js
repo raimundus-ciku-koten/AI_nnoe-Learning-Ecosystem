@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase.ts';
 import { setState } from '../state.js';
+import { assertChatE2EEReady } from './featureFlags.js';
 import {
   hapusLampiranChatDriveSetelahGagal,
   unggahLampiranChatDrive,
@@ -145,6 +146,7 @@ async function kirimNotifikasiPesan(messageId) {
 }
 
 export async function kirimPesan(chatId, uidSaya, semuaAnggota, isi) {
+  assertChatE2EEReady();
   if (isi.type !== 'text') {
     throw new Error('Kirim lampiran melalui alur upload terenkripsi.');
   }
@@ -166,6 +168,7 @@ export async function kirimPesan(chatId, uidSaya, semuaAnggota, isi) {
 }
 
 export async function unggahBerkas(chatId, uidSaya, berkas, accessToken, identity) {
+  assertChatE2EEReady();
   const check = periksaBerkas(berkas);
   if (!check.ok) throw new Error(check.alasan);
   if (!idValid(chatId) || typeof uidSaya !== 'string' ||
