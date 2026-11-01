@@ -118,6 +118,20 @@ hanya memperoleh Dashboard.
 Perubahan status menu hanya dilakukan setelah alur dan kontrol akses terkait selesai serta
 teruji. Jumlah item adalah snapshot kode dan perlu diperbarui bersama perubahan katalog.
 
+## Gerbang cakupan dan rilis
+
+Seluruh kapabilitas yang dipilih pengguna tetap menjadi cakupan target; tidak ada item yang
+boleh dianggap selesai hanya karena tautannya aktif, atau dihapus/dinonaktifkan tanpa alasan
+dan keputusan yang tercatat. Pemilik memilih menahan rilis publik sampai seluruh kapabilitas
+target memiliki desain aman tanpa biaya owner yang terverifikasi dan implementasi yang lulus
+uji. Status saat ini **NO-GO publik**.
+
+Untuk setiap item menu, audit lanjutan harus membuktikan halaman/alur, service, sumber
+persistensi, otorisasi pada batas tepercaya, status gagal/kosong, pengujian, serta
+kelayakan biaya. Item yang belum punya bukti harus tetap ditandai belum siap; item lintas
+akun tidak boleh diaktifkan hanya dengan feature flag klien atau penyimpanan lokal. Gerbang
+ini tidak mengizinkan perubahan hosted, billing, push, atau deploy.
+
 ## Pembaruan status Jurnal Mengajar
 
 Catatan ini menggantikan status Jurnal Mengajar dan prioritas P0 gabungan pada tabel di atas,

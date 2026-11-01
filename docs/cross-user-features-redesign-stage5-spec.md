@@ -3,6 +3,8 @@
 **Status:** draf desain untuk keputusan produk dan kelayakan; belum siap implementasi produksi
 **Tanggal audit kode:** 1 November 2026
 **Keputusan pengguna:** desain ulang fitur lintas pengguna; seluruh kategori data boleh dipertimbangkan hanya setelah tinjauan privasi/hukum dan persetujuan terkait selesai.
+**Cakupan target:** seluruh kapabilitas yang dipilih pengguna, termasuk data personal/sekolah, asesmen bersama, chat, panggilan, notifikasi, administrasi platform, konten, dan entitlement/pembayaran; tidak ada kapabilitas yang boleh dihapus diam-diam.
+**Keputusan rilis:** **NO-GO publik** sampai setiap kapabilitas target memiliki rancangan tanpa biaya owner yang terverifikasi, implementasi lengkap, kontrol akses dan privasi yang disetujui, serta pengujian dan prosedur pemulihan yang lulus. Bila satu kapabilitas tidak memenuhi syarat, rilis tetap ditahan dan cakupan/arsitektur harus diputuskan ulang.
 **Batas arsitektur:** Supabase keluar dari jalur kritis; data aplikasi berada di perangkat atau akun penyimpanan pengguna; biaya owner harus tetap nol; tidak boleh menghubungkan billing, upgrade paket, atau deploy dalam pekerjaan desain.
 **Gerbang terkait:** [verifikasi biaya Tahap 1](./cloudflare-cost-plan-verification-stage1.md), [threat model Tahap 2](./cloudflare-workers-stage2-threat-model.md), [spesifikasi port API Tahap 3](./cloudflare-workers-api-migration-spec.md), dan [spesifikasi migrasi Tahap 4](./identity-data-migration-spec.md).
 
@@ -181,7 +183,7 @@ Nama, email, roster, hasil ujian, token, recovery code, dan isi dokumen tidak bo
 ## Rencana rollout
 
 1. **Inventaris dan paritas:** petakan setiap fitur lintas pengguna terhadap route, service, tabel/RPC, RLS, Edge Function, trigger, dan status Production. Jangan mengubah/menonaktifkan kode atau data dalam tahap ini.
-2. **Keputusan produk:** pemilik memilih kemampuan yang harus dipertahankan pada pilot dan UX pengganti bila realtime/admin/ujian/pembayaran tidak mempunyai padanan tanpa server.
+2. **Gerbang cakupan rilis:** seluruh kapabilitas target tetap wajib; tidak ada penggantian UX, penghapusan, atau pengurangan cakupan secara diam-diam. Karena belum semua kapabilitas memiliki rancangan yang terbukti aman dan tanpa biaya, rilis publik tetap ditahan. Jika suatu kapabilitas tidak dapat memenuhi syarat tersebut, minta keputusan pemilik sebelum mengubah cakupan atau batas arsitektur.
 3. **Spike provider lokal:** fixture sintetis untuk Drive scope/ACL, envelope kunci, revocation, conflict, dan recovery. Tidak ada credential atau akun produksi.
 4. **Review privacy/security:** klasifikasi data, consent, retensi, data anak, threat model, dan prosedur penghapusan ditinjau sebelum ada data non-sintetis.
 5. **Implementasi per-domain:** personal documents lebih dahulu; setiap domain memiliki adapter, feature gate fail-closed, tes dua identitas/tenant, dan export/restore.
@@ -193,7 +195,7 @@ Nama, email, roster, hasil ujian, token, recovery code, dan isi dokumen tidak bo
 
 | Pertanyaan | Status | Dampak |
 |---|---|---|
-| Kapabilitas mana yang wajib ada pada rilis awal: admin sekolah, superadmin, chat, panggilan, ujian online, push, pembayaran? | **PERLU KONFIRMASI per kapabilitas** | Tanpa koordinasi tepercaya, paritas beberapa fitur tidak dapat diasumsikan |
+| Apakah kapabilitas target mencakup admin sekolah, superadmin, chat, panggilan, ujian online, notifikasi, pembayaran, dan kategori terkait? | Cakupan target dipilih untuk seluruh kapabilitas; desain aman dan tanpa biaya masih harus dibuktikan per fitur | Satu fitur yang belum memenuhi syarat menahan rilis publik; jangan menurunkan cakupan tanpa keputusan baru |
 | Apakah berbagi file Drive memenuhi model akses sekolah, role, dan pencabutan yang dibutuhkan? | **PERLU KONFIRMASI** lewat spike scope/ACL dan threat review | Kesalahan dapat membuka data lintas akun atau menyebabkan pengguna kehilangan akses |
 | OAuth/token browser yang sesuai tujuan “login sekali” tanpa menyimpan refresh token tidak aman | **PERLU KONFIRMASI** | Tidak dapat menjanjikan sesi lintas reload/perangkat |
 | Jenis akun Drive/Workspace pilot, quota, pemilik shared folder, dan retention | **PERLU KONFIRMASI** | Biaya, kegagalan upload, atau kepemilikan data salah |
@@ -204,7 +206,7 @@ Nama, email, roster, hasil ujian, token, recovery code, dan isi dokumen tidak bo
 | Profil CPU Worker Free dan desain backlog terjadwal | **NO-GO** pada hasil yang tersedia | Benchmark lokal tidak membuktikan batas 10 ms; jangan deploy/menambah layanan untuk menutup gap |
 | Hak penggunaan Vercel Hobby dan pilihan repository/domain rilis | **PERLU KONFIRMASI** sebelum publikasi | Dapat melanggar syarat provider atau memublikasikan branch/fitur yang keliru |
 
-**Keputusan teknis saat ini:** lanjutkan hanya inventaris/parity matrix serta prototipe sintetis personal-first. Jangan mulai port API/cron Tahap 3, migrasi data nyata Tahap 4, atau implementasi/aktivasi fitur lintas pengguna sebelum keputusan di atas selesai. Dokumen ini tidak mengizinkan push, deploy, billing, upgrade, perubahan provider, maupun migrasi hosted.
+**Keputusan teknis saat ini:** lanjutkan inventaris/parity matrix dan prototipe sintetis personal-first. Belum ada bukti bahwa seluruh kapabilitas target dapat dipenuhi secara aman tanpa biaya owner; karena itu rilis publik tetap **NO-GO**. Jangan mulai port API/cron Tahap 3, migrasi data nyata Tahap 4, atau implementasi/aktivasi fitur lintas pengguna sebelum desain per-domain, tinjauan privasi/keamanan, dan gerbang biaya lulus. Dokumen ini tidak mengizinkan push, deploy, billing, upgrade, perubahan provider, maupun migrasi hosted.
 
 ## Sumber implementasi
 
