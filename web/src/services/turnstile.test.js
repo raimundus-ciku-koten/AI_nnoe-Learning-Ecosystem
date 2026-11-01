@@ -27,8 +27,18 @@ test('Turnstile returns only verified tokens and resets or removes its widget', 
     callbacks.callback('another-token');
     widget.reset();
     assert.equal(widget.token(), '');
+    callbacks['error-callback']('300030');
+    assert.equal(widget.errorCode(), '300030');
+    widget.reset();
+    assert.equal(widget.errorCode(), '');
+    callbacks['error-callback']('not-a-code');
+    assert.equal(widget.errorCode(), '');
     widget.remove();
-    assert.deepEqual(calls, [['reset', 'widget-1'], ['remove', 'widget-1']]);
+    assert.deepEqual(calls, [
+      ['reset', 'widget-1'],
+      ['reset', 'widget-1'],
+      ['remove', 'widget-1'],
+    ]);
   } finally {
     if (previous) Object.defineProperty(globalThis, 'turnstile', previous);
     else delete globalThis.turnstile;

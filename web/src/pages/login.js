@@ -335,7 +335,20 @@ export function halamanLogin(wadah) {
     if (captchaSetupError) throw captchaSetupError;
     if (!TURNSTILE_SITE_KEY) return undefined;
     const token = captchaWidget?.token();
-    if (!token) throw new Error('Selesaikan verifikasi Cloudflare sebelum melanjutkan.');
+    if (!token) {
+      const errorCode = captchaWidget?.errorCode();
+      if (errorCode === '300030') {
+        throw new Error(
+          'Cloudflare tidak dapat menyelesaikan pemeriksaan (kode 300030). Coba gunakan browser biasa, nonaktifkan VPN/proksi atau ekstensi pemblokir sementara, lalu muat ulang halaman. Jika tetap gagal, hubungi administrator.',
+        );
+      }
+      if (errorCode) {
+        throw new Error(
+          `Verifikasi Cloudflare gagal (kode ${errorCode}). Muat ulang halaman dan coba kembali. Jika tetap gagal, hubungi administrator.`,
+        );
+      }
+      throw new Error('Selesaikan verifikasi Cloudflare sebelum melanjutkan.');
+    }
     return token;
   };
   const terapkanModeTrial = (aktif) => {
