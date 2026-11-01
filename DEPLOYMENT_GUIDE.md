@@ -15,6 +15,17 @@ and operational limits have been reviewed. Legacy provider source, rules, and
 local payment/advertising integrations have been removed from the workspace.
 This does not retire hosted projects, deployed services, or data.
 
+The Stage 1 public pricing/limit review is recorded in
+[cloudflare-cost-plan-verification-stage1.md](docs/cloudflare-cost-plan-verification-stage1.md).
+It does not verify account billing, payment methods, usage, or provider settings.
+In particular, Cloudflare Workers Free currently has a 10 ms CPU cap for HTTP
+and scheduled invocations. A synthetic Workerd-local benchmark is recorded in
+the Stage 1 report, but it measured wall time rather than Cloudflare CPU time
+and did not enforce the Free-tier cap. The audit job is therefore not cleared
+for Free-tier production. Keep the no-cost gate blocked until the owner confirms
+account plans/usage and a valid CPU profile plus bounded backlog design exist.
+Do not upgrade, attach billing, or deploy as part of this verification.
+
 Current release status:
 - **Chat safety gate deployed to Production (2026-10-31):** [PR #33](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/pull/33) (`11f45de`) merged to `main` as `9b9a121`; [post-merge Web CI](https://github.com/raimundus-ciku-koten/AI_nnoe-Learning-Ecosystem/actions/runs/41161157477) passed and [Vercel Production deployment](https://vercel.com/kotenraimundusc-4094/ainnoe-le/7Kg8rN6MV5gF6PXXh13udJyGwe1m) was marked Ready. A signed-in Production smoke check confirmed that direct chat navigation displays an unavailable notice and the expanded navigation does not expose a chat link. Chat remains disabled until its schema, RLS policy semantics, tenant isolation, and UAT are verified. No hosted database changes were made. Preview sign-in could not be validated because Cloudflare Turnstile returned error `110200`; no credentials were entered and no security settings were changed.
 - **Local source UX improvement (not deployed):** role menus and the dashboard now retain a non-clickable Chat status entry explaining that database schema and school access policies still need verification. This makes the disabled feature discoverable without enabling chat routes, data requests, or presence synchronization. Production remains unchanged until this source update passes release review and deployment.

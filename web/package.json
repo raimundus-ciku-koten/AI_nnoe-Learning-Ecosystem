@@ -11,12 +11,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --port 4173",
-    "test": "npm run test:unit && npm run test:planning-source && npm run test:assessment && npm run test:vitest && npm run test:assessment-ui && npm run test:lesson-journal && npm run test:role-access && npm run test:integration && npm run test:ai-providers",
+    "test": "npm run test:unit && npm run test:planning-source && npm run test:assessment && npm run test:vitest && npm run test:assessment-ui && npm run test:lesson-journal && npm run test:identity-migration-prototype && npm run test:role-access && npm run test:integration && npm run test:ai-providers",
     "test:planning-source": "node --test tests/capaian-pembelajaran.test.mjs tests/planning-ai-schema.test.mjs",
     "test:backup": "node --test ../scripts/encryptedBackup.test.mjs ../scripts/validateStagingBackupTarget.test.mjs ../scripts/stagingMigrationRehearsalWorkflow.test.mjs",
     "test:assessment": "node --test tests/online-assessments-schema.test.mjs",
     "test:assessment-ui": "vitest run src/services/onlineAssessments.test.js",
     "test:lesson-journal": "node --test tests/lesson-journal-schema.test.mjs tests/lesson-journal-audit-schema.test.mjs && vitest run src/services/lessonJournal.test.js src/services/lessonJournalAudit.test.js src/pages/LessonJournalPage.test.jsx",
+    "test:identity-migration-prototype": "node --test tests/identity-data-migration-prototype.test.mjs tests/drive-encryption.test.js",
     "test:role-access": "node --test src/services/roleAccess.test.js",
     "test:economy": "node --test src/services/economyMode.test.js",
     "test:security": "node --test src/services/turnstile.test.js",
@@ -37,6 +38,7 @@
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
+    "fake-indexeddb": "^6.2.7",
     "vite": "^6.0.0",
     "vitest": "^5.0.4"
   },
