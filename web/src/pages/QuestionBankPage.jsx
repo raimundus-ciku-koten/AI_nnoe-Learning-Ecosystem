@@ -110,8 +110,17 @@ export function QuestionBankGeneratedDocument({ bank }) {
             {pilihanGanda.map((question) => (
               <div className="question-bank-document-item" key={`pg-${question.nomor}`}>
                 <p><strong>{question.nomor}.</strong> {question.pertanyaan}</p>
+                <p><strong>Konteks:</strong> {question.konteks}</p>
+                <p><strong>Level Bloom:</strong> {question.tingkatKognitifBloom}</p>
                 <ol type="A">
-                  {question.pilihan.map((choice, index) => <li key={`${index}-${choice}`}>{choice}</li>)}
+                  {question.pilihan.map((choice, index) => (
+                    <li key={`${index}-${choice}`}>
+                      {choice}
+                      {question.rasionalisasiPilihan?.[index] && (
+                        <p><strong>Rasionalisasi:</strong> {question.rasionalisasiPilihan[index]}</p>
+                      )}
+                    </li>
+                  ))}
                 </ol>
               </div>
             ))}
@@ -123,6 +132,8 @@ export function QuestionBankGeneratedDocument({ bank }) {
             {uraian.map((question) => (
               <div className="question-bank-document-item" key={`uraian-${question.nomor}`}>
                 <p><strong>{question.nomor}.</strong> {question.pertanyaan}</p>
+                <p><strong>Konteks:</strong> {question.konteks}</p>
+                <p><strong>Level Bloom:</strong> {question.tingkatKognitifBloom}</p>
               </div>
             ))}
           </>
@@ -434,7 +445,7 @@ export default function QuestionBankPage() {
                   <option value="Campuran LOT-MOT-HOT">Campuran LOT–MOT–HOT</option>
                   <option value="LOT">LOT (C1–C2)</option>
                   <option value="MOT">MOT (C3–C4)</option>
-                  <option value="HOTS">HOTS (C5–C6)</option>
+                  <option value="HOTS">HOTS (C4–C6)</option>
                 </select>
               </label>
               <label>

@@ -3,9 +3,10 @@ import Ikon from '../components/Ikon.jsx';
 import '../styles/ai-integrations.css';
 
 const WORKFLOWS = [
-  'Asisten AI',
+  'Teman Belajar AI_nnoe',
   'Draf perencanaan pembelajaran',
   'Draf soal pada Bank Soal',
+  'Draf Modul Siswa',
 ];
 
 export default function AIIntegrationsPage() {
@@ -36,10 +37,15 @@ export default function AIIntegrationsPage() {
         </p>
         <p>
           Untuk memilih model, mengatur timeout, atau menguji koneksi, buka Pengaturan Koneksi.
-          Bank Soal mencoba model cadangan lokal jika model utama gagal atau hasilnya tidak lolos
-          validasi. Pastikan kedua model sudah tersedia di Ollama; fitur lain tidak beralih otomatis
-          ke model cadangan. Jika model yang diperlukan tidak tersedia, aplikasi menampilkan
-          kesalahan dan tidak beralih ke cloud.
+          Setiap alur generatif mencoba model cadangan lokal jika model utama gagal atau hasilnya
+          tidak lolos validasi. Pastikan kedua model sudah tersedia di Ollama; batas waktu berlaku
+          untuk setiap percobaan sehingga proses dapat memerlukan hingga dua kali batas tersebut.
+          Aplikasi tidak beralih ke provider cloud.
+        </p>
+        <p>
+          PDF Teman Belajar diekstrak dan diindeks di browser ini. Pencarian konteks berlangsung
+          lokal; hanya potongan yang cocok dikirim ke endpoint Ollama localhost. PDF hasil pindai
+          tanpa teks belum didukung karena fitur OCR belum tersedia.
         </p>
       </section>
     </main>

@@ -7,7 +7,7 @@ const dataGroups = [
   ['Data pembelajaran', 'Data siswa, kelas, kehadiran, bank soal, nilai atau asesmen, dan dokumen yang dimasukkan oleh sekolah atau pengguna.'],
   ['Komunikasi', 'Pesan, metadata percakapan, lampiran yang dipilih pengguna, dan token notifikasi perangkat bila notifikasi diaktifkan.'],
   ['Integrasi pilihan pengguna', 'Integrasi Google Workspace lama menyimpan access token sementara di memori halaman. Rancangan koneksi baru mengenkripsi refresh token Google di backend dan menyimpan metadata Drive serta data Tasks/Calendar di Supabase; fitur ini belum aktif sampai migrasi dan environment server diterapkan.'],
-  ['Permintaan AI', 'Fitur generatif hanya memanggil endpoint Ollama localhost dari aplikasi. Untuk mencegah runtime Ollama sendiri memakai layanan cloud, pengguna harus mengaktifkan OLLAMA_NO_CLOUD=1. Ollama dan model lokal harus dipasang, dijalankan, dan diunduh oleh pengguna.'],
+  ['Permintaan AI', 'Fitur generatif hanya memanggil endpoint Ollama localhost dari aplikasi. PDF Teman Belajar diekstrak dan diindeks di IndexedDB browser; pencarian dilakukan lokal dan hanya potongan yang relevan dikirim ke Ollama localhost. PDF asli tidak diunggah oleh fitur ini. Untuk mencegah runtime Ollama sendiri memakai layanan cloud, pengguna harus mengaktifkan OLLAMA_NO_CLOUD=1. Ollama dan model lokal harus dipasang, dijalankan, dan diunduh oleh pengguna.'],
   ['Draf program BK dan kegiatan', 'Draf program hanya berada di memori halaman hingga ditutup. Gunakan cetak atau Simpan sebagai PDF untuk membuat salinan lokal; jangan masukkan identitas siswa atau isi konseling.'],
 ];
 

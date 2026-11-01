@@ -95,6 +95,7 @@
 .question-bank-document-item p { margin: .35rem 0; white-space: pre-wrap; }
 .question-bank-document-item ol { margin: .35rem 0 .35rem 1.5rem; padding-left: 1rem; }
 .question-bank-document-item li { padding: .1rem 0; }
+.question-bank-document-item li p { margin: .2rem 0; }
 .question-bank-document-answers { break-before: page; }
 
 @media (max-width: 720px) {

@@ -340,7 +340,7 @@ export default function ConnectionSettingsPage() {
             <span className="connection-settings__badge">Lokal saja</span>
           </div>
           <p>Semua menu generatif hanya memanggil Ollama di perangkat ini. Pastikan Ollama berjalan, memakai model yang telah diunduh, dan mengizinkan origin aplikasi pada CORS. Untuk mencegah Ollama sendiri memakai model cloud, aktifkan OLLAMA_NO_CLOUD=1 lalu mulai ulang Ollama.</p>
-          <p>Bank Soal mencoba model cadangan lokal jika model utama gagal atau hasilnya tidak lolos validasi. Kedua model harus sudah tersedia di Ollama; batas waktu berlaku untuk setiap percobaan sehingga totalnya dapat mencapai dua kali batas tersebut. Tidak ada provider cloud yang dipanggil.</p>
+          <p>Setiap alur AI generatif mencoba model cadangan lokal jika model utama gagal atau hasilnya tidak lolos validasi. Kedua model harus sudah tersedia di Ollama; batas waktu berlaku untuk setiap percobaan sehingga totalnya dapat mencapai dua kali batas tersebut. Tidak ada provider cloud yang dipanggil.</p>
           <p>
             “Tanpa batas keluaran aplikasi” meminta model lokal menghasilkan keluaran tanpa batas token
             yang ditetapkan aplikasi. Batas konteks model, memori, kecepatan, dan kemampuan perangkat
@@ -369,7 +369,7 @@ export default function ConnectionSettingsPage() {
                 />
               </label>
               <label className="connection-settings__field">
-                Model cadangan Bank Soal
+                Model cadangan lokal
                 <input
                   type="text"
                   value={localAiSettings.fallbackModel}

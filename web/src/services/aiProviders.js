@@ -11,9 +11,13 @@ const DEFAULT_LOCAL_SETTINGS = Object.freeze({
 });
 const WORKFLOWS = new Set(['planning', 'assistant', 'questions', 'modul_siswa']);
 const FALLBACK_WORKFLOWS = Object.freeze({
+  planning: 'Perencanaan pembelajaran',
+  assistant: 'Asisten AI',
   questions: 'Bank Soal',
   modul_siswa: 'Modul Siswa',
 });
+const MAX_PROMPT_LENGTH = 300_000;
+const MAX_STREAM_RESPONSE_LENGTH = 100_000;
 
 function requireUser(uid) {
   const userId = String(uid || '').trim();
@@ -44,7 +48,7 @@ function validasiPengaturanLokal(settings) {
     throw new TypeError('Nama model cadangan AI_nnoe hanya boleh berisi huruf, angka, titik, garis bawah, titik dua, atau tanda hubung.');
   }
   if (fallbackModel === model) {
-    throw new TypeError('Model cadangan Bank Soal harus berbeda dari model utama.');
+    throw new TypeError('Model cadangan lokal harus berbeda dari model utama.');
   }
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 15 || timeoutSeconds > 600) {
     throw new RangeError('Batas waktu AI_nnoe harus 15–600 detik.');
@@ -130,6 +134,95 @@ async function askLocal(settings, prompt, workflow, requestSignal, model) {
   return { text, provider: 'local', model: result.model || model };
 }
 
+async function askLocalStream(settings, prompt, workflow, requestSignal, model, onChunk) {
+  const endpoint = localEndpoint(settings.endpoint);
+  endpoint.pathname = `${endpoint.pathname.replace(/\/$/, '')}/api/chat`;
+  const signal = requestSignal
+    ? AbortSignal.any([AbortSignal.timeout(settings.timeoutSeconds * 1000), requestSignal])
+    : AbortSignal.timeout(settings.timeoutSeconds * 1000);
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        stream: true,
+        messages: [{ role: 'user', content: prompt }],
+        options: { num_predict: settings.outputTokens },
+        metadata: { workflow, product: 'AI_nnoe' },
+      }),
+      signal,
+    });
+  } catch (cause) {
+    if (requestSignal?.aborted) throw cause;
+    if (signal.aborted) {
+      throw new Error(`AI_nnoe lokal tidak merespons dalam ${settings.timeoutSeconds} detik. Coba lagi atau periksa model lokal.`);
+    }
+    throw new Error('AI_nnoe lokal tidak dapat dijangkau. Pastikan Ollama berjalan dan origin aplikasi diizinkan pada CORS.');
+  }
+  if (!response.ok) throw new Error(`AI_nnoe lokal merespons HTTP ${response.status}.`);
+  if (!response.body) throw new Error('AI_nnoe lokal tidak menyediakan aliran respons yang dapat dibaca.');
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = '';
+  let text = '';
+  let responseModel = model;
+  const consumeLine = (line) => {
+    if (!line.trim()) return;
+    let item;
+    try {
+      item = JSON.parse(line);
+    } catch (cause) {
+      throw new Error('AI_nnoe lokal mengirim potongan respons yang tidak valid.', { cause });
+    }
+    if (typeof item?.error === 'string' && item.error) {
+      throw new Error(`AI_nnoe lokal: ${item.error.slice(0, 300)}`);
+    }
+    if (typeof item?.model === 'string' && item.model) responseModel = item.model;
+    const chunk = item?.message?.content;
+    if (chunk !== undefined && typeof chunk !== 'string') {
+      throw new Error('AI_nnoe lokal mengirim format potongan respons yang tidak didukung.');
+    }
+    if (chunk) {
+      text += chunk;
+      if (text.length > MAX_STREAM_RESPONSE_LENGTH) {
+        throw new RangeError('Respons AI_nnoe lokal melebihi batas 100.000 karakter.');
+      }
+      onChunk(chunk);
+    }
+  };
+
+  try {
+    while (true) {
+      let next;
+      try {
+        next = await reader.read();
+      } catch (cause) {
+        if (requestSignal?.aborted) throw cause;
+        if (signal.aborted) {
+          throw new Error(`AI_nnoe lokal tidak merespons dalam ${settings.timeoutSeconds} detik. Coba lagi atau periksa model lokal.`);
+        }
+        throw new Error('Aliran AI_nnoe lokal terputus sebelum respons selesai.', { cause });
+      }
+      if (next.done) {
+        pending += decoder.decode();
+        if (pending) consumeLine(pending);
+        break;
+      }
+      pending += decoder.decode(next.value, { stream: true });
+      const lines = pending.split('\n');
+      pending = lines.pop() || '';
+      for (const line of lines) consumeLine(line);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  if (!text.trim()) throw new Error('AI_nnoe lokal mengembalikan hasil kosong.');
+  return { text, provider: 'local', model: responseModel };
+}
+
 function validateLocalResult(result, validateResponse) {
   if (!validateResponse) return result;
   try {
@@ -139,13 +232,30 @@ function validateLocalResult(result, validateResponse) {
   }
 }
 
-export async function routeAiRequest({ uid, workflow, prompt, signal, validateResponse }) {
+function validasiPermintaanAi({ uid, workflow, prompt, signal, validateResponse, onChunk, onFallback }) {
   const userId = requireUser(uid);
   if (!WORKFLOWS.has(workflow)) throw new TypeError('Workflow AI tidak dikenal.');
   if (typeof prompt !== 'string' || !prompt.trim()) throw new TypeError('Prompt AI wajib diisi.');
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    throw new RangeError('Prompt AI_nnoe melebihi batas 300.000 karakter.');
+  }
   if (validateResponse !== undefined && typeof validateResponse !== 'function') {
     throw new TypeError('Validator hasil AI tidak valid.');
   }
+  if (signal !== undefined && typeof signal?.aborted !== 'boolean') {
+    throw new TypeError('Sinyal pembatalan AI tidak valid.');
+  }
+  if (onChunk !== undefined && typeof onChunk !== 'function') {
+    throw new TypeError('Penerima aliran AI tidak valid.');
+  }
+  if (onFallback !== undefined && typeof onFallback !== 'function') {
+    throw new TypeError('Pemberitahuan model cadangan AI tidak valid.');
+  }
+  return userId;
+}
+
+export async function routeAiRequest({ uid, workflow, prompt, signal, validateResponse }) {
+  const userId = validasiPermintaanAi({ uid, workflow, prompt, signal, validateResponse });
   const settings = muatPengaturanLokalAI(userId);
   try {
     const result = await askLocal(settings, prompt, workflow, signal, settings.model);
@@ -155,6 +265,44 @@ export async function routeAiRequest({ uid, workflow, prompt, signal, validateRe
     if (signal?.aborted || !fallbackLabel || !settings.fallbackModel) throw primaryError;
     try {
       const result = await askLocal(settings, prompt, workflow, signal, settings.fallbackModel);
+      return {
+        ...validateLocalResult(result, validateResponse),
+        fallbackUsed: true,
+      };
+    } catch (fallbackError) {
+      if (signal?.aborted) throw fallbackError;
+      const message = (error) => error instanceof Error ? error.message : 'Kesalahan tidak diketahui.';
+      throw new Error(
+        `Model utama gagal: ${message(primaryError)} Model cadangan ${fallbackLabel} juga gagal: ${message(fallbackError)}. Periksa model lokal atau coba kembali.`,
+        { cause: fallbackError },
+      );
+    }
+  }
+}
+
+export async function streamAiRequest({
+  uid, workflow, prompt, signal, validateResponse, onChunk = () => {}, onFallback,
+}) {
+  const userId = validasiPermintaanAi({
+    uid, workflow, prompt, signal, validateResponse, onChunk, onFallback,
+  });
+  const settings = muatPengaturanLokalAI(userId);
+  try {
+    const result = await askLocalStream(settings, prompt, workflow, signal, settings.model, onChunk);
+    return validateLocalResult(result, validateResponse);
+  } catch (primaryError) {
+    const fallbackLabel = FALLBACK_WORKFLOWS[workflow];
+    if (signal?.aborted || !fallbackLabel || !settings.fallbackModel) throw primaryError;
+    try {
+      onFallback?.({ primaryModel: settings.model, fallbackModel: settings.fallbackModel });
+      const result = await askLocalStream(
+        settings,
+        prompt,
+        workflow,
+        signal,
+        settings.fallbackModel,
+        onChunk,
+      );
       return {
         ...validateLocalResult(result, validateResponse),
         fallbackUsed: true,

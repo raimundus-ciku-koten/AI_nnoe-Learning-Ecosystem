@@ -27,14 +27,30 @@ const bank = {
   questions: [{
     jenis: 'pilihan_ganda',
     nomor: 1,
+    konteks: 'Seorang siswa menghitung dua pasang benda.',
     pertanyaan: 'Berapakah hasil 2 + 2?',
+    tingkatKognitifBloom: 'C4 (Analisis)',
     pilihan: ['3', '4', '5', '6'],
+    rasionalisasiPilihan: [
+      'Satu benda terlewat.',
+      'Jumlahnya empat benda.',
+      'Satu benda dihitung ulang.',
+      'Kelompok dijumlahkan keliru.',
+    ],
   }],
   answers: [{
     jenis: 'pilihan_ganda',
     nomor: 1,
+    konteks: 'Seorang siswa menghitung dua pasang benda.',
     pertanyaan: 'Berapakah hasil 2 + 2?',
+    tingkatKognitifBloom: 'C4 (Analisis)',
     pilihan: ['3', '4', '5', '6'],
+    rasionalisasiPilihan: [
+      'Satu benda terlewat.',
+      'Jumlahnya empat benda.',
+      'Satu benda dihitung ulang.',
+      'Kelompok dijumlahkan keliru.',
+    ],
     jawaban: '4',
     pembahasan: 'Dua ditambah dua sama dengan empat.',
     caraCepat: 'Hitung langsung.',
@@ -42,13 +58,17 @@ const bank = {
 };
 
 describe('QuestionBankGeneratedDocument', () => {
-  it('renders the question, A–D options, answer key, explanation, and document metadata', () => {
+  it('renders the context, Bloom level, option rationales, answer key, and metadata', () => {
     const markup = renderToStaticMarkup(<QuestionBankGeneratedDocument bank={bank} />);
 
     expect(markup).toContain('Persamaan Linear');
     expect(markup).toContain('Mata pelajaran:');
     expect(markup).toContain('Matematika');
     expect(markup).toContain('Berapakah hasil 2 + 2?');
+    expect(markup).toContain('Seorang siswa menghitung dua pasang benda.');
+    expect(markup).toContain('C4 (Analisis)');
+    expect(markup).toContain('Rasionalisasi:');
+    expect(markup).toContain('Jumlahnya empat benda.');
     expect(markup).toContain('<ol type="A">');
     expect(markup).toContain('Kunci jawaban');
     expect(markup).toContain('Dua ditambah dua sama dengan empat.');

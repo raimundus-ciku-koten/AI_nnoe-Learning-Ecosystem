@@ -5,7 +5,18 @@ import {
   muatPengaturanLokalAI,
   routeAiRequest,
   simpanPengaturanLokalAI,
+  streamAiRequest,
 } from './aiProviders.js';
+
+function streamedResponse(lines, status = 200) {
+  const body = new ReadableStream({
+    start(controller) {
+      for (const line of lines) controller.enqueue(new TextEncoder().encode(line));
+      controller.close();
+    },
+  });
+  return new Response(body, { status });
+}
 
 describe('privacy-aware AI providers', () => {
   afterEach(() => {
@@ -95,6 +106,7 @@ describe('privacy-aware AI providers', () => {
       setItem: (key, value) => storage.set(key, value),
       removeItem: (key) => storage.delete(key),
     });
+
     const defaults = muatPengaturanLokalAI('user-1');
     expect(() => simpanPengaturanLokalAI('user-1', { ...defaults, endpoint: 'https://example.com' }))
       .toThrow('localhost');
@@ -108,6 +120,33 @@ describe('privacy-aware AI providers', () => {
       .toThrow('15–600 detik');
     expect(() => simpanPengaturanLokalAI('user-1', { ...defaults, outputTokens: 32 }))
       .toThrow('minimal 128 token');
+  });
+
+  it('validates AI prompts and stream callbacks before making local requests', async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    await expect(routeAiRequest({
+      uid: 'user-1',
+      workflow: 'unknown',
+      prompt: 'Pertanyaan.',
+    })).rejects.toThrow('Workflow AI tidak dikenal');
+    await expect(streamAiRequest({
+      uid: 'user-1',
+      workflow: 'assistant',
+      prompt: ' '.repeat(2),
+    })).rejects.toThrow('Prompt AI wajib diisi');
+    await expect(streamAiRequest({
+      uid: 'user-1',
+      workflow: 'assistant',
+      prompt: 'x'.repeat(300_001),
+    })).rejects.toThrow('melebihi batas 300.000 karakter');
+    await expect(streamAiRequest({
+      uid: 'user-1',
+      workflow: 'assistant',
+      prompt: 'Pertanyaan.',
+      onChunk: 'bukan fungsi',
+    })).rejects.toThrow('Penerima aliran AI tidak valid');
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('routes only to the local model even if a legacy caller requests cloud', async () => {
@@ -126,8 +165,9 @@ describe('privacy-aware AI providers', () => {
       preference: 'cloud',
       allowCloud: true,
     })).rejects.toThrow('Pastikan Ollama berjalan');
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
     expect(String(fetch.mock.calls[0][0])).toContain('127.0.0.1');
+    expect(String(fetch.mock.calls[1][0])).toContain('127.0.0.1');
   });
 
   it('retries failed or invalid Bank Soal output with the configured local backup model', async () => {
@@ -217,7 +257,7 @@ describe('privacy-aware AI providers', () => {
     expect(JSON.parse(fetch.mock.calls[1][1].body).model).toBe('llama3.2:1b');
   });
 
-  it('reports both local model failures and does not retry non-question workflows', async () => {
+  it('reports both local model failures for every AI workflow', async () => {
     const fetch = vi.fn()
       .mockRejectedValueOnce(new Error('primary unavailable'))
       .mockRejectedValueOnce(new Error('backup unavailable'));
@@ -235,8 +275,18 @@ describe('privacy-aware AI providers', () => {
       uid: 'user-1',
       workflow: 'assistant',
       prompt: 'Balas.',
-    })).rejects.toThrow('Pastikan Ollama berjalan');
-    expect(fetch).toHaveBeenCalledTimes(1);
+    })).rejects.toThrow(/Model utama gagal:.*Model cadangan Asisten AI juga gagal/);
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    fetch.mockClear();
+    fetch.mockRejectedValueOnce(new Error('primary unavailable'))
+      .mockRejectedValueOnce(new Error('backup unavailable'));
+    await expect(routeAiRequest({
+      uid: 'user-1',
+      workflow: 'planning',
+      prompt: 'Susun draf.',
+    })).rejects.toThrow(/Model utama gagal:.*Model cadangan Perencanaan pembelajaran juga gagal/);
+    expect(fetch).toHaveBeenCalledTimes(2);
 
     fetch.mockClear();
     fetch.mockRejectedValueOnce(new Error('primary unavailable'))
@@ -265,14 +315,87 @@ describe('privacy-aware AI providers', () => {
   });
 
   it('reports a local generation timeout in user-facing language', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => {
+    const fetch = vi.fn(async () => {
       throw new DOMException('The operation timed out.', 'TimeoutError');
-    }));
+    });
+    vi.stubGlobal('fetch', fetch);
     await expect(routeAiRequest({
       uid: 'user-1',
       workflow: 'planning',
       prompt: 'Susun draf.',
     })).rejects.toThrow('tidak merespons dalam 120 detik');
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('streams NDJSON chunks and retries a failed assistant stream with the local fallback', async () => {
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(streamedResponse([
+        '{"model":"llama3.2:3b","message":{"content":"Jawaban parsial"}}\n',
+        '{"error":"model berhenti"}\n',
+      ]))
+      .mockResolvedValueOnce(streamedResponse([
+        '{"model":"llama3.2:1b","message":{"content":"Petunjuk"}}\n',
+        '{"model":"llama3.2:1b","message":{"content":" lanjutan"}}\n',
+      ]));
+    const chunks = [];
+    const onFallback = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    const result = await streamAiRequest({
+      uid: 'user-1',
+      workflow: 'assistant',
+      prompt: 'Bantu saya memahami soal.',
+      onChunk: (chunk) => chunks.push(chunk),
+      onFallback,
+      validateResponse: (text) => {
+        if (!text.trim()) throw new Error('Jawaban kosong.');
+        return text;
+      },
+    });
+
+    expect(result).toMatchObject({
+      text: 'Petunjuk lanjutan',
+      provider: 'local',
+      model: 'llama3.2:1b',
+      fallbackUsed: true,
+      validated: 'Petunjuk lanjutan',
+    });
+    expect(chunks).toEqual(['Jawaban parsial', 'Petunjuk', ' lanjutan']);
+    expect(onFallback).toHaveBeenCalledWith({
+      primaryModel: 'llama3.2:3b',
+      fallbackModel: 'llama3.2:1b',
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetch.mock.calls[0][1].body).stream).toBe(true);
+    expect(String(fetch.mock.calls[0][0])).toBe('http://127.0.0.1:11434/api/chat');
+  });
+
+  it('assembles NDJSON split across byte chunks and does not fall back after cancellation', async () => {
+    const fetch = vi.fn().mockResolvedValueOnce(streamedResponse([
+      '{"model":"local","message":{"content":"Halo',
+      ' dunia"}}\n',
+    ]));
+    vi.stubGlobal('fetch', fetch);
+    await expect(streamAiRequest({
+      uid: 'user-1',
+      workflow: 'assistant',
+      prompt: 'Beri sapaan.',
+      onChunk: vi.fn(),
+    })).resolves.toMatchObject({ text: 'Halo dunia', model: 'local' });
+
+    const controller = new AbortController();
+    controller.abort();
+    fetch.mockClear();
+    fetch.mockRejectedValueOnce(controller.signal.reason);
+    const onFallback = vi.fn();
+    await expect(streamAiRequest({
+      uid: 'user-1',
+      workflow: 'assistant',
+      prompt: 'Beri sapaan.',
+      signal: controller.signal,
+      onFallback,
+    })).rejects.toMatchObject({ name: 'AbortError' });
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(onFallback).not.toHaveBeenCalled();
   });
 
   it('keeps local settings isolated between signed-in accounts', () => {
