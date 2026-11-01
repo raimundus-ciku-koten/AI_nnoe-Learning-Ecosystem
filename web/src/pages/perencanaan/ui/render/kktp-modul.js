@@ -12,35 +12,119 @@ const paragraf = (teks) => (teks ? h('p', null, teks) : null);
 
 /* --------------------------------- KKTP --------------------------------- */
 
+const PERLU_KONFIRMASI = 'PERLU KONFIRMASI';
+
+function rubrikBerkembang(rubrik) {
+  return [
+    rubrik?.cukup ? `${t('kktp.levelCukup')}: ${rubrik.cukup}` : '',
+    rubrik?.baik ? `${t('kktp.levelBaik')}: ${rubrik.baik}` : '',
+  ].filter(Boolean).join(' / ') || PERLU_KONFIRMASI;
+}
+
+function tabelKriteriaKktp(kktp, petaTp) {
+  const baris = (kktp.items ?? []).map((item, index) => {
+    const tp = petaTp.get(normKode(item.kode));
+    return [
+      String(index + 1),
+      item.kode,
+      tp?.rumusan || PERLU_KONFIRMASI,
+      item.indikator?.join('; ') || PERLU_KONFIRMASI,
+      item.asesmen || PERLU_KONFIRMASI,
+      item.rubrik?.perluBimbingan || PERLU_KONFIRMASI,
+      rubrikBerkembang(item.rubrik),
+      item.rubrik?.sangatBaik || PERLU_KONFIRMASI,
+      item.tindakLanjut || PERLU_KONFIRMASI,
+    ];
+  });
+  if (baris.length === 0) baris.push([{ teks: PERLU_KONFIRMASI, colspan: 9 }]);
+  return tabel({
+    caption: t('kktp.tabelTujuan'),
+    kelas: 'tbl-kktp tbl-kktp-tujuan',
+    kepala: [
+      t('rpe.no'), t('atp.kode'), t('atp.tp'), t('kktp.indikator'),
+      t('kktp.bentukAsesmen'), t('kktp.kategoriBelum'), t('kktp.kategoriBerkembang'),
+      t('kktp.kategoriMahir'), t('kktp.tindakLanjut')
+    ],
+    baris
+  });
+}
+
+function tabelRubrikUmum(kktp) {
+  const data = kktp.rubrikUmum?.length ? kktp.rubrikUmum : Array.from({ length: 4 }, () => ({
+    aspek: PERLU_KONFIRMASI,
+    belumBerkembang: PERLU_KONFIRMASI,
+    berkembangSesuaiHarapan: PERLU_KONFIRMASI,
+    mahir: PERLU_KONFIRMASI,
+  }));
+  return tabel({
+    caption: t('kktp.rubrikUmum'),
+    kelas: 'tbl-kktp tbl-kktp-rubrik',
+    kepala: [
+      t('rpe.no'), t('kktp.aspek'), t('kktp.kategoriBelum'),
+      t('kktp.kategoriBerkembangSesuai'), t('kktp.kategoriMahir')
+    ],
+    baris: data.map((item, index) => [
+      String(index + 1),
+      item.aspek || PERLU_KONFIRMASI,
+      item.belumBerkembang || PERLU_KONFIRMASI,
+      item.berkembangSesuaiHarapan || PERLU_KONFIRMASI,
+      item.mahir || PERLU_KONFIRMASI,
+    ])
+  });
+}
+
+function tabelKonversiKktp() {
+  return tabel({
+    caption: t('kktp.konversiCapaian'),
+    kelas: 'tbl-kktp tbl-kktp-konversi',
+    kepala: [
+      t('kktp.kategori'), t('kktp.rentangSkor'), t('kktp.predikat'),
+      t('kktp.deskripsi'), t('kktp.tindakLanjut')
+    ],
+    baris: [
+      ['Belum Berkembang', '0–59', 'Perlu Bimbingan', PERLU_KONFIRMASI, t('kktp.tindakBelum')],
+      ['Berkembang', '60–79', 'Baik', PERLU_KONFIRMASI, t('kktp.tindakBerkembang')],
+      ['Mahir', '80–100', 'Sangat Baik', PERLU_KONFIRMASI, t('kktp.tindakMahir')],
+    ]
+  });
+}
+
 /**
- * @param {Object} kktp { ambang, items:[{kode, indikator[], rubrik{...}}] }
+ * @param {Object} kktp {ambang, items:[{kode, indikator[], asesmen, rubrik, tindakLanjut}], rubrikUmum[]}
  * @param {Object} atp  payload ATP (untuk rumusan TP)
  * @param {Object} konteks
  */
 export function renderKktp(kktp, atp, konteks) {
   const petaTp = new Map(ratakanTp(atp).map((x) => [normKode(x.kode), x]));
-  const level = [
-    ['perluBimbingan', t('kktp.levelPerluBimbingan')],
-    ['cukup', t('kktp.levelCukup')],
-    ['baik', t('kktp.levelBaik')],
-    ['sangatBaik', t('kktp.levelSangatBaik')]
-  ];
+  const konteksIdentitas = {
+    ...konteks,
+    identitas: {
+      ...konteks.identitas,
+      sekolah: konteks.identitas?.sekolah || PERLU_KONFIRMASI,
+      guru: konteks.identitas?.guru || PERLU_KONFIRMASI,
+    },
+  };
   return h('article', { class: 'dokumen dokumen-kktp' },
     kopDokumen(konteks, t('kktp.judul')),
-    tabelIdentitas(konteks, [[t('kktp.ambang'), String(kktp.ambang)]]),
-    kktp.items.map((it) => {
-      const tp = petaTp.get(normKode(it.kode));
-      return h('section', { class: 'blok-tp' },
-        h('h2', null, `${it.kode}`),
-        tp ? h('p', { class: 'rumusan-tp' }, tp.rumusan) : null,
-        h('h3', null, t('kktp.indikator')),
-        daftar(it.indikator),
-        tabel({
-          caption: t('kktp.rubrikUntuk', { kode: it.kode }),
-          kepala: [t('kktp.level'), t('kktp.deskripsi')],
-          baris: level.map(([k, label]) => [label, it.rubrik?.[k] ?? ''])
-        }));
-    }),
+    h('section', { class: 'kktp-bagian' },
+      h('h2', null, `A. ${t('kktp.identitas')}`),
+      tabelIdentitas(konteksIdentitas, [[t('kktp.ambang'), String(kktp.ambang)]])),
+    h('section', { class: 'kktp-bagian' },
+      h('h2', null, `B. ${t('kktp.landasanPrinsip')}`),
+      h('p', null, t('kktp.prinsipKriteria')),
+      h('p', null, t('kktp.prinsipBukti')),
+      h('p', null, t('kktp.prinsipTindakLanjut'))),
+    h('section', { class: 'kktp-bagian' },
+      h('h2', null, `C. ${t('kktp.tabelTujuanJudul')}`),
+      h('p', null, t('kktp.pemetaanEmpatLevel')),
+      tabelKriteriaKktp(kktp, petaTp)),
+    h('section', { class: 'kktp-bagian' },
+      h('h2', null, `D. ${t('kktp.rubrikUmum')}`),
+      tabelRubrikUmum(kktp)),
+    h('section', { class: 'kktp-bagian' },
+      h('h2', null, `E. ${t('kktp.konversiCapaian')}`),
+      h('p', null, t('kktp.konversiPerluKonfirmasi', { ambang: kktp.ambang })),
+      tabelKonversiKktp()),
     blokTtd(konteks));
 }
 

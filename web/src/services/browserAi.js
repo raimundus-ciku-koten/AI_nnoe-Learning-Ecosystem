@@ -1,7 +1,7 @@
 import { routeAiRequest } from './aiProviders.js';
 import { bacaInputAi } from './planningDriveRepository.js';
 import { parsePlanningOutput } from './planningAiSchema.js';
-import { kontrakKodeAtp, promptAtp } from './planningAiPrompts.js';
+import { kontrakKodeAtp, promptAtp, promptKktp } from './planningAiPrompts.js';
 
 export const EXTERNAL_AI_PROVIDERS_ENABLED = false;
 
@@ -386,12 +386,18 @@ export async function generateBrowserPlanning({ uid, paketId, jenis, noUnit, sin
   requireUser(uid);
   if (sinyal?.aborted) throw new DOMException('Permintaan dibatalkan.', 'AbortError');
   const context = await bacaInputAi({ uid, paketId, jenis, noUnit });
-  const requiredShape = jenis === 'kktp'
-      ? '{"ambang":75,"items":[{"kode":"...","indikator":["..."],"rubrik":{"perluBimbingan":"...","cukup":"...","baik":"...","sangatBaik":"..."}}]}'
-      : '{"tujuanKode":["..."],"model":"...","pemahamanBermakna":["..."],"pertanyaanPemantik":["..."],"dimensiProfil":["..."],"sarpras":["..."],"pertemuan":[{"ke":1,"judul":"...","tujuan":"...","menit":40,"pendahuluan":["..."],"inti":["..."],"penutup":["..."]}],"asesmen":{"diagnostik":"...","formatif":"...","sumatif":"..."},"remedial":"...","pengayaan":"...","refleksiGuru":["..."],"refleksiSiswa":["..."]}';
+  const requiredShape = '{"tujuanKode":["..."],"model":"...","pemahamanBermakna":["..."],"pertanyaanPemantik":["..."],"dimensiProfil":["..."],"sarpras":["..."],"pertemuan":[{"ke":1,"judul":"...","tujuan":"...","menit":40,"pendahuluan":["..."],"inti":["..."],"penutup":["..."]}],"asesmen":{"diagnostik":"...","formatif":"...","sumatif":"..."},"remedial":"...","pengayaan":"...","refleksiGuru":["..."],"refleksiSiswa":["..."]}';
   const kontrakAtp = jenis === 'atp' ? kontrakKodeAtp(context) : null;
+  const validateKktp = jenis === 'kktp'
+    ? (text) => parsePlanningOutput('kktp', text, { kodeTp: context.kodeTp })
+    : undefined;
   const prompt = jenis === 'atp'
     ? promptAtp(context)
+    : jenis === 'kktp'
+      ? promptKktp({
+        ...context,
+        tps: context.unit.flatMap((unit) => unit.tp.map((tp) => ({ ...tp, unit: unit.nama }))),
+      })
     : [
       `Susun draf ${jenis} untuk perencanaan pembelajaran.`,
       'Ikuti struktur JSON yang diwajibkan dan jangan menambah properti.',
@@ -405,8 +411,9 @@ export async function generateBrowserPlanning({ uid, paketId, jenis, noUnit, sin
     workflow: 'planning',
     signal: sinyal,
     prompt,
+    ...(validateKktp ? { validateResponse: validateKktp } : {}),
   });
-  const parsed = parsePlanningOutput(jenis, result.text, {
+  const parsed = result.validated ?? parsePlanningOutput(jenis, result.text, {
     cp: context.cp,
     ...(jenis === 'atp' ? {
       legacyContract: true,

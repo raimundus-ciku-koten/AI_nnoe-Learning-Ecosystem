@@ -163,19 +163,46 @@ function parseAtp(value, context = {}) {
   return parsed;
 }
 
-function parseKktp(value, validCodes) {
-  const parsed = object(value, 'kktp', {
-    ambang: (field, path) => integer(field, path, 1, 100),
+const PLACEHOLDER_KKTP = 'PERLU KONFIRMASI';
+const rubrikUmumKktpAwal = () => Array.from({ length: 4 }, () => ({
+  aspek: PLACEHOLDER_KKTP,
+  belumBerkembang: PLACEHOLDER_KKTP,
+  berkembangSesuaiHarapan: PLACEHOLDER_KKTP,
+  mahir: PLACEHOLDER_KKTP,
+}));
+
+function parseKktp(value, validCodes, allowLegacy = false) {
+  const normalized = allowLegacy && value && typeof value === 'object' && !Array.isArray(value)
+    ? {
+      ...value,
+      items: Array.isArray(value.items) ? value.items.map((item) => ({
+        ...item,
+        asesmen: item?.asesmen ?? PLACEHOLDER_KKTP,
+        tindakLanjut: item?.tindakLanjut ?? PLACEHOLDER_KKTP,
+      })) : value.items,
+      rubrikUmum: value.rubrikUmum ?? rubrikUmumKktpAwal(),
+    }
+    : value;
+  const parsed = object(normalized, 'kktp', {
+    ambang: (field, path) => integer(field, path, allowLegacy ? 1 : 60, allowLegacy ? 100 : 85),
     items: (input, path) => array(input, path, 1, 80, (item, itemPath) => object(item, itemPath, {
       kode: code,
       indikator: (field, fieldPath) => array(field, fieldPath, 1, 8, (entry, entryPath) => text(entry, entryPath, 400)),
+      asesmen: (field, path) => text(field, path, 600),
       rubrik: (field, fieldPath) => object(field, fieldPath, {
         perluBimbingan: (entry, entryPath) => text(entry, entryPath, 600),
         cukup: (entry, entryPath) => text(entry, entryPath, 600),
         baik: (entry, entryPath) => text(entry, entryPath, 600),
         sangatBaik: (entry, entryPath) => text(entry, entryPath, 600)
-      })
-    }))
+      }),
+      tindakLanjut: (field, path) => text(field, path, 600),
+    })),
+    rubrikUmum: (input, path) => array(input, path, 4, 8, (item, itemPath) => object(item, itemPath, {
+      aspek: (field, fieldPath) => text(field, fieldPath, 200),
+      belumBerkembang: (field, fieldPath) => text(field, fieldPath, 600),
+      berkembangSesuaiHarapan: (field, fieldPath) => text(field, fieldPath, 600),
+      mahir: (field, fieldPath) => text(field, fieldPath, 600),
+    })),
   });
   const available = new Set(validCodes);
   const included = new Set(parsed.items.map((item) => item.kode.toUpperCase().replace(/[^A-Z0-9]/g, '')));
@@ -229,7 +256,7 @@ export function parsePlanningOutput(type, raw, context = {}) {
     throw new PlanningParseError(type, 'bukan JSON valid');
   }
   if (type === 'atp') return parseAtp(json, context);
-  if (type === 'kktp') return parseKktp(json, context.kodeTp ?? []);
+  if (type === 'kktp') return parseKktp(json, context.kodeTp ?? [], context.allowLegacyKktp === true);
   if (type === 'modul') return parseModule(json, context.kodeTp ?? [], context.allowEmptyLists === true);
   throw new PlanningParseError(type, 'jenis dokumen tidak dikenal');
 }

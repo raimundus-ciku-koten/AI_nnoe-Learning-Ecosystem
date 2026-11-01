@@ -87,12 +87,15 @@ TUGAS: susun Kriteria Ketercapaian Tujuan Pembelajaran (KKTP) untuk SETIAP TP pa
 
 ATURAN:
 - ${COMMON_RULES}
-- Bentuk JSON: {"ambang":int,"items":[{"kode":string,"indikator":[string],"rubrik":{"perluBimbingan":string,"cukup":string,"baik":string,"sangatBaik":string}}]}
+- Bentuk JSON wajib: {"ambang":int,"items":[{"kode":string,"indikator":[string],"asesmen":string,"rubrik":{"perluBimbingan":string,"cukup":string,"baik":string,"sangatBaik":string},"tindakLanjut":string}],"rubrikUmum":[{"aspek":string,"belumBerkembang":string,"berkembangSesuaiHarapan":string,"mahir":string}]}
 - "ambang": nilai ambang ketercapaian umum (bilangan bulat 60-85).
 - Satu item per TP, "kode" harus PERSIS sama dengan kode pada DATA, tidak boleh menambah atau melewatkan kode.
-- "indikator": 2-4 indikator teramati dan terukur. "rubrik": deskripsi 4 level yang membedakan kedalaman penguasaan secara konkret.
+- "indikator": 2-4 indikator teramati dan terukur; "asesmen" memuat bentuk asesmen; "tindakLanjut" memuat langkah yang sesuai dengan hasil asesmen.
+- "rubrik": isi empat tingkat yang membedakan kedalaman penguasaan secara konkret.
+- "rubrikUmum": tepat empat aspek umum yang relevan dengan TP, masing-masing berisi deskripsi tiga kategori sesuai nama properti.
+- Jangan mengarang nomor peraturan atau kutipan hukum. Rumusan prinsip dan tindak lanjut harus relevan dengan TP pada DATA.
 
-${dataBlock({ mapel: safe(mapel, 120), kelas: safe(kelas, 20), fase: safe(fase, 2), tps: tps.map((item) => ({ kode: safe(item.kode, 20), rumusan: safe(item.rumusan, 600) })) })}`;
+${dataBlock({ mapel: safe(mapel, 120), kelas: safe(kelas, 20), fase: safe(fase, 2), tps: tps.map((item) => ({ unit: safe(item.unit, 120), kode: safe(item.kode, 20), rumusan: safe(item.rumusan, 600) })) })}`;
 }
 
 export function promptModul({ mapel, kelas, fase, unit, jpUnit, jpPerPertemuan }) {

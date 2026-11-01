@@ -10,6 +10,8 @@ import { hitungProsem } from '../src/pages/perencanaan/engine/prosem.js';
 import { validasiKonteks, validasiAtp } from '../src/pages/perencanaan/engine/validator.js';
 import { pekanDalamBulan } from '../src/pages/perencanaan/ui/render/format.js';
 import { renderRpe } from '../src/pages/perencanaan/ui/render/rpe.js';
+import { buatKktpEditor } from '../src/pages/perencanaan/ui/kktp-editor.js';
+import { renderKktp } from '../src/pages/perencanaan/ui/render/kktp-modul.js';
 import { renderProsem, renderProta } from '../src/pages/perencanaan/ui/render/prota-prosem.js';
 
 /* ---------- Data uji: pola contoh Matematika Kelas X (5 unit, 16 TP, 114 JP) ---------- */
@@ -52,12 +54,19 @@ function denganDomUji(fn) {
     append(...children) { this.children.push(...children); }
     setAttribute(name, value) { this.attributes[name] = String(value); }
     addEventListener() {}
+    get value() { return this._value ?? this.attributes.value ?? this.textContent; }
+    set value(value) { this._value = String(value); }
     get textContent() { return this.tagName === '#text' ? this.text : this.children.map((child) => child.textContent).join(''); }
     querySelectorAll(tag) {
       return this.children.flatMap((child) => [
         ...(child.tagName === tag ? [child] : []),
         ...child.querySelectorAll(tag)
       ]);
+    }
+    querySelector(selector) {
+      const field = /^\[data-field="([^"]+)"\]$/.exec(selector)?.[1];
+      const descendants = (node) => node.children.flatMap((child) => [child, ...descendants(child)]);
+      return field ? descendants(this).find((child) => child.attributes['data-field'] === field) ?? null : null;
     }
   }
 
@@ -401,6 +410,80 @@ test('Prosem: renderer mempertahankan matriks delapan kolom, TP kanonis, CP, dan
   assert.match(tabelSemester.textContent, /Modul 1: Unit 1/);
   assert.match(tabel[1].textContent, /Capaian Pembelajaran/);
   assert.match(tabel[1].textContent, /Bilangan/);
+});
+
+test('KKTP: renderer memuat struktur lima bagian dan tabel kriteria sembilan kolom', () => {
+  const tujuan = buatAtp().unit[0].tp[0];
+  const kktp = {
+    ambang: 75,
+    items: [{
+      kode: tujuan.kode,
+      indikator: ['Mengidentifikasi konsep.'],
+      asesmen: 'Observasi.',
+      rubrik: {
+        perluBimbingan: 'Perlu bantuan.',
+        cukup: 'Mulai memahami.',
+        baik: 'Memahami.',
+        sangatBaik: 'Menerapkan.',
+      },
+      tindakLanjut: 'Latihan terarah.',
+    }],
+    rubrikUmum: Array.from({ length: 4 }, (_, index) => ({
+      aspek: `Aspek ${index + 1}`,
+      belumBerkembang: 'Perlu bantuan.',
+      berkembangSesuaiHarapan: 'Mencapai sebagian besar indikator.',
+      mahir: 'Menerapkan mandiri.',
+    })),
+  };
+  const dokumen = denganDomUji(() => renderKktp(kktp, buatAtp(), {
+    mapel: 'Matematika', kelas: 'X', fase: 'E', tahunAjaran: '2026/2027'
+  }));
+  const tabel = dokumen.querySelectorAll('table');
+  const bagian = dokumen.querySelectorAll('section');
+  assert.equal(bagian.length, 5);
+  assert.equal(tabel.length, 4);
+  const tabelTp = tabel[1];
+  assert.deepEqual(tabelTp.querySelectorAll('th').map((sel) => sel.textContent), [
+    'No', 'Kode TP', 'Tujuan Pembelajaran', 'Indikator ketercapaian', 'Bentuk asesmen',
+    'Belum Berkembang', 'Berkembang', 'Mahir', 'Tindak lanjut'
+  ]);
+  const baris = tabelTp.querySelectorAll('tbody')[0].children;
+  assert.equal(baris.length, 1);
+  assert.equal(baris[0].children.length, 9);
+  assert.match(tabelTp.textContent, /Cukup: Mulai memahami\. \/ Baik: Memahami\./);
+  assert.match(tabelTp.textContent, /Peserta didik mampu 1/);
+  assert.deepEqual(tabel[2].querySelectorAll('th').map((sel) => sel.textContent), [
+    'No', 'Aspek / kriteria', 'Belum Berkembang', 'Berkembang Sesuai Harapan', 'Mahir'
+  ]);
+  assert.equal(tabel[2].querySelectorAll('tbody')[0].children.length, 4);
+  assert.match(tabel[2].textContent, /Aspek 4/);
+  assert.match(tabel[3].textContent, /PERLU KONFIRMASI/);
+  assert.match(tabel[3].textContent, /0–59/);
+  assert.match(dokumen.textContent, /PERLU KONFIRMASI/);
+});
+
+test('KKTP: editor memigrasikan draf tersimpan lama tanpa menghapus rubrik empat tingkat', () => {
+  const atp = buatAtp();
+  const lama = {
+    ambang: 75,
+    items: ratakanTp(atp).map((tp) => ({
+      kode: tp.kode,
+      indikator: ['Indikator lama.'],
+      rubrik: {
+        perluBimbingan: 'Perlu bantuan.',
+        cukup: 'Mulai memahami.',
+        baik: 'Memahami.',
+        sangatBaik: 'Menerapkan.',
+      },
+    })),
+  };
+  const draft = denganDomUji(() => buatKktpEditor(atp, lama).ambil());
+  assert.equal(draft.items.length, lama.items.length);
+  assert.equal(draft.items[0].asesmen, 'PERLU KONFIRMASI');
+  assert.equal(draft.items[0].tindakLanjut, 'PERLU KONFIRMASI');
+  assert.deepEqual(draft.items[0].rubrik, lama.items[0].rubrik);
+  assert.equal(draft.rubrikUmum.length, 4);
+  assert.equal(draft.rubrikUmum[0].aspek, 'PERLU KONFIRMASI');
 });
 
 /* ---------- Validator ---------- */

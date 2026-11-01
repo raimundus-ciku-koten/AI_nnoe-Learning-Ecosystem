@@ -173,9 +173,26 @@ export default {
   'prosem.sumberJadwal': 'Jadwal dihitung dari TP dan alokasi Program Tahunan serta kalender RPE. Periksa kembali kalender pendidikan dan penempatan asesmen sebelum dokumen digunakan.',
 
   /* KKTP */
-  'kktp.judul': 'Kriteria Ketercapaian Tujuan Pembelajaran', 'kktp.ambang': 'Ambang ketercapaian', 'kktp.indikator': 'Indikator', 'kktp.level': 'Level', 'kktp.deskripsi': 'Deskripsi',
+  'kktp.judul': 'Kriteria Ketercapaian Tujuan Pembelajaran', 'kktp.identitas': 'Identitas', 'kktp.ambang': 'Ambang ketercapaian',
+  'kktp.indikator': 'Indikator ketercapaian', 'kktp.level': 'Level', 'kktp.deskripsi': 'Deskripsi',
   'kktp.rubrikUntuk': 'Rubrik untuk {kode}', 'kktp.levelPerluBimbingan': 'Perlu bimbingan', 'kktp.levelCukup': 'Cukup', 'kktp.levelBaik': 'Baik', 'kktp.levelSangatBaik': 'Sangat baik',
-  'kktp.editorPetunjuk': 'Isi indikator satu per baris dan rubrik untuk setiap level. Dokumen disimpan manual dan mengikuti revisi ATP.',
+  'kktp.tabelTujuan': 'Kriteria ketercapaian per tujuan pembelajaran', 'kktp.tabelTujuanJudul': 'Tabel KKTP per Tujuan Pembelajaran',
+  'kktp.bentukAsesmen': 'Bentuk asesmen', 'kktp.tindakLanjut': 'Tindak lanjut',
+  'kktp.kategori': 'Kategori', 'kktp.kategoriBelum': 'Belum Berkembang', 'kktp.kategoriBerkembang': 'Berkembang',
+  'kktp.kategoriBerkembangSesuai': 'Berkembang Sesuai Harapan',
+  'kktp.kategoriMahir': 'Mahir', 'kktp.aspek': 'Aspek / kriteria', 'kktp.aspekKe': 'Aspek {nomor}',
+  'kktp.rubrikUmum': 'Rubrik umum', 'kktp.konversiCapaian': 'Konversi capaian',
+  'kktp.rentangSkor': 'Rentang skor', 'kktp.predikat': 'Predikat',
+  'kktp.konversiPerluKonfirmasi': 'Rentang konversi mengikuti acuan lama. Kesesuaiannya dengan ambang {ambang} dan kebijakan satuan pendidikan PERLU KONFIRMASI.',
+  'kktp.tindakBelum': 'Pendampingan terarah dan remedial.',
+  'kktp.tindakBerkembang': 'Penguatan dan latihan lanjutan.',
+  'kktp.tindakMahir': 'Tantangan pengayaan dan peran tutor sebaya.',
+  'kktp.landasanPrinsip': 'Landasan dan Prinsip KKTP',
+  'kktp.prinsipKriteria': 'KKTP menetapkan kriteria ketercapaian tujuan pembelajaran berdasarkan capaian pembelajaran fase dan tujuan yang telah disusun. Nomor peraturan atau rujukan resmi tidak dicantumkan apabila sumbernya belum diverifikasi.',
+  'kktp.prinsipBukti': 'Penilaian berfokus pada bukti ketercapaian tujuan pembelajaran, bukan pada perbandingan antarpeserta didik.',
+  'kktp.prinsipTindakLanjut': 'Kategori capaian digunakan sebagai bahan diagnosis untuk menentukan dukungan, penguatan, atau pengayaan; kategori bukan label permanen bagi peserta didik.',
+  'kktp.pemetaanEmpatLevel': 'Pada kategori Berkembang, deskripsi Cukup dan Baik tetap ditampilkan terpisah agar informasi rubrik empat tingkat tidak hilang.',
+  'kktp.editorPetunjuk': 'Lengkapi indikator, bentuk asesmen, empat tingkat rubrik, tindak lanjut, dan empat aspek rubrik umum. Isian yang belum diketahui ditandai PERLU KONFIRMASI.',
   'kktp.indikatorPetunjuk': 'Indikator (satu per baris)',
 
   /* Modul */

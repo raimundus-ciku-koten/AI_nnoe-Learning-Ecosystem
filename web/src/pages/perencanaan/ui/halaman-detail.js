@@ -43,7 +43,7 @@ import {
 /** Orientasi kertas saat cetak per jenis dokumen. */
 const ORIENTASI = Object.freeze({
   [JENIS.RPE]: 'portrait', [JENIS.CP]: 'portrait', [JENIS.ATP]: 'landscape', [JENIS.PROTA]: 'portrait',
-  [JENIS.PROSEM]: 'landscape', [JENIS.KKTP]: 'portrait', [JENIS.MODUL]: 'portrait'
+  [JENIS.PROSEM]: 'landscape', [JENIS.KKTP]: 'landscape', [JENIS.MODUL]: 'portrait'
 });
 
 const kodeGalat = (e) => e?.kode
@@ -317,7 +317,7 @@ export function halamanDetail(wadah, {
     try {
       const draft = editor.ambil();
       const codes = dokumen[JENIS.ATP].payload.unit.flatMap((unit) => unit.tp.map((tp) => normKode(tp.kode)));
-      payload = parsePlanningOutput('kktp', JSON.stringify(draft), { kodeTp: codes });
+      payload = parsePlanningOutput('kktp', JSON.stringify(draft), { kodeTp: codes, allowLegacyKktp: true });
     } catch (error) {
       toast(`Periksa isian KKTP: ${error.message}`, 'galat');
       return;

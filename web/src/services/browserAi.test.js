@@ -347,12 +347,20 @@ describe('local AI provider integrations', () => {
       items: ['E.1'].map((kode) => ({
         kode,
         indikator: ['Mengidentifikasi konsep.'],
+        asesmen: 'Observasi dan tanya jawab.',
         rubrik: {
           perluBimbingan: 'Perlu bimbingan.',
           cukup: 'Mulai memahami.',
           baik: 'Memahami dengan baik.',
           sangatBaik: 'Menerapkan secara mandiri.',
         },
+        tindakLanjut: 'Latihan dengan bimbingan.',
+      })),
+      rubrikUmum: Array.from({ length: 4 }, (_, index) => ({
+        aspek: `Aspek ${index + 1}`,
+        belumBerkembang: 'Memerlukan bimbingan.',
+        berkembangSesuaiHarapan: 'Mencapai sebagian besar indikator.',
+        mahir: 'Menerapkan secara mandiri.',
       })),
     };
     const modul = {
@@ -381,13 +389,13 @@ describe('local AI provider integrations', () => {
       refleksiGuru: ['Apakah tujuan tercapai?'],
       refleksiSiswa: ['Apa yang sudah dipahami?'],
     };
-    bacaInputAi.mockResolvedValue({
+    bacaInputAi.mockResolvedValueOnce({
       mapel: 'Matematika',
       kelas: 'X',
       fase: 'E',
       tahunAjaran: '2026/2027',
       kodeTp: ['E1'],
-      unit: { no: 1, nama: 'Bilangan', tp: [{ kode: 'E.1', rumusan: 'Memahami bilangan.' }] },
+      unit: [{ no: 1, nama: 'Bilangan', tp: [{ kode: 'E.1', rumusan: 'Memahami bilangan.' }] }],
     });
 
     routeAiRequest.mockResolvedValueOnce({ provider: 'local', text: JSON.stringify(kktp) });
@@ -398,8 +406,22 @@ describe('local AI provider integrations', () => {
     expect(routeAiRequest).toHaveBeenLastCalledWith(expect.objectContaining({
       uid: 'teacher-1',
       workflow: 'planning',
+      prompt: expect.stringContaining('"rubrikUmum"'),
+      validateResponse: expect.any(Function),
     }));
+    expect(() => routeAiRequest.mock.calls[0][0].validateResponse(JSON.stringify({
+      ...kktp,
+      items: [{ ...kktp.items[0], kode: 'X.99' }],
+    }))).toThrow(/kode TP tidak sesuai/);
 
+    bacaInputAi.mockResolvedValueOnce({
+      mapel: 'Matematika',
+      kelas: 'X',
+      fase: 'E',
+      tahunAjaran: '2026/2027',
+      kodeTp: ['E1'],
+      unit: { no: 1, nama: 'Bilangan', tp: [{ kode: 'E.1', rumusan: 'Memahami bilangan.' }] },
+    });
     routeAiRequest.mockResolvedValueOnce({ provider: 'local', text: JSON.stringify(modul) });
     const moduleResult = await generateBrowserPlanning({
       uid: 'teacher-1', paketId: 'package-1', jenis: 'modul', noUnit: 1,

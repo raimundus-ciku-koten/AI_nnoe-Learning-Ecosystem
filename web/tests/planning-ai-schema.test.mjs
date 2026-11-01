@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { parsePlanningOutput } from '../src/services/planningAiSchema.js';
-import { kontrakKodeAtp, promptAtp } from '../src/services/planningAiPrompts.js';
+import { kontrakKodeAtp, promptAtp, promptKktp } from '../src/services/planningAiPrompts.js';
 import { PRASYARAT, JENIS } from '../src/pages/perencanaan/constants.js';
 import { sumberBelajarModul } from '../src/pages/perencanaan/engine/prota.js';
 
@@ -177,7 +177,78 @@ test('rejects KKTP codes not present in its source ATP', () => {
       }
     }]
   };
-  assert.throws(() => parsePlanningOutput('kktp', JSON.stringify(result), { kodeTp: ['E1'] }), /kode TP tidak sesuai/);
+  assert.throws(() => parsePlanningOutput('kktp', JSON.stringify(result), {
+    kodeTp: ['E1'],
+    allowLegacyKktp: true,
+  }), /kode TP tidak sesuai/);
+});
+
+test('validates complete KKTP output and preserves the four-level rubric fields', () => {
+  const result = {
+    ambang: 75,
+    items: [{
+      kode: 'E.1',
+      indikator: ['Mengidentifikasi konsep.'],
+      asesmen: 'Observasi.',
+      rubrik: {
+        perluBimbingan: 'Perlu bantuan.',
+        cukup: 'Mulai memahami.',
+        baik: 'Memahami.',
+        sangatBaik: 'Menerapkan.',
+      },
+      tindakLanjut: 'Latihan terarah.',
+    }],
+    rubrikUmum: Array.from({ length: 4 }, (_, index) => ({
+      aspek: `Aspek ${index + 1}`,
+      belumBerkembang: 'Perlu bantuan.',
+      berkembangSesuaiHarapan: 'Mencapai sebagian besar indikator.',
+      mahir: 'Menerapkan mandiri.',
+    })),
+  };
+  assert.deepEqual(parsePlanningOutput('kktp', JSON.stringify(result), { kodeTp: ['E1'] }), result);
+  assert.throws(() => parsePlanningOutput('kktp', JSON.stringify({ ...result, ambang: 59 }), { kodeTp: ['E1'] }), /60-85/);
+  assert.throws(() => parsePlanningOutput('kktp', JSON.stringify({
+    ...result,
+    rubrikUmum: result.rubrikUmum.slice(0, 3),
+  }), { kodeTp: ['E1'] }), /minimal 4 butir/);
+});
+
+test('normalizes previously saved KKTP drafts without fabricating missing content', () => {
+  const legacy = {
+    ambang: 75,
+    items: [{
+      kode: 'E.1',
+      indikator: ['Mengidentifikasi konsep.'],
+      rubrik: {
+        perluBimbingan: 'Perlu bantuan.',
+        cukup: 'Mulai memahami.',
+        baik: 'Memahami.',
+        sangatBaik: 'Menerapkan.',
+      },
+    }],
+  };
+  const result = parsePlanningOutput('kktp', JSON.stringify(legacy), {
+    kodeTp: ['E1'],
+    allowLegacyKktp: true,
+  });
+  assert.equal(result.items[0].asesmen, 'PERLU KONFIRMASI');
+  assert.equal(result.items[0].tindakLanjut, 'PERLU KONFIRMASI');
+  assert.equal(result.rubrikUmum.length, 4);
+  assert.equal(result.rubrikUmum[0].aspek, 'PERLU KONFIRMASI');
+  assert.throws(() => parsePlanningOutput('kktp', JSON.stringify(legacy), { kodeTp: ['E1'] }), /struktur memiliki kolom/);
+});
+
+test('KKTP prompt includes required per-TP and general-rubric sections', () => {
+  const prompt = promptKktp({
+    mapel: 'Matematika',
+    kelas: 'X',
+    fase: 'E',
+    tps: [{ unit: 'Bilangan', kode: 'E.1', rumusan: 'Mengidentifikasi bilangan.' }],
+  });
+  assert.match(prompt, /"asesmen"/);
+  assert.match(prompt, /"tindakLanjut"/);
+  assert.match(prompt, /"rubrikUmum"/);
+  assert.match(prompt, /E\.1/);
 });
 
 test('rejects Modul Ajar that references a foreign TP code', () => {

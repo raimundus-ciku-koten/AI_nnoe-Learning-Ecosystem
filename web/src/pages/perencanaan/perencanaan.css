@@ -150,6 +150,14 @@ legend { font-weight: 700; padding: 0 6px; }
   .dokumen-prosem .prosem-bagian { break-inside: auto; }
   .dokumen-prosem .ttd { break-inside: avoid; }
   .dokumen-prosem .tabel-bungkus { overflow: visible; }
+  .dokumen-kktp { font-size: 12pt; line-height: 1; }
+  .dokumen-kktp .kop-judul, .dokumen-kktp h2 { font-size: 14pt; }
+  .dokumen-kktp .tbl { font-size: 11pt; }
+  .dokumen-kktp .kop-sub, .dokumen-kktp .tbl-identitas { font-size: 9pt; }
+  .dokumen-kktp .kktp-bagian { break-inside: auto; }
+  .dokumen-kktp .ttd, .dokumen-kktp .tbl tr { break-inside: avoid; }
+  .dokumen-kktp .tabel-bungkus { overflow: visible; }
+  .dokumen-kktp .tbl-kktp-tujuan { table-layout: fixed; }
   .dokumen-atp { font-size: 12pt; line-height: 1; }
   .dokumen-atp h1 { font-size: 14pt; }
   .dokumen-atp h2 { font-size: 12pt; }
