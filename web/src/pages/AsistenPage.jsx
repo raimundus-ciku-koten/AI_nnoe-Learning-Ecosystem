@@ -11,13 +11,6 @@ const SARAN = [
   'Susun pertanyaan refleksi untuk siswa setelah belajar.',
 ];
 const MAKS_RIWAYAT_TAMPIL = 100;
-const NAMA_PROVIDER = {
-  local: 'AI_nnoe lokal',
-  gemini: 'Gemini',
-  deepseek: 'DeepSeek',
-  groq: 'Groq',
-  cerebras: 'Cerebras',
-};
 
 export default function AsistenPage() {
   const { features } = usePlatformControls();
@@ -28,9 +21,15 @@ export default function AsistenPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [provider, setProvider] = useState('');
-  const [izinkanCloud, setIzinkanCloud] = useState(false);
   const daftarRef = useRef(null);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    setMessages([]);
+    setDraft('');
+    setError('');
+    setProvider('');
+  }, [user?.uid]);
 
   useEffect(() => {
     const daftar = daftarRef.current;
@@ -49,16 +48,13 @@ export default function AsistenPage() {
     setDraft('');
     setError('');
     setBusy(true);
-    const allowCloud = izinkanCloud;
-    setIzinkanCloud(false);
     try {
       const hasil = await tanyaAsisten(
         user?.uid,
         berikutnya.slice(-16).map(({ role, text }) => ({ role, text })),
-        { allowCloud },
       );
       setMessages((lama) => [...lama, { role: 'assistant', text: hasil.answer }].slice(-MAKS_RIWAYAT_TAMPIL));
-      setProvider(NAMA_PROVIDER[hasil.penyedia] || hasil.penyedia);
+      setProvider('AI_nnoe lokal');
     } catch (err) {
       console.error('[asisten] Permintaan AI gagal:', err);
       setError(err.message || 'Permintaan AI gagal. Silakan coba lagi.');
@@ -76,16 +72,13 @@ export default function AsistenPage() {
     }
     setError('');
     setBusy(true);
-    const allowCloud = izinkanCloud;
-    setIzinkanCloud(false);
     try {
       const hasil = await tanyaAsisten(
         user?.uid,
         messages.slice(-16).map(({ role, text }) => ({ role, text })),
-        { allowCloud },
       );
       setMessages((lama) => [...lama, { role: 'assistant', text: hasil.answer }].slice(-MAKS_RIWAYAT_TAMPIL));
-      setProvider(NAMA_PROVIDER[hasil.penyedia] || hasil.penyedia);
+      setProvider('AI_nnoe lokal');
     } catch (err) {
       console.error('[asisten] Pengulangan permintaan AI gagal:', err);
       setError(err.message || 'Permintaan AI gagal. Silakan coba lagi.');
@@ -134,7 +127,7 @@ export default function AsistenPage() {
       <div className="ai-chat-card">
         <div className="ai-chat-meta">
           <span className="ai-status"><span aria-hidden="true" /> {aiEnabled ? 'Siap membantu' : 'Layanan dinonaktifkan'}</span>
-          <span>AI_nnoe lokal digunakan secara default; AI cloud hanya tersedia dengan izin eksplisit.</span>
+          <span>Semua prompt diproses oleh AI_nnoe lokal pada perangkat ini.</span>
         </div>
 
         {!aiEnabled && (
@@ -191,24 +184,12 @@ export default function AsistenPage() {
             disabled={busy || !aiEnabled}
           />
           <div className="ai-composer-footer">
-            <span>AI_nnoe lokal adalah default. Jangan kirim kata sandi atau data pribadi sensitif.</span>
+            <span>Memerlukan Ollama aktif. Jangan masukkan kata sandi atau data yang tidak diperlukan.</span>
             <button type="submit" disabled={busy || !draft.trim() || !aiEnabled}>
               <Ikon nama="chat" /> {busy ? 'Mengirim…' : 'Kirim'}
             </button>
           </div>
         </form>
-        <label className="ai-cloud-consent">
-          <input
-            type="checkbox"
-            checked={izinkanCloud}
-            onChange={(event) => setIzinkanCloud(event.target.checked)}
-            disabled={busy || !aiEnabled}
-          />
-          <span>
-            Izinkan AI cloud untuk permintaan berikutnya saja. Saya memastikan percakapan terbaru
-            tidak memuat data pribadi atau data sekolah. Persetujuan akan dihapus setelah satu permintaan.
-          </span>
-        </label>
         <p className="ai-provider-note">
           {provider ? `Jawaban terakhir dibuat dengan ${provider}. ` : ''}
           Jawaban AI dapat keliru; periksa kembali informasi penting.

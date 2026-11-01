@@ -1,5 +1,5 @@
 /**
- * @file Generator AI provider eksternal untuk perangkat ajar.
+ * @file Generator perangkat ajar melalui AI_nnoe lokal.
  */
 
 import { getState } from '../../../state.js';

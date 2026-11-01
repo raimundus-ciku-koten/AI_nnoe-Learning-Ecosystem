@@ -15,13 +15,43 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+function problemTitle(status) {
+  if (status === 400) return 'Permintaan tidak valid';
+  if (status === 401) return 'Autentikasi diperlukan';
+  if (status === 403) return 'Akses ditolak';
+  if (status === 404) return 'Sumber tidak ditemukan';
+  if (status === 405) return 'Metode tidak diizinkan';
+  if (status === 409) return 'Konflik permintaan';
+  if (status === 410) return 'Sumber tidak tersedia lagi';
+  if (status === 422) return 'Permintaan tidak dapat diproses';
+  if (status === 429) return 'Terlalu banyak permintaan';
+  if (status >= 500) return 'Kesalahan layanan';
+  return 'Permintaan gagal';
+}
+
 function fail(res, error) {
-  if (error instanceof HttpError) {
-    sendJson(res, error.status, { error: error.message, code: error.code });
-    return;
+  const known = error instanceof HttpError;
+  const status = known ? error.status : 500;
+  const code = known ? error.code : 'internal_error';
+  const detail = known ? error.message : 'Layanan mengalami kesalahan internal.';
+  if (!known) {
+    console.error('[api] Request failed:', {
+      status,
+      code,
+      name: error?.name || 'Error',
+    });
   }
-  console.error('[api] Integration request failed:', error?.message || 'Unknown error');
-  sendJson(res, 500, { error: 'Layanan integrasi mengalami kesalahan.' });
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/problem+json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.end(JSON.stringify({
+    type: `urn:ainnoe:problem:${encodeURIComponent(code)}`,
+    title: problemTitle(status),
+    status,
+    detail,
+    code,
+    error: detail,
+  }));
 }
 
 function requireMethod(req, methods) {

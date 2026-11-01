@@ -19,6 +19,7 @@ function makeQuery(response) {
     eq: vi.fn(() => query),
     gte: vi.fn(() => query),
     lt: vi.fn(() => query),
+    or: vi.fn(() => query),
     order: vi.fn(() => query),
     limit: vi.fn(() => Promise.resolve(response)),
     insert: vi.fn(() => query),
@@ -43,7 +44,7 @@ const journal = {
 };
 
 const row = {
-  id: 'journal-id',
+  id: '00000000-0000-4000-8000-000000000001',
   tenant_id: 'school-1',
   owner_id: 'teacher-1',
   ...journal,
@@ -77,12 +78,15 @@ describe('Supabase lesson journals', () => {
     await expect(muatJurnal('school-1', 'teacher-1', {
       month: '2026-10',
       kelas: 'X',
-    })).resolves.toMatchObject([{
-      id: row.id,
-      tenantId: 'school-1',
-      ownerUid: 'teacher-1',
-      tindakLanjut: 'Latihan tambahan',
-    }]);
+    })).resolves.toMatchObject({
+      items: [{
+        id: row.id,
+        tenantId: 'school-1',
+        ownerUid: 'teacher-1',
+        tindakLanjut: 'Latihan tambahan',
+      }],
+      nextCursor: null,
+    });
     expect(supabase.from).toHaveBeenCalledWith('lesson_journals');
     expect(query.eq.mock.calls).toEqual([
       ['tenant_id', 'school-1'],
@@ -91,7 +95,45 @@ describe('Supabase lesson journals', () => {
     ]);
     expect(query.gte).toHaveBeenCalledWith('tanggal', '2026-10-01');
     expect(query.lt).toHaveBeenCalledWith('tanggal', '2026-11-01');
-    expect(query.limit).toHaveBeenCalledWith(200);
+    expect(query.order.mock.calls).toEqual([
+      ['tanggal', { ascending: false }],
+      ['created_at', { ascending: false }],
+      ['id', { ascending: false }],
+    ]);
+    expect(query.limit).toHaveBeenCalledWith(51);
+  });
+
+  it('uses a stable keyset cursor and rejects invalid page settings and cursors', async () => {
+    const nextRow = {
+      ...row,
+      id: '00000000-0000-4000-8000-000000000002',
+    };
+    const query = makeQuery({ data: [row, nextRow], error: null });
+    supabase.from.mockReturnValueOnce(query);
+
+    const page = await muatJurnal('school-1', 'teacher-1', {
+      month: '2026-10',
+      limit: 1,
+    });
+    expect(page.items).toHaveLength(1);
+    expect(page.nextCursor).toMatch(/^[A-Za-z0-9_-]+$/);
+
+    const nextQuery = makeQuery({ data: [nextRow], error: null });
+    supabase.from.mockReturnValueOnce(nextQuery);
+    await muatJurnal('school-1', 'teacher-1', {
+      month: '2026-10',
+      cursor: page.nextCursor,
+      limit: 1,
+    });
+    expect(nextQuery.or).toHaveBeenCalledWith(
+      `tanggal.lt.${row.tanggal},and(tanggal.eq.${row.tanggal},created_at.lt.${row.created_at}),and(tanggal.eq.${row.tanggal},created_at.eq.${row.created_at},id.lt.${row.id})`,
+    );
+    await expect(muatJurnal('school-1', 'teacher-1', { month: '2026-10', limit: 101 }))
+      .rejects.toThrow('Ukuran halaman');
+    await expect(muatJurnal('school-1', 'teacher-1', {
+      month: '2026-10',
+      cursor: 'invalid',
+    })).rejects.toThrow('Penanda halaman');
   });
 
   it('creates, updates, and deletes only records owned by the current teacher', async () => {

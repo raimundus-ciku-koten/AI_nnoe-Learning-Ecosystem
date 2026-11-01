@@ -6,6 +6,8 @@ import { test } from 'node:test';
 
 const require = createRequire(import.meta.url);
 const {
+  fail,
+  HttpError,
   decryptSecret,
   encryptSecret,
   hash,
@@ -13,6 +15,11 @@ const {
 const { containsLikelyPersonalData } = require('../../api/_lib/privacy.js');
 const { normalizeItem } = require('../../api/_lib/sync.js');
 const { SCOPES } = require('../../api/_lib/google.js');
+const {
+  hapusAuditKedaluwarsaDrive,
+  unggahEventKeDrive,
+  validasiEventAudit,
+} = require('../../api/_lib/journal-audit.js');
 const {
   googleCallbackHandler: authGoogleCallbackHandler,
   googleStartHandler: authGoogleStartHandler,
@@ -24,6 +31,8 @@ const {
 const aiHandler = require('../../api/ai.js');
 const startGoogleHandler = require('../../api/connections/start.js');
 const googleCallbackHandler = require('../../api/google/callback.js');
+const journalAuditHandler = require('../../api/audit/lesson-journal.js');
+const journalAuditCronHandler = require('../../api/cron/lesson-journal-audit.js');
 
 function createResponseRecorder() {
   return {
@@ -65,6 +74,40 @@ function restoreEnv(values) {
   }
 }
 
+test('API errors use RFC 9457 Problem Details and retain legacy client fields', () => {
+  const res = createResponseRecorder();
+  fail(res, new HttpError(403, 'Akses ditolak.', 'access_denied'));
+
+  assert.equal(res.statusCode, 403);
+  assert.equal(res.headers['Content-Type'], 'application/problem+json; charset=utf-8');
+  assert.equal(res.headers['Cache-Control'], 'no-store');
+  assert.deepEqual(JSON.parse(res.body), {
+    type: 'urn:ainnoe:problem:access_denied',
+    title: 'Akses ditolak',
+    status: 403,
+    detail: 'Akses ditolak.',
+    code: 'access_denied',
+    error: 'Akses ditolak.',
+  });
+});
+
+test('API errors do not expose internal exception messages', () => {
+  const res = createResponseRecorder();
+  const previousError = console.error;
+  console.error = () => {};
+  try {
+    fail(res, new Error('private upstream token'));
+  } finally {
+    console.error = previousError;
+  }
+
+  const body = JSON.parse(res.body);
+  assert.equal(res.statusCode, 500);
+  assert.equal(body.status, 500);
+  assert.equal(body.code, 'internal_error');
+  assert.doesNotMatch(res.body, /private upstream token/);
+});
+
 function setupIntegrationEnv() {
   process.env.SUPABASE_URL = 'https://supabase.example';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-test-key';
@@ -100,6 +143,232 @@ test('OAuth Google meminta scope terpisah dan paling terbatas sesuai layanan', (
   assert.equal(SCOPES.tasks, 'https://www.googleapis.com/auth/tasks');
   assert.equal(SCOPES.calendar, 'https://www.googleapis.com/auth/calendar.events.owned');
   assert.equal(new Set(Object.values(SCOPES)).size, 3);
+});
+
+test('validasi audit menolak payload berisi nilai konten dan waktu di luar retensi', () => {
+  const userId = '00000000-0000-4000-8000-000000000011';
+  const event = {
+    eventId: '00000000-0000-4000-8000-000000000012',
+    journalId: '00000000-0000-4000-8000-000000000013',
+    action: 'updated',
+    changedFields: ['materi'],
+    occurredAt: new Date().toISOString(),
+  };
+  assert.deepEqual(validasiEventAudit(event, userId).changed_fields, ['materi']);
+  assert.throws(() => validasiEventAudit({
+    ...event,
+    nilaiBaru: 'teks rahasia',
+  }, userId), /Format catatan audit/);
+  assert.throws(() => validasiEventAudit({
+    ...event,
+    occurredAt: new Date(Date.now() - 366 * 24 * 60 * 60 * 1000).toISOString(),
+  }, userId), /masa simpan satu tahun/);
+});
+
+test('API audit requires an authenticated user and rejects invalid metadata before storage', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalEnv = saveEnv(['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']);
+  process.env.SUPABASE_URL = 'https://supabase.example';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-test-key';
+  let storageTouched = false;
+  globalThis.fetch = async (url) => {
+    if (String(url).startsWith('https://supabase.example/auth/v1/user')) {
+      return Response.json({
+        id: '00000000-0000-4000-8000-000000000021',
+        email: 'teacher@example.edu',
+      });
+    }
+    storageTouched = true;
+    return Response.json([]);
+  };
+  try {
+    const res = createResponseRecorder();
+    await journalAuditHandler({
+      method: 'POST',
+      headers: { authorization: 'Bearer access-token' },
+      body: {
+        eventId: '00000000-0000-4000-8000-000000000022',
+        journalId: '00000000-0000-4000-8000-000000000023',
+        action: 'updated',
+        changedFields: ['materi'],
+        occurredAt: new Date().toISOString(),
+        isi: 'jangan kirim isi jurnal',
+      },
+    }, res);
+
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.headers['Content-Type'], 'application/problem+json; charset=utf-8');
+    assert.equal(JSON.parse(res.body).code, 'journal_audit_invalid');
+    assert.equal(storageTouched, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+});
+
+test('audit Drive upload is idempotent and contains metadata only', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalEnv = saveEnv([
+    'SUPABASE_URL',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'GOOGLE_OAUTH_CLIENT_ID',
+    'GOOGLE_OAUTH_CLIENT_SECRET',
+    'APP_ORIGIN',
+    'INTEGRATION_TOKEN_ENCRYPTION_KEY',
+    'INTEGRATION_TOKEN_ENCRYPTION_KEY_VERSION',
+  ]);
+  setupIntegrationEnv();
+  const userId = '00000000-0000-4000-8000-000000000031';
+  const event = {
+    user_id: userId,
+    event_id: '00000000-0000-4000-8000-000000000032',
+    journal_id: '00000000-0000-4000-8000-000000000033',
+    action: 'updated',
+    changed_fields: ['materi'],
+    occurred_at: '2026-10-18T10:00:00.000Z',
+  };
+  const uploaded = [];
+  let driveFile = null;
+  globalThis.fetch = async (url, options = {}) => {
+    const target = String(url);
+    if (target.startsWith('https://supabase.example/rest/v1/oauth_connections')) {
+      if (options.method === 'PATCH') return new Response(null, { status: 204 });
+      return Response.json([{
+        id: 'connection-1',
+        user_id: userId,
+        service: 'drive',
+        refresh_token_ciphertext: encryptSecret('server-only-google-refresh'),
+        status: 'connected',
+      }]);
+    }
+    if (target.startsWith('https://oauth2.googleapis.com/token')) {
+      return Response.json({ access_token: 'google-access-token' });
+    }
+    if (target.startsWith('https://www.googleapis.com/drive/v3/files?')) {
+      return Response.json({ files: driveFile ? [driveFile] : [] });
+    }
+    if (target.startsWith('https://www.googleapis.com/upload/drive/v3/files?')) {
+      const metadata = JSON.parse(await options.body.get('metadata').text());
+      const content = JSON.parse(await options.body.get('file').text());
+      uploaded.push({ metadata, content, authorization: options.headers.Authorization });
+      driveFile = { id: 'drive-audit-1', appProperties: metadata.appProperties };
+      return Response.json(driveFile);
+    }
+    throw new Error(`Unexpected request: ${target}`);
+  };
+  try {
+    const result = await unggahEventKeDrive(userId, event);
+    const duplicate = await unggahEventKeDrive(userId, event);
+    assert.equal(result.id, 'drive-audit-1');
+    assert.equal(duplicate.id, 'drive-audit-1');
+    assert.equal(uploaded.length, 1);
+    assert.equal(uploaded[0].authorization, 'Bearer google-access-token');
+    assert.deepEqual(uploaded[0].content, {
+      versi: 1,
+      idPeristiwa: event.event_id,
+      idJurnal: event.journal_id,
+      aktor: userId,
+      aksi: 'updated',
+      fieldBerubah: ['materi'],
+      waktu: event.occurred_at,
+    });
+    assert.doesNotMatch(JSON.stringify(uploaded[0].content), /nilai|persamaan|rahasia/i);
+    assert.equal(uploaded[0].metadata.appProperties.aleOwner, userId);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+});
+
+test('audit Drive retention authenticates list and delete requests', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalEnv = saveEnv([
+    'SUPABASE_URL',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'GOOGLE_OAUTH_CLIENT_ID',
+    'GOOGLE_OAUTH_CLIENT_SECRET',
+    'APP_ORIGIN',
+    'INTEGRATION_TOKEN_ENCRYPTION_KEY',
+    'INTEGRATION_TOKEN_ENCRYPTION_KEY_VERSION',
+  ]);
+  setupIntegrationEnv();
+  const userId = '00000000-0000-4000-8000-000000000041';
+  const requests = [];
+  let listedExpiredFile = false;
+  globalThis.fetch = async (url, options = {}) => {
+    const target = String(url);
+    if (target.startsWith('https://supabase.example/rest/v1/oauth_connections')) {
+      if (options.method === 'PATCH') return new Response(null, { status: 204 });
+      return Response.json([{
+        id: 'connection-2',
+        user_id: userId,
+        service: 'drive',
+        refresh_token_ciphertext: encryptSecret('server-only-google-refresh'),
+        status: 'connected',
+      }]);
+    }
+    if (target.startsWith('https://oauth2.googleapis.com/token')) {
+      return Response.json({ access_token: 'google-access-token' });
+    }
+    if (target.startsWith('https://www.googleapis.com/drive/v3/files?')) {
+      requests.push({ method: 'GET', authorization: options.headers.Authorization });
+      if (!listedExpiredFile) {
+        listedExpiredFile = true;
+        return Response.json({ files: [{ id: 'expired-audit-file' }] });
+      }
+      return Response.json({ files: [] });
+    }
+    if (target === 'https://www.googleapis.com/drive/v3/files/expired-audit-file' &&
+        options.method === 'DELETE') {
+      requests.push({ method: 'DELETE', authorization: options.headers.Authorization });
+      return new Response(null, { status: 204 });
+    }
+    throw new Error(`Unexpected request: ${target}`);
+  };
+  try {
+    const result = await hapusAuditKedaluwarsaDrive(
+      userId,
+      Date.parse('2026-11-03T00:00:00.000Z'),
+    );
+    assert.deepEqual(result, { deleted: 1, hasMore: false });
+    assert.deepEqual(requests, [
+      { method: 'GET', authorization: 'Bearer google-access-token' },
+      { method: 'DELETE', authorization: 'Bearer google-access-token' },
+      { method: 'GET', authorization: 'Bearer google-access-token' },
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnv(originalEnv);
+  }
+});
+
+test('scheduled audit job rejects requests without its secret', async () => {
+  const originalEnv = saveEnv(['CRON_SECRET']);
+  delete process.env.CRON_SECRET;
+  try {
+    const res = createResponseRecorder();
+    await journalAuditCronHandler({ method: 'GET', headers: {} }, res);
+    assert.equal(res.statusCode, 503);
+    assert.equal(JSON.parse(res.body).code, 'cron_secret_not_configured');
+  } finally {
+    restoreEnv(originalEnv);
+  }
+});
+
+test('scheduled audit job rejects an incorrect secret in constant-time path', async () => {
+  const originalEnv = saveEnv(['CRON_SECRET']);
+  process.env.CRON_SECRET = 'a-long-random-secret-for-tests';
+  try {
+    const res = createResponseRecorder();
+    await journalAuditCronHandler({
+      method: 'GET',
+      headers: { authorization: 'Bearer another-long-random-secret' },
+    }, res);
+    assert.equal(res.statusCode, 401);
+    assert.equal(JSON.parse(res.body).code, 'cron_unauthorized');
+  } finally {
+    restoreEnv(originalEnv);
+  }
 });
 
 test('BFF password login menyimpan refresh token di HttpOnly cookie dan hanya mengembalikan sentinel', async () => {
@@ -520,7 +789,7 @@ test('deteksi cloud menandai pola identitas dan tidak mengirimnya', () => {
   assert.equal(containsLikelyPersonalData('Nomor 081234567890'), true);
 });
 
-test('endpoint AI menolak permintaan sensitif sebelum memanggil provider', async () => {
+test('endpoint AI cloud dinonaktifkan sebelum membaca atau meneruskan prompt', async () => {
   const originalFetch = globalThis.fetch;
   const originalConfig = {
     url: process.env.SUPABASE_URL,
@@ -556,8 +825,8 @@ test('endpoint AI menolak permintaan sensitif sebelum memanggil provider', async
     };
     const res = createResponseRecorder();
     await aiHandler(req, res);
-    assert.equal(res.statusCode, 403);
-    assert.equal(JSON.parse(res.body).code, 'personal_data_blocked');
+    assert.equal(res.statusCode, 410);
+    assert.equal(JSON.parse(res.body).code, 'cloud_ai_disabled');
     assert.equal(cloudCalled, false);
   } finally {
     globalThis.fetch = originalFetch;
@@ -574,7 +843,7 @@ test('endpoint AI menolak permintaan sensitif sebelum memanggil provider', async
   }
 });
 
-test('endpoint AI menolak consent cloud yang tidak eksplisit', async () => {
+test('endpoint AI cloud tetap dinonaktifkan meskipun consent tidak tersedia', async () => {
   const originalFetch = globalThis.fetch;
   const previousUrl = process.env.SUPABASE_URL;
   const previousKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -588,8 +857,8 @@ test('endpoint AI menolak consent cloud yang tidak eksplisit', async () => {
       headers: { origin: 'https://app.example', host: 'app.example', authorization: 'Bearer test-access-token' },
       body: { workflow: 'assistant', prompt: 'A general prompt', allowCloud: false, sensitivity: 'non_sensitive' },
     }, res);
-    assert.equal(res.statusCode, 403);
-    assert.equal(JSON.parse(res.body).code, 'cloud_consent_required');
+    assert.equal(res.statusCode, 410);
+    assert.equal(JSON.parse(res.body).code, 'cloud_ai_disabled');
   } finally {
     globalThis.fetch = originalFetch;
     if (previousUrl === undefined) delete process.env.SUPABASE_URL;
@@ -599,7 +868,7 @@ test('endpoint AI menolak consent cloud yang tidak eksplisit', async () => {
   }
 });
 
-test('endpoint AI cloud memerlukan quota server dan membatasi output', async () => {
+test('endpoint AI cloud tidak memanggil provider atau mengonsumsi kuota', async () => {
   const originalFetch = globalThis.fetch;
   const originalConfig = {
     url: process.env.SUPABASE_URL,
@@ -639,13 +908,9 @@ test('endpoint AI cloud memerlukan quota server dan membatasi output', async () 
       },
     }, res);
 
-    assert.equal(res.statusCode, 200);
-    assert.equal(JSON.parse(res.body).text, 'Jawaban.');
-    const quotaRequest = calls.find(({ url }) => url.endsWith('/rpc/consume_cloud_ai_quota'));
-    assert.ok(quotaRequest);
-    assert.deepEqual(JSON.parse(quotaRequest.options.body), { p_user_id: 'user-1' });
-    const cloudRequest = calls.find(({ url }) => url === process.env.CLOUD_AI_API_URL);
-    assert.equal(JSON.parse(cloudRequest.options.body).max_tokens, 1200);
+    assert.equal(res.statusCode, 410);
+    assert.equal(JSON.parse(res.body).code, 'cloud_ai_disabled');
+    assert.deepEqual(calls, []);
   } finally {
     globalThis.fetch = originalFetch;
     for (const [name, value] of Object.entries({
@@ -661,7 +926,7 @@ test('endpoint AI cloud memerlukan quota server dan membatasi output', async () 
   }
 });
 
-test('endpoint AI menolak provider cloud saat quota harian habis', async () => {
+test('endpoint AI cloud tidak menghubungi provider meskipun konfigurasi kuota tersedia', async () => {
   const originalFetch = globalThis.fetch;
   const originalConfig = {
     url: process.env.SUPABASE_URL,
@@ -697,8 +962,8 @@ test('endpoint AI menolak provider cloud saat quota harian habis', async () => {
         sensitivity: 'non_sensitive',
       },
     }, res);
-    assert.equal(res.statusCode, 429);
-    assert.equal(JSON.parse(res.body).code, 'cloud_ai_daily_limit');
+    assert.equal(res.statusCode, 410);
+    assert.equal(JSON.parse(res.body).code, 'cloud_ai_disabled');
     assert.equal(cloudCalled, false);
   } finally {
     globalThis.fetch = originalFetch;

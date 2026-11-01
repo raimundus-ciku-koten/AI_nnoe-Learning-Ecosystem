@@ -34,7 +34,10 @@ export default {
   'detail.prasyarat': 'Selesaikan dahulu: {daftar}.', 'detail.sumber': 'Sumber: {sumber}', 'detail.tabLabel': 'Dokumen perencanaan',
   'detail.tidakDitemukan': 'Paket tidak ditemukan atau Anda tidak memiliki akses.', 'detail.ubahKonteks': 'Ubah data paket',
   'detail.dokumenKhususGuru': 'Dokumen RPE–Modul dibuat dan diperbarui dari akun guru.',
-  'detail.aiNonaktif': 'Pembuatan berbantuan AI tidak aktif dalam mode tanpa billing.',
+  'detail.aiLokal': 'AI_nnoe lokal menyusun draf di perangkat ini. Tinjau dan simpan draf secara manual; dokumen tidak disimpan otomatis.',
+  'detail.aiSukses': 'Draf AI lokal siap ditinjau. Periksa isinya lalu simpan untuk menyetujui.',
+  'detail.aiGagalManual': 'AI lokal gagal menyusun draf: {detail}. Editor manual dibuka; dokumen tersimpan tidak berubah.',
+  'detail.aiMemproses': 'AI_nnoe lokal sedang menyusun draf…',
   'detail.manualGratis': 'Susun dan simpan dokumen ini secara manual tanpa provider AI atau biaya penggunaan.',
   'detail.usang': 'Dokumen ini dibuat dari versi sebelumnya dari dokumen induknya. Buat ulang agar tetap sinkron.',
 

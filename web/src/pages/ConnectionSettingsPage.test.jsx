@@ -9,7 +9,7 @@ vi.mock('../context/AuthContext.jsx', () => ({
 }));
 
 describe('ConnectionSettingsPage', () => {
-  it('renders least-privilege services, local AI and explicit cloud permission', () => {
+  it('renders least-privilege services and local-only AI settings', () => {
     vi.stubGlobal('localStorage', { getItem: () => 'cloud' });
     const markup = renderToStaticMarkup(
       <MemoryRouter initialEntries={['/']}>
@@ -21,7 +21,8 @@ describe('ConnectionSettingsPage', () => {
     expect(markup).toContain('Google Tasks');
     expect(markup).toContain('calendar.events.owned');
     expect(markup).toContain('AI_nnoe lokal (Ollama)');
-    expect(markup).toContain('Nonaktif secara default');
-    expect(markup).toContain('Saya memastikan prompt ini tidak sensitif');
+    expect(markup).toContain('Lokal saja');
+    expect(markup).toContain('Semua menu generatif hanya memanggil Ollama di perangkat ini');
+    expect(markup).not.toContain('Kirim dengan izin cloud');
   });
 });

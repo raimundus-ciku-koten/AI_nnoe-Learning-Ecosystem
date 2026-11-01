@@ -7,7 +7,7 @@ const dataGroups = [
   ['Data pembelajaran', 'Data siswa, kelas, kehadiran, bank soal, nilai atau asesmen, dan dokumen yang dimasukkan oleh sekolah atau pengguna.'],
   ['Komunikasi', 'Pesan, metadata percakapan, lampiran yang dipilih pengguna, dan token notifikasi perangkat bila notifikasi diaktifkan.'],
   ['Integrasi pilihan pengguna', 'Integrasi Google Workspace lama menyimpan access token sementara di memori halaman. Rancangan koneksi baru mengenkripsi refresh token Google di backend dan menyimpan metadata Drive serta data Tasks/Calendar di Supabase; fitur ini belum aktif sampai migrasi dan environment server diterapkan.'],
-  ['Permintaan AI', 'AI_nnoe mengirim prompt ke Ollama localhost secara default. AI cloud hanya menerima prompt setelah izin eksplisit per permintaan dan pemrosesan data sensitif tetap diblokir; provider cloud belum aktif sampai backend dikonfigurasi.'],
+  ['Permintaan AI', 'Fitur generatif hanya memanggil endpoint Ollama localhost dari aplikasi. Untuk mencegah runtime Ollama sendiri memakai layanan cloud, pengguna harus mengaktifkan OLLAMA_NO_CLOUD=1. Ollama dan model lokal harus dipasang, dijalankan, dan diunduh oleh pengguna.'],
   ['Draf program BK dan kegiatan', 'Draf program hanya berada di memori halaman hingga ditutup. Gunakan cetak atau Simpan sebagai PDF untuk membuat salinan lokal; jangan masukkan identitas siswa atau isi konseling.'],
 ];
 
@@ -31,7 +31,9 @@ export default function PrivacyNoticePage() {
         <h2>Tujuan dan kendali akses</h2>
         <p>
           Data digunakan untuk menyediakan ruang kerja belajar, administrasi sekolah, komunikasi, dan fitur
-          yang dipilih pengguna. Akses seharusnya dibatasi menurut peran dan sekolah; jangan memasukkan data
+          yang dipilih pengguna. Skema lokal merancang pembatasan data menurut akun, peran, dan sekolah
+          melalui kebijakan akses database; data sekolah dapat dibagikan sesuai penugasan dan kewenangan.
+          Status penerapan dan kesetaraan skema pada server hosted belum terverifikasi. Jangan memasukkan data
           yang tidak diperlukan. Jangan membagikan tautan rapat, berkas, atau informasi siswa kepada pihak
           yang tidak berwenang.
         </p>

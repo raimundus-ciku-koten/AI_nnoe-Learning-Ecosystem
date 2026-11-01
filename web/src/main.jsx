@@ -1,6 +1,7 @@
 // web/src/main.jsx
 import './styles/app.css'; //[cite: 11]
 import './styles/base.css';
+import 'bootstrap-icons/font/bootstrap-icons.min.css';
 
 import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';

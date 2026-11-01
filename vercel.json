@@ -9,6 +9,12 @@
       "destination": "/index.html"
     }
   ],
+  "crons": [
+    {
+      "path": "/api/cron/lesson-journal-audit",
+      "schedule": "17 3 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

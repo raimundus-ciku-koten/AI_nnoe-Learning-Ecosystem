@@ -19,14 +19,16 @@ describe('privacy-aware AI providers', () => {
     }));
     vi.stubGlobal('fetch', fetch);
     const result = await routeAiRequest({
+      uid: 'user-1',
       workflow: 'assistant',
       prompt: 'Balas dengan satu kata.',
     });
     expect(result).toMatchObject({ provider: 'local', model: 'local-test', text: 'Siap.' });
     expect(String(fetch.mock.calls[0][0])).toBe('http://127.0.0.1:11434/api/chat');
+    expect(JSON.parse(fetch.mock.calls[0][1].body).model).toBe('llama3.2:3b');
   });
 
-  it('uses locally saved model, output-token and timeout settings without cloud fallback', async () => {
+  it('uses account-scoped model, output-token and timeout settings', async () => {
     const storage = new Map();
     vi.stubGlobal('localStorage', {
       getItem: (key) => storage.get(key) ?? null,
@@ -42,7 +44,7 @@ describe('privacy-aware AI providers', () => {
       return Response.json({ model: 'ainnoe-qwen', message: { content: 'Siap.' } });
     });
     vi.stubGlobal('fetch', fetch);
-    const saved = simpanPengaturanLokalAI({
+    const saved = simpanPengaturanLokalAI('user-1', {
       endpoint: 'http://localhost:11434',
       model: 'ainnoe-qwen',
       timeoutSeconds: 240,
@@ -50,15 +52,15 @@ describe('privacy-aware AI providers', () => {
     });
 
     await expect(routeAiRequest({
+      uid: 'user-1',
       workflow: 'planning',
       prompt: 'Draf lokal.',
-      sensitivity: 'sensitive',
     })).resolves.toMatchObject({ provider: 'local', model: 'ainnoe-qwen', text: 'Siap.' });
     expect(saved.timeoutSeconds).toBe(240);
-    expect(muatPengaturanLokalAI()).toEqual(saved);
+    expect(muatPengaturanLokalAI('user-1')).toEqual(saved);
     expect(String(fetch.mock.calls[0][0])).toBe('http://localhost:11434/api/chat');
     expect(fetch).toHaveBeenCalledTimes(1);
-    expect(aturUlangPengaturanLokalAI().model).toBe('llama3.2');
+    expect(aturUlangPengaturanLokalAI('user-1').model).toBe('llama3.2:3b');
   });
 
   it('rejects non-local endpoints, unsafe model names, and unbounded timeouts', () => {
@@ -68,53 +70,60 @@ describe('privacy-aware AI providers', () => {
       setItem: (key, value) => storage.set(key, value),
       removeItem: (key) => storage.delete(key),
     });
-    const defaults = muatPengaturanLokalAI();
-    expect(() => simpanPengaturanLokalAI({ ...defaults, endpoint: 'https://example.com' }))
+    const defaults = muatPengaturanLokalAI('user-1');
+    expect(() => simpanPengaturanLokalAI('user-1', { ...defaults, endpoint: 'https://example.com' }))
       .toThrow('localhost');
-    expect(() => simpanPengaturanLokalAI({ ...defaults, model: '../other-model' }))
+    expect(() => simpanPengaturanLokalAI('user-1', { ...defaults, model: '../other-model' }))
       .toThrow('Nama model');
-    expect(() => simpanPengaturanLokalAI({ ...defaults, timeoutSeconds: 0 }))
+    expect(() => simpanPengaturanLokalAI('user-1', { ...defaults, timeoutSeconds: 0 }))
       .toThrow('15–600 detik');
-    expect(() => simpanPengaturanLokalAI({ ...defaults, outputTokens: 32 }))
+    expect(() => simpanPengaturanLokalAI('user-1', { ...defaults, outputTokens: 32 }))
       .toThrow('minimal 128 token');
   });
 
-  it('never falls back to cloud for sensitive content', async () => {
-    const fetch = vi.fn(async () => { throw new Error('local runtime unavailable'); });
+  it('routes only to the local model even if a legacy caller requests cloud', async () => {
+    const storage = new Map();
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value),
+      removeItem: (key) => storage.delete(key),
+    });
+    const fetch = vi.fn(async () => { throw new Error('connection refused'); });
     vi.stubGlobal('fetch', fetch);
     await expect(routeAiRequest({
+      uid: 'user-1',
       workflow: 'assistant',
-      prompt: 'Data internal',
-      sensitivity: 'sensitive',
+      prompt: 'Pertanyaan umum',
+      preference: 'cloud',
       allowCloud: true,
-    })).rejects.toThrow('local runtime unavailable');
+    })).rejects.toThrow('Pastikan Ollama berjalan');
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(String(fetch.mock.calls[0][0])).toContain('127.0.0.1');
   });
 
-  it('requires explicit consent before selecting cloud', async () => {
-    const fetch = vi.fn();
-    vi.stubGlobal('fetch', fetch);
+  it('reports a local generation timeout in user-facing language', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new DOMException('The operation timed out.', 'TimeoutError');
+    }));
     await expect(routeAiRequest({
-      workflow: 'assistant',
-      prompt: 'General prompt',
-      preference: 'cloud',
-      sensitivity: 'non_sensitive',
-      allowCloud: false,
-    })).rejects.toThrow('persetujuan cloud');
-    expect(fetch).not.toHaveBeenCalled();
+      uid: 'user-1',
+      workflow: 'planning',
+      prompt: 'Susun draf.',
+    })).rejects.toThrow('tidak merespons dalam 120 detik');
   });
 
-  it('rejects cloud use for sensitive content even with user consent', async () => {
-    const fetch = vi.fn();
-    vi.stubGlobal('fetch', fetch);
-    await expect(routeAiRequest({
-      workflow: 'assistant',
-      prompt: 'Student data',
-      preference: 'cloud',
-      sensitivity: 'sensitive',
-      allowCloud: true,
-    })).rejects.toThrow('Data sensitif');
-    expect(fetch).not.toHaveBeenCalled();
+  it('keeps local settings isolated between signed-in accounts', () => {
+    const storage = new Map();
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value),
+      removeItem: (key) => storage.delete(key),
+    });
+    const first = muatPengaturanLokalAI('user-1');
+    const second = muatPengaturanLokalAI('user-2');
+    simpanPengaturanLokalAI('user-1', { ...first, model: 'user-one-model' });
+    expect(muatPengaturanLokalAI('user-1').model).toBe('user-one-model');
+    expect(muatPengaturanLokalAI('user-2')).toEqual(second);
+    expect(() => muatPengaturanLokalAI('')).toThrow('Sesi login tidak tersedia');
   });
 });

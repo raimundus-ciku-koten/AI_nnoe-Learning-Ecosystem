@@ -3,6 +3,13 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Ikon from '../components/Ikon.jsx';
 import { muatPenugasanGuru } from '../services/teacherAssignments.js';
 import {
+  antrekanEventAuditJurnal,
+  buatEventAuditJurnal,
+  cobaKirimUlangAuditJurnal,
+  jumlahEventAuditJurnal,
+  kirimAntreanAuditJurnal,
+} from '../services/lessonJournalAudit.js';
+import {
   dapatMengelolaJurnal, hapusJurnal, muatJurnal, tambahJurnal, ubahJurnal,
 } from '../services/lessonJournal.js';
 import '../styles/lesson-journal.css';
@@ -16,6 +23,10 @@ const BATAS = Object.freeze({
   tindakLanjut: 2000,
 });
 const DRAF_VERSION = 1;
+const FIELD_JURNAL = Object.freeze([
+  'tanggal', 'kelas', 'mapel', 'jam', 'materi', 'kegiatan',
+  'kendala', 'tindakLanjut', 'status',
+]);
 
 function tanggalHariIni() {
   const date = new Date();
@@ -144,10 +155,16 @@ export default function LessonJournalPage() {
   const [draftReady, setDraftReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState('');
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [auditNotice, setAuditNotice] = useState('');
+  const [auditWarning, setAuditWarning] = useState('');
+  const [syncingAudit, setSyncingAudit] = useState(false);
+  const [localAuditCount, setLocalAuditCount] = useState(0);
   const [form, setForm] = useState(() => formKosong({ kelas: [], mapel: [] }));
   const [editId, setEditId] = useState('');
   const [month, setMonth] = useState(monthCurrent);
   const [classFilter, setClassFilter] = useState('');
+  const [nextCursor, setNextCursor] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -232,9 +249,12 @@ export default function LessonJournalPage() {
     if (!assignmentsReady || !ownerUid || !tenantId || !canManage) return;
     setLoadingItems(true);
     setError('');
+    setItems([]);
+    setNextCursor(null);
     try {
       const result = await muatJurnal(tenantId, ownerUid, { month, kelas: classFilter });
-      setItems(result);
+      setItems(result.items);
+      setNextCursor(result.nextCursor);
     } catch (loadError) {
       console.error('[lesson-journal] Gagal memuat riwayat jurnal:', loadError);
       setError(pesanKesalahan(loadError, 'memuat'));
@@ -246,6 +266,99 @@ export default function LessonJournalPage() {
   useEffect(() => {
     void refreshItems();
   }, [refreshItems]);
+
+  useEffect(() => {
+    let active = true;
+    if (!ownerUid) return undefined;
+    jumlahEventAuditJurnal(ownerUid)
+      .then((count) => { if (active) setLocalAuditCount(count); })
+      .catch((countError) => {
+        console.error('[lesson-journal] Gagal memeriksa antrean audit lokal:', countError);
+        if (active) setAuditWarning('Antrean audit lokal belum dapat diperiksa. Riwayat aktivitas mungkin belum terkirim.');
+      });
+    return () => { active = false; };
+  }, [ownerUid]);
+
+  async function catatAktivitas(action, journalId, changedFields) {
+    try {
+      const event = buatEventAuditJurnal({ journalId, action, changedFields });
+      await antrekanEventAuditJurnal(ownerUid, event);
+      setLocalAuditCount(await jumlahEventAuditJurnal(ownerUid));
+    } catch (queueError) {
+      console.error('[lesson-journal] Gagal mengantrekan audit lokal:', queueError);
+      setAuditWarning('Jurnal sudah tersimpan, tetapi riwayat aktivitas tidak dapat dimasukkan ke antrean lokal. Hubungi administrator jika catatan ini diperlukan.');
+      return;
+    }
+
+    try {
+      const result = await kirimAntreanAuditJurnal(ownerUid);
+      setLocalAuditCount(result.queued);
+      if (result.expired) {
+        setAuditWarning(`${result.expired} catatan aktivitas melewati masa simpan satu tahun dan tidak dikirim.`);
+        setAuditNotice('');
+      } else if (result.queued || result.serverPending) {
+        setAuditWarning('Jurnal tersimpan. Catatan aktivitas menunggu pengiriman ke Google Drive pribadi; periksa koneksi Google Drive.');
+        setAuditNotice('');
+      } else {
+        setAuditWarning('');
+        setAuditNotice('Catatan aktivitas tersimpan di Google Drive pribadi.');
+      }
+    } catch (sendError) {
+      console.error('[lesson-journal] Gagal mengirim audit:', sendError);
+      setAuditWarning('Jurnal tersimpan. Catatan aktivitas tertahan dalam antrean lokal; periksa koneksi, lalu coba kirim ulang.');
+      setAuditNotice('');
+    }
+  }
+
+  async function kirimUlangAudit() {
+    if (syncingAudit || !ownerUid) return;
+    setSyncingAudit(true);
+    setAuditWarning('');
+    setAuditNotice('');
+    try {
+      const local = await kirimAntreanAuditJurnal(ownerUid);
+      const remote = await cobaKirimUlangAuditJurnal();
+      const pending = local.queued + remote.pending;
+      setLocalAuditCount(local.queued);
+      if (local.expired) {
+        setAuditWarning(`${local.expired} catatan aktivitas melewati masa simpan satu tahun dan tidak dikirim.`);
+      } else if (pending) {
+        setAuditWarning('Sebagian catatan aktivitas masih menunggu Google Drive. Hubungkan Drive atau coba kembali nanti.');
+      } else {
+        setAuditNotice('Antrean aktivitas telah dikirim ke Google Drive pribadi.');
+      }
+    } catch (retryError) {
+      console.error('[lesson-journal] Gagal mengirim ulang audit:', retryError);
+      setAuditWarning('Catatan aktivitas belum dapat dikirim. Pastikan Google Drive terhubung dan coba lagi.');
+    } finally {
+      setSyncingAudit(false);
+      try {
+        setLocalAuditCount(await jumlahEventAuditJurnal(ownerUid));
+      } catch (countError) {
+        console.error('[lesson-journal] Gagal memperbarui jumlah antrean audit:', countError);
+      }
+    }
+  }
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore || !ownerUid || !tenantId) return;
+    setLoadingMore(true);
+    setError('');
+    try {
+      const result = await muatJurnal(tenantId, ownerUid, {
+        month,
+        kelas: classFilter,
+        cursor: nextCursor,
+      });
+      setItems((current) => [...current, ...result.items]);
+      setNextCursor(result.nextCursor);
+    } catch (loadError) {
+      console.error('[lesson-journal] Gagal memuat halaman riwayat berikutnya:', loadError);
+      setError(pesanKesalahan(loadError, 'memuat'));
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   useEffect(() => {
     if (!draftReady || !storageKey || editId) return undefined;
@@ -309,8 +422,16 @@ export default function LessonJournalPage() {
     setError('');
     setNotice('');
     try {
-      if (editId) await ubahJurnal(tenantId, ownerUid, editId, form);
-      else await tambahJurnal(tenantId, ownerUid, form);
+      const previous = editId ? items.find((item) => item.id === editId) : null;
+      const saved = editId
+        ? await ubahJurnal(tenantId, ownerUid, editId, form)
+        : await tambahJurnal(tenantId, ownerUid, form);
+      const changedFields = editId
+        ? FIELD_JURNAL.filter((field) => String(previous?.[field] ?? '') !== String(form[field] ?? ''))
+        : FIELD_JURNAL;
+      if (changedFields.length) {
+        await catatAktivitas(editId ? 'updated' : 'created', saved.id, changedFields);
+      }
       if (!editId && storageKey) {
         try {
           window.localStorage.removeItem(storageKey);
@@ -326,7 +447,8 @@ export default function LessonJournalPage() {
       setEditId('');
       try {
         const refreshed = await muatJurnal(tenantId, ownerUid, { month, kelas: classFilter });
-        setItems(refreshed);
+        setItems(refreshed.items);
+        setNextCursor(refreshed.nextCursor);
       } catch (refreshError) {
         console.error('[lesson-journal] Jurnal tersimpan, tetapi riwayat gagal diperbarui:', refreshError);
         setError('Jurnal sudah tersimpan, tetapi riwayat belum dapat diperbarui. Muat ulang halaman untuk melihatnya.');
@@ -348,6 +470,7 @@ export default function LessonJournalPage() {
       await hapusJurnal(tenantId, ownerUid, item.id);
       setItems((current) => current.filter((entry) => entry.id !== item.id));
       if (editId === item.id) resetForm();
+      await catatAktivitas('deleted', item.id, FIELD_JURNAL);
       setNotice('Jurnal berhasil dihapus dari server.');
     } catch (deleteError) {
       console.error('[lesson-journal] Gagal menghapus jurnal:', deleteError);
@@ -405,6 +528,16 @@ export default function LessonJournalPage() {
       {notice && <p className="lesson-journal-message is-success" role="status">{notice}</p>}
       {assignmentError && <p className="lesson-journal-message is-error" role="alert">{assignmentError}</p>}
       {draftError && <p className="lesson-journal-message is-error" role="alert">{draftError}</p>}
+      {auditNotice && <p className="lesson-journal-message is-success" role="status">{auditNotice}</p>}
+      {auditWarning && (
+        <div className="lesson-journal-message is-error" role="status">
+          <p>{auditWarning}</p>
+          <a href="#/pengaturan/koneksi">Buka pengaturan koneksi Google Drive</a>
+          <button type="button" onClick={kirimUlangAudit} disabled={syncingAudit}>
+            {syncingAudit ? 'Mengirim…' : `Coba kirim ulang${localAuditCount ? ` (${localAuditCount})` : ''}`}
+          </button>
+        </div>
+      )}
 
       {loadingAssignments ? (
         <section className="ale-kartu lesson-journal-notice" role="status" aria-busy="true">
@@ -516,7 +649,7 @@ export default function LessonJournalPage() {
             <div className="lesson-journal-history-heading">
               <div>
                 <h2 id="lesson-journal-history-title">Riwayat jurnal</h2>
-                <p>{items.length} catatan pada periode dan filter terpilih (maksimal 200).</p>
+                <p>{items.length} catatan dimuat pada periode dan filter terpilih.</p>
               </div>
               <div className="lesson-journal-filters">
                 <label>
@@ -549,6 +682,16 @@ export default function LessonJournalPage() {
                   />
                 ))}
               </div>
+            )}
+            {!loadingItems && nextCursor && (
+              <button
+                type="button"
+                className="is-secondary"
+                onClick={loadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? 'Memuat…' : 'Muat jurnal berikutnya'}
+              </button>
             )}
             {draftNotice && <p className="lesson-journal-history-note">{draftNotice}</p>}
           </section>

@@ -87,8 +87,8 @@ describe('local AI provider integrations', () => {
     });
     expect(result.payload.questions[0].jawaban).toBe('4');
     expect(routeAiRequest).toHaveBeenCalledWith(expect.objectContaining({
+      uid: 'teacher-1',
       workflow: 'questions',
-      sensitivity: 'sensitive',
     }));
   });
 
@@ -99,21 +99,22 @@ describe('local AI provider integrations', () => {
     ]);
     expect(result).toEqual({ answer: 'Berikut penjelasannya.', penyedia: 'local' });
     expect(routeAiRequest).toHaveBeenCalledWith(expect.objectContaining({
+      uid: 'teacher-1',
       workflow: 'assistant',
-      sensitivity: 'sensitive',
     }));
   });
 
-  it('sends an assistant prompt to cloud only when the caller provides explicit consent', async () => {
-    routeAiRequest.mockResolvedValue({ provider: 'cloud', text: 'Jawaban.' });
+  it('ignores legacy cloud options and still calls the local-only route', async () => {
+    routeAiRequest.mockResolvedValue({ provider: 'local', text: 'Jawaban.' });
     await askBrowserAssistant('teacher-1', [{ role: 'user', text: 'Pertanyaan umum.' }], {
       allowCloud: true,
     });
     expect(routeAiRequest).toHaveBeenCalledWith(expect.objectContaining({
-      preference: 'cloud',
-      sensitivity: 'non_sensitive',
-      allowCloud: true,
+      uid: 'teacher-1',
+      workflow: 'assistant',
     }));
+    expect(routeAiRequest.mock.calls[0][0]).not.toHaveProperty('allowCloud');
+    expect(routeAiRequest.mock.calls[0][0]).not.toHaveProperty('preference');
   });
 
   it('uses the encrypted planning source and validates generated JSON against its schema', async () => {
@@ -142,11 +143,84 @@ describe('local AI provider integrations', () => {
     });
     expect(result.payload).toEqual(atpPayload);
     expect(routeAiRequest).toHaveBeenCalledWith(expect.objectContaining({
+      uid: 'teacher-1',
       workflow: 'planning',
-      sensitivity: 'sensitive',
       prompt: expect.stringContaining('Salin seluruh elemen dan rumusan CP PERSIS'),
     }));
     expect(routeAiRequest.mock.calls[0][0].prompt).toContain('E.1, E.2');
+  });
+
+  it('generates and validates KKTP and Modul Ajar drafts using only the local planning workflow', async () => {
+    const kktp = {
+      ambang: 75,
+      items: ['E.1'].map((kode) => ({
+        kode,
+        indikator: ['Mengidentifikasi konsep.'],
+        rubrik: {
+          perluBimbingan: 'Perlu bimbingan.',
+          cukup: 'Mulai memahami.',
+          baik: 'Memahami dengan baik.',
+          sangatBaik: 'Menerapkan secara mandiri.',
+        },
+      })),
+    };
+    const modul = {
+      tujuanKode: ['E.1'],
+      model: 'Pembelajaran berbasis masalah',
+      pemahamanBermakna: ['Konsep membantu menyelesaikan masalah.'],
+      pertanyaanPemantik: ['Bagaimana konsep ini digunakan?'],
+      dimensiProfil: ['Bernalar kritis'],
+      sarpras: ['Papan tulis'],
+      pertemuan: [{
+        ke: 1,
+        judul: 'Eksplorasi konsep',
+        tujuan: 'Menerapkan konsep pada contoh.',
+        menit: 80,
+        pendahuluan: ['Menyampaikan tujuan.'],
+        inti: ['Menganalisis contoh.'],
+        penutup: ['Merefleksikan pembelajaran.'],
+      }],
+      asesmen: {
+        diagnostik: 'Tanya jawab awal.',
+        formatif: 'Observasi diskusi.',
+        sumatif: 'Tugas penerapan.',
+      },
+      remedial: 'Latihan dengan bimbingan.',
+      pengayaan: 'Menganalisis masalah lanjutan.',
+      refleksiGuru: ['Apakah tujuan tercapai?'],
+      refleksiSiswa: ['Apa yang sudah dipahami?'],
+    };
+    bacaInputAi.mockResolvedValue({
+      mapel: 'Matematika',
+      kelas: 'X',
+      fase: 'E',
+      tahunAjaran: '2026/2027',
+      kodeTp: ['E1'],
+      unit: { no: 1, nama: 'Bilangan', tp: [{ kode: 'E.1', rumusan: 'Memahami bilangan.' }] },
+    });
+
+    routeAiRequest.mockResolvedValueOnce({ provider: 'local', text: JSON.stringify(kktp) });
+    const kktpResult = await generateBrowserPlanning({
+      uid: 'teacher-1', paketId: 'package-1', jenis: 'kktp',
+    });
+    expect(kktpResult.payload).toEqual(kktp);
+    expect(routeAiRequest).toHaveBeenLastCalledWith(expect.objectContaining({
+      uid: 'teacher-1',
+      workflow: 'planning',
+    }));
+
+    routeAiRequest.mockResolvedValueOnce({ provider: 'local', text: JSON.stringify(modul) });
+    const moduleResult = await generateBrowserPlanning({
+      uid: 'teacher-1', paketId: 'package-1', jenis: 'modul', noUnit: 1,
+    });
+    expect(moduleResult.payload).toEqual(modul);
+    expect(bacaInputAi).toHaveBeenLastCalledWith({
+      uid: 'teacher-1', paketId: 'package-1', jenis: 'modul', noUnit: 1,
+    });
+    expect(routeAiRequest).toHaveBeenLastCalledWith(expect.objectContaining({
+      uid: 'teacher-1',
+      workflow: 'planning',
+    }));
   });
 
   it('rejects invalid planning output rather than saving a success-shaped fallback', async () => {

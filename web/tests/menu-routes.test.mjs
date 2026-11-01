@@ -112,6 +112,19 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
     }
   });
 
+  it('requires the authenticated private shell and privileged MFA for the platform user directory', () => {
+    assert.doesNotMatch(
+      appSource,
+      /location\.pathname\s*===\s*'\/platform\/supabase-users'/,
+      'the administration page must not skip the auth-loading guard',
+    );
+    assert.match(
+      appSource,
+      /<Route path="\/platform\/supabase-users" element=\{user\s*\?\s*<PrivateShell><HalamanPenggunaSupabase \/><\/PrivateShell>/,
+    );
+    assert.match(appSource, /<PrivilegedMfaGate role=\{role\} userId=\{user\.uid\}>/);
+  });
+
   it('gives every active sidebar item an explicit application route', () => {
     for (const role of [
       'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',

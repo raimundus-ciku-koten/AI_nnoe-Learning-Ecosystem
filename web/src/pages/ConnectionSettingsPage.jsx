@@ -67,17 +67,8 @@ export default function ConnectionSettingsPage() {
   const [localAiError, setLocalAiError] = useState('');
   const [localAiBusy, setLocalAiBusy] = useState(false);
   const [localAiSettings, setLocalAiSettings] = useState(null);
+  const [localAiSettingsUser, setLocalAiSettingsUser] = useState('');
   const [conflictBusy, setConflictBusy] = useState('');
-  const [aiPreference, setAiPreference] = useState(() => {
-    try {
-      return localStorage.getItem('ale-ai-provider-preference') === 'cloud' ? 'cloud' : 'local';
-    } catch {
-      return 'local';
-    }
-  });
-  const [cloudPrompt, setCloudPrompt] = useState('');
-  const [cloudConsent, setCloudConsent] = useState(false);
-  const [cloudResult, setCloudResult] = useState('');
 
   const connectionByService = useMemo(
     () => new Map(connections.map((connection) => [connection.service, connection])),
@@ -99,11 +90,20 @@ export default function ConnectionSettingsPage() {
 
   useEffect(() => {
     let active = true;
-    try {
-      setLocalAiSettings(muatPengaturanLokalAI());
-    } catch (cause) {
-      console.error('[connection-settings] Pengaturan AI lokal tidak dapat dimuat:', cause);
-      setLocalAiError(cause?.message || 'Pengaturan AI_nnoe lokal tidak dapat dimuat.');
+    if (user?.uid) {
+      try {
+        setLocalAiSettings(muatPengaturanLokalAI(user.uid));
+        setLocalAiSettingsUser(user.uid);
+        setLocalAiError('');
+      } catch (cause) {
+        console.error('[connection-settings] Pengaturan AI lokal tidak dapat dimuat:', cause);
+        setLocalAiSettingsUser('');
+        setLocalAiError(cause?.message || 'Pengaturan AI_nnoe lokal tidak dapat dimuat.');
+      }
+    } else {
+      setLocalAiSettings(null);
+      setLocalAiSettingsUser('');
+      setLocalAiError('Masuk ke akun sebelum mengatur AI_nnoe lokal.');
     }
     getConnectionStatus().then((result) => {
       if (!active) return;
@@ -124,13 +124,13 @@ export default function ConnectionSettingsPage() {
   }, [location.search, user?.uid]);
 
   function simpanPengaturanAiLokal() {
-    if (!localAiSettings || localAiBusy) return;
+    if (!localAiSettings || localAiSettingsUser !== user?.uid || localAiBusy) return;
     setLocalAiBusy(true);
     setLocalAiError('');
     setLocalAiStatus('');
     try {
-      setLocalAiSettings(simpanPengaturanLokalAI(localAiSettings));
-      setLocalAiStatus('Pengaturan AI_nnoe disimpan hanya pada penyimpanan lokal browser ini.');
+      setLocalAiSettings(simpanPengaturanLokalAI(user?.uid, localAiSettings));
+      setLocalAiStatus('Pengaturan AI_nnoe disimpan lokal untuk akun ini pada browser ini.');
     } catch (cause) {
       console.error('[connection-settings] Pengaturan AI lokal tidak dapat disimpan:', cause);
       setLocalAiError(cause?.message || 'Pengaturan AI_nnoe lokal tidak dapat disimpan.');
@@ -140,12 +140,12 @@ export default function ConnectionSettingsPage() {
   }
 
   function resetPengaturanAiLokal() {
-    if (localAiBusy) return;
+    if (!user?.uid || localAiSettingsUser !== user.uid || localAiBusy) return;
     setLocalAiBusy(true);
     setLocalAiError('');
     setLocalAiStatus('');
     try {
-      setLocalAiSettings(aturUlangPengaturanLokalAI());
+      setLocalAiSettings(aturUlangPengaturanLokalAI(user?.uid));
       setLocalAiStatus('Pengaturan AI_nnoe dikembalikan ke nilai bawaan.');
     } catch (cause) {
       console.error('[connection-settings] Pengaturan AI lokal tidak dapat diatur ulang:', cause);
@@ -216,11 +216,9 @@ export default function ConnectionSettingsPage() {
     setLocalAiError('');
     try {
       const result = await routeAiRequest({
+        uid: user?.uid,
         workflow: 'assistant',
         prompt: 'Balas dengan satu kata: siap',
-        preference: 'local',
-        sensitivity: 'sensitive',
-        allowCloud: false,
       });
       setLocalAiStatus(`AI_nnoe lokal merespons (${result.model || 'model lokal'}).`);
     } catch (cause) {
@@ -248,46 +246,6 @@ export default function ConnectionSettingsPage() {
       setError(cause?.message || 'Konflik tidak dapat diselesaikan.');
     } finally {
       setConflictBusy('');
-    }
-  }
-
-  function ubahPreferensiAi(value) {
-    setAiPreference(value);
-    try {
-      localStorage.setItem('ale-ai-provider-preference', value);
-    } catch (cause) {
-      console.error('[connection-settings] Preferensi AI tidak dapat disimpan:', cause);
-      setError('Preferensi AI hanya berlaku di tab ini karena penyimpanan browser tidak tersedia.');
-    }
-  }
-
-  async function kirimPromptAi() {
-    if (!cloudPrompt.trim()) {
-      setError('Tulis prompt terlebih dahulu.');
-      return;
-    }
-    if (aiPreference === 'cloud' && !cloudConsent) {
-      setError('Persetujuan eksplisit wajib sebelum mengirim prompt ke cloud.');
-      return;
-    }
-    setLocalAiBusy(true);
-    setError('');
-    setCloudResult('');
-    setLocalAiError('');
-    try {
-      const result = await routeAiRequest({
-        workflow: 'assistant',
-        prompt: cloudPrompt.trim(),
-        preference: aiPreference,
-        sensitivity: aiPreference === 'cloud' ? 'non_sensitive' : 'sensitive',
-        allowCloud: aiPreference === 'cloud' && cloudConsent,
-      });
-      setCloudResult(result.text);
-    } catch (cause) {
-      console.error('[connection-settings] Permintaan AI gagal:', cause);
-      setLocalAiError(cause?.message || 'Permintaan AI tidak dapat diproses.');
-    } finally {
-      setLocalAiBusy(false);
     }
   }
 
@@ -375,19 +333,19 @@ export default function ConnectionSettingsPage() {
       </section>
 
       <section className="connection-settings__section" aria-labelledby="ai-provider-title">
-        <h2 id="ai-provider-title">AI_nnoe dan AI cloud</h2>
+        <h2 id="ai-provider-title">AI_nnoe lokal</h2>
         <div className="connection-settings__card">
           <div className="connection-settings__card-heading">
             <h3>AI_nnoe lokal (Ollama)</h3>
-            <span className="connection-settings__badge">Default · lokal</span>
+            <span className="connection-settings__badge">Lokal saja</span>
           </div>
-          <p>Prompt diproses pada Ollama di perangkat ini. Pastikan Ollama berjalan dan mengizinkan origin aplikasi pada konfigurasi CORS.</p>
+          <p>Semua menu generatif hanya memanggil Ollama di perangkat ini. Pastikan Ollama berjalan, memakai model yang telah diunduh, dan mengizinkan origin aplikasi pada CORS. Untuk mencegah Ollama sendiri memakai model cloud, aktifkan OLLAMA_NO_CLOUD=1 lalu mulai ulang Ollama.</p>
           <p>
             “Tanpa batas keluaran aplikasi” meminta model lokal menghasilkan keluaran tanpa batas token
             yang ditetapkan aplikasi. Batas konteks model, memori, kecepatan, dan kemampuan perangkat
             tetap berlaku; permintaan tetap memiliki batas waktu keselamatan.
           </p>
-          {localAiSettings ? (
+          {localAiSettings && localAiSettingsUser === user?.uid ? (
             <div className="connection-settings__local-ai-fields">
               <label className="connection-settings__field">
                 Endpoint localhost
@@ -431,62 +389,22 @@ export default function ConnectionSettingsPage() {
                 />
               </label>
               <div className="connection-settings__actions">
-                <button type="button" disabled={localAiBusy} onClick={simpanPengaturanAiLokal}>
+                <button type="button" disabled={localAiBusy || !user?.uid} onClick={simpanPengaturanAiLokal}>
                   Simpan pengaturan lokal
                 </button>
-                <button type="button" className="is-secondary" disabled={localAiBusy} onClick={resetPengaturanAiLokal}>
+                <button type="button" className="is-secondary" disabled={localAiBusy || !user?.uid} onClick={resetPengaturanAiLokal}>
                   Atur ulang
                 </button>
               </div>
             </div>
           ) : <p role="status">Memuat pengaturan AI_nnoe lokal…</p>}
           <div className="connection-settings__actions">
-            <button type="button" disabled={localAiBusy} onClick={testLocalAi}>
+            <button type="button" disabled={localAiBusy || !user?.uid} onClick={testLocalAi}>
               {localAiBusy ? 'Memeriksa…' : 'Uji AI lokal'}
             </button>
             {localAiStatus && <span role="status">{localAiStatus}</span>}
           </div>
           {localAiError && <p className="connection-settings__inline-error" role="alert">{localAiError}</p>}
-        </div>
-        <div className="connection-settings__card">
-          <div className="connection-settings__card-heading">
-            <h3>AI cloud</h3>
-            <span className="connection-settings__badge">Nonaktif secara default</span>
-          </div>
-          <p>Kunci provider hanya berada di environment backend. Jangan masukkan nama, email, NIP, nilai, atau data pribadi siswa. Cloud tidak memproses data yang ditandai sensitif.</p>
-          <label className="connection-settings__field">
-            Preferensi provider AI
-            <select value={aiPreference} onChange={(event) => ubahPreferensiAi(event.target.value)}>
-              <option value="local">AI_nnoe lokal (default)</option>
-              <option value="cloud">Cloud (izin eksplisit per permintaan)</option>
-            </select>
-          </label>
-          <label className="connection-settings__field">
-            Prompt uji
-            <textarea
-              value={cloudPrompt}
-              onChange={(event) => setCloudPrompt(event.target.value)}
-              maxLength={20000}
-              rows={4}
-              placeholder="Gunakan hanya contoh umum tanpa data pribadi."
-            />
-          </label>
-          {aiPreference === 'cloud' && (
-            <label className="connection-settings__consent">
-              <input
-                type="checkbox"
-                checked={cloudConsent}
-                onChange={(event) => setCloudConsent(event.target.checked)}
-              />
-              <span>Saya memastikan prompt ini tidak sensitif dan mengizinkan pengirimannya ke penyedia AI cloud untuk permintaan ini.</span>
-            </label>
-          )}
-          <div className="connection-settings__actions">
-            <button type="button" disabled={localAiBusy || !cloudPrompt.trim()} onClick={kirimPromptAi}>
-              {localAiBusy ? 'Memproses…' : aiPreference === 'cloud' ? 'Kirim dengan izin cloud' : 'Kirim ke AI_nnoe lokal'}
-            </button>
-          </div>
-          {cloudResult && <pre className="connection-settings__result" role="status">{cloudResult}</pre>}
         </div>
       </section>
 

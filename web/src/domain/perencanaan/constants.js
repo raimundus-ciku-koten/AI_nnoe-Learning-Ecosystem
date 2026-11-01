@@ -33,7 +33,7 @@ export const URUTAN_DOKUMEN = Object.freeze([
 /** Dokumen yang dihitung di peramban (deterministik, tanpa AI). */
 export const DOKUMEN_MESIN = Object.freeze([JENIS.RPE, JENIS.PROTA, JENIS.PROSEM]);
 
-/** Dokumen yang membutuhkan provider AI eksternal. */
+/** Dokumen yang dapat dibuat dengan AI_nnoe lokal. */
 export const DOKUMEN_AI = Object.freeze([JENIS.KKTP, JENIS.MODUL]);
 
 /** Prasyarat tiap dokumen. */

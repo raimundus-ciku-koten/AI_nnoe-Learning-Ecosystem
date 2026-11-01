@@ -11,6 +11,9 @@ const BATAS = Object.freeze({
   kendala: 2000,
   tindakLanjut: 2000,
 });
+const UKURAN_HALAMAN_BAWAAN = 50;
+const UKURAN_HALAMAN_MAKS = 100;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function teks(input, field) {
   const value = input[field];
@@ -33,6 +36,36 @@ function validasiTanggal(tanggal) {
   if (Number(tanggal.slice(0, 4)) < 1) return false;
   const parsed = new Date(`${tanggal}T00:00:00.000Z`);
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === tanggal;
+}
+
+function encodeCursor(row) {
+  const value = JSON.stringify({
+    tanggal: row.tanggal,
+    createdAt: row.created_at,
+    id: row.id,
+  });
+  return btoa(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function decodeCursor(value) {
+  if (typeof value !== 'string' || value.length > 512 || !/^[A-Za-z0-9_-]+$/.test(value)) {
+    throw new TypeError('Penanda halaman jurnal tidak valid.');
+  }
+  let cursor;
+  try {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    cursor = JSON.parse(atob(normalized + '='.repeat((4 - normalized.length % 4) % 4)));
+  } catch (cause) {
+    throw new TypeError('Penanda halaman jurnal tidak valid.', { cause });
+  }
+  if (!cursor || typeof cursor !== 'object' ||
+      !validasiTanggal(cursor.tanggal) ||
+      typeof cursor.createdAt !== 'string' ||
+      !Number.isFinite(Date.parse(cursor.createdAt)) ||
+      !UUID.test(cursor.id)) {
+    throw new TypeError('Penanda halaman jurnal tidak valid.');
+  }
+  return cursor;
 }
 
 export function bersihkanJurnal(input) {
@@ -115,9 +148,18 @@ export function rentangBulanJurnal(month) {
   return { dari: `${month}-01`, sampai: `${nextMonth}-01` };
 }
 
-export async function muatJurnal(tenantId, ownerUid, { month, kelas = '' }) {
+export async function muatJurnal(tenantId, ownerUid, {
+  month,
+  kelas = '',
+  cursor = '',
+  limit = UKURAN_HALAMAN_BAWAAN,
+}) {
   validasiKepemilikan(tenantId, ownerUid);
+  if (!Number.isInteger(limit) || limit < 1 || limit > UKURAN_HALAMAN_MAKS) {
+    throw new RangeError(`Ukuran halaman jurnal harus 1–${UKURAN_HALAMAN_MAKS}.`);
+  }
   const { dari, sampai } = rentangBulanJurnal(month);
+  const after = cursor ? decodeCursor(cursor) : null;
   let query = supabase
     .from('lesson_journals')
     .select(COLUMNS)
@@ -126,13 +168,26 @@ export async function muatJurnal(tenantId, ownerUid, { month, kelas = '' }) {
     .gte('tanggal', dari)
     .lt('tanggal', sampai);
   if (kelas) query = query.eq('kelas', kelas);
+  if (after) {
+    query = query.or([
+      `tanggal.lt.${after.tanggal}`,
+      `and(tanggal.eq.${after.tanggal},created_at.lt.${after.createdAt})`,
+      `and(tanggal.eq.${after.tanggal},created_at.eq.${after.createdAt},id.lt.${after.id})`,
+    ].join(','));
+  }
   const { data, error } = await query
     .order('tanggal', { ascending: false })
     .order('created_at', { ascending: false })
-    .limit(200);
+    .order('id', { ascending: false })
+    .limit(limit + 1);
   if (error) throw error;
   if (!Array.isArray(data)) throw new Error('Supabase tidak mengembalikan riwayat jurnal yang valid.');
-  return data.map(dariBaris);
+  const hasMore = data.length > limit;
+  const rows = hasMore ? data.slice(0, limit) : data;
+  return {
+    items: rows.map(dariBaris),
+    nextCursor: hasMore ? encodeCursor(rows.at(-1)) : null,
+  };
 }
 
 export async function tambahJurnal(tenantId, ownerUid, input) {

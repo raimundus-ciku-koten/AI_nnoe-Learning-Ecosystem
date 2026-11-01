@@ -58,8 +58,8 @@ export async function generateBrowserQuestion(uid, input = {}) {
     throw new TypeError('Mata pelajaran, kelas, topik, dan jenis soal wajib diisi.');
   }
   const result = await routeAiRequest({
+    uid,
     workflow: 'questions',
-    sensitivity: 'sensitive',
     prompt: [
       'Buat tepat satu draf soal pendidikan berbahasa Indonesia.',
       'Kembalikan hanya JSON: {"questions":[{"pertanyaan":"...","pilihan":["A...","B...","C...","D..."],"jawaban":"...","pembahasan":"..."}]}.',
@@ -78,7 +78,7 @@ export async function generateBrowserQuestion(uid, input = {}) {
   return { payload: { questions: [question] }, penyedia: result.provider };
 }
 
-export async function askBrowserAssistant(uid, messages = [], { allowCloud = false } = {}) {
+export async function askBrowserAssistant(uid, messages = []) {
   requireUser(uid);
   if (!Array.isArray(messages) || !messages.length) throw new TypeError('Percakapan belum memiliki pesan.');
   const transcript = messages.slice(-16).map((message) => {
@@ -88,10 +88,8 @@ export async function askBrowserAssistant(uid, messages = [], { allowCloud = fal
     return `${message.role === 'user' ? 'Pengguna' : 'Asisten'}: ${message.text.slice(0, 3000)}`;
   }).join('\n');
   const result = await routeAiRequest({
+    uid,
     workflow: 'assistant',
-    preference: allowCloud ? 'cloud' : 'local',
-    sensitivity: allowCloud ? 'non_sensitive' : 'sensitive',
-    allowCloud,
     prompt: `Jawab percakapan berikut dengan akurat, ringkas, dan berbahasa Indonesia. Jangan mengarang fakta.\n\n${transcript}`,
   });
   return { answer: result.text, penyedia: result.provider };
@@ -116,8 +114,8 @@ export async function generateBrowserPlanning({ uid, paketId, jenis, noUnit, sin
       `Konteks sumber: ${JSON.stringify(context)}`,
     ].join('\n');
   const result = await routeAiRequest({
+    uid,
     workflow: 'planning',
-    sensitivity: 'sensitive',
     signal: sinyal,
     prompt,
   });

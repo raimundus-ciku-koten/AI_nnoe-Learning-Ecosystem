@@ -1,9 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { parsePlanningOutput } from '../src/services/planningAiSchema.js';
 import { kontrakKodeAtp, promptAtp } from '../src/services/planningAiPrompts.js';
 import { PRASYARAT, JENIS } from '../src/pages/perencanaan/constants.js';
 import { sumberBelajarModul } from '../src/pages/perencanaan/engine/prota.js';
+
+const detailPage = await readFile(
+  new URL('../src/pages/perencanaan/ui/halaman-detail.js', import.meta.url),
+  'utf8',
+);
 
 const atp = () => ({
   cp: [{ elemen: 'Bilangan', cp: 'Memahami bilangan.' }],
@@ -237,6 +243,16 @@ test('allows intentionally empty optional sections in a manually authored module
 test('requires current Prosem before creating modules and invalidates them when Prosem changes', () => {
   assert.deepEqual(PRASYARAT[JENIS.MODUL], [JENIS.ATP, JENIS.PROTA, JENIS.PROSEM]);
   assert.deepEqual(PRASYARAT[JENIS.ATP], [JENIS.RPE, JENIS.CP]);
+});
+
+test('exposes local AI drafting for KKTP and Modul Ajar and saves only after editor approval', () => {
+  assert.match(detailPage, /onClick:\s*\(\)\s*=>\s*buatDrafAi\(JENIS\.KKTP\)/);
+  assert.match(detailPage, /onClick:\s*\(\)\s*=>\s*buatDrafAi\(JENIS\.MODUL,\s*u\)/);
+  assert.match(detailPage, /mulaiEditorKktp\(hasil\.payload,\s*SUMBER\.AI\)/);
+  assert.match(detailPage, /mulaiEditorModul\(unit,\s*hasil\.payload,\s*SUMBER\.AI\)/);
+  assert.match(detailPage, /simpan\(JENIS\.KKTP,\s*payload,\s*editorSumberKktp\)/);
+  assert.match(detailPage, /payload,\s*sumber:\s*editorSumberModul/);
+  assert.doesNotMatch(detailPage, /detail\.aiNonaktif/);
 });
 
 test('returns canonical CP and TP text from the source ATP for the module renderer', () => {

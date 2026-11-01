@@ -177,8 +177,7 @@ function RouteWrapper() {
 
   const publicRoute = location.pathname === '/login'
     || location.pathname === '/privacy'
-    || location.pathname.startsWith('/scan/')
-    || location.pathname === '/platform/supabase-users';
+    || location.pathname.startsWith('/scan/');
   if (loading && !publicRoute) {
     return <div className="app-loader">Memuat sesi...</div>;
   }
@@ -190,7 +189,9 @@ function RouteWrapper() {
         <Route path="/login" element={user && !passwordRecovery ? <Navigate to={selectedRole === 'demo' ? '/trial' : '/dashboard'} replace /> : <HalamanLogin />} />
         <Route path="/trial" element={user ? (selectedRole === 'demo' ? <HalamanTrial /> : <Navigate to="/dashboard" replace />) : <Navigate to="/login" replace />} />
         <Route path="/privacy" element={<HalamanPrivasi />} />
-        <Route path="/platform/supabase-users" element={<HalamanPenggunaSupabase />} />
+        <Route path="/platform/supabase-users" element={user
+          ? <PrivateShell><HalamanPenggunaSupabase /></PrivateShell>
+          : <HalamanPenggunaSupabase />} />
         <Route path="/scan/:kode" element={<HalamanScan />} />
         <Route path="/" element={<Navigate to={user ? (passwordRecovery ? '/login' : selectedRole === 'demo' ? '/trial' : '/dashboard') : '/login'} replace />} />
 
