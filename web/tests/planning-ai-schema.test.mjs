@@ -277,6 +277,44 @@ test('rejects Modul Ajar that references a foreign TP code', () => {
   assert.throws(() => parsePlanningOutput('modul', JSON.stringify(result), { kodeTp: ['E1'] }), /kode tujuan tidak sesuai/);
 });
 
+test('requires AI-generated modules to preserve every ATP code and sequential meeting numbers', () => {
+  const result = {
+    tujuanKode: ['E.1', 'E.2'],
+    model: 'Inkuiri',
+    pemahamanBermakna: ['Konsep digunakan sehari-hari.'],
+    pertanyaanPemantik: ['Apa yang kamu amati?'],
+    dimensiProfil: ['Bernalar kritis'],
+    sarpras: ['Papan tulis'],
+    pertemuan: [{
+      ke: 1,
+      judul: 'Pengantar',
+      tujuan: 'Memahami konsep.',
+      menit: 40,
+      pendahuluan: ['Menyapa peserta didik.'],
+      inti: ['Diskusi.'],
+      penutup: ['Refleksi.'],
+    }],
+    asesmen: { diagnostik: 'Tanya jawab.', formatif: 'Observasi.', sumatif: 'Tes.' },
+    remedial: 'Latihan tambahan.',
+    pengayaan: 'Soal tantangan.',
+    refleksiGuru: ['Evaluasi proses.'],
+    refleksiSiswa: ['Apa yang dipelajari?'],
+  };
+  const context = { kodeTp: ['E1', 'E2'], requireAllCodes: true };
+  assert.deepEqual(parsePlanningOutput('modul', JSON.stringify(result), context), result);
+  assert.throws(
+    () => parsePlanningOutput('modul', JSON.stringify({ ...result, tujuanKode: ['E.1'] }), context),
+    /semua kode TP unit harus digunakan/,
+  );
+  assert.throws(
+    () => parsePlanningOutput('modul', JSON.stringify({
+      ...result,
+      pertemuan: [{ ...result.pertemuan[0], ke: 2 }],
+    }), context),
+    /nomor pertemuan harus berurutan/,
+  );
+});
+
 test('allows intentionally empty optional sections in a manually authored module only', () => {
   const result = {
     tujuanKode: ['E.1'],

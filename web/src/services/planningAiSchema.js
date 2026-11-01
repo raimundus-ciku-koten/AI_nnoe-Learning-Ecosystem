@@ -215,7 +215,7 @@ function parseKktp(value, validCodes, allowLegacy = false) {
 const textList = (maxItems, maxText, allowEmpty = false) => (value, path) =>
   array(value, path, allowEmpty ? 0 : 1, maxItems, (item, itemPath) => text(item, itemPath, maxText));
 
-function parseModule(value, validCodes, allowEmptyLists = false) {
+function parseModule(value, validCodes, { allowEmptyLists = false, requireAllCodes = false } = {}) {
   const parsed = object(value, 'modul', {
     tujuanKode: (input, path) => array(input, path, 1, 20, code),
     model: (field, path) => text(field, path, 160),
@@ -242,8 +242,22 @@ function parseModule(value, validCodes, allowEmptyLists = false) {
     refleksiGuru: textList(6, 600, allowEmptyLists),
     refleksiSiswa: textList(6, 600, allowEmptyLists)
   });
-  if (parsed.tujuanKode.some((key) => !validCodes.includes(key.toUpperCase().replace(/[^A-Z0-9]/g, '')))) {
+  const normalizeCode = (key) => key.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const availableCodes = validCodes.map(normalizeCode);
+  const selectedCodes = parsed.tujuanKode.map(normalizeCode);
+  if (new Set(selectedCodes).size !== selectedCodes.length) {
+    throw new PlanningParseError('modul', 'kode tujuan tidak boleh ganda');
+  }
+  if (selectedCodes.some((key) => !availableCodes.includes(key))) {
     throw new PlanningParseError('modul', 'kode tujuan tidak sesuai dengan ATP');
+  }
+  if (requireAllCodes &&
+    (selectedCodes.length !== availableCodes.length ||
+     selectedCodes.some((key, index) => key !== availableCodes[index]))) {
+    throw new PlanningParseError('modul', 'semua kode TP unit harus digunakan sesuai urutan ATP');
+  }
+  if (parsed.pertemuan.some((item, index) => item.ke !== index + 1)) {
+    throw new PlanningParseError('modul', 'nomor pertemuan harus berurutan mulai dari 1');
   }
   return parsed;
 }
@@ -257,6 +271,9 @@ export function parsePlanningOutput(type, raw, context = {}) {
   }
   if (type === 'atp') return parseAtp(json, context);
   if (type === 'kktp') return parseKktp(json, context.kodeTp ?? [], context.allowLegacyKktp === true);
-  if (type === 'modul') return parseModule(json, context.kodeTp ?? [], context.allowEmptyLists === true);
+  if (type === 'modul') return parseModule(json, context.kodeTp ?? [], {
+    allowEmptyLists: context.allowEmptyLists === true,
+    requireAllCodes: context.requireAllCodes === true,
+  });
   throw new PlanningParseError(type, 'jenis dokumen tidak dikenal');
 }

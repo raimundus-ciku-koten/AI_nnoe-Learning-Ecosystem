@@ -419,8 +419,11 @@ describe('local AI provider integrations', () => {
       kelas: 'X',
       fase: 'E',
       tahunAjaran: '2026/2027',
-      kodeTp: ['E1'],
-      unit: { no: 1, nama: 'Bilangan', tp: [{ kode: 'E.1', rumusan: 'Memahami bilangan.' }] },
+      kodeTp: ['E1', 'E2'],
+      unit: { no: 1, nama: 'Bilangan', tp: [
+        { kode: 'E.1', rumusan: 'Memahami bilangan.' },
+        { kode: 'E.2', rumusan: 'Menerapkan bilangan.' },
+      ] },
     });
     routeAiRequest.mockResolvedValueOnce({ provider: 'local', text: JSON.stringify(modul) });
     const moduleResult = await generateBrowserPlanning({
@@ -433,7 +436,12 @@ describe('local AI provider integrations', () => {
     expect(routeAiRequest).toHaveBeenLastCalledWith(expect.objectContaining({
       uid: 'teacher-1',
       workflow: 'planning',
+      validateResponse: expect.any(Function),
     }));
+    expect(() => routeAiRequest.mock.calls.at(-1)[0].validateResponse(JSON.stringify({
+      ...modul,
+      tujuanKode: ['E.1'],
+    }))).toThrow(/semua kode TP unit harus digunakan/);
   });
 
   it('rejects invalid planning output rather than saving a success-shaped fallback', async () => {

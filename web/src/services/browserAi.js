@@ -391,6 +391,12 @@ export async function generateBrowserPlanning({ uid, paketId, jenis, noUnit, sin
   const validateKktp = jenis === 'kktp'
     ? (text) => parsePlanningOutput('kktp', text, { kodeTp: context.kodeTp })
     : undefined;
+  const validateModul = jenis === 'modul'
+    ? (text) => parsePlanningOutput('modul', text, {
+      kodeTp: context.kodeTp,
+      requireAllCodes: true,
+    })
+    : undefined;
   const prompt = jenis === 'atp'
     ? promptAtp(context)
     : jenis === 'kktp'
@@ -412,6 +418,7 @@ export async function generateBrowserPlanning({ uid, paketId, jenis, noUnit, sin
     signal: sinyal,
     prompt,
     ...(validateKktp ? { validateResponse: validateKktp } : {}),
+    ...(validateModul ? { validateResponse: validateModul } : {}),
   });
   const parsed = result.validated ?? parsePlanningOutput(jenis, result.text, {
     cp: context.cp,
