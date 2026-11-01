@@ -230,6 +230,16 @@ HTTP methods. This keeps the current set of deployable API functions below the
 Vercel Hobby limit without removing endpoints. The root function-count test
 guards this limit; verify the generated Preview deployment before release.
 
+The auth BFF requires `APP_ORIGIN` in each Vercel environment. It must exactly
+match the HTTPS origin users open in that environment; a Preview deployment
+must not use the Production origin. For a Preview using a dedicated Staging
+Supabase project, allow only that Preview callback in Supabase Auth URL
+Configuration (`https://<preview-origin>/api/auth/google/callback` and
+`https://<preview-origin>/api/auth/recovery/callback`). The Google OAuth client
+redirect URI remains the Supabase project's canonical
+`https://<project-ref>.supabase.co/auth/v1/callback`. Do not test Preview auth
+against Production Supabase or add broad redirect patterns to Production.
+
 The Jurnal Mengajar personal activity mirror requires the forward-only
 `20261103000200_journal_audit_outbox.sql` migration and a server-side Google
 Drive OAuth connection for each user. The daily Vercel Cron is configured in

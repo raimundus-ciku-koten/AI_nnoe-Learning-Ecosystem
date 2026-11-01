@@ -135,6 +135,48 @@ test('router autentikasi meneruskan query callback tanpa parameter dispatch', as
   assert.equal(res.statusCode, 400);
 });
 
+test('Google OAuth start reports missing APP_ORIGIN before setting OAuth cookies', async () => {
+  const previousEnv = saveEnv(['APP_ORIGIN']);
+  delete process.env.APP_ORIGIN;
+  const res = createResponseRecorder();
+
+  try {
+    await authRouter({
+      method: 'POST',
+      url: '/api/auth?route=google%2Fstart',
+      query: { route: 'google/start' },
+      headers: { origin: 'https://preview.example' },
+    }, res);
+  } finally {
+    restoreEnv(previousEnv);
+  }
+
+  assert.equal(res.statusCode, 503);
+  assert.equal(JSON.parse(res.body).code, 'app_origin_not_configured');
+  assert.equal(res.headers['Set-Cookie'], undefined);
+});
+
+test('Google OAuth start rejects a browser origin that differs from APP_ORIGIN', async () => {
+  const previousEnv = saveEnv(['APP_ORIGIN']);
+  process.env.APP_ORIGIN = 'https://production.example';
+  const res = createResponseRecorder();
+
+  try {
+    await authRouter({
+      method: 'POST',
+      url: '/api/auth?route=google%2Fstart',
+      query: { route: 'google/start' },
+      headers: { origin: 'https://preview.example' },
+    }, res);
+  } finally {
+    restoreEnv(previousEnv);
+  }
+
+  assert.equal(res.statusCode, 403);
+  assert.equal(JSON.parse(res.body).code, 'origin_mismatch');
+  assert.equal(res.headers['Set-Cookie'], undefined);
+});
+
 test('API errors use RFC 9457 Problem Details and retain legacy client fields', () => {
   const res = createResponseRecorder();
   fail(res, new HttpError(403, 'Akses ditolak.', 'access_denied'));
