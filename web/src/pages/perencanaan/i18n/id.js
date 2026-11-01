@@ -163,10 +163,14 @@ export default {
   'prota.catatanKalender': 'Jika kalender pendidikan berubah, tinjau ulang penempatan waktu pada Program Semester. Jangan mengubah urutan TP atau total JP tanpa pemeriksaan dan persetujuan guru.',
   'prota.catatanAsesmen': 'Strategi asesmen rinci belum tersedia pada data ATP. Lengkapi dan verifikasi strategi tersebut sebelum dokumen digunakan.',
   'prosem.judul': 'Program Semester', 'prosem.bagianSemester': 'Semester {semester}', 'prosem.tabelSemester': 'Program Semester {semester}', 'prosem.bulan': 'Bulan',
-  'prosem.pekan': 'Pekan ke-', 'prosem.kegiatan': 'TP / Kegiatan', 'prosem.uh': 'Ulangan Harian Modul {no}', 'prosem.sts': 'Sumatif Tengah Semester', 'prosem.sas': 'Sumatif Akhir Semester',
+  'prosem.pekan': 'Minggu ke-', 'prosem.kegiatan': 'TP / Kegiatan', 'prosem.alurTp': 'Alur Tujuan Pembelajaran', 'prosem.uh': 'Ulangan Harian Modul {no}', 'prosem.sts': 'Sumatif Tengah Semester', 'prosem.sas': 'Sumatif Akhir Semester',
+  'prosem.identitasProgram': 'Identitas Program', 'prosem.capaianPembelajaran': 'Capaian Pembelajaran', 'prosem.matriks': 'Matriks Program Semester',
+  'prosem.catatanPelaksanaan': 'Catatan Pelaksanaan di Kelas', 'prosem.penutup': 'Penutup dan Pengesahan', 'prosem.kbmEfektif': 'Kegiatan belajar mengajar efektif',
   'prosem.cadangan': 'Cadangan: remedial / pengayaan',
   'prosem.peringatanKurang': 'Pekan efektif tidak cukup: {jp} JP belum terjadwal. Periksa kalender libur atau Total JP.',
+  'prosem.tidakDisimpan': 'Prosem tidak disimpan: {jp} JP belum tertampung dalam pekan efektif. Periksa kalender atau alokasi Prota.',
   'prosem.catatan': 'Sumatif Tengah dan Akhir Semester adalah penanda waktu pelaksanaan; JP-nya sudah termasuk dalam Total JP resmi.',
+  'prosem.sumberJadwal': 'Jadwal dihitung dari TP dan alokasi Program Tahunan serta kalender RPE. Periksa kembali kalender pendidikan dan penempatan asesmen sebelum dokumen digunakan.',
 
   /* KKTP */
   'kktp.judul': 'Kriteria Ketercapaian Tujuan Pembelajaran', 'kktp.ambang': 'Ambang ketercapaian', 'kktp.indikator': 'Indikator', 'kktp.level': 'Level', 'kktp.deskripsi': 'Deskripsi',

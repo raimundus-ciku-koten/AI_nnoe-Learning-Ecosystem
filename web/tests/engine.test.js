@@ -10,7 +10,7 @@ import { hitungProsem } from '../src/pages/perencanaan/engine/prosem.js';
 import { validasiKonteks, validasiAtp } from '../src/pages/perencanaan/engine/validator.js';
 import { pekanDalamBulan } from '../src/pages/perencanaan/ui/render/format.js';
 import { renderRpe } from '../src/pages/perencanaan/ui/render/rpe.js';
-import { renderProta } from '../src/pages/perencanaan/ui/render/prota-prosem.js';
+import { renderProsem, renderProta } from '../src/pages/perencanaan/ui/render/prota-prosem.js';
 
 /* ---------- Data uji: pola contoh Matematika Kelas X (5 unit, 16 TP, 114 JP) ---------- */
 const buatAtp = () => {
@@ -367,6 +367,40 @@ test('Prosem: melaporkan kekurangan JP bila pekan efektif tidak cukup', () => {
   const prosem = hitungProsem({ rpe, prota });
   assert.ok(prosem.ganjil.kekuranganJP > 0);
   assert.equal(prosem.ganjil.jpTerjadwal + prosem.ganjil.kekuranganJP, prota.program[1].jp);
+});
+
+test('Prosem: renderer mempertahankan matriks delapan kolom, TP kanonis, CP, dan minggu per bulan', () => {
+  const rpe = hitungRpe({ ...konteksDasar, totalJP: 114 });
+  const atp = selaraskanJpAtp(buatAtp(), 114, 4).atp;
+  const prota = hitungProta({ atp, totalJP: 114, jpPerPekan: 4, jumlahHari: 2 });
+  const prosem = hitungProsem({ rpe, prota });
+  const dokumen = denganDomUji(() => renderProsem(prosem, {
+    mapel: 'Matematika', kelas: 'X', fase: 'E', tahunAjaran: '2026/2027'
+  }, atp));
+  const tabel = dokumen.querySelectorAll('table');
+  assert.equal(tabel.length, 4);
+  const tabelSemester = tabel[2];
+  const kepala = tabelSemester.querySelectorAll('th').map((sel) => sel.textContent);
+  assert.deepEqual(kepala, [
+    'No', 'Semester', 'Modul / unit pembelajaran', 'Alur Tujuan Pembelajaran',
+    'JP', 'Bulan', 'Minggu ke-', 'Keterangan'
+  ]);
+  const baris = tabelSemester.querySelectorAll('tbody')[0].children;
+  assert.ok(baris.length > 0);
+  assert.ok(baris.every((row) => row.children.length === 8));
+  assert.ok(baris.every((row) => !('rowspan' in row.children[0].attributes)));
+  let bulanSebelumnya = null;
+  let mingguDalamBulan = 0;
+  for (const row of baris) {
+    const bulan = row.children[5].textContent;
+    mingguDalamBulan = bulan === bulanSebelumnya ? mingguDalamBulan + 1 : 1;
+    assert.equal(row.children[6].textContent, String(mingguDalamBulan));
+    bulanSebelumnya = bulan;
+  }
+  assert.match(tabelSemester.textContent, /E\.1: Peserta didik mampu 1/);
+  assert.match(tabelSemester.textContent, /Modul 1: Unit 1/);
+  assert.match(tabel[1].textContent, /Capaian Pembelajaran/);
+  assert.match(tabel[1].textContent, /Bilangan/);
 });
 
 /* ---------- Validator ---------- */

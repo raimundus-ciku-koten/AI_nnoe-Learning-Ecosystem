@@ -143,6 +143,13 @@ legend { font-weight: 700; padding: 0 6px; }
   .dokumen-prota .kop-sub, .dokumen-prota .tbl-identitas { font-size: 9pt; }
   .dokumen-prota .prota-bagian { break-inside: auto; }
   .dokumen-prota .rumus, .dokumen-prota .ttd { break-inside: avoid; }
+  .dokumen-prosem { font-size: 12pt; line-height: 1; }
+  .dokumen-prosem .kop-judul, .dokumen-prosem h2 { font-size: 14pt; }
+  .dokumen-prosem .tbl { font-size: 11pt; }
+  .dokumen-prosem .kop-sub, .dokumen-prosem .tbl-identitas, .dokumen-prosem .catatan { font-size: 9pt; }
+  .dokumen-prosem .prosem-bagian { break-inside: auto; }
+  .dokumen-prosem .ttd { break-inside: avoid; }
+  .dokumen-prosem .tabel-bungkus { overflow: visible; }
   .dokumen-atp { font-size: 12pt; line-height: 1; }
   .dokumen-atp h1 { font-size: 14pt; }
   .dokumen-atp h2 { font-size: 12pt; }

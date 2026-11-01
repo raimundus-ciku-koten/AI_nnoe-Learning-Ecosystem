@@ -9,7 +9,7 @@
  *  - Tab mengikuti pola WAI-ARIA (panah kiri/kanan, Home/End).
  */
 
-import { h, kosongkan, toast, konfirmasi } from './dom.js';
+import { h, kosongkan, toast, konfirmasi, angka } from './dom.js';
 import { t } from '../i18n/index.js';
 import { JENIS, URUTAN_DOKUMEN, PRASYARAT, STATUS, SUMBER, DOKUMEN_AI } from '../constants.js';
 import { hitungRpe } from '../engine/rpe.js';
@@ -210,6 +210,11 @@ export function halamanDetail(wadah, {
     [JENIS.PROSEM]: () => tandaiSibuk(JENIS.PROSEM, async () => {
       if (!(await konfirmasiTimpa(JENIS.PROSEM))) return;
       const hasil = hitungProsem({ rpe: dokumen[JENIS.RPE].payload, prota: dokumen[JENIS.PROTA].payload });
+      const kekuranganJP = hasil.ganjil.kekuranganJP + hasil.genap.kekuranganJP;
+      if (kekuranganJP > 0) {
+        toast(t('prosem.tidakDisimpan', { jp: angka(kekuranganJP) }), 'galat');
+        return;
+      }
       await simpan(JENIS.PROSEM, hasil, SUMBER.MESIN);
       toast(t('umum.berhasilHitung'), 'sukses');
     }),
@@ -755,7 +760,11 @@ export function halamanDetail(wadah, {
           statusDok(JENIS.RPE) === STATUS.SIAP ? dokumen.rpe?.payload : null,
         )
         : null);
-      case JENIS.PROSEM: return panelUmum(tab, dokumen.prosem ? renderProsem(dokumen.prosem.payload, paket) : null);
+      case JENIS.PROSEM: return panelUmum(tab, dokumen.prosem ? renderProsem(
+        dokumen.prosem.payload,
+        paket,
+        statusDok(JENIS.ATP) === STATUS.SIAP ? dokumen[JENIS.ATP]?.payload : null,
+      ) : null);
       case JENIS.KKTP: return panelKktp();
       default: return panelModul();
     }

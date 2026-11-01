@@ -276,15 +276,18 @@ export function renderProta(prota, konteks, rpe) {
 function kegiatanSegmen(seg) {
   return seg.map((s) => (s.jenis === 'uh'
     ? t('prosem.uh', { no: s.modulNo })
-    : `${s.kode} (${s.jp} JP)`)).join('; ');
+    : `${s.kode}: ${s.rumusan || 'PERLU KONFIRMASI'}`)).join('; ');
 }
 
 function modulSegmen(seg) {
-  return [...new Set(seg.map((s) => s.modulNo))].join(', ');
+  return [...new Map(seg.map((s) => [s.modulNo, s.modulNama])).entries()]
+    .map(([no, nama]) => `${t('atp.modul')} ${no}: ${nama || 'PERLU KONFIRMASI'}`)
+    .join('; ');
 }
 
 function keteranganProsem(p) {
   const bagian = [];
+  if (p.efektif && p.segmen.length > 0) bagian.push(t('prosem.kbmEfektif'));
   if (p.penanda === 'sts') bagian.push(t('prosem.sts'));
   if (p.penanda === 'sas') bagian.push(t('prosem.sas'));
   if (p.penanda === 'cadangan') bagian.push(t('prosem.cadangan'));
@@ -295,17 +298,19 @@ function keteranganProsem(p) {
 
 function tabelProsemSemester(nama, sem) {
   const baris = [];
+  let nomor = 0;
   for (const b of sem.bulan) {
     b.pekan.forEach((p, i) => {
       const r = [
-        i === 0 ? { teks: `${bulanNama(b.bulan)} ${b.tahun}`, rowspan: b.pekan.length, kelas: 'sel-unit' } : null,
-        String(p.noSemester),
-        rentangTanggal(p.mulai, p.selesai),
-        p.efektif ? modulSegmen(p.segmen) || '–' : '–',
-        p.efektif ? kegiatanSegmen(p.segmen) || '–' : '–',
-        p.efektif ? String(p.segmen.reduce((s, x) => s + x.jp, 0)) : '0',
+        String(++nomor),
+        nama,
+        p.efektif && p.segmen.length ? modulSegmen(p.segmen) : '–',
+        p.efektif && p.segmen.length ? kegiatanSegmen(p.segmen) : '–',
+        String(p.segmen.reduce((s, x) => s + x.jp, 0)),
+        `${bulanNama(b.bulan)} ${b.tahun}`,
+        String(i + 1),
         keteranganProsem(p)
-      ].filter((x) => x !== null);
+      ];
       r.kelas = !p.efektif ? 'baris-nonefektif' : p.penanda === 'sts' || p.penanda === 'sas' ? 'baris-sumatif' : '';
       baris.push(r);
     });
@@ -313,22 +318,53 @@ function tabelProsemSemester(nama, sem) {
   return tabel({
     caption: t('prosem.tabelSemester', { semester: nama }),
     kelas: 'tbl-prosem',
-    kepala: [t('prosem.bulan'), t('prosem.pekan'), t('rpe.tanggal'), t('atp.modul'), t('prosem.kegiatan'), t('atp.jp'), t('rpe.keterangan')],
+    kepala: [
+      t('rpe.no'), t('umum.semester'), t('prota.modulUnit'), t('prosem.alurTp'),
+      t('atp.jp'), t('prosem.bulan'), t('prosem.pekan'), t('rpe.keterangan')
+    ],
     baris
   });
 }
 
-/** @param {Object} prosem payload hitungProsem @param {Object} konteks */
-export function renderProsem(prosem, konteks) {
+function tabelCapaianProsem(atp) {
+  const baris = (atp?.cp ?? []).map((item) => [
+    item.elemen || 'PERLU KONFIRMASI',
+    item.cp || 'PERLU KONFIRMASI'
+  ]);
+  if (baris.length === 0) baris.push(['PERLU KONFIRMASI', 'PERLU KONFIRMASI']);
+  return tabel({
+    caption: t('prosem.capaianPembelajaran'),
+    kelas: 'tbl-prosem tbl-prosem-cp',
+    kepala: [t('prota.elemenCP'), t('atp.cp')],
+    baris
+  });
+}
+
+/** @param {Object} prosem payload hitungProsem @param {Object} konteks @param {Object} [atp] */
+export function renderProsem(prosem, konteks, atp) {
   const kurang = prosem.ganjil.kekuranganJP + prosem.genap.kekuranganJP;
   return h('article', { class: 'dokumen dokumen-prosem' },
     kopDokumen(konteks, t('prosem.judul')),
-    tabelIdentitas(konteks, [[t('rpe.jpPerPekan'), `${prosem.jpPerPekan} JP`]]),
+    h('section', { class: 'prosem-bagian' },
+      h('h2', null, `1. ${t('prosem.identitasProgram')}`),
+      tabelIdentitas(konteks, [[t('rpe.jpPerPekan'), `${prosem.jpPerPekan} JP`]])),
+    h('section', { class: 'prosem-bagian' },
+      h('h2', null, `2. ${t('prosem.capaianPembelajaran')}`),
+      tabelCapaianProsem(atp)),
     kurang > 0
       ? peringatan(t('prosem.peringatanKurang', { jp: angka(kurang) }), 'galat')
       : null,
-    h('section', null, h('h2', null, t('prosem.bagianSemester', { semester: t('umum.ganjil') })), tabelProsemSemester(t('umum.ganjil'), prosem.ganjil)),
-    h('section', null, h('h2', null, t('prosem.bagianSemester', { semester: t('umum.genap') })), tabelProsemSemester(t('umum.genap'), prosem.genap)),
-    h('p', { class: 'catatan' }, t('prosem.catatan')),
-    blokTtd(konteks));
+    h('section', { class: 'prosem-bagian' },
+      h('h2', null, `3. ${t('prosem.matriks')}`),
+      h('h3', null, t('prosem.bagianSemester', { semester: t('umum.ganjil') })),
+      tabelProsemSemester(t('umum.ganjil'), prosem.ganjil),
+      h('h3', null, t('prosem.bagianSemester', { semester: t('umum.genap') })),
+      tabelProsemSemester(t('umum.genap'), prosem.genap)),
+    h('section', { class: 'prosem-bagian' },
+      h('h2', null, `4. ${t('prosem.catatanPelaksanaan')}`),
+      h('p', { class: 'catatan' }, t('prosem.catatan')),
+      h('p', { class: 'catatan' }, t('prosem.sumberJadwal'))),
+    h('section', { class: 'prosem-bagian' },
+      h('h2', null, `5. ${t('prosem.penutup')}`),
+      blokTtd(konteks)));
 }

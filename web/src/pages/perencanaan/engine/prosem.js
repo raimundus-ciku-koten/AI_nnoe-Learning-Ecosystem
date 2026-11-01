@@ -20,7 +20,9 @@ import { bulanDariIso, urai } from './tanggal.js';
  * @typedef {Object} SegmenProsem
  * @property {'tp'|'uh'} jenis
  * @property {number} modulNo
+ * @property {string} modulNama
  * @property {string} [kode]
+ * @property {string} [rumusan]
  * @property {string} [materi]
  * @property {number} jp
  */
@@ -35,8 +37,13 @@ export function hitungProsemSemester({ rpeSemester, protaSemester, jpPerPekan })
   /** @type {SegmenProsem[]} */
   const urutan = [];
   for (const m of protaSemester?.modul ?? []) {
-    for (const b of m.baris) urutan.push({ jenis: 'tp', modulNo: m.no, kode: b.kode, materi: b.materi, jp: b.jp });
-    urutan.push({ jenis: 'uh', modulNo: m.no, jp: m.uh });
+    for (const b of m.baris) {
+      urutan.push({
+        jenis: 'tp', modulNo: m.no, modulNama: m.nama,
+        kode: b.kode, rumusan: b.rumusan, materi: b.materi, jp: b.jp
+      });
+    }
+    urutan.push({ jenis: 'uh', modulNo: m.no, modulNama: m.nama, jp: m.uh });
   }
 
   const pekan = (rpeSemester?.pekan ?? []).map((p) => ({
