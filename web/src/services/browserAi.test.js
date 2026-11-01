@@ -68,28 +68,65 @@ describe('local AI provider integrations', () => {
   });
 
   it('generates and validates question drafts through local AI only', async () => {
-    routeAiRequest.mockResolvedValue({
+    routeAiRequest.mockImplementation(async ({ validateResponse }) => ({
       provider: 'local',
-      text: JSON.stringify({
+      model: 'llama3.2:1b',
+      fallbackUsed: true,
+      validated: validateResponse(JSON.stringify({
         questions: [{
           pertanyaan: 'Berapakah 2 + 2?',
           pilihan: ['3', '4', '5', '6'],
           jawaban: '4',
           pembahasan: 'Dua ditambah dua sama dengan empat.',
         }],
-      }),
-    });
+      })),
+    }));
     const result = await generateBrowserQuestion('teacher-1', {
       mapel: 'Matematika',
       kelas: 'X',
       topik: 'Bilangan',
-      jenis: 'pilihan ganda',
+      jenis: 'pilihan_ganda',
     });
     expect(result.payload.questions[0].jawaban).toBe('4');
+    expect(result).toMatchObject({
+      model: 'llama3.2:1b',
+      fallbackUsed: true,
+    });
     expect(routeAiRequest).toHaveBeenCalledWith(expect.objectContaining({
       uid: 'teacher-1',
       workflow: 'questions',
+      validateResponse: expect.any(Function),
     }));
+  });
+
+  it('rejects invalid question inputs and malformed AI question output', async () => {
+    await expect(generateBrowserQuestion('teacher-1', null))
+      .rejects.toThrow('Input generator soal tidak valid.');
+    await expect(generateBrowserQuestion('teacher-1', {
+      mapel: 'Matematika',
+      kelas: 'X',
+      topik: 'Bilangan',
+      jenis: 'pilihan benar',
+    })).rejects.toThrow('Jenis soal harus berupa pilihan ganda atau uraian.');
+    expect(routeAiRequest).not.toHaveBeenCalled();
+
+    routeAiRequest.mockImplementationOnce(async ({ validateResponse }) => ({
+      text: '',
+      validated: validateResponse(JSON.stringify({
+        questions: [{
+          pertanyaan: 'Soal',
+          pilihan: ['A', 'B'],
+          jawaban: 'C',
+          pembahasan: 'Pembahasan',
+        }],
+      })),
+    }));
+    await expect(generateBrowserQuestion('teacher-1', {
+      mapel: 'Matematika',
+      kelas: 'X',
+      topik: 'Bilangan',
+      jenis: 'pilihan_ganda',
+    })).rejects.toThrow('Pilihan ganda harus berisi empat pilihan unik dan kunci yang cocok.');
   });
 
   it('returns an assistant answer without routing personal context to cloud', async () => {

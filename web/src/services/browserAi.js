@@ -50,32 +50,78 @@ function parseJsonResponse(raw, label) {
 
 export async function generateBrowserQuestion(uid, input = {}) {
   requireUser(uid);
-  const mapel = String(input.mapel || '').trim();
-  const kelas = String(input.kelas || '').trim();
-  const topik = String(input.topik || '').trim();
-  const jenis = String(input.jenis || '').trim();
-  if (!mapel || !kelas || !topik || !jenis) {
-    throw new TypeError('Mata pelajaran, kelas, topik, dan jenis soal wajib diisi.');
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new TypeError('Input generator soal tidak valid.');
+  }
+  const requiredText = (value, label, maxLength) => {
+    if (typeof value !== 'string') throw new TypeError(`${label} wajib berupa teks.`);
+    const text = value.trim();
+    if (!text) throw new TypeError(`${label} wajib diisi.`);
+    if (text.length > maxLength) throw new RangeError(`${label} maksimal ${maxLength} karakter.`);
+    return text;
+  };
+  const mapel = requiredText(input.mapel, 'Mata pelajaran', 80);
+  const kelas = requiredText(input.kelas, 'Kelas/fase', 30);
+  const topik = requiredText(input.topik, 'Topik', 500);
+  const jenisInput = requiredText(input.jenis, 'Jenis soal', 40).toLocaleLowerCase('id');
+  const jenis = ['pilihan_ganda', 'pilihan ganda'].includes(jenisInput)
+    ? 'pilihan_ganda'
+    : jenisInput === 'uraian' ? 'uraian' : '';
+  if (!jenis) {
+    throw new TypeError('Jenis soal harus berupa pilihan ganda atau uraian.');
   }
   const result = await routeAiRequest({
     uid,
     workflow: 'questions',
     prompt: [
-      'Buat tepat satu draf soal pendidikan berbahasa Indonesia.',
-      'Kembalikan hanya JSON: {"questions":[{"pertanyaan":"...","pilihan":["A...","B...","C...","D..."],"jawaban":"...","pembahasan":"..."}]}.',
-      'Untuk soal uraian, pilihan boleh berupa array kosong. Jangan sertakan data pribadi.',
+      'Buat tepat satu draf soal pendidikan berbahasa Indonesia dan sesuai topik.',
+      'Kembalikan hanya JSON: {"questions":[{"pertanyaan":"...","pilihan":["...","...","...","..."],"jawaban":"...","pembahasan":"..."}]}.',
+      'Pilihan ganda wajib memiliki tepat empat pilihan berbeda berurutan A-D dan jawaban harus sama persis dengan salah satunya.',
+      'Untuk soal uraian, pilihan wajib berupa array kosong dan jawaban berisi pedoman penilaian.',
+      'Pertanyaan, jawaban, dan pembahasan wajib terisi. Jangan sertakan data pribadi.',
       JSON.stringify({ mapel, kelas, topik, jenis }),
     ].join('\n'),
+    validateResponse: (raw) => {
+      if (typeof raw !== 'string' || raw.length > 20000) {
+        throw new Error('Respons soal terlalu panjang atau tidak berupa teks.');
+      }
+      const payload = parseJsonResponse(raw, 'AI_nnoe lokal');
+      if (!Array.isArray(payload?.questions) || payload.questions.length !== 1) {
+        throw new Error('Draf harus berisi tepat satu soal.');
+      }
+      const question = payload.questions[0];
+      const validText = (value, maxLength) =>
+        typeof value === 'string' && value.trim().length > 0 && value.trim().length <= maxLength;
+      if (!validText(question?.pertanyaan, 2000) ||
+          !validText(question?.jawaban, 1000) ||
+          !validText(question?.pembahasan, 2000) ||
+          !Array.isArray(question?.pilihan) ||
+          question.pilihan.some((choice) => !validText(choice, 300))) {
+        throw new Error('Teks soal, jawaban, pembahasan, atau pilihan tidak lengkap.');
+      }
+      const pilihan = question.pilihan.map((choice) => choice.trim());
+      const jawaban = question.jawaban.trim();
+      if (jenis === 'pilihan_ganda' &&
+          (pilihan.length !== 4 || new Set(pilihan).size !== 4 || !pilihan.includes(jawaban))) {
+        throw new Error('Pilihan ganda harus berisi empat pilihan unik dan kunci yang cocok.');
+      }
+      if (jenis === 'uraian' && pilihan.length !== 0) {
+        throw new Error('Soal uraian tidak boleh memiliki pilihan ganda.');
+      }
+      return {
+        pertanyaan: question.pertanyaan.trim(),
+        pilihan,
+        jawaban,
+        pembahasan: question.pembahasan.trim(),
+      };
+    },
   });
-  const payload = parseJsonResponse(result.text, 'AI lokal');
-  const question = payload?.questions?.[0];
-  if (!question || typeof question.pertanyaan !== 'string' ||
-      typeof question.jawaban !== 'string' || typeof question.pembahasan !== 'string' ||
-      !Array.isArray(question.pilihan) ||
-      question.pilihan.some((choice) => typeof choice !== 'string')) {
-    throw new Error('AI lokal mengembalikan struktur draf soal yang tidak sesuai.');
-  }
-  return { payload: { questions: [question] }, penyedia: result.provider };
+  return {
+    payload: { questions: [result.validated] },
+    penyedia: result.provider,
+    model: result.model,
+    fallbackUsed: Boolean(result.fallbackUsed),
+  };
 }
 
 export async function askBrowserAssistant(uid, messages = []) {

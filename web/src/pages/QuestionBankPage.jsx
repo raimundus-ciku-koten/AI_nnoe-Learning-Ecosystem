@@ -200,7 +200,10 @@ export default function QuestionBankPage() {
         groq: 'Groq',
         cerebras: 'Cerebras'
       }[result.penyedia] || 'AI';
-      setNotice(`Draf soal dibuat dengan ${provider}. Periksa dan sunting sebelum menyimpan.`);
+      const engine = result.fallbackUsed
+        ? `${provider} menggunakan model cadangan ${result.model || ''}`.trim()
+        : `${provider}${result.model ? ` (${result.model})` : ''}`;
+      setNotice(`Draf soal dibuat dengan ${engine}. Periksa dan sunting sebelum menyimpan.`);
     } catch (err) {
       console.error('[question-bank] Gagal membuat draf AI:', err);
       setError(err?.message || 'Draf soal belum dapat dibuat.');

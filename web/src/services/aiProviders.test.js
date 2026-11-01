@@ -61,6 +61,29 @@ describe('privacy-aware AI providers', () => {
     expect(String(fetch.mock.calls[0][0])).toBe('http://localhost:11434/api/chat');
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(aturUlangPengaturanLokalAI('user-1').model).toBe('llama3.2:3b');
+    expect(aturUlangPengaturanLokalAI('user-1').fallbackModel).toBe('llama3.2:1b');
+  });
+
+  it('adds the default local fallback when loading an older saved configuration', () => {
+    const storage = new Map([[
+      'ainnoe.ai.local.settings.v2:user-1',
+      JSON.stringify({
+        endpoint: 'http://127.0.0.1:11434',
+        model: 'legacy-model',
+        timeoutSeconds: 120,
+        outputTokens: -1,
+      }),
+    ]]);
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value),
+      removeItem: (key) => storage.delete(key),
+    });
+
+    expect(muatPengaturanLokalAI('user-1')).toMatchObject({
+      model: 'legacy-model',
+      fallbackModel: 'llama3.2:1b',
+    });
   });
 
   it('rejects non-local endpoints, unsafe model names, and unbounded timeouts', () => {
@@ -75,6 +98,10 @@ describe('privacy-aware AI providers', () => {
       .toThrow('localhost');
     expect(() => simpanPengaturanLokalAI('user-1', { ...defaults, model: '../other-model' }))
       .toThrow('Nama model');
+    expect(() => simpanPengaturanLokalAI('user-1', { ...defaults, fallbackModel: defaults.model }))
+      .toThrow('harus berbeda');
+    expect(() => simpanPengaturanLokalAI('user-1', { ...defaults, fallbackModel: '../other-model' }))
+      .toThrow('Nama model cadangan');
     expect(() => simpanPengaturanLokalAI('user-1', { ...defaults, timeoutSeconds: 0 }))
       .toThrow('15–600 detik');
     expect(() => simpanPengaturanLokalAI('user-1', { ...defaults, outputTokens: 32 }))
@@ -99,6 +126,100 @@ describe('privacy-aware AI providers', () => {
     })).rejects.toThrow('Pastikan Ollama berjalan');
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(String(fetch.mock.calls[0][0])).toContain('127.0.0.1');
+  });
+
+  it('retries failed or invalid Bank Soal output with the configured local backup model', async () => {
+    const fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('connection refused'))
+      .mockResolvedValueOnce(Response.json({
+        model: 'llama3.2:1b',
+        message: { content: '{"questions":[{"pertanyaan":"Soal valid"}]}' },
+      }));
+    vi.stubGlobal('fetch', fetch);
+    const result = await routeAiRequest({
+      uid: 'user-1',
+      workflow: 'questions',
+      prompt: 'Susun satu soal.',
+      validateResponse: (text) => {
+        const parsed = JSON.parse(text);
+        if (parsed.questions?.length !== 1 || !parsed.questions[0].pertanyaan) {
+          throw new Error('Bentuk soal tidak valid.');
+        }
+        return parsed.questions[0];
+      },
+    });
+
+    expect(result).toMatchObject({
+      model: 'llama3.2:1b',
+      fallbackUsed: true,
+      validated: { pertanyaan: 'Soal valid' },
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetch.mock.calls[0][1].body).model).toBe('llama3.2:3b');
+    expect(JSON.parse(fetch.mock.calls[1][1].body).model).toBe('llama3.2:1b');
+  });
+
+  it('uses the local backup when the primary model returns invalid content', async () => {
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(Response.json({
+        model: 'llama3.2:3b',
+        message: { content: 'not json' },
+      }))
+      .mockResolvedValueOnce(Response.json({
+        model: 'llama3.2:1b',
+        message: { content: '{"ok":true}' },
+      }));
+    vi.stubGlobal('fetch', fetch);
+    const result = await routeAiRequest({
+      uid: 'user-1',
+      workflow: 'questions',
+      prompt: 'Susun satu soal.',
+      validateResponse: (text) => {
+        const parsed = JSON.parse(text);
+        if (parsed.ok !== true) throw new Error('Bentuk tidak valid.');
+        return parsed;
+      },
+    });
+
+    expect(result).toMatchObject({ fallbackUsed: true, validated: { ok: true } });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports both local model failures and does not retry non-question workflows', async () => {
+    const fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('primary unavailable'))
+      .mockRejectedValueOnce(new Error('backup unavailable'));
+    vi.stubGlobal('fetch', fetch);
+    await expect(routeAiRequest({
+      uid: 'user-1',
+      workflow: 'questions',
+      prompt: 'Susun satu soal.',
+    })).rejects.toThrow(/Model utama gagal:.*Model cadangan Bank Soal juga gagal/);
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    fetch.mockClear();
+    fetch.mockRejectedValueOnce(new Error('primary unavailable'));
+    await expect(routeAiRequest({
+      uid: 'user-1',
+      workflow: 'assistant',
+      prompt: 'Balas.',
+    })).rejects.toThrow('Pastikan Ollama berjalan');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not start a fallback request after the user cancels generation', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetch = vi.fn(async () => { throw new DOMException('Aborted.', 'AbortError'); });
+    vi.stubGlobal('fetch', fetch);
+
+    await expect(routeAiRequest({
+      uid: 'user-1',
+      workflow: 'questions',
+      prompt: 'Susun satu soal.',
+      signal: controller.signal,
+    })).rejects.toMatchObject({ name: 'AbortError' });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it('reports a local generation timeout in user-facing language', async () => {

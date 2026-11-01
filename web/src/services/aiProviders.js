@@ -2,6 +2,7 @@ const LOCAL_SETTINGS_KEY = 'ainnoe.ai.local.settings.v2';
 const DEFAULT_LOCAL_SETTINGS = Object.freeze({
   endpoint: import.meta.env?.VITE_LOCAL_AI_ENDPOINT?.trim() || 'http://127.0.0.1:11434',
   model: import.meta.env?.VITE_LOCAL_AI_MODEL?.trim() || 'llama3.2:3b',
+  fallbackModel: 'llama3.2:1b',
   timeoutSeconds: 120,
   outputTokens: -1,
 });
@@ -25,11 +26,18 @@ function validasiPengaturanLokal(settings) {
   }
   const endpointText = String(settings.endpoint ?? '').trim();
   const model = String(settings.model ?? '').trim();
+  const fallbackModel = String(settings.fallbackModel ?? DEFAULT_LOCAL_SETTINGS.fallbackModel).trim();
   const timeoutSeconds = Number(settings.timeoutSeconds);
   const outputTokens = Number(settings.outputTokens);
   localEndpoint(endpointText);
   if (!model || model.length > 100 || !/^[\w][\w.:-]*$/.test(model)) {
     throw new TypeError('Nama model AI_nnoe hanya boleh berisi huruf, angka, titik, garis bawah, titik dua, atau tanda hubung.');
+  }
+  if (!fallbackModel || fallbackModel.length > 100 || !/^[\w][\w.:-]*$/.test(fallbackModel)) {
+    throw new TypeError('Nama model cadangan AI_nnoe hanya boleh berisi huruf, angka, titik, garis bawah, titik dua, atau tanda hubung.');
+  }
+  if (fallbackModel === model) {
+    throw new TypeError('Model cadangan Bank Soal harus berbeda dari model utama.');
   }
   if (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 15 || timeoutSeconds > 600) {
     throw new RangeError('Batas waktu AI_nnoe harus 15–600 detik.');
@@ -38,7 +46,7 @@ function validasiPengaturanLokal(settings) {
       (outputTokens !== -1 && outputTokens < 128)) {
     throw new RangeError('Batas keluaran harus -1 (tanpa batas keluaran aplikasi) atau bilangan bulat minimal 128 token.');
   }
-  return { endpoint: endpointText, model, timeoutSeconds, outputTokens };
+  return { endpoint: endpointText, model, fallbackModel, timeoutSeconds, outputTokens };
 }
 
 export function muatPengaturanLokalAI(uid) {
@@ -81,8 +89,7 @@ function localEndpoint(endpointValue) {
   return endpoint;
 }
 
-async function askLocal(uid, prompt, workflow, requestSignal) {
-  const settings = muatPengaturanLokalAI(uid);
+async function askLocal(settings, prompt, workflow, requestSignal, model) {
   const endpoint = localEndpoint(settings.endpoint);
   endpoint.pathname = `${endpoint.pathname.replace(/\/$/, '')}/api/chat`;
   const signal = requestSignal
@@ -94,7 +101,7 @@ async function askLocal(uid, prompt, workflow, requestSignal) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: settings.model,
+        model,
         stream: false,
         messages: [{ role: 'user', content: prompt }],
         options: { num_predict: settings.outputTokens },
@@ -113,12 +120,44 @@ async function askLocal(uid, prompt, workflow, requestSignal) {
   if (!response.ok) throw new Error(`AI_nnoe lokal merespons HTTP ${response.status}.`);
   const text = result?.message?.content;
   if (typeof text !== 'string' || !text.trim()) throw new Error('AI_nnoe lokal mengembalikan hasil kosong.');
-  return { text, provider: 'local', model: result.model || settings.model };
+  return { text, provider: 'local', model: result.model || model };
 }
 
-export async function routeAiRequest({ uid, workflow, prompt, signal }) {
-  requireUser(uid);
+function validateLocalResult(result, validateResponse) {
+  if (!validateResponse) return result;
+  try {
+    return { ...result, validated: validateResponse(result.text) };
+  } catch (cause) {
+    throw new Error(`Model lokal ${result.model} mengembalikan hasil yang tidak sesuai format.`, { cause });
+  }
+}
+
+export async function routeAiRequest({ uid, workflow, prompt, signal, validateResponse }) {
+  const userId = requireUser(uid);
   if (!WORKFLOWS.has(workflow)) throw new TypeError('Workflow AI tidak dikenal.');
   if (typeof prompt !== 'string' || !prompt.trim()) throw new TypeError('Prompt AI wajib diisi.');
-  return askLocal(uid, prompt, workflow, signal);
+  if (validateResponse !== undefined && typeof validateResponse !== 'function') {
+    throw new TypeError('Validator hasil AI tidak valid.');
+  }
+  const settings = muatPengaturanLokalAI(userId);
+  try {
+    const result = await askLocal(settings, prompt, workflow, signal, settings.model);
+    return validateLocalResult(result, validateResponse);
+  } catch (primaryError) {
+    if (signal?.aborted || workflow !== 'questions' || !settings.fallbackModel) throw primaryError;
+    try {
+      const result = await askLocal(settings, prompt, workflow, signal, settings.fallbackModel);
+      return {
+        ...validateLocalResult(result, validateResponse),
+        fallbackUsed: true,
+      };
+    } catch (fallbackError) {
+      if (signal?.aborted) throw fallbackError;
+      const message = (error) => error instanceof Error ? error.message : 'Kesalahan tidak diketahui.';
+      throw new Error(
+        `Model utama gagal: ${message(primaryError)} Model cadangan Bank Soal juga gagal: ${message(fallbackError)}. Periksa model lokal atau susun soal secara manual.`,
+        { cause: fallbackError },
+      );
+    }
+  }
 }

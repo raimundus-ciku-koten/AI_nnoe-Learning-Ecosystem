@@ -36,7 +36,10 @@ export default function AIIntegrationsPage() {
         </p>
         <p>
           Untuk memilih model, mengatur timeout, atau menguji koneksi, buka Pengaturan Koneksi.
-          Jika Ollama tidak tersedia, AI menampilkan kesalahan dan tidak beralih ke cloud.
+          Bank Soal mencoba model cadangan lokal jika model utama gagal atau hasilnya tidak lolos
+          validasi. Pastikan kedua model sudah tersedia di Ollama; fitur lain tidak beralih otomatis
+          ke model cadangan. Jika model yang diperlukan tidak tersedia, aplikasi menampilkan
+          kesalahan dan tidak beralih ke cloud.
         </p>
       </section>
     </main>
