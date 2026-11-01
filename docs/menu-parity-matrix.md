@@ -2,9 +2,11 @@
 
 Dokumen ini mencatat menu yang benar-benar dirender oleh `web/src/navigasi.js` melalui
 `web/src/components/AppShell.jsx`, bukan katalog adaptor lama di `web/src/menu.js`.
-Rute dibandingkan dengan deklarasi di `web/src/app/RouteWrapper.jsx`.
+Path menu dibandingkan dengan deklarasi rute di `web/src/app/RouteWrapper.jsx`; sebagian path
+dapat ditangani rute wildcard atau halaman panduan generik.
 
-**Status menu bukan status paritas fitur.** Aktif berarti item mempunyai rute eksplisit;
+**Status menu bukan status paritas fitur.** Aktif berarti item mempunyai path yang dapat
+ditangani rute aplikasi;
 hal itu tidak membuktikan alur kerja, persistensi, izin, atau kesetaraan dengan kode lama.
 Item nonaktif tidak mempunyai tautan agar tidak membuka halaman generik seolah-olah fitur
 sudah siap. Saat Chat digate, satu status nonaktif dipertahankan per grup yang memuat Chat
@@ -15,6 +17,13 @@ agar grup khusus komunikasi tidak hilang.
 - Katalog baru: `web/src/navigasi.js`; sidebar: `web/src/components/AppShell.jsx`;
   penjaga rute: `web/src/app/RouteWrapper.jsx`; halaman generik:
   `web/src/pages/SubMenuPage.jsx`.
+- `web/src/navigasi.js` menonaktifkan path yang terdaftar pada `RUTE_TANPA_ALUR`. Untuk item
+  aktif non-guru yang jatuh ke `SubMenuPage`, halaman menampilkan panduan baca-saja dan secara
+  eksplisit menyatakan bahwa modul tersebut belum mengubah data. Rute `/platform/*` juga
+  memakai satu handler wildcard; handler itu perlu ditinjau per submenu.
+- `web/tests/menu-routes.test.mjs` menguji status nonaktif dan bahwa path menu dicocokkan oleh
+  deklarasi rute. Pencocoknya menerima `*`, sehingga tes ini tidak membuktikan komponen tujuan,
+  penyimpanan, otorisasi server, ataupun alur end-to-end.
 - Referensi pelaksanaan lama tersedia di `D:\New folder (3)\ainnoe-pelaksanaan\`:
   `web/src/menu.js`, `web/src/pages/jurnal.js`, `web/src/pages/presensi.js`, dan
   `web/src/lib/pelaksanaan.js`. Sumber tersebut hanya dibaca.
