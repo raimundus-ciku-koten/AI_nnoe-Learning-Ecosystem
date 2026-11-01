@@ -405,7 +405,7 @@ export async function unggahBerkasTerenkripsiDrive(
   } = {},
 ) {
   if (!file || !(file instanceof File)) throw new TypeError('Pilih berkas untuk vault Drive.');
-  if (!['other', 'teacher-workspace', 'teacher-schedule', 'teacher-seating', 'planning-package', 'communication'].includes(category)) {
+  if (!['other', 'teacher-workspace', 'teacher-schedule', 'teacher-seating', 'planning-package', 'student-module', 'communication'].includes(category)) {
     throw new TypeError('Kategori berkas terenkripsi tidak valid.');
   }
   if (!identity?.publicKey || !identity?.fingerprint ||
@@ -512,6 +512,34 @@ export async function daftarBerkasTerenkripsiDrive(accessToken) {
     ...file,
     manifest: parseVaultDescription(file),
   }));
+}
+
+export async function daftarModulSiswaTerenkripsiDrive(accessToken, pageToken = '') {
+  if (pageToken && (typeof pageToken !== 'string' || pageToken.length > 2048)) {
+    throw new TypeError('Penanda halaman Modul Siswa tidak valid.');
+  }
+  const parameters = new URLSearchParams({
+    q: [
+      `appProperties has { key='aleKind' and value='${VAULT_KIND}' }`,
+      "appProperties has { key='aleCategory' and value='student-module' }",
+      'trashed=false',
+    ].join(' and '),
+    pageSize: '10',
+    orderBy: 'modifiedTime desc',
+    fields: 'files(id,name,description,createdTime,modifiedTime,size,appProperties),nextPageToken',
+  });
+  if (pageToken) parameters.set('pageToken', pageToken);
+  const result = await requestGoogle(`${BASE_DRIVE}/files?${parameters}`, accessToken);
+  if (!Array.isArray(result.files)) {
+    throw new Error('Google Drive tidak mengembalikan riwayat Modul Siswa yang valid.');
+  }
+  const files = result.files.map((file) => {
+    if (file.appProperties?.aleCategory !== 'student-module') {
+      throw new Error('Kategori riwayat Modul Siswa terenkripsi tidak valid.');
+    }
+    return { ...file, manifest: parseVaultDescription(file) };
+  });
+  return { files, nextPageToken: result.nextPageToken || null };
 }
 
 export async function daftarCatatanKerjaTerenkripsiDrive(accessToken, identity, pageToken = '') {
@@ -772,7 +800,7 @@ export async function cabutBagikanBerkasDrive(accessToken, driveFileId, permissi
 
 export async function hapusBerkasVaultDrive(accessToken, driveFileId, category, identity) {
   if (typeof driveFileId !== 'string' || !/^[A-Za-z0-9_-]{1,256}$/.test(driveFileId) ||
-      category !== 'planning-package') {
+      !['planning-package', 'student-module'].includes(category)) {
     throw new TypeError('Berkas vault yang akan dihapus tidak valid.');
   }
   const metadata = await requestGoogle(

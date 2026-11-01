@@ -6,6 +6,8 @@ import {
   daftarBerkasTerenkripsiDrive,
   daftarCatatanKerjaTerenkripsiDrive,
   daftarDenahTerenkripsiDrive,
+  daftarModulSiswaTerenkripsiDrive,
+  hapusBerkasVaultDrive,
   hapusCatatanKerjaTerenkripsiDrive,
   pulihkanCadanganKunciDariDrive,
   simpanCadanganKunciDrive,
@@ -113,6 +115,7 @@ test('mengunggah ciphertext dengan nama Drive generik dan manifest tanpa nama as
       'owner-user-id',
       identity,
       original,
+      { category: 'student-module' },
     );
     const metadata = JSON.parse(await uploadRequest.options.body.get('metadata').text());
     const uploadedBytes = new Uint8Array(await uploadRequest.options.body.get('file').arrayBuffer());
@@ -121,9 +124,73 @@ test('mengunggah ciphertext dengan nama Drive generik dan manifest tanpa nama as
     assert.match(metadata.name, /^ALE-Encrypted-[0-9a-f-]+\.bin$/);
     assert.equal(metadata.description.includes(original.name), false);
     assert.equal(metadata.appProperties.aleKind, 'ale-e2e-v1');
+    assert.equal(metadata.appProperties.aleCategory, 'student-module');
     assert.equal(Buffer.from(uploadedBytes).includes(Buffer.from('private assessment data')), false);
     assert.equal(uploadRequest.options.body.get('file').type, 'application/octet-stream');
     assert.match(uploadRequest.url, /uploadType=multipart/);
+  } finally {
+    globalThis.fetch = fetchSebelumnya;
+  }
+});
+
+test('mencari riwayat Modul Siswa hanya di kategori vault dan mendukung pagination', async () => {
+  const fetchSebelumnya = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const requestUrl = String(url);
+    assert.match(requestUrl, /student-module/);
+    assert.match(requestUrl, /pageSize=10/);
+    assert.match(requestUrl, /pageToken=next-page/);
+    return Response.json({ files: [], nextPageToken: 'next-page' });
+  };
+  try {
+    const result = await daftarModulSiswaTerenkripsiDrive('google-access-token', 'next-page');
+    assert.deepEqual(result, { files: [], nextPageToken: 'next-page' });
+  } finally {
+    globalThis.fetch = fetchSebelumnya;
+  }
+});
+
+test('menghapus Modul Siswa hanya dengan kategori vault dan kunci pemilik yang cocok', async () => {
+  const identity = await buatIdentitasEnkripsiDrive();
+  const fetchSebelumnya = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url: String(url), method: options.method || 'GET' });
+    if (options.method === 'DELETE') return new Response(null, { status: 204 });
+    return Response.json({
+      id: 'drive-module-delete',
+      description: JSON.stringify({
+        version: 1,
+        iv: 'nonce',
+        ciphertextSha256: 'a'.repeat(64),
+        ciphertextSizeBytes: 64,
+        keyEnvelopes: [{
+          userId: 'owner-user-id',
+          wrappedDataKey: 'wrapped',
+          recipientKeyFingerprint: identity.fingerprint,
+          keyVersion: identity.keyVersion,
+        }],
+      }),
+      appProperties: {
+        aleKind: 'ale-e2e-v1',
+        aleRecord: '3b12f1df-5232-4804-897e-917bf397618a',
+        aleCategory: 'student-module',
+      },
+    });
+  };
+  try {
+    await hapusBerkasVaultDrive(
+      'google-access-token',
+      'drive-module-delete',
+      'student-module',
+      identity,
+    );
+    assert.deepEqual(calls.map(({ method }) => method), ['GET', 'DELETE']);
+    await assert.rejects(
+      hapusBerkasVaultDrive('google-access-token', 'drive-module-delete', 'other', identity),
+      /Berkas vault yang akan dihapus tidak valid/,
+    );
+    assert.equal(calls.length, 2);
   } finally {
     globalThis.fetch = fetchSebelumnya;
   }

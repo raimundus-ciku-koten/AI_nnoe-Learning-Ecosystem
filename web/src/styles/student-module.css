@@ -14,6 +14,32 @@
   border-radius: .75rem;
   background: #fff;
 }
+.student-module-drive-card {
+  display: grid;
+  gap: .75rem;
+  margin-bottom: 1rem;
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid #d5dee7;
+  border-radius: .75rem;
+  background: #fff;
+}
+.student-module-drive-card h2, .student-module-history h3,
+.student-module-drive-card p { margin: 0; }
+.student-module-drive-card p { margin-top: .35rem; color: #536272; }
+.student-module-drive-card a { align-self: center; color: #125f5b; font-weight: 700; }
+.student-module-history { display: grid; gap: .65rem; }
+.student-module-history ul { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.student-module-history li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  padding: .65rem;
+  border: 1px solid #d5dee7;
+  border-radius: .55rem;
+}
+.student-module-history li > span { display: grid; gap: .2rem; min-width: 0; }
+.student-module-history small { color: #536272; }
 .student-module-notice { margin-bottom: 1rem; color: #344456; }
 .student-module-form-card { display: grid; gap: .75rem; }
 .student-module-form-card h2, .student-module-form-card p { margin: 0; }
@@ -71,7 +97,7 @@
   text-align: center;
   break-after: page;
 }
-.student-module-cover h1 { max-width: 90%; margin: 2rem 0 1rem; font-size: 18pt; }
+.student-module-cover h1 { max-width: 90%; margin: 2rem 0 1rem; font-size: 14pt; }
 .student-module-cover-subtitle { font-size: 14pt; }
 .student-module-cover-label { font-size: 11pt; font-weight: 700; letter-spacing: .08em; }
 .student-module-cover dl { display: grid; gap: .4rem; margin-top: 2rem; font-size: 9pt; }
@@ -94,6 +120,7 @@
 @media (max-width: 720px) {
   .student-module-fields { grid-template-columns: 1fr; }
   .student-module-cover { min-height: 0; padding: 2rem 0; }
+  .student-module-history li { align-items: flex-start; flex-direction: column; }
 }
 
 @page {
@@ -115,6 +142,9 @@
     border: 0 !important;
     border-radius: 0 !important;
   }
+  .student-module-drive-card,
+  .student-module-notice,
+  .student-module-form-card { display: none !important; }
   .student-module-screen-notice { display: none !important; }
   .student-module-document {
     max-width: none;

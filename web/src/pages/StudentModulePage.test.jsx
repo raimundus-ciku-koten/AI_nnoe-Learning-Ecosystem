@@ -50,8 +50,10 @@ describe('StudentModulePage', () => {
     const markup = renderToStaticMarkup(<StudentModulePage />);
 
     expect(markup).toContain('Modul Siswa');
-    expect(markup).toContain('Draf belum tersimpan.');
+    expect(markup).toContain('Draf tersimpan hanya setelah Anda memilih Simpan ke Drive.');
     expect(markup).toContain('Sinkronisasi otomatis RPE, Prosem, dan ATP belum tersedia');
+    expect(markup).toContain('Hubungkan Google Drive');
+    expect(markup).toContain('Isi Modul Siswa dienkripsi sebelum diunggah');
     expect(markup).toContain('Sumber pustaka terverifikasi');
     expect(markup).toContain('Susun Modul Siswa');
     expect(markup).not.toContain('Sudah tersimpan');

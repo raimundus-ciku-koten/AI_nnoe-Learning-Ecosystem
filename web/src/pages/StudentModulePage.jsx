@@ -1,8 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { adalahPeranGuru } from '../navigasi.js';
+import {
+  identitasEnkripsiDriveDalamSesi,
+} from '../services/driveEncryption.js';
+import {
+  hubungkanGoogleDriveUntukPengguna,
+  sesiGoogleWorkspacePerPengguna,
+} from '../services/googleWorkspaceAuth.js';
 import { MODUL_SISWA_BAGIAN } from '../services/studentModuleAiPrompts.js';
 import { generateStudentModule } from '../services/studentModuleAi.js';
+import {
+  hapusModulSiswaDrive,
+  muatModulSiswaDrive,
+  simpanModulSiswaDrive,
+} from '../services/studentModuleDriveRepository.js';
 import '../styles/student-module.css';
 
 const FORM_AWAL = {
@@ -151,34 +163,65 @@ export default function StudentModulePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [driveBusy, setDriveBusy] = useState('');
+  const [driveError, setDriveError] = useState('');
+  const [driveNotice, setDriveNotice] = useState('');
+  const [history, setHistory] = useState([]);
+  const [historyCursor, setHistoryCursor] = useState('');
+  const [selectedRecord, setSelectedRecord] = useState(null);
   const controllerRef = useRef(null);
   const completedCountRef = useRef(0);
+  const ownerUid = user?.id || user?.uid || '';
+  const ownerUidRef = useRef(ownerUid);
+  ownerUidRef.current = ownerUid;
+  const driveSession = ownerUid ? sesiGoogleWorkspacePerPengguna(ownerUid) : null;
+  const driveIdentity = ownerUid ? identitasEnkripsiDriveDalamSesi(ownerUid) : null;
   const isTeacher = adalahPeranGuru(activeRole || role);
 
   useEffect(() => () => controllerRef.current?.abort(), []);
+  useEffect(() => {
+    controllerRef.current?.abort();
+    setForm(FORM_AWAL);
+    setSections([]);
+    setBusy(false);
+    setDriveBusy('');
+    setHistory([]);
+    setHistoryCursor('');
+    setSelectedRecord(null);
+    setError('');
+    setNotice('');
+    setDriveError('');
+    setDriveNotice('');
+    completedCountRef.current = 0;
+  }, [ownerUid]);
 
   async function generate() {
     if (!isTeacher || busy || controllerRef.current ||
         sections.length >= MODUL_SISWA_BAGIAN.length) return;
     const controller = new AbortController();
+    const requestedOwner = ownerUid;
     controllerRef.current = controller;
     setBusy(true);
     setError('');
     setNotice('');
+    completedCountRef.current = sections.length;
     try {
       await generateStudentModule({
-        uid: user?.uid,
+        uid: ownerUid,
         input: form,
         startIndex: sections.length,
         existingSections: sections,
         signal: controller.signal,
         onSection: (section) => {
+          if (ownerUidRef.current !== requestedOwner) return;
           completedCountRef.current += 1;
           setSections((current) => [...current, section]);
         },
       });
+      if (ownerUidRef.current !== requestedOwner) return;
       setNotice('Modul Siswa lengkap. Periksa isi dan sumber sebelum mencetak; draf belum tersimpan.');
     } catch (generationError) {
+      if (ownerUidRef.current !== requestedOwner) return;
       console.error('[student-module] Gagal menyusun modul:', generationError);
       if (generationError?.name === 'AbortError') {
         setNotice(`Penyusunan dihentikan. ${completedCountRef.current} bagian yang sudah selesai tetap tersedia.`);
@@ -197,11 +240,139 @@ export default function StudentModulePage() {
 
   function reset() {
     if (busy) return;
+    if (sections.length > 0 &&
+        !window.confirm('Hapus isi Modul Siswa yang sedang terbuka dari halaman ini? Draf yang belum disimpan tidak dapat dipulihkan.')) return;
     setForm(FORM_AWAL);
     setSections([]);
+    setSelectedRecord(null);
     completedCountRef.current = 0;
     setError('');
     setNotice('');
+  }
+
+  async function hubungkanDrive() {
+    const requestedOwner = ownerUid;
+    setDriveBusy('connect');
+    setDriveError('');
+    setDriveNotice('');
+    try {
+      await hubungkanGoogleDriveUntukPengguna(user);
+      if (ownerUidRef.current !== requestedOwner) return;
+      if (!identitasEnkripsiDriveDalamSesi(ownerUid)) {
+        setDriveNotice('Google Drive terhubung. Buka pengaturan Google untuk membuat atau memulihkan kunci vault sebelum memuat riwayat.');
+        return;
+      }
+      setDriveNotice('Google Drive siap untuk riwayat Modul Siswa.');
+    } catch (driveConnectionError) {
+      console.error('[student-module] Gagal menghubungkan Google Drive:', driveConnectionError);
+      setDriveError(driveConnectionError?.message || 'Google Drive tidak dapat dihubungkan.');
+    } finally {
+      setDriveBusy('');
+    }
+  }
+
+  async function muatRiwayatDrive(pageToken = '', append = false) {
+    const requestedOwner = ownerUid;
+    setDriveBusy('load');
+    setDriveError('');
+    setDriveNotice('');
+    try {
+      const session = sesiGoogleWorkspacePerPengguna(ownerUid);
+      const identity = identitasEnkripsiDriveDalamSesi(ownerUid);
+      if (!session) throw new Error('Hubungkan Google Drive terlebih dahulu.');
+      if (!identity) throw new Error('Buka atau pulihkan kunci vault di pengaturan Google terlebih dahulu.');
+      const result = await muatModulSiswaDrive(
+        session.accessToken,
+        ownerUid,
+        identity,
+        pageToken,
+      );
+      if (ownerUidRef.current !== requestedOwner) return;
+      setHistory((current) => {
+        const combined = append ? [...current, ...result.entries] : result.entries;
+        return [...new Map(combined.map((entry) => [entry.driveFileId, entry])).values()];
+      });
+      setHistoryCursor(result.nextPageToken || '');
+      setDriveNotice(`${result.entries.length} draf Modul Siswa dimuat dari Google Drive.`);
+    } catch (historyError) {
+      console.error('[student-module] Gagal memuat riwayat Drive:', historyError);
+      setDriveError(historyError?.message || 'Riwayat Modul Siswa tidak dapat dimuat.');
+    } finally {
+      setDriveBusy('');
+    }
+  }
+
+  async function simpanKeDrive(asCopy = false) {
+    const requestedOwner = ownerUid;
+    setDriveBusy('save');
+    setDriveError('');
+    setDriveNotice('');
+    try {
+      const session = sesiGoogleWorkspacePerPengguna(ownerUid);
+      const identity = identitasEnkripsiDriveDalamSesi(ownerUid);
+      if (!session) throw new Error('Hubungkan Google Drive terlebih dahulu.');
+      if (!identity) throw new Error('Buka atau pulihkan kunci vault di pengaturan Google terlebih dahulu.');
+      const saved = await simpanModulSiswaDrive({
+        accessToken: session.accessToken,
+        ownerUid,
+        identity,
+        input: form,
+        sections,
+        existingRecord: asCopy ? null : selectedRecord,
+      });
+      if (ownerUidRef.current !== requestedOwner) return;
+      setSelectedRecord(saved);
+      setHistory((current) => [
+        saved,
+        ...current.filter((entry) => entry.driveFileId !== saved.driveFileId),
+      ]);
+      setDriveNotice('Draf Modul Siswa tersimpan terenkripsi di Google Drive akun Anda.');
+    } catch (saveError) {
+      console.error('[student-module] Gagal menyimpan draf ke Drive:', saveError);
+      setDriveError(saveError?.message || 'Draf Modul Siswa tidak dapat disimpan ke Drive.');
+    } finally {
+      setDriveBusy('');
+    }
+  }
+
+  async function hapusDrafDrive(entry) {
+    if (!window.confirm(`Hapus draf "${entry.judul}" dari Google Drive? Penghapusan ini tidak dapat dibatalkan.`)) return;
+    const requestedOwner = ownerUid;
+    setDriveBusy('delete');
+    setDriveError('');
+    setDriveNotice('');
+    try {
+      const session = sesiGoogleWorkspacePerPengguna(ownerUid);
+      const identity = identitasEnkripsiDriveDalamSesi(ownerUid);
+      if (!session) throw new Error('Hubungkan Google Drive terlebih dahulu.');
+      if (!identity) throw new Error('Buka atau pulihkan kunci vault di pengaturan Google terlebih dahulu.');
+      await hapusModulSiswaDrive({
+        accessToken: session.accessToken,
+        ownerUid,
+        identity,
+        record: entry,
+      });
+      if (ownerUidRef.current !== requestedOwner) return;
+      setHistory((current) => current.filter((item) => item.driveFileId !== entry.driveFileId));
+      if (selectedRecord?.driveFileId === entry.driveFileId) setSelectedRecord(null);
+      setDriveNotice('Draf dihapus dari Google Drive. Isi yang sedang terbuka tetap berada di halaman sampai Anda meresetnya.');
+    } catch (deleteError) {
+      console.error('[student-module] Gagal menghapus draf dari Drive:', deleteError);
+      setDriveError(deleteError?.message || 'Draf Modul Siswa tidak dapat dihapus dari Drive.');
+    } finally {
+      setDriveBusy('');
+    }
+  }
+
+  function pulihkanDraf(entry) {
+    if (sections.length > 0 &&
+        !window.confirm('Ganti isi Modul Siswa yang sedang terbuka dengan draf dari Drive? Simpan perubahan terlebih dahulu bila diperlukan.')) return;
+    setForm(entry.input);
+    setSections(entry.sections);
+    setSelectedRecord(entry);
+    completedCountRef.current = entry.sections.length;
+    setError('');
+    setNotice('Draf dipulihkan dari Google Drive. Periksa isinya sebelum melanjutkan atau mencetak.');
   }
 
   if (!isTeacher) {
@@ -226,10 +397,61 @@ export default function StudentModulePage() {
       </header>
 
       <section className="student-module-notice" aria-label="Batas penyimpanan dan sinkronisasi">
-        <strong>Draf belum tersimpan.</strong> Modul hanya berada di memori halaman. Sinkronisasi otomatis RPE, Prosem, dan ATP belum tersedia; konteks turunannya dapat dimasukkan manual. Jika halaman ditutup, draf akan hilang.
+        <strong>Draf tersimpan hanya setelah Anda memilih Simpan ke Drive.</strong> Isi Modul Siswa dienkripsi sebelum diunggah ke Google Drive akun Anda. Sinkronisasi otomatis RPE, Prosem, dan ATP belum tersedia; konteks turunannya dapat dimasukkan manual.
       </section>
       {error && <p className="student-module-message is-error" role="alert">{error}</p>}
       {notice && <p className="student-module-message is-success" role="status">{notice}</p>}
+      {driveError && <p className="student-module-message is-error" role="alert">{driveError}</p>}
+      {driveNotice && <p className="student-module-message is-success" role="status">{driveNotice}</p>}
+
+      <section className="student-module-drive-card" aria-label="Penyimpanan Modul Siswa">
+        <div>
+          <h2>Riwayat pribadi di Google Drive</h2>
+          <p>
+            {driveSession && driveIdentity
+              ? `Vault siap${driveSession.email ? ` untuk ${driveSession.email}` : ''}.`
+              : 'Hubungkan Google Drive dan buka kunci vault untuk menyimpan atau memulihkan draf.'}
+            {' '}Access token hanya digunakan sementara di sesi ini.
+          </p>
+        </div>
+        <div className="student-module-actions">
+          <button type="button" className="is-secondary" onClick={hubungkanDrive} disabled={Boolean(driveBusy)}>
+            {driveBusy === 'connect' ? 'Menghubungkan…' : 'Hubungkan Google Drive'}
+          </button>
+          <button type="button" className="is-secondary" onClick={() => void muatRiwayatDrive()} disabled={Boolean(driveBusy)}>
+            {driveBusy === 'load' ? 'Memuat riwayat…' : 'Muat riwayat Drive'}
+          </button>
+          {(!driveSession || !driveIdentity) && (
+            <a href="#/pengaturan/google">Buka pengaturan Google untuk menyiapkan vault</a>
+          )}
+        </div>
+        {history.length > 0 && (
+          <div className="student-module-history">
+            <h3>Draf tersimpan</h3>
+            <ul>
+              {history.map((entry) => (
+                <li key={entry.driveFileId}>
+                  <span>
+                    <strong>{entry.judul}</strong>
+                    <small>{new Date(entry.updatedAt).toLocaleString('id-ID')} · {entry.sections.length}/9 bagian</small>
+                  </span>
+                  <button type="button" className="is-secondary" onClick={() => pulihkanDraf(entry)} disabled={Boolean(driveBusy || busy)}>
+                    {selectedRecord?.driveFileId === entry.driveFileId ? 'Draf aktif' : 'Pulihkan'}
+                  </button>
+                  <button type="button" className="is-secondary" onClick={() => void hapusDrafDrive(entry)} disabled={Boolean(driveBusy || busy || !driveSession || !driveIdentity)}>
+                    Hapus dari Drive
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {historyCursor && (
+              <button type="button" className="is-secondary" onClick={() => void muatRiwayatDrive(historyCursor, true)} disabled={Boolean(driveBusy)}>
+                {driveBusy === 'load' ? 'Memuat…' : 'Muat draf berikutnya'}
+              </button>
+            )}
+          </div>
+        )}
+      </section>
 
       <section className="student-module-form-card">
         <h2>Data Modul</h2>
@@ -314,6 +536,18 @@ export default function StudentModulePage() {
               </button>
             )}
             {busy && <button type="button" className="is-secondary" onClick={cancel}>Batalkan proses</button>}
+            {sections.length > 0 && (
+              <button type="button" className="is-secondary" onClick={() => void simpanKeDrive()} disabled={Boolean(driveBusy || busy || !driveSession || !driveIdentity)}>
+                {driveBusy === 'save'
+                  ? 'Menyimpan ke Drive…'
+                  : selectedRecord ? 'Simpan perubahan ke Drive' : 'Simpan draf ke Drive'}
+              </button>
+            )}
+            {sections.length > 0 && selectedRecord && (
+              <button type="button" className="is-secondary" onClick={() => void simpanKeDrive(true)} disabled={Boolean(driveBusy || busy || !driveSession || !driveIdentity)}>
+                Simpan sebagai draf baru
+              </button>
+            )}
             {completed && <button type="button" onClick={() => window.print()}>Cetak / Simpan sebagai PDF</button>}
             {sections.length > 0 && !busy && <button type="button" className="is-secondary" onClick={reset}>Buat modul baru</button>}
           </div>
@@ -328,7 +562,7 @@ export default function StudentModulePage() {
 
       {completed && (
         <section className="student-module-output">
-          <p className="student-module-screen-notice">Pratinjau dokumen. Verifikasi isi, TP, asesmen, dan semua sumber sebelum digunakan; draf ini belum tersimpan.</p>
+          <p className="student-module-screen-notice">Pratinjau dokumen. Verifikasi isi, TP, asesmen, dan semua sumber sebelum digunakan; draf belum tersimpan sampai Anda memilih Simpan ke Drive.</p>
           <StudentModuleDocument input={form} sections={sections} />
         </section>
       )}
