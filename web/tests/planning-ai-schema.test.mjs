@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { parsePlanningOutput } from '../src/services/planningAiSchema.js';
-import { kontrakKodeAtp, promptAtp, promptKktp } from '../src/services/planningAiPrompts.js';
+import { kontrakKodeAtp, promptAtp, promptKktp, promptModul } from '../src/services/planningAiPrompts.js';
 import { PRASYARAT, JENIS } from '../src/pages/perencanaan/constants.js';
 import { sumberBelajarModul } from '../src/pages/perencanaan/engine/prota.js';
 
@@ -251,6 +251,36 @@ test('KKTP prompt includes required per-TP and general-rubric sections', () => {
   assert.match(prompt, /E\.1/);
 });
 
+test('Modul Ajar prompt uses canonical CP, Prota allocation, and Prosem schedule', () => {
+  const prompt = promptModul({
+    mapel: 'Matematika',
+    kelas: 'X-A',
+    fase: 'E',
+    tahunAjaran: '2026/2027',
+    cp: [{ elemen: 'Bilangan', cp: 'Memahami bilangan.' }],
+    unit: {
+      no: 1,
+      nama: 'Bilangan',
+      semester: 1,
+      tp: [{ kode: 'E.1', rumusan: 'Mengenali bilangan.', materi: 'Bilangan' }],
+    },
+    alokasi: { semester: 1, jpTP: 10, uh: 2, totalJP: 12, jpPerPekan: 5 },
+    jadwal: [{
+      semester: 1,
+      pekan: 4,
+      mulai: '2026-08-03',
+      selesai: '2026-08-09',
+      penanda: null,
+      segmen: [{ jenis: 'tp', kode: 'E.1', jp: 5 }],
+    }],
+  });
+  assert.match(prompt, /"cp":"Memahami bilangan\."/);
+  assert.match(prompt, /"totalJP":12/);
+  assert.match(prompt, /"pekan":4/);
+  assert.match(prompt, /DATA jadwal menyatakan JP, bukan durasi menit/);
+  assert.match(prompt, /rubrik, dan lampiran belum tersedia/);
+});
+
 test('rejects Modul Ajar that references a foreign TP code', () => {
   const result = {
     tujuanKode: ['X.1'],
@@ -384,7 +414,7 @@ test('includes canonical Prota allocation and Prosem schedule for the module', (
   const source = atp();
   const prota = {
     program: {
-      1: { modul: [{ no: 1, jp: 10, jpTP: 8, uh: 2 }] },
+      1: { modul: [{ no: 1, jpTP: 8, uh: 2 }] },
       2: { modul: [{ no: 2, jp: 12, jpTP: 10, uh: 2 }] },
     },
   };

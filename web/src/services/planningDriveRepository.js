@@ -428,8 +428,125 @@ export async function bacaInputAi({ uid, paketId, jenis, noUnit }) {
 
   const unit = tpByUnit.find((item) => item.no === Number(noUnit));
   if (!unit || !unit.tp.length) throw new Error('Unit ATP yang dipilih tidak memiliki tujuan pembelajaran.');
-  return { ...input, unit, kodeTp: unit.tp.map((tp) =>
-    String(tp.kode).toUpperCase().replace(/[^A-Z0-9]/g, '')) };
+  const atpDocument = bundle.documents[JENIS.ATP];
+  const protaDocument = bundle.documents[JENIS.PROTA];
+  const prosemDocument = bundle.documents[JENIS.PROSEM];
+  const rpeDocument = bundle.documents[JENIS.RPE];
+  const cpDocument = bundle.documents[JENIS.CP];
+  if (!rpeDocument || !cpDocument ||
+      atpDocument.sumberRev?.[JENIS.RPE] !== rpeDocument.rev ||
+      atpDocument.sumberRev?.[JENIS.CP] !== cpDocument.rev) {
+    throw new Error('Simpan ATP terbaru dari RPE dan CP aktif sebelum membuat Modul Ajar.');
+  }
+  if (!protaDocument || protaDocument.sumberRev?.[JENIS.ATP] !== atpDocument.rev) {
+    throw new Error('Simpan Prota terbaru dari ATP aktif sebelum membuat Modul Ajar.');
+  }
+  if (!prosemDocument ||
+      prosemDocument.sumberRev?.[JENIS.PROTA] !== protaDocument.rev ||
+      prosemDocument.sumberRev?.[JENIS.RPE] !== rpeDocument?.rev) {
+    throw new Error('Simpan Prosem terbaru dari RPE dan Prota aktif sebelum membuat Modul Ajar.');
+  }
+
+  const alokasiProta = protaDocument.payload?.program?.[unit.semester]?.modul?.find((item) =>
+    item.no === unit.no);
+  if (!alokasiProta || !Number.isInteger(alokasiProta.jpTP) || alokasiProta.jpTP < 1 ||
+      !Number.isInteger(alokasiProta.uh) || alokasiProta.uh < 0 ||
+      !Array.isArray(alokasiProta.baris) || alokasiProta.baris.length !== unit.tp.length ||
+      alokasiProta.baris.some((item, index) =>
+        !plainObject(item) || typeof item.kode !== 'string' ||
+        item.kode.toUpperCase().replace(/[^A-Z0-9]/g, '') !==
+          unit.tp[index].kode.toUpperCase().replace(/[^A-Z0-9]/g, '') ||
+        !Number.isInteger(item.jp) || item.jp < 1) ||
+      alokasiProta.baris.reduce((total, item) => total + item.jp, 0) !== alokasiProta.jpTP) {
+    throw new Error('Alokasi TP unit pada Prota tidak sesuai dengan ATP aktif.');
+  }
+  const jpPerPekan = rpeDocument?.payload?.jpPerPekan;
+  if (!Number.isInteger(jpPerPekan) || jpPerPekan < 1) {
+    throw new Error('RPE aktif tidak memiliki alokasi JP per pekan yang valid.');
+  }
+
+  const jadwal = [];
+  const alokasiTp = new Map(alokasiProta.baris.map(({ kode, jp }) => [
+    kode.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+    jp,
+  ]));
+  const jadwalTp = new Map();
+  let jpUhTerjadwal = 0;
+  for (const semester of [1, 2]) {
+    const semesterProsem = prosemDocument.payload?.[semester === 1 ? 'ganjil' : 'genap'];
+    if (!plainObject(semesterProsem) || !Array.isArray(semesterProsem.bulan)) {
+      throw new Error('Struktur Prosem tidak valid untuk Modul Ajar.');
+    }
+    for (const bulan of semesterProsem.bulan) {
+      if (!plainObject(bulan) || !Array.isArray(bulan.pekan)) {
+        throw new Error('Struktur bulan pada Prosem tidak valid untuk Modul Ajar.');
+      }
+      for (const pekan of bulan.pekan) {
+        if (!plainObject(pekan) || !Array.isArray(pekan.segmen)) {
+          throw new Error('Struktur pekan pada Prosem tidak valid untuk Modul Ajar.');
+        }
+        const segmen = pekan.segmen.filter((item) => item?.modulNo === unit.no);
+        if (!segmen.length) continue;
+        if (!Number.isInteger(pekan.noSemester) || typeof pekan.mulai !== 'string' ||
+            typeof pekan.selesai !== 'string' ||
+            segmen.some((item) => {
+              if (!['tp', 'uh'].includes(item.jenis) ||
+                  !Number.isInteger(item.jp) || item.jp < 1) return true;
+              if (item.jenis === 'uh') {
+                jpUhTerjadwal += item.jp;
+                return false;
+              }
+              if (typeof item.kode !== 'string') return true;
+              const kode = item.kode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+              if (!alokasiTp.has(kode)) return true;
+              jadwalTp.set(kode, (jadwalTp.get(kode) ?? 0) + item.jp);
+              return false;
+            })) {
+          throw new Error('Jadwal Prosem unit tidak valid untuk Modul Ajar.');
+        }
+        jadwal.push({
+          semester,
+          pekan: pekan.noSemester,
+          mulai: pekan.mulai,
+          selesai: pekan.selesai,
+          penanda: pekan.penanda ?? null,
+          segmen: segmen.map(({ jenis: kategori, kode, jp }) => ({
+            jenis: kategori,
+            ...(kode ? { kode } : {}),
+            jp,
+          })),
+        });
+      }
+    }
+  }
+  const jpTerjadwal = jadwal.flatMap((pekan) => pekan.segmen)
+    .reduce((total, item) => total + item.jp, 0);
+  const jpAlokasi = alokasiProta.jpTP + alokasiProta.uh;
+  const jpTpSesuai = [...alokasiTp].every(([kode, jp]) => jadwalTp.get(kode) === jp) &&
+    jadwalTp.size === alokasiTp.size;
+  if (!jadwal.length || jpTerjadwal !== jpAlokasi ||
+      !jpTpSesuai || jpUhTerjadwal !== alokasiProta.uh) {
+    throw new Error('Alokasi JP TP/UH pada Prosem unit tidak sesuai dengan Prota.');
+  }
+
+  const elemenUnit = atp.unit.find((source) => source.no === unit.no)?.elemen;
+  const cp = (atp.cp ?? []).filter((item) => item.elemen === elemenUnit);
+  if (!cp.length) throw new Error('CP kanonis unit tidak ditemukan pada ATP.');
+  return {
+    ...input,
+    unit,
+    cp,
+    alokasi: {
+      semester: unit.semester,
+      jpTP: alokasiProta.jpTP,
+      uh: alokasiProta.uh,
+      totalJP: jpAlokasi,
+      jpPerPekan,
+      tp: alokasiProta.baris.map(({ kode, jp }) => ({ kode, jp })),
+    },
+    jadwal,
+    kodeTp: unit.tp.map((tp) => String(tp.kode).toUpperCase().replace(/[^A-Z0-9]/g, '')),
+  };
 }
 
 export async function buatPaket({ uid, tenantId, konteks, jumlahPaketSaatIni = 0 }) {

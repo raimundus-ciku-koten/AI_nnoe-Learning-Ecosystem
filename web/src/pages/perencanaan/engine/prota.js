@@ -104,7 +104,7 @@ export function sumberBelajarModul(atp, unit, prota, prosem) {
     tp: (unit?.tp ?? []).map(({ kode, rumusan, materi }) => ({ kode, rumusan, materi })),
     alokasi: alokasi ? {
       semester: unit.semester,
-      jp: alokasi.jp,
+      jp: alokasi.jp ?? (alokasi.jpTP + alokasi.uh),
       jpTP: alokasi.jpTP,
       uh: alokasi.uh
     } : null,

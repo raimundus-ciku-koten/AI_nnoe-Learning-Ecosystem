@@ -1,7 +1,7 @@
 import { routeAiRequest } from './aiProviders.js';
 import { bacaInputAi } from './planningDriveRepository.js';
 import { parsePlanningOutput } from './planningAiSchema.js';
-import { kontrakKodeAtp, promptAtp, promptKktp } from './planningAiPrompts.js';
+import { kontrakKodeAtp, promptAtp, promptKktp, promptModul } from './planningAiPrompts.js';
 
 export const EXTERNAL_AI_PROVIDERS_ENABLED = false;
 
@@ -404,6 +404,8 @@ export async function generateBrowserPlanning({ uid, paketId, jenis, noUnit, sin
         ...context,
         tps: context.unit.flatMap((unit) => unit.tp.map((tp) => ({ ...tp, unit: unit.nama }))),
       })
+    : jenis === 'modul'
+      ? promptModul(context)
     : [
       `Susun draf ${jenis} untuk perencanaan pembelajaran.`,
       'Ikuti struktur JSON yang diwajibkan dan jangan menambah properti.',

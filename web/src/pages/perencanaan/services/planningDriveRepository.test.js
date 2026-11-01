@@ -201,7 +201,7 @@ describe('encrypted planning package repository', () => {
     stop();
   });
 
-  it('loads only the minimum validated package context for the external AI generator', async () => {
+  it('loads validated ATP, Prota, and Prosem context for Modul Ajar generation', async () => {
     const rpe = {
       rev: 1,
       jenis: 'rpe',
@@ -213,17 +213,70 @@ describe('encrypted planning package repository', () => {
       rev: 2,
       jenis: 'atp',
       sumber: 'ai',
-      sumberRev: { rpe: 1 },
+      sumberRev: { rpe: 1, cp: 3 },
       payload: {
+        cp: [{ elemen: 'Bilangan', cp: 'Memahami bilangan.' }],
         unit: [{
           no: 1,
           nama: 'Bilangan',
+          elemen: 'Bilangan',
           semester: 1,
           tp: [{ kode: 'E.1', rumusan: 'Mengenali bilangan.', materi: 'Bilangan' }],
         }],
       },
     };
-    mockPackage({ ...BUNDLE, documents: { rpe, atp } });
+    const cp = {
+      rev: 3,
+      jenis: 'cp',
+      sumber: 'manual',
+      sumberRev: {},
+      payload: {
+        mapel: 'Matematika',
+        fase: 'E',
+        cp: [{ elemen: 'Bilangan', cp: 'Memahami bilangan.' }],
+        source: {
+          fileName: 'Matematika.pdf',
+          fileId: 'source-file-id',
+          importedAt: '2026-10-18T00:00:00.000Z',
+        },
+      },
+    };
+    const prota = {
+      rev: 3,
+      jenis: 'prota',
+      sumber: 'mesin',
+      sumberRev: { atp: 2 },
+      payload: {
+        program: {
+          1: {
+            modul: [{
+              no: 1,
+              jpTP: 10,
+              uh: 2,
+              baris: [{ kode: 'E.1', jp: 10 }],
+            }],
+          },
+        },
+      },
+    };
+    const pekan = (noSemester, jenis, jp) => ({
+      noSemester,
+      mulai: `2026-07-${String(noSemester).padStart(2, '0')}`,
+      selesai: `2026-07-${String(noSemester + 6).padStart(2, '0')}`,
+      penanda: null,
+      segmen: [{ jenis, ...(jenis === 'tp' ? { kode: 'E.1' } : {}), modulNo: 1, jp }],
+    });
+    const prosem = {
+      rev: 4,
+      jenis: 'prosem',
+      sumber: 'mesin',
+      sumberRev: { prota: 3, rpe: 1 },
+      payload: {
+        ganjil: { bulan: [{ pekan: [pekan(1, 'tp', 5), pekan(2, 'tp', 5), pekan(3, 'uh', 2)] }] },
+        genap: { bulan: [] },
+      },
+    };
+    mockPackage({ ...BUNDLE, documents: { rpe, cp, atp, prota, prosem } });
 
     await expect(bacaInputAi({
       uid: OWNER,
@@ -235,14 +288,123 @@ describe('encrypted planning package repository', () => {
       kelas: 'X-A',
       fase: 'E',
       tahunAjaran: '2026/2027',
+      cp: [{ elemen: 'Bilangan', cp: 'Memahami bilangan.' }],
       unit: {
         no: 1,
         nama: 'Bilangan',
         semester: 1,
         tp: [{ kode: 'E.1', rumusan: 'Mengenali bilangan.', materi: 'Bilangan' }],
       },
+      alokasi: {
+        semester: 1,
+        jpTP: 10,
+        uh: 2,
+        totalJP: 12,
+        jpPerPekan: 5,
+        tp: [{ kode: 'E.1', jp: 10 }],
+      },
+      jadwal: [
+        {
+          semester: 1,
+          pekan: 1,
+          mulai: '2026-07-01',
+          selesai: '2026-07-07',
+          penanda: null,
+          segmen: [{ jenis: 'tp', kode: 'E.1', jp: 5 }],
+        },
+        {
+          semester: 1,
+          pekan: 2,
+          mulai: '2026-07-02',
+          selesai: '2026-07-08',
+          penanda: null,
+          segmen: [{ jenis: 'tp', kode: 'E.1', jp: 5 }],
+        },
+        {
+          semester: 1,
+          pekan: 3,
+          mulai: '2026-07-03',
+          selesai: '2026-07-09',
+          penanda: null,
+          segmen: [{ jenis: 'uh', jp: 2 }],
+        },
+      ],
       kodeTp: ['E1'],
     });
+
+    const prosemTidakSesuai = {
+      ...prosem,
+      payload: {
+        ...prosem.payload,
+        ganjil: {
+          bulan: [{
+            pekan: [
+              pekan(1, 'tp', 4),
+              pekan(2, 'tp', 4),
+              pekan(3, 'uh', 4),
+            ],
+          }],
+        },
+      },
+    };
+    mockPackage({ ...BUNDLE, documents: { rpe, cp, atp, prota, prosem: prosemTidakSesuai } });
+    await expect(bacaInputAi({
+      uid: OWNER,
+      paketId: BUNDLE.id,
+      jenis: 'modul',
+      noUnit: 1,
+    })).rejects.toThrow(/Alokasi JP TP\/UH pada Prosem unit tidak sesuai/);
+  });
+
+  it('rejects Modul Ajar generation when Prosem no longer matches the active Prota', async () => {
+    const document = (jenis, rev, sumberRev, payload) => ({
+      ownerUid: OWNER,
+      tenantId: TENANT,
+      paketId: BUNDLE.id,
+      jenis,
+      schemaVersion: 1,
+      rev,
+      sumber: 'mesin',
+      sumberRev,
+      payload,
+      createdAt: '2026-10-18T00:00:00.000Z',
+      updatedAt: '2026-10-18T00:00:00.000Z',
+    });
+    const atp = {
+      ...document('atp', 2, { rpe: 1, cp: 3 }, {
+        cp: [{ elemen: 'Bilangan', cp: 'Memahami bilangan.' }],
+        unit: [{
+          no: 1, nama: 'Bilangan', elemen: 'Bilangan', semester: 1,
+          tp: [{ kode: 'E.1', rumusan: 'Mengenali bilangan.', materi: 'Bilangan' }],
+        }],
+      }),
+    };
+    mockPackage({
+      ...BUNDLE,
+      documents: {
+        rpe: document('rpe', 1, { paket: 1 }, { jpPerPekan: 5 }),
+        cp: document('cp', 3, {}, {
+          mapel: 'Matematika',
+          fase: 'E',
+          cp: [{ elemen: 'Bilangan', cp: 'Memahami bilangan.' }],
+          source: {
+            fileName: 'Matematika.pdf',
+            fileId: 'source-file-id',
+            importedAt: '2026-10-18T00:00:00.000Z',
+          },
+        }),
+        atp,
+        prota: document('prota', 3, { atp: 2 }, { program: { 1: { modul: [] } } }),
+        prosem: document('prosem', 4, { prota: 2, rpe: 1 }, {}),
+      },
+    });
+
+    await expect(bacaInputAi({
+      uid: OWNER,
+      paketId: BUNDLE.id,
+      jenis: 'modul',
+      noUnit: 1,
+    })).rejects.toThrow(/Simpan Prosem terbaru/);
   });
 
   it('requires an imported CP source and supplies it as canonical ATP input', async () => {

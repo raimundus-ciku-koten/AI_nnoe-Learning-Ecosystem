@@ -98,8 +98,7 @@ ATURAN:
 ${dataBlock({ mapel: safe(mapel, 120), kelas: safe(kelas, 20), fase: safe(fase, 2), tps: tps.map((item) => ({ unit: safe(item.unit, 120), kode: safe(item.kode, 20), rumusan: safe(item.rumusan, 600) })) })}`;
 }
 
-export function promptModul({ mapel, kelas, fase, unit, jpUnit, jpPerPertemuan }) {
-  const pertemuan = Math.max(1, Math.min(8, Math.ceil(jpUnit / Math.max(1, jpPerPertemuan))));
+export function promptModul({ mapel, kelas, fase, tahunAjaran, cp, unit, alokasi, jadwal }) {
   return `${ROLE}
 
 TUGAS: susun Modul Ajar untuk SATU unit pembelajaran pada blok DATA.
@@ -107,15 +106,29 @@ TUGAS: susun Modul Ajar untuk SATU unit pembelajaran pada blok DATA.
 ATURAN:
 - ${COMMON_RULES}
 - Bentuk JSON: {"tujuanKode":[string],"model":string,"pemahamanBermakna":[string],"pertanyaanPemantik":[string],"dimensiProfil":[string],"sarpras":[string],"pertemuan":[{"ke":int,"judul":string,"tujuan":string,"menit":int,"pendahuluan":[string],"inti":[string],"penutup":[string]}],"asesmen":{"diagnostik":string,"formatif":string,"sumatif":string},"remedial":string,"pengayaan":string,"refleksiGuru":[string],"refleksiSiswa":[string]}
-- "tujuanKode": semua kode TP pada unit, PERSIS seperti pada DATA.
-- Tepat ${pertemuan} pertemuan, bernomor 1..${pertemuan}; total durasi sepadan dengan ${jpUnit} JP.
-- Kegiatan konkret, berurutan, dan dapat dilaksanakan di kelas biasa; sertakan aktivitas yang membuat peserta didik berpikir mendalam.
+- "tujuanKode": semua kode TP unit tepat satu kali dan dalam urutan ATP; salin kode dan rumusan TP tanpa perubahan.
+- Jadikan CP, alokasi Prota, dan pekan Prosem dalam DATA sebagai sumber kanonis; jangan mengarang atau menggeser kalender, TP, materi, maupun JP.
+- Rancang setiap pertemuan dengan tujuan dan kegiatan awal, inti, serta penutup yang konkret, berurutan, dan sesuai TP. Nomor pertemuan harus berurutan mulai dari 1.
+- DATA jadwal menyatakan JP, bukan durasi menit. Isi "menit" sebagai rancangan sementara yang wajib dikonfirmasi guru; jangan menyatakan konversi JP-menit sebagai fakta.
+- Isi asesmen diagnostik, formatif, sumatif, remedial, pengayaan, refleksi guru/siswa, dan metadata sesuai DATA. Jangan mengarang identitas, kondisi peserta didik, sarana, tanggal, atau sumber resmi yang tidak tersedia.
+- Gunakan hanya properti pada bentuk JSON. Bagian materi terperinci, soal beserta kunci, rubrik, dan lampiran belum tersedia dalam kontrak ini; jangan menyamarkannya sebagai sudah tercakup.
+- Seluruh isi berbahasa Indonesia baku.
 
 ${dataBlock({
-    mapel: safe(mapel, 120), kelas: safe(kelas, 20), fase: safe(fase, 2), jpUnit, jpPerPertemuan,
+    mapel: safe(mapel, 120),
+    kelas: safe(kelas, 30),
+    fase: safe(fase, 4),
+    tahunAjaran: safe(tahunAjaran, 9),
+    cp: (Array.isArray(cp) ? cp : []).map((item) => ({
+      elemen: safe(item.elemen, 120),
+      cp: safe(item.cp, 3000),
+    })),
+    alokasi,
+    jadwal,
     unit: {
       no: unit.no,
       nama: safe(unit.nama, 120),
+      semester: unit.semester,
       tp: unit.tp.map((item) => ({
         kode: safe(item.kode, 20),
         rumusan: safe(item.rumusan, 600),
