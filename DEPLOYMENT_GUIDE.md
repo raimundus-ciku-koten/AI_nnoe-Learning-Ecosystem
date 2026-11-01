@@ -224,6 +224,12 @@ The Vite-only `web/vercel.json` deployment does not include these functions.
 Use Vercel's local dev runtime when testing BFF routes; plain `vite` serves the
 frontend only.
 
+The root deployment groups the seven `/api/auth/*` endpoints behind
+`api/auth.js`; the rewrite preserves their public paths, query parameters, and
+HTTP methods. This keeps the current set of deployable API functions below the
+Vercel Hobby limit without removing endpoints. The root function-count test
+guards this limit; verify the generated Preview deployment before release.
+
 The Jurnal Mengajar personal activity mirror requires the forward-only
 `20261103000200_journal_audit_outbox.sql` migration and a server-side Google
 Drive OAuth connection for each user. The daily Vercel Cron is configured in

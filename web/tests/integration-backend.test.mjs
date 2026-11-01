@@ -28,6 +28,7 @@ const {
   sessionHandler: authSessionHandler,
   signupHandler: authSignupHandler,
 } = require('../../api/_lib/auth-session.js');
+const { authRouter } = require('../../api/_lib/auth-router.js');
 const aiHandler = require('../../api/ai.js');
 const startGoogleHandler = require('../../api/connections/start.js');
 const googleCallbackHandler = require('../../api/google/callback.js');
@@ -73,6 +74,66 @@ function restoreEnv(values) {
     else process.env[name] = value;
   }
 }
+
+test('router autentikasi mempertahankan seluruh endpoint publik dan menolak rute asing', async () => {
+  const routes = [
+    'login',
+    'session',
+    'signup',
+    'google/callback',
+    'google/start',
+    'recovery/callback',
+    'recovery/verifier',
+  ];
+
+  for (const route of routes) {
+    const res = createResponseRecorder();
+    await authRouter({
+      method: 'OPTIONS',
+      url: `/api/auth?route=${encodeURIComponent(route)}`,
+      query: { route },
+      headers: {},
+    }, res);
+
+    assert.equal(res.statusCode, 405, `Expected ${route} to resolve to an auth handler`);
+  }
+
+  const missing = createResponseRecorder();
+  await authRouter({
+    method: 'GET',
+    url: '/api/auth?route=unknown',
+    query: { route: 'unknown' },
+    headers: {},
+  }, missing);
+  assert.equal(missing.statusCode, 404);
+  assert.equal(JSON.parse(missing.body).code, 'auth_route_not_found');
+});
+
+test('router autentikasi meneruskan query callback tanpa parameter dispatch', async () => {
+  const previousOrigin = process.env.APP_ORIGIN;
+  process.env.APP_ORIGIN = 'https://app.example';
+  const req = {
+    method: 'GET',
+    url: '/api/auth?route=recovery%2Fcallback&code=recovery-code&type=recovery',
+    query: { route: 'recovery/callback', code: 'recovery-code', type: 'recovery' },
+    headers: {},
+  };
+  const res = createResponseRecorder();
+
+  try {
+    await authRouter(req, res);
+  } finally {
+    if (previousOrigin === undefined) delete process.env.APP_ORIGIN;
+    else process.env.APP_ORIGIN = previousOrigin;
+  }
+
+  const callback = new URL(req.url, 'https://app.example');
+  assert.equal(callback.pathname, '/api/auth/recovery/callback');
+  assert.equal(callback.searchParams.get('code'), 'recovery-code');
+  assert.equal(callback.searchParams.get('type'), 'recovery');
+  assert.equal(callback.searchParams.has('route'), false);
+  assert.equal(res.statusCode, 400);
+});
 
 test('API errors use RFC 9457 Problem Details and retain legacy client fields', () => {
   const res = createResponseRecorder();
