@@ -2,8 +2,9 @@
  * @file Halaman detail satu paket perencanaan: tab RPE → CP → ATP → Prota → Prosem → KKTP → Modul.
  *
  * Prinsip:
- *  - Dokumen mesin dihitung di peramban; dokumen AI memerlukan provider eksternal.
- *    Dokumen turunan otomatis ditandai "usang" bila induknya berubah (rev).
+ *  - Dokumen mesin dihitung di peramban; draf AI ATP memakai provider lokal dan tidak
+ *    disimpan sebelum guru meninjau serta menyetujuinya.
+ *  - Dokumen turunan otomatis ditandai "usang" bila induknya berubah (rev).
  *  - Tidak ada innerHTML. Semua isi paket dienkripsi sebelum ditulis ke Google Drive.
  *  - Tab mengikuti pola WAI-ARIA (panah kiri/kanan, Home/End).
  */
@@ -12,7 +13,7 @@ import { h, kosongkan, toast, konfirmasi } from './dom.js';
 import { t } from '../i18n/index.js';
 import { JENIS, URUTAN_DOKUMEN, PRASYARAT, STATUS, SUMBER, DOKUMEN_AI } from '../constants.js';
 import { hitungRpe } from '../engine/rpe.js';
-import { hitungProta, hitungAnggaran, jumlahJpTp, normKode } from '../engine/prota.js';
+import { hitungProta, hitungAnggaran, hitungAnggaranAtp, jumlahJpTp, normKode } from '../engine/prota.js';
 import { hitungProsem } from '../engine/prosem.js';
 import { validasiAtp } from '../engine/validator.js';
 import { parsePlanningOutput } from '../../../services/planningAiSchema.js';
@@ -20,6 +21,7 @@ import {
   berikanAksesPaket, cabutAksesPaket, dengarPaket, dengarDokumen, dengarModul,
   simpanDokumen, simpanModul, perbaruiPaket
 } from '../services/repository.js';
+import { buatDenganAi } from '../services/ai.js';
 import { daftarAdminKunciTenant } from '../../../services/encryptionKeyDirectory.js';
 import { getState } from '../../../state.js';
 import { renderRpe } from './render/rpe.js';
@@ -74,6 +76,8 @@ export function halamanDetail(wadah, {
   let editor = null;       // { el, ambil } untuk ATP, KKTP, atau Modul Ajar
   let editorJenis = null;
   let editorKotor = false;
+  let editorSumberAtp = SUMBER.MANUAL;
+  let editorAiFallback = false;
   let dimuat = { paket: false, dokumen: false, modul: false };
   let adminTenant = null;
   const pemilikPaket = getState().user?.uid === uid;
@@ -189,7 +193,12 @@ export function halamanDetail(wadah, {
     [JENIS.PROTA]: () => tandaiSibuk(JENIS.PROTA, async () => {
       if (!(await konfirmasiTimpa(JENIS.PROTA))) return;
       const rpe = dokumen[JENIS.RPE].payload;
-      const hasil = hitungProta({ atp: dokumen[JENIS.ATP].payload, totalJP: rpe.totalJP, jpPerPekan: rpe.jpPerPekan, jumlahHari: rpe.hari.length });
+      const hasil = hitungProta({
+        atp: dokumen[JENIS.ATP].payload,
+        totalJP: rpe.totalJP,
+        jpPerPekan: rpe.jpPerPekan,
+        jumlahHari: rpe.hari.length,
+      });
       if (!hasil.ok) throw Object.assign(new Error(hasil.alasan), { kode: hasil.alasan });
       await simpan(JENIS.PROTA, hasil, SUMBER.MESIN);
       toast(t('umum.berhasilHitung'), 'sukses');
@@ -212,7 +221,7 @@ export function halamanDetail(wadah, {
       return;
     }
     const rpe = dokumen[JENIS.RPE].payload;
-    const ang = hitungAnggaran(draft.unit.filter((u) => u.tp.length).length, rpe.totalJP, rpe.jpPerPekan, rpe.hari.length);
+    const ang = hitungAnggaranAtp(draft.unit.filter((u) => u.tp.length).length, rpe.totalJP, rpe.jpPerPekan);
     if (!ang.ok) { toast(t(`galat.${ang.alasan}`), 'galat'); return; }
     if (jumlahJpTp(draft) !== ang.sisaTP) {
       toast(t('atpEditor.jpBelumSelaras'), 'galat');
@@ -222,10 +231,17 @@ export function halamanDetail(wadah, {
       const lama = dokumen[JENIS.ATP];
       await simpanDokumen({
         uid, tenantId, paketId, jenis: JENIS.ATP,
-        payload: { ...draft, anggaran: { jpPertemuan: ang.jpPertemuan, uhTotal: ang.uhTotal, sisaTP: ang.sisaTP }, totalJP: rpe.totalJP },
-        sumber: SUMBER.MANUAL, sumberRev: depRev(JENIS.ATP), revDasar: lama?.rev ?? 0
+        payload: {
+          ...draft,
+          anggaran: { jpPertemuan: ang.jpPertemuan, uhTotal: ang.uhTotal, sisaTP: ang.sisaTP },
+          jpPerPekan: rpe.jpPerPekan,
+          totalJP: rpe.totalJP,
+        },
+        sumber: editorSumberAtp, sumberRev: depRev(JENIS.ATP), revDasar: lama?.rev ?? 0
       });
       editor = null; editorJenis = null; editorKotor = false;
+      editorSumberAtp = SUMBER.MANUAL;
+      editorAiFallback = false;
       toast(t('atpEditor.tersimpan'), 'sukses');
     });
   }
@@ -260,6 +276,8 @@ export function halamanDetail(wadah, {
     editor = null;
     editorJenis = null;
     editorKotor = false;
+    editorSumberAtp = SUMBER.MANUAL;
+    editorAiFallback = false;
     gambar();
   }
 
@@ -440,16 +458,48 @@ export function halamanDetail(wadah, {
       dok ? isiDokumen : (kurang.length ? null : kosong ?? h('p', { class: 'kosong' }, t('detail.belumAda'))));
   }
 
-  function mulaiEditorAtp() {
+  function mulaiEditorAtp(
+    atpAwal = dokumen[JENIS.ATP]?.payload ?? { unit: [] },
+    sumber = SUMBER.MANUAL,
+  ) {
     const rpe = dokumen[JENIS.RPE].payload;
     const cp = dokumen[JENIS.CP].payload.cp;
     editorKotor = false;
+    editorSumberAtp = sumber;
+    editorAiFallback = false;
     editor = buatAtpEditor({
-      atp: { ...(dokumen[JENIS.ATP]?.payload ?? { unit: [] }), cp },
-      totalJP: rpe.totalJP, jpPerPekan: rpe.jpPerPekan, jumlahHari: rpe.hari.length,
-      onChange: () => { editorKotor = true; perbaruiTombolSimpan(); }
+      atp: { ...atpAwal, cp },
+      totalJP: rpe.totalJP, jpPerPekan: rpe.jpPerPekan,
+      onChange: () => {
+        editorKotor = true;
+        if (editorSumberAtp === SUMBER.AI) editorSumberAtp = SUMBER.MANUAL;
+        perbaruiTombolSimpan();
+      }
     });
     editorJenis = JENIS.ATP;
+  }
+
+  async function buatAtpAi() {
+    if (dokumen[JENIS.ATP] && !(await konfirmasi(
+      t('atpEditor.konfirmasiAi'),
+      { ya: t('umum.timpa'), bahaya: true },
+    ))) return;
+    await tandaiSibuk('atp-ai', async () => {
+      try {
+        const hasil = await buatDenganAi({ paketId, jenis: JENIS.ATP });
+        mulaiEditorAtp(hasil.payload, SUMBER.AI);
+        toast(t('atpEditor.aiSukses'), 'sukses');
+      } catch (error) {
+        console.error('[perencanaan] ATP AI gagal; beralih ke editor manual.', {
+          kode: error?.kode,
+          nama: error?.name,
+        });
+        mulaiEditorAtp();
+        editorAiFallback = true;
+        toast(t('atpEditor.aiGagalManual'), 'galat');
+      }
+      gambar();
+    });
   }
 
   let tombolSimpanAtp = null;
@@ -465,16 +515,23 @@ export function halamanDetail(wadah, {
         onClick: simpanAtpManual,
       }, t('atpEditor.simpanSemua'));
       return h('div', null,
+        editorAiFallback
+          ? h('p', { class: 'kotak kotak-info', role: 'status' }, t('atpEditor.aiGagalManual'))
+          : null,
         h('div', { class: 'bilah-aksi no-print' }, tombolSimpanAtp,
           h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: async () => {
             if (editorKotor && !(await konfirmasi(t('atpEditor.buangPerubahan'), { bahaya: true }))) return;
-            editor = null; editorJenis = null; editorKotor = false; gambar();
+            editor = null; editorJenis = null; editorKotor = false;
+            editorSumberAtp = SUMBER.MANUAL; editorAiFallback = false; gambar();
           } }, t('atpEditor.selesai'))),
         editor.el);
     }
     const kurang = prasyaratKurang(JENIS.ATP);
     return h('div', null,
       !canGenerateDocuments ? h('p', { class: 'kotak kotak-info no-print', role: 'note' }, t('detail.dokumenKhususGuru')) : null,
+      sibuk.has('atp-ai')
+        ? h('p', { class: 'kotak kotak-info no-print', role: 'status', 'aria-live': 'polite' }, t('atpEditor.aiMemproses'))
+        : null,
       h('div', { class: 'bilah-aksi no-print' },
         canGenerateDocuments ? h('button', {
           type: 'button',
@@ -482,6 +539,14 @@ export function halamanDetail(wadah, {
           disabled: kurang.length > 0 || sibuk.size > 0,
           onClick: aksi[JENIS.ATP],
         }, dok ? t('atpEditor.mulai') : t('atpEditor.susun')) : null,
+        canGenerateDocuments ? h('button', {
+          type: 'button',
+          class: 'tombol tombol-sekunder',
+          disabled: kurang.length > 0 || sibuk.size > 0,
+          onClick: buatAtpAi,
+        }, sibuk.has('atp-ai')
+          ? t('atpEditor.aiMemproses')
+          : dok ? t('atpEditor.aiUlangi') : t('atpEditor.aiSusun')) : null,
         dok ? h('button', { type: 'button', class: 'tombol tombol-sekunder', onClick: cetak }, t('umum.cetak')) : null,
         dok ? h('span', { class: 'meta' }, t('detail.sumber', { sumber: t(`sumber.${dok.sumber}`) })) : null),
       kurang.length ? peringatan(t('detail.prasyarat', { daftar: kurang.map((k) => t(`dok.${k}`)).join(', ') })) : null,
@@ -624,6 +689,7 @@ export function halamanDetail(wadah, {
     if (j === tab) return;
     if (editor && editorKotor && !(await konfirmasi(t('atpEditor.buangPerubahan'), { bahaya: true }))) return;
     editor = null; editorJenis = null; editorKotor = false;
+    editorSumberAtp = SUMBER.MANUAL; editorAiFallback = false;
     tab = j;
     const unit = j === JENIS.MODUL ? `?unit=${unitModulAktif}` : '';
     history.replaceState(null, '', urlPaket(j, unit));
@@ -674,6 +740,8 @@ export function halamanDetail(wadah, {
     if (editor && !editorKotor) {
       editor = null;
       editorJenis = null;
+      editorSumberAtp = SUMBER.MANUAL;
+      editorAiFallback = false;
     }
     gambar();
   }

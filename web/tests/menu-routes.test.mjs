@@ -2,10 +2,13 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { menuUntuk } from '../src/menu.js';
-import { cariMenu } from '../src/navigasi.js';
-import { isChatFeaturePath } from '../src/services/featureFlags.js';
+import { cariMenu, menuUntukPeran } from '../src/navigasi.js';
+import {
+  CHAT_FEATURE_ENABLED,
+  isChatFeaturePath,
+} from '../src/services/featureFlags.js';
 
-const appSource = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
+const appSource = readFileSync(new URL('../src/app/RouteWrapper.jsx', import.meta.url), 'utf8');
 const explicitRoutes = [...appSource.matchAll(/<Route\s+path="([^"]+)"/g)]
   .map((match) => match[1]);
 
@@ -90,6 +93,40 @@ describe('rute menu guru, staf pengajar, dan superadmin', () => {
       assert.match(chat[0].availabilityMessage, /kebijakan akses sekolah belum terverifikasi/);
       assert.ok(items.every((item) =>
         !item.href || !isChatFeaturePath(item.href.slice(1).split('?')[0])));
+    }
+  });
+
+  it('shows at most one unavailable chat entry in each role menu group while chat is gated', () => {
+    if (CHAT_FEATURE_ENABLED) return;
+
+    for (const role of [
+      'guru', 'operator', 'siswa', 'ortu', 'admin_sekolah', 'superadmin',
+    ]) {
+      for (const group of menuUntukPeran(role)) {
+        const chatItems = group.item
+          .filter((item) => item.label === 'Chat' || isChatFeaturePath(item.path));
+
+        assert.ok(chatItems.length <= 1, `${role}/${group.label}: Chat tidak boleh berulang`);
+        assert.ok(chatItems.every((item) => item.disabled && !item.path));
+      }
+    }
+  });
+
+  it('gives every active sidebar item an explicit application route', () => {
+    for (const role of [
+      'guru', 'guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler',
+      'operator', 'admin_sekolah', 'superadmin', 'siswa', 'ortu',
+      'demo', 'kepala_sekolah', 'wali_kelas',
+    ]) {
+      for (const item of menuUntukPeran(role).flatMap((group) => group.item)) {
+        if (item.disabled) continue;
+
+        assert.ok(item.path, `${role}: ${item.label} tidak memiliki path`);
+        assert.ok(
+          explicitRoutes.some((route) => cocokRuteEksplisit(route, item.path)),
+          `${role}: ${item.label} tidak memiliki rute eksplisit (${item.path})`,
+        );
+      }
     }
   });
 });

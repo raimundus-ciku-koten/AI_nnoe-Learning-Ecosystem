@@ -81,7 +81,6 @@ describe('submenu platform superadmin', () => {
 
     it('menandai submenu guru tanpa alur kerja sebagai belum tersedia', () => {
       const targetPaths = [
-        '/pelaksanaan/jurnal',
         '/asesmen/remedial',
         '/pemantauan/catatan',
         '/refleksi/pembelajaran',
@@ -102,8 +101,8 @@ describe('submenu platform superadmin', () => {
 
     it('tidak membuka ruang kerja generik untuk menu yang belum tersedia', () => {
       auth.user = null;
-      const html = renderSubmenu('/pelaksanaan/jurnal');
-      expect(html).toContain('Jurnal Mengajar Harian belum tersedia');
+      const html = renderSubmenu('/pelaksanaan/realisasi');
+      expect(html).toContain('Realisasi terhadap Rencana belum tersedia');
       expect(html).not.toContain('Buat catatan kerja');
       auth.user = { uid: 'guru-test' };
     });
@@ -119,20 +118,20 @@ describe('submenu platform superadmin', () => {
     it('mengikuti peran aktif saat akun berpindah dari peran utama admin ke guru', () => {
       auth.role = 'admin_sekolah';
       auth.activeRole = 'guru';
-      const html = renderSubmenu('/pelaksanaan/jurnal');
+      const html = renderSubmenu('/pelaksanaan/realisasi');
 
-      expect(html).toContain('Jurnal Mengajar Harian belum tersedia');
+      expect(html).toContain('Realisasi terhadap Rencana belum tersedia');
       expect(html).not.toContain('Halaman tidak ditemukan');
     });
 
     it.each(['guru_bk', 'guru_kokurikuler', 'guru_ekstrakurikuler'])(
-      'menyediakan ruang kerja untuk peran aktif %s',
+      'menangani menu belum tersedia untuk peran aktif %s',
       (role) => {
         auth.role = 'guru';
         auth.activeRole = role;
-        const html = renderSubmenu('/pelaksanaan/jurnal');
+        const html = renderSubmenu('/pelaksanaan/realisasi');
 
-        expect(html).toContain('Jurnal Mengajar Harian belum tersedia');
+        expect(html).toContain('Realisasi terhadap Rencana belum tersedia');
         expect(html).not.toContain('Halaman tidak ditemukan');
       },
     );

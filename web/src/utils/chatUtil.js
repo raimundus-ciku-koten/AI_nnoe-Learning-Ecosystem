@@ -1,25 +1,23 @@
 // web/src/utils/chatUtil.js
 import { isEconomyMode } from '../services/economyMode.js';
+import {
+  MAKS_BERKAS,
+  TIPE_DOKUMEN,
+  TIPE_GAMBAR,
+} from '../domain/chatAttachments.js';
+
+export { MAKS_BERKAS, TIPE_DOKUMEN, TIPE_GAMBAR } from '../domain/chatAttachments.js';
 /**
  * Fungsi murni untuk chat (tanpa DOM atau backend) agar mudah diuji dengan `node --test`.
  * Batas di sini harus sama dengan validasi layanan dan skema chat.
  */
 
 export const MAKS_TEKS = 2000;               // database.rules.json: text <= 2000
-export const MAKS_BERKAS = 2 * 1024 * 1024;
 export const MAKS_ANGGOTA_GRUP = 50;         // Client-side group creation limit.
 export const MAKS_JUDUL = 80;
 export const MASA_AKTIF_PRESENCE = 90_000;
 
 /** SVG sengaja tidak diizinkan (vektor XSS). */
-export const TIPE_GAMBAR = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-export const TIPE_DOKUMEN = [
-  'application/pdf', 'text/plain', 'application/msword',
-  'application/vnd.ms-excel', 'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-];
 export const ATRIBUT_ACCEPT =
   'image/jpeg,image/png,image/webp,image/gif,.pdf,.txt,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
 

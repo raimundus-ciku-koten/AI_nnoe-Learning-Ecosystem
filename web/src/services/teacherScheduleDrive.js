@@ -3,7 +3,7 @@ import {
   daftarJadwalTerenkripsiDrive,
   unggahBerkasTerenkripsiDrive,
 } from './googleWorkspace.js';
-import { terapkanOperasi } from '../pages/dataDasar/jadwalUtil.js';
+import { terapkanOperasi } from '../domain/jadwal.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ROLES = new Set(['admin_sekolah', 'operator', 'guru', 'demo']);

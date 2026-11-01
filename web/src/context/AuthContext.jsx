@@ -2,7 +2,14 @@
 import React, {
   createContext, useContext, useEffect, useMemo, useState,
 } from 'react';
-import { getSnapshot, getState, setState, subscribe } from '../state.js';
+import {
+  getSnapshot,
+  getState,
+  pilihStateAuth,
+  setState,
+  shallowEqual,
+  subscribeSelector,
+} from '../state.js';
 import {
   pantaulogin, login, logout, masukGoogle, resetPassword, updateProfil, switchRole,
 } from '../auth.js';
@@ -16,12 +23,16 @@ export function AuthProvider({ children }) {
   const [state, setAuthSnapshot] = useState(getSnapshot);
 
   useEffect(() => {
-    const unsubscribeState = subscribe(() => setAuthSnapshot(getSnapshot()));
+    const unsubscribeState = subscribeSelector(
+      pilihStateAuth,
+      setAuthSnapshot,
+      shallowEqual,
+    );
     const berhenti = pantaulogin(() => setState({ authReady: true }));
     const timer = setTimeout(() => {
       if (!getState().authReady) setState({ authReady: true });
     }, BATAS_AUTH_SIAP_MS);
-    setAuthSnapshot(getSnapshot());
+    setAuthSnapshot(pilihStateAuth(getSnapshot()));
     return () => {
       clearTimeout(timer);
       berhenti();

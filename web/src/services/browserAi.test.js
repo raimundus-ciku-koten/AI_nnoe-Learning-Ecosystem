@@ -6,7 +6,7 @@ const { routeAiRequest, bacaInputAi } = vi.hoisted(() => ({
 }));
 
 vi.mock('./aiProviders.js', () => ({ routeAiRequest }));
-vi.mock('../pages/perencanaan/services/planningDriveRepository.js', () => ({ bacaInputAi }));
+vi.mock('./planningDriveRepository.js', () => ({ bacaInputAi }));
 
 import {
   askBrowserAssistant,
@@ -20,6 +20,7 @@ import {
 } from './browserAi.js';
 
 const atpPayload = {
+  rasionalisasi: 'Urutan pembelajaran bergerak dari pengenalan menuju penerapan.',
   cp: [{ elemen: 'Bilangan', cp: 'Memahami bilangan.' }],
   unit: [
     {
@@ -27,14 +28,27 @@ const atpPayload = {
       nama: 'Bilangan dasar',
       elemen: 'Bilangan',
       semester: 1,
-      tp: [{ kode: 'E.1', rumusan: 'Mengidentifikasi bilangan.', materi: 'Bilangan', jp: 4 }],
-    },
-    {
-      no: 2,
-      nama: 'Pola bilangan',
-      elemen: 'Bilangan',
-      semester: 2,
-      tp: [{ kode: 'E.2', rumusan: 'Menerapkan bilangan.', materi: 'Pola', jp: 4 }],
+      tujuanUnit: 'Peserta didik mengidentifikasi konsep bilangan.',
+      kataKunci: ['bilangan'],
+      isiProsesPembelajaran: 'Mengamati dan membandingkan bilangan.',
+      dimensiProfil: ['Bernalar kritis'],
+      glosarium: [{ istilah: 'Bilangan', makna: 'Konsep untuk menyatakan kuantitas.' }],
+      tp: [
+        {
+          kode: 'E.1',
+          rumusan: 'Mengidentifikasi bilangan.',
+          materi: 'Bilangan',
+          strategiAsesmen: 'Observasi dan tanya jawab.',
+          jp: 4,
+        },
+        {
+          kode: 'E.2',
+          rumusan: 'Menerapkan bilangan.',
+          materi: 'Pola',
+          strategiAsesmen: 'Tugas pemecahan masalah.',
+          jp: 4,
+        },
+      ],
     },
   ],
 };
@@ -111,6 +125,7 @@ describe('local AI provider integrations', () => {
       cp: atpPayload.cp,
       totalJP: 72,
       jpPerPekan: 4,
+      kodePerElemen: [{ elemen: 'Bilangan', kode: ['E.1', 'E.2'] }],
     });
     routeAiRequest.mockResolvedValue({ provider: 'local', text: JSON.stringify(atpPayload) });
     const result = await generateBrowserPlanning({
@@ -129,17 +144,57 @@ describe('local AI provider integrations', () => {
     expect(routeAiRequest).toHaveBeenCalledWith(expect.objectContaining({
       workflow: 'planning',
       sensitivity: 'sensitive',
+      prompt: expect.stringContaining('Salin seluruh elemen dan rumusan CP PERSIS'),
     }));
+    expect(routeAiRequest.mock.calls[0][0].prompt).toContain('E.1, E.2');
   });
 
   it('rejects invalid planning output rather than saving a success-shaped fallback', async () => {
-    bacaInputAi.mockResolvedValue({ cp: atpPayload.cp, kodeTp: [] });
+    bacaInputAi.mockResolvedValue({ cp: atpPayload.cp, totalJP: 72, jpPerPekan: 4 });
     routeAiRequest.mockResolvedValue({ provider: 'local', text: '{"unit":[]}' });
     await expect(generateBrowserPlanning({
       uid: 'teacher-1',
       paketId: 'package-1',
       jenis: 'atp',
     })).rejects.toThrow('struktur memiliki kolom yang tidak dikenal atau belum lengkap');
+  });
+
+  it('rejects ATP output that changes its legacy TP-code contract', async () => {
+    bacaInputAi.mockResolvedValue({
+      cp: atpPayload.cp,
+      totalJP: 72,
+      jpPerPekan: 4,
+      kodePerElemen: [{ elemen: 'Bilangan', kode: ['E.1', 'E.2'] }],
+    });
+    routeAiRequest.mockResolvedValue({
+      provider: 'local',
+      text: JSON.stringify({
+        ...atpPayload,
+        unit: [{ ...atpPayload.unit[0], tp: atpPayload.unit[0].tp.map((tp) => ({ ...tp, kode: `X${tp.kode}` })) }],
+      }),
+    });
+    await expect(generateBrowserPlanning({
+      uid: 'teacher-1',
+      paketId: 'package-1',
+      jenis: 'atp',
+    })).rejects.toThrow('kode TP harus mengikuti kontrak sumber dan urutannya');
+  });
+
+  it('rejects ATP output with missing unit metadata or incomplete assessment strategy', async () => {
+    bacaInputAi.mockResolvedValue({
+      cp: atpPayload.cp,
+      totalJP: 72,
+      jpPerPekan: 4,
+      kodePerElemen: [{ elemen: 'Bilangan', kode: ['E.1', 'E.2'] }],
+    });
+    const incomplete = structuredClone(atpPayload);
+    incomplete.unit[0].tp[0].strategiAsesmen = '';
+    routeAiRequest.mockResolvedValue({ provider: 'local', text: JSON.stringify(incomplete) });
+    await expect(generateBrowserPlanning({
+      uid: 'teacher-1',
+      paketId: 'package-1',
+      jenis: 'atp',
+    })).rejects.toThrow('strategiAsesmen: wajib berupa teks');
   });
 
   it('keeps AI provider preferences local and does not expose personal keys', () => {

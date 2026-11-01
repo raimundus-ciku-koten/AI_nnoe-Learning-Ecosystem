@@ -38,6 +38,7 @@ with expected_feature_relations(name) as (
     ('online_exams'),
     ('online_exam_items'),
     ('online_exam_attempts'),
+    ('lesson_journals'),
     ('trial_registrations')
 ),
 public_tables as (

@@ -19,7 +19,7 @@ const migration = await readFile(
   new URL('../../supabase/migrations/20261102000100_chat_call_history.sql', import.meta.url),
   'utf8',
 );
-const appRoutes = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
+const appRoutes = await readFile(new URL('../src/app/RouteWrapper.jsx', import.meta.url), 'utf8');
 const chatPage = await readFile(new URL('../src/pages/chat.js', import.meta.url), 'utf8');
 const room = await readFile(new URL('../src/views/chat/chatRoom.js', import.meta.url), 'utf8');
 const chatService = await readFile(new URL('../src/services/chat.js', import.meta.url), 'utf8');

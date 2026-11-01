@@ -1,6 +1,7 @@
 import { routeAiRequest } from './aiProviders.js';
-import { bacaInputAi } from '../pages/perencanaan/services/planningDriveRepository.js';
+import { bacaInputAi } from './planningDriveRepository.js';
 import { parsePlanningOutput } from './planningAiSchema.js';
+import { kontrakKodeAtp, promptAtp } from './planningAiPrompts.js';
 
 export const EXTERNAL_AI_PROVIDERS_ENABLED = false;
 
@@ -100,27 +101,34 @@ export async function generateBrowserPlanning({ uid, paketId, jenis, noUnit, sin
   requireUser(uid);
   if (sinyal?.aborted) throw new DOMException('Permintaan dibatalkan.', 'AbortError');
   const context = await bacaInputAi({ uid, paketId, jenis, noUnit });
-  const requiredShape = jenis === 'atp'
-    ? '{"cp":[{"elemen":"...","cp":"teks sumber persis"}],"unit":[{"no":1,"nama":"...","elemen":"...","semester":1,"tp":[{"kode":"E.1","rumusan":"...","materi":"...","jp":1}]}]}'
-    : jenis === 'kktp'
+  const requiredShape = jenis === 'kktp'
       ? '{"ambang":75,"items":[{"kode":"...","indikator":["..."],"rubrik":{"perluBimbingan":"...","cukup":"...","baik":"...","sangatBaik":"..."}}]}'
       : '{"tujuanKode":["..."],"model":"...","pemahamanBermakna":["..."],"pertanyaanPemantik":["..."],"dimensiProfil":["..."],"sarpras":["..."],"pertemuan":[{"ke":1,"judul":"...","tujuan":"...","menit":40,"pendahuluan":["..."],"inti":["..."],"penutup":["..."]}],"asesmen":{"diagnostik":"...","formatif":"...","sumatif":"..."},"remedial":"...","pengayaan":"...","refleksiGuru":["..."],"refleksiSiswa":["..."]}';
-  const result = await routeAiRequest({
-    workflow: 'planning',
-    sensitivity: 'sensitive',
-    signal: sinyal,
-    prompt: [
+  const kontrakAtp = jenis === 'atp' ? kontrakKodeAtp(context) : null;
+  const prompt = jenis === 'atp'
+    ? promptAtp(context)
+    : [
       `Susun draf ${jenis} untuk perencanaan pembelajaran.`,
       'Ikuti struktur JSON yang diwajibkan dan jangan menambah properti.',
       'Jangan mengarang, mengubah, atau memparafrase teks CP dan kode TP pada input.',
       'Kembalikan hanya objek JSON; seluruh teks berbahasa Indonesia.',
       `Struktur: ${requiredShape}`,
       `Konteks sumber: ${JSON.stringify(context)}`,
-    ].join('\n'),
+    ].join('\n');
+  const result = await routeAiRequest({
+    workflow: 'planning',
+    sensitivity: 'sensitive',
+    signal: sinyal,
+    prompt,
   });
   const parsed = parsePlanningOutput(jenis, result.text, {
     cp: context.cp,
-    kodeTp: context.kodeTp,
+    ...(jenis === 'atp' ? {
+      legacyContract: true,
+      requireAtpDetails: true,
+      jpPerPekan: context.jpPerPekan,
+      kodeTp: kontrakAtp.flatMap((item) => item.kode),
+    } : { kodeTp: context.kodeTp }),
   });
   return { payload: parsed, penyedia: result.provider };
 }

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { urai, keIso, seninPekan, formatTanggal } from '../src/pages/perencanaan/engine/tanggal.js';
 import { normalisasiHari, hitungRpe, bangunPetaKalender } from '../src/pages/perencanaan/engine/rpe.js';
 import {
-  bagiProporsional, hitungAnggaran, jumlahJpTp, selaraskanJpAtp, hitungProta, rekapAtp, ratakanTp
+  bagiProporsional, hitungAnggaran, hitungAnggaranAtp, jumlahJpTp, selaraskanJpAtp, hitungProta, rekapAtp, ratakanTp
 } from '../src/pages/perencanaan/engine/prota.js';
 import { hitungProsem } from '../src/pages/perencanaan/engine/prosem.js';
 import { validasiKonteks, validasiAtp } from '../src/pages/perencanaan/engine/validator.js';
@@ -120,21 +120,26 @@ test('bagiProporsional: jumlah persis, minimum dihormati, deterministik', () => 
 });
 
 /* ---------- Anggaran & Selaras JP ---------- */
-test('hitungAnggaran: 5 unit, 114 JP, 4 JP/pekan, 2 hari → UH 2 JP per unit', () => {
+test('hitungAnggaran Prota mempertahankan UH per unit berdasarkan hari pembelajaran', () => {
   const a = hitungAnggaran(5, 114, 4, 2);
   assert.deepEqual(a, { ok: true, jpPertemuan: 2, uhTotal: 10, sisaTP: 104 });
 });
 
-test('hitungAnggaran: gagal dengan kode jelas', () => {
-  assert.equal(hitungAnggaran(5, 2, 4, 2).alasan, 'TOTAL_JP_TERLALU_KECIL');
-  assert.equal(hitungAnggaran(0, 114, 4, 2).alasan, 'TIDAK_ADA_UNIT');
-  assert.equal(hitungAnggaran(30, 40, 4, 1).alasan, 'JP_TIDAK_CUKUP');
+test('hitungAnggaranAtp mengikuti mode legacy perUnit sebesar JP per pekan tiap unit', () => {
+  const a = hitungAnggaranAtp(5, 114, 4);
+  assert.deepEqual(a, { ok: true, jpPertemuan: 4, uhTotal: 20, sisaTP: 94 });
+});
+
+test('hitungAnggaranAtp: gagal dengan kode jelas', () => {
+  assert.equal(hitungAnggaranAtp(5, 2, 4).alasan, 'TOTAL_JP_TERLALU_KECIL');
+  assert.equal(hitungAnggaranAtp(0, 114, 4).alasan, 'TIDAK_ADA_UNIT');
+  assert.equal(hitungAnggaranAtp(30, 40, 4).alasan, 'JP_TIDAK_CUKUP');
 });
 
 test('selaraskanJpAtp: Σ JP TP + Σ UH = Total JP tepat; kode/rumusan tak berubah; tidak memutasi', () => {
   const asli = buatAtp();
   const salinan = structuredClone(asli);
-  const r = selaraskanJpAtp(asli, 114, 4, 2);
+  const r = selaraskanJpAtp(asli, 114, 4);
   assert.ok(r.ok);
   assert.deepEqual(asli, salinan, 'masukan tidak boleh dimutasi');
   assert.notEqual(jumlahJpTp(asli), r.anggaran.sisaTP);
@@ -146,7 +151,7 @@ test('selaraskanJpAtp: Σ JP TP + Σ UH = Total JP tepat; kode/rumusan tak berub
 });
 
 test('rekapAtp = Prota: Bagian 5 dan 6 tidak mungkin berselisih', () => {
-  const sel = selaraskanJpAtp(buatAtp(), 114, 4, 2);
+  const sel = selaraskanJpAtp(buatAtp(), 114, 4);
   const rekap = rekapAtp(sel.atp, sel.anggaran.jpPertemuan);
   const prota = hitungProta({ atp: sel.atp, totalJP: 114, jpPerPekan: 4, jumlahHari: 2 });
   assert.equal(rekap.total, 114);
@@ -156,7 +161,7 @@ test('rekapAtp = Prota: Bagian 5 dan 6 tidak mungkin berselisih', () => {
 
 /* ---------- Prota ---------- */
 test('Prota: total semester = Total JP; tiap TP ≥ 1 JP; pekan berurutan tanpa lubang', () => {
-  const sel = selaraskanJpAtp(buatAtp(), 114, 4, 2);
+  const sel = selaraskanJpAtp(buatAtp(), 114, 4);
   const p = hitungProta({ atp: sel.atp, totalJP: 114, jpPerPekan: 4, jumlahHari: 2 });
   assert.ok(p.ok);
   assert.equal(p.program[1].jp + p.program[2].jp, 114);
@@ -178,7 +183,7 @@ test('Prota: total semester = Total JP; tiap TP ≥ 1 JP; pekan berurutan tanpa 
 test('Prota: semester dibelah menurut JP bila ATP tidak konsisten', () => {
   const atp = buatAtp();
   atp.unit.forEach((u) => { u.semester = 1; }); // semua Ganjil → tidak valid
-  const sel = selaraskanJpAtp(atp, 114, 4, 2);
+  const sel = selaraskanJpAtp(atp, 114, 4);
   const p = hitungProta({ atp: sel.atp, totalJP: 114, jpPerPekan: 4, jumlahHari: 2 });
   assert.ok(p.program[1].modul.length > 0 && p.program[2].modul.length > 0);
   assert.equal(p.program[1].jp + p.program[2].jp, 114);
@@ -187,7 +192,7 @@ test('Prota: semester dibelah menurut JP bila ATP tidak konsisten', () => {
 /* ---------- Prosem ---------- */
 test('Prosem: JP terjadwal = JP Prota bila kapasitas cukup; STS/SAS ditandai', () => {
   const rpe = hitungRpe({ ...konteksDasar, totalJP: 114 });
-  const sel = selaraskanJpAtp(buatAtp(), 114, 4, 2);
+  const sel = selaraskanJpAtp(buatAtp(), 114, 4);
   const prota = hitungProta({ atp: sel.atp, totalJP: 114, jpPerPekan: 4, jumlahHari: 2 });
   const prosem = hitungProsem({ rpe, prota });
   for (const [kunci, s] of [['ganjil', 1], ['genap', 2]]) {
@@ -207,7 +212,7 @@ test('Prosem: melaporkan kekurangan JP bila pekan efektif tidak cukup', () => {
     ...konteksDasar,
     kalender: [{ mulai: '2026-07-13', selesai: '2026-11-30', ket: 'Libur panjang', efektif: false }]
   });
-  const sel = selaraskanJpAtp(buatAtp(), 114, 4, 2);
+  const sel = selaraskanJpAtp(buatAtp(), 114, 4);
   const prota = hitungProta({ atp: sel.atp, totalJP: 114, jpPerPekan: 4, jumlahHari: 2 });
   const prosem = hitungProsem({ rpe, prota });
   assert.ok(prosem.ganjil.kekuranganJP > 0);

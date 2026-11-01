@@ -101,6 +101,9 @@ legend { font-weight: 700; padding: 0 6px; }
 .editor-dokumen { display: grid; gap: 12px; margin: 16px 0; }
 .editor-kelompok { min-width: 0; }
 .editor-lapangan { display: grid; gap: 6px; margin: 0 0 12px; }
+.atp-metadata-editor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0; }
+.atp-metadata-field { display: grid; gap: 6px; font-weight: 600; }
+.atp-metadata-field textarea { width: 100%; min-width: 0; font: inherit; font-weight: 400; }
 .editor-pilihan { display: flex; align-items: flex-start; gap: 8px; margin: 8px 0; font-weight: 400; }
 .editor-pilihan input { width: auto; margin-top: 4px; }
 .editor-dokumen textarea { resize: vertical; }
@@ -118,6 +121,7 @@ legend { font-weight: 700; padding: 0 6px; }
   .modul-tata { grid-template-columns: 1fr; }
   .unit-kepala { grid-template-columns: 1fr; }
   .dokumen { padding: 12px; } .main { padding: 12px; }
+  .atp-metadata-editor { grid-template-columns: 1fr; }
   .tab span:not(.tab-no):not(.lencana) { font-size: .85rem; }
 }
 
@@ -127,6 +131,11 @@ legend { font-weight: 700; padding: 0 6px; }
   body, .app, .main { background: #fff !important; display: block !important; padding: 0 !important; }
   .dokumen { box-shadow: none; padding: 0; font-size: 12pt; }
   .dokumen .tbl { font-size: 10.5pt; }
+  .dokumen-atp { font-size: 12pt; line-height: 1; }
+  .dokumen-atp h1 { font-size: 14pt; }
+  .dokumen-atp h2 { font-size: 12pt; }
+  .dokumen-atp .tbl { font-size: 11pt; }
+  .dokumen-atp .kop-sub, .dokumen-atp .tbl-identitas { font-size: 9pt; }
   .tabel-bungkus { overflow: visible; }
   .tbl thead { display: table-header-group; }
   .tbl tr, .blok-tp, .blok-pertemuan { break-inside: avoid; }

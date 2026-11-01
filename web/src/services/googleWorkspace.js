@@ -1,12 +1,11 @@
 import { dekripsiBerkasDrive, enkripsiBerkasDrive } from './driveEncryption.js';
+import { requestGoogle } from './googleWorkspaceRequest.js';
 import { siapkanCatatanGuru } from './teacherWorkspace.js';
-import { bersihBawaan, normalisasiEntri } from '../pages/dataDasar/jadwalUtil.js';
-import { MAKS_BERKAS, TIPE_DOKUMEN, TIPE_GAMBAR } from '../utils/chatUtil.js';
+import { bersihBawaan, normalisasiEntri } from '../domain/jadwal.js';
+import { MAKS_BERKAS, TIPE_DOKUMEN, TIPE_GAMBAR } from '../domain/chatAttachments.js';
 
 const BASE_DRIVE = 'https://www.googleapis.com/drive/v3';
 const BASE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3';
-const BASE_MEET = 'https://meet.googleapis.com/v2';
-const BASE_SHEETS = 'https://sheets.googleapis.com/v4';
 const GOOGLE_API_SCRIPT_URL = 'https://apis.google.com/js/api.js';
 const BATAS_BERKAS = 10 * 1024 * 1024;
 const BATAS_CIPHERTEXT = 10 * 1024 * 1024 + 4096;
@@ -206,35 +205,6 @@ export async function unduhPdfCapaianDrive(accessToken, fileId) {
     throw new Error('Isi file yang dipilih bukan PDF yang valid.');
   }
   return { id: fileId, name: metadata.name, bytes };
-}
-
-async function requestGoogle(url, token, options = {}) {
-  if (typeof token !== 'string' || !token.trim()) throw new Error('Hubungkan akun Google untuk melanjutkan.');
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
-    },
-    signal: AbortSignal.timeout(30000),
-  });
-  const raw = await response.text();
-  let result = {};
-  if (raw) {
-    try {
-      result = JSON.parse(raw);
-    } catch (error) {
-      if (response.ok) throw new Error('Respons Google API tidak dapat dibaca.');
-    }
-  }
-  if (!response.ok) {
-    const detail = result.error?.message || `Permintaan Google ditolak (HTTP ${response.status}).`;
-    const error = new Error(detail);
-    error.code = result.error?.status || 'google/api-error';
-    error.status = response.status;
-    throw error;
-  }
-  return result;
 }
 
 async function requestGoogleBytes(url, token, maxBytes = BATAS_CIPHERTEXT, signal) {
@@ -1110,107 +1080,5 @@ export async function simpanFotoProfilDiDrive(accessToken, uid, berkas) {
   });
 }
 
-export function buatTautanGoogleCalendar({ judul, mulai, selesai, deskripsi = '' }) {
-  const namaAcara = typeof judul === 'string' ? judul.trim() : '';
-  const awal = new Date(mulai);
-  const akhir = new Date(selesai);
-  if (!namaAcara || Number.isNaN(awal.getTime()) || Number.isNaN(akhir.getTime()) || akhir <= awal) {
-    throw new Error('Isi judul acara dan pastikan waktu selesai setelah waktu mulai.');
-  }
-  const formatWaktu = (date) => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const calendarUrl = new URL('https://calendar.google.com/calendar/render');
-  calendarUrl.search = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: namaAcara.slice(0, 120),
-    dates: `${formatWaktu(awal)}/${formatWaktu(akhir)}`,
-    details: typeof deskripsi === 'string' ? deskripsi.trim().slice(0, 2000) : '',
-  }).toString();
-  return calendarUrl.href;
-}
-
-export async function buatRuangGoogleMeet(accessToken) {
-  const ruang = await requestGoogle(`${BASE_MEET}/spaces`, accessToken, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
-  });
-  let meetingUrl;
-  try {
-    meetingUrl = new URL(ruang.meetingUri);
-  } catch (error) {
-    throw new Error('Google Meet tidak mengembalikan tautan rapat yang valid.', { cause: error });
-  }
-  if (meetingUrl.origin !== 'https://meet.google.com' || meetingUrl.username || meetingUrl.password) {
-    throw new Error('Google Meet mengembalikan tautan rapat yang tidak aman.');
-  }
-  return { ...ruang, meetingUri: meetingUrl.href };
-}
-
-export async function buatSpreadsheetDenganData(accessToken, { judul, values }) {
-  const spreadsheetTitle = typeof judul === 'string' ? judul.trim() : '';
-  if (!spreadsheetTitle || spreadsheetTitle.length > 120) {
-    throw new TypeError('Judul spreadsheet harus diisi dan maksimal 120 karakter.');
-  }
-  if (!Array.isArray(values) || values.length === 0 || values.length > 500) {
-    throw new TypeError('Data spreadsheet harus berisi 1 sampai 500 baris.');
-  }
-  if (!values.every((row) => Array.isArray(row) && row.length > 0 && row.length <= 20)) {
-    throw new TypeError('Setiap baris spreadsheet harus berisi 1 sampai 20 kolom.');
-  }
-  const cellCount = values.reduce((total, row) => total + row.length, 0);
-  if (cellCount > 5000 || values.some((row) => row.some((cell) => (
-    typeof cell !== 'string' || cell.length > 2000
-  )))) {
-    throw new TypeError('Data spreadsheet melebihi batas 5.000 sel atau 2.000 karakter per sel.');
-  }
-
-  const spreadsheet = await requestGoogle(`${BASE_SHEETS}/spreadsheets`, accessToken, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      properties: { title: spreadsheetTitle },
-      sheets: [{ properties: { title: 'Data' } }],
-    }),
-  });
-  const sheet = spreadsheet.sheets?.[0]?.properties;
-  if (typeof spreadsheet.spreadsheetId !== 'string' || !spreadsheet.spreadsheetId ||
-      !Number.isInteger(sheet?.sheetId)) {
-    throw new Error('Google Sheets tidak mengembalikan identitas spreadsheet yang valid.');
-  }
-
-  let spreadsheetUrl = spreadsheet.spreadsheetUrl ||
-    `https://docs.google.com/spreadsheets/d/${encodeURIComponent(spreadsheet.spreadsheetId)}/edit`;
-  try {
-    const parsedUrl = new URL(spreadsheetUrl);
-    if (parsedUrl.protocol !== 'https:' || parsedUrl.hostname !== 'docs.google.com') {
-      throw new Error('Google Sheets mengembalikan alamat spreadsheet yang tidak aman.');
-    }
-    spreadsheetUrl = parsedUrl.href;
-  } catch (error) {
-    if (error.message === 'Google Sheets mengembalikan alamat spreadsheet yang tidak aman.') {
-      throw error;
-    }
-    throw new Error('Google Sheets mengembalikan alamat spreadsheet yang tidak valid.', { cause: error });
-  }
-
-  try {
-    await requestGoogle(
-      `${BASE_SHEETS}/spreadsheets/${encodeURIComponent(spreadsheet.spreadsheetId)}/values/Data!A1?valueInputOption=RAW`,
-      accessToken,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ majorDimension: 'ROWS', values }),
-      },
-    );
-  } catch (error) {
-    throw new Error(
-      'Spreadsheet kosong sudah dibuat, tetapi data gagal ditulis. Periksa Google Sheets sebelum mencoba ulang.',
-      { cause: error },
-    );
-  }
-  return {
-    spreadsheetId: spreadsheet.spreadsheetId,
-    spreadsheetUrl,
-  };
-}
+export { buatTautanGoogleCalendar, buatRuangGoogleMeet } from './googleWorkspaceMeet.js';
+export { buatSpreadsheetDenganData } from './googleWorkspaceSheets.js';

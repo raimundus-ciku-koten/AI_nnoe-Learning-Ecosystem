@@ -51,13 +51,33 @@ function code(value, path) {
   return output;
 }
 
-function parseAtp(value, canonicalCp) {
-  const parsed = object(value, 'atp', {
+function parseAtp(value, context = {}) {
+  const requireAtpDetails = context.requireAtpDetails === true;
+  const normalized = value && typeof value === 'object' && !Array.isArray(value)
+    ? {
+      ...value,
+      rasionalisasi: value.rasionalisasi ?? '',
+      unit: Array.isArray(value.unit) ? value.unit.map((unit) => ({
+        ...unit,
+        tujuanUnit: unit?.tujuanUnit ?? '',
+        kataKunci: unit?.kataKunci ?? [],
+        isiProsesPembelajaran: unit?.isiProsesPembelajaran ?? '',
+        dimensiProfil: unit?.dimensiProfil ?? [],
+        glosarium: unit?.glosarium ?? [],
+        tp: Array.isArray(unit?.tp) ? unit.tp.map((goal) => ({
+          ...goal,
+          strategiAsesmen: goal?.strategiAsesmen ?? '',
+        })) : unit?.tp,
+      })) : value.unit,
+    }
+    : value;
+  const parsed = object(normalized, 'atp', {
+    rasionalisasi: (field, path) => text(field, path, 3000, !requireAtpDetails),
     cp: (input, path) => array(input, path, 1, 30, (item, itemPath) => object(item, itemPath, {
       elemen: (field, fieldPath) => text(field, fieldPath, 120),
       cp: (field, fieldPath) => text(field, fieldPath, 3000)
     })),
-    unit: (input, path) => array(input, path, 2, 30, (item, itemPath) => object(item, itemPath, {
+    unit: (input, path) => array(input, path, 1, 30, (item, itemPath) => object(item, itemPath, {
       no: (field, fieldPath) => integer(field, fieldPath, 1, 30),
       nama: (field, fieldPath) => text(field, fieldPath, 120),
       elemen: (field, fieldPath) => text(field, fieldPath, 120),
@@ -65,10 +85,19 @@ function parseAtp(value, canonicalCp) {
         const semester = integer(field, fieldPath, 1, 2);
         return semester;
       },
+      tujuanUnit: (field, fieldPath) => text(field, fieldPath, 800, !requireAtpDetails),
+      kataKunci: textList(12, 120, !requireAtpDetails),
+      isiProsesPembelajaran: (field, fieldPath) => text(field, fieldPath, 2400, !requireAtpDetails),
+      dimensiProfil: textList(8, 160, !requireAtpDetails),
+      glosarium: (input, path) => array(input, path, 0, 20, (item, itemPath) => object(item, itemPath, {
+        istilah: (field, fieldPath) => text(field, fieldPath, 100),
+        makna: (field, fieldPath) => text(field, fieldPath, 300)
+      })),
       tp: (goals, goalsPath) => array(goals, goalsPath, 1, 20, (goal, goalPath) => object(goal, goalPath, {
         kode: code,
         rumusan: (field, fieldPath) => text(field, fieldPath, 1200),
         materi: (field, fieldPath) => text(field, fieldPath, 300),
+        strategiAsesmen: (field, fieldPath) => text(field, fieldPath, 800, !requireAtpDetails),
         jp: (field, fieldPath) => integer(field, fieldPath, 1, 99)
       }))
     }))
@@ -94,16 +123,40 @@ function parseAtp(value, canonicalCp) {
   if (parsed.unit.some((unit, index) => index > 0 && unit.semester < parsed.unit[index - 1].semester)) {
     throw new PlanningParseError('atp.unit', 'urutan semester tidak boleh mundur');
   }
-  if (parsed.unit[0].semester !== 1 || parsed.unit.at(-1).semester !== 2) {
+  if (parsed.unit.length > 1 &&
+      (parsed.unit[0].semester !== 1 || parsed.unit.at(-1).semester !== 2)) {
     throw new PlanningParseError('atp.unit', 'urutan ATP harus mencakup Semester 1 dan Semester 2');
   }
-  if (canonicalCp) {
+  if (context.legacyContract === true) {
+    if (parsed.unit.length !== parsed.cp.length ||
+        parsed.unit.some((unit, index) => unit.elemen !== parsed.cp[index].elemen)) {
+      throw new PlanningParseError('atp.unit', 'harus ada tepat satu unit per elemen CP sesuai urutan sumber');
+    }
+    const expectedCodes = context.kodeTp ?? [];
+    const actualCodes = parsed.unit.flatMap((unit) => unit.tp.map((goal) => goal.kode));
+    if (!expectedCodes.length || actualCodes.length !== expectedCodes.length ||
+        actualCodes.some((kode, index) => kode !== expectedCodes[index])) {
+      throw new PlanningParseError('atp.unit', 'kode TP harus mengikuti kontrak sumber dan urutannya');
+    }
+    const jpPerPekan = Number(context.jpPerPekan);
+    if (Number.isInteger(jpPerPekan) && jpPerPekan > 0 &&
+        parsed.unit.some((unit) => unit.tp.some((goal) => goal.jp % jpPerPekan !== 0))) {
+      throw new PlanningParseError('atp.unit', 'alokasi setiap TP harus berupa kelipatan JP per pekan');
+    }
+  }
+  if (context.requireAtpDetails === true &&
+      parsed.unit.some((unit) =>
+        !unit.tujuanUnit || !unit.kataKunci.length || !unit.isiProsesPembelajaran ||
+        !unit.dimensiProfil.length || unit.tp.some((goal) => !goal.strategiAsesmen))) {
+    throw new PlanningParseError('atp.unit', 'metadata unit dan strategi asesmen wajib lengkap');
+  }
+  if (context.cp) {
     const sameText = (left, right) => clean(left) === clean(right);
-    if (!Array.isArray(canonicalCp) ||
-        parsed.cp.length !== canonicalCp.length ||
+    if (!Array.isArray(context.cp) ||
+        parsed.cp.length !== context.cp.length ||
         parsed.cp.some((item, index) =>
-          !sameText(item.elemen, canonicalCp[index]?.elemen) ||
-          !sameText(item.cp, canonicalCp[index]?.cp))) {
+          !sameText(item.elemen, context.cp[index]?.elemen) ||
+          !sameText(item.cp, context.cp[index]?.cp))) {
       throw new PlanningParseError('atp.cp', 'rumusan CP harus sama persis dengan sumber terpilih');
     }
   }
@@ -175,7 +228,7 @@ export function parsePlanningOutput(type, raw, context = {}) {
   } catch {
     throw new PlanningParseError(type, 'bukan JSON valid');
   }
-  if (type === 'atp') return parseAtp(json, context.cp);
+  if (type === 'atp') return parseAtp(json, context);
   if (type === 'kktp') return parseKktp(json, context.kodeTp ?? []);
   if (type === 'modul') return parseModule(json, context.kodeTp ?? [], context.allowEmptyLists === true);
   throw new PlanningParseError(type, 'jenis dokumen tidak dikenal');

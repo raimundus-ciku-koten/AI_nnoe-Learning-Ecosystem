@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parsePlanningOutput } from '../src/services/planningAiSchema.js';
+import { kontrakKodeAtp, promptAtp } from '../src/services/planningAiPrompts.js';
 import { PRASYARAT, JENIS } from '../src/pages/perencanaan/constants.js';
 import { sumberBelajarModul } from '../src/pages/perencanaan/engine/prota.js';
 
@@ -27,6 +28,72 @@ const atp = () => ({
 test('validates and normalizes a valid ATP output', () => {
   const parsed = parsePlanningOutput('atp', JSON.stringify(atp()));
   assert.equal(parsed.unit[0].tp[0].kode, 'E.1');
+});
+
+test('builds the legacy ATP code contract and reuses a complete saved contract', () => {
+  const cp = [
+    { elemen: 'Bilangan', cp: 'CP bilangan.' },
+    { elemen: 'Aljabar', cp: 'CP aljabar.' },
+  ];
+  assert.deepEqual(kontrakKodeAtp({ cp, totalJP: 72, jpPerPekan: 4 }), [
+    { elemen: 'Bilangan', kode: ['A.1', 'A.2', 'A.3'] },
+    { elemen: 'Aljabar', kode: ['B.1', 'B.2', 'B.3'] },
+  ]);
+  const saved = [{ elemen: 'Bilangan', kode: ['E.1', 'E.2'] }];
+  assert.deepEqual(kontrakKodeAtp({
+    cp: [cp[0]], totalJP: 72, jpPerPekan: 4, kodePerElemen: saved,
+  }), saved);
+  assert.match(promptAtp({
+    mapel: 'Matematika', kelas: 'X', fase: 'E', cp: [cp[0]],
+    totalJP: 72, jpPerPekan: 4, kodePerElemen: saved,
+  }), /E\.1, E\.2/);
+});
+
+test('validates a one-element legacy ATP and rejects a code or weekly JP mismatch', () => {
+  const singleElement = {
+    rasionalisasi: 'Urutan TP bergerak dari pengenalan menuju penerapan.',
+    cp: [{ elemen: 'Bilangan', cp: 'Memahami bilangan.' }],
+    unit: [{
+      no: 1,
+      nama: 'Bilangan',
+      elemen: 'Bilangan',
+      semester: 1,
+      tujuanUnit: 'Menggunakan bilangan.',
+      kataKunci: ['bilangan'],
+      isiProsesPembelajaran: 'Mengamati dan berlatih.',
+      dimensiProfil: ['Bernalar kritis'],
+      glosarium: [],
+      tp: [{
+        kode: 'E.1',
+        rumusan: 'Mengidentifikasi bilangan.',
+        materi: 'Bilangan',
+        strategiAsesmen: 'Observasi.',
+        jp: 4,
+      }],
+    }],
+  };
+  const context = {
+    cp: singleElement.cp,
+    legacyContract: true,
+    requireAtpDetails: true,
+    kodeTp: ['E.1'],
+    jpPerPekan: 4,
+  };
+  assert.deepEqual(parsePlanningOutput('atp', JSON.stringify(singleElement), context), singleElement);
+  assert.throws(
+    () => parsePlanningOutput('atp', JSON.stringify({
+      ...singleElement,
+      unit: [{ ...singleElement.unit[0], tp: [{ ...singleElement.unit[0].tp[0], kode: 'X.1' }] }],
+    }), context),
+    /kode TP harus mengikuti kontrak sumber dan urutannya/,
+  );
+  assert.throws(
+    () => parsePlanningOutput('atp', JSON.stringify({
+      ...singleElement,
+      unit: [{ ...singleElement.unit[0], tp: [{ ...singleElement.unit[0].tp[0], jp: 3 }] }],
+    }), context),
+    /alokasi setiap TP harus berupa kelipatan JP per pekan/,
+  );
 });
 
 test('requires AI-generated ATP to preserve the imported CP exactly', () => {

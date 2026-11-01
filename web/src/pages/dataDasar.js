@@ -26,7 +26,7 @@
  *   import '../styles/dataDasar-screens.css';   // kelas ale-* semua sub-menu
  */
 import { getState } from '../state.js';
-import { bacaRute, navigate } from '../router.js';
+import { navigate } from '../utils/navigation.js';
 import { perbaruiHeader } from '../components/sidebar.js';
 import { esc, LABEL_PERAN, namaDariUser, ambilProfil } from '../ui.js';
 import { bersih, galat, ik, muatPenugasan, toast } from './dataDasar/umum.js';
@@ -60,8 +60,10 @@ const SUB = {
  *   /datadasar?tab=siswa   → 'siswa' (legacy, kompat. bookmark lama)
  *   /datadasar             → null (redirect ke default)
  */
-function subDariUrl() {
-  const { path, query } = bacaRute();
+function subDariUrl(route = {}) {
+  const rawPath = route.path || window.location.hash.replace(/^#/, '');
+  const [path, legacyQuery = ''] = String(rawPath).split('?');
+  const query = new URLSearchParams(String(route.search || legacyQuery).replace(/^\?/, ''));
   const seg = String(path || '').replace(/\/+$/, '').split('/').filter(Boolean);
   let id = seg[1];                            // ['datadasar', 'siswa']
   if (!id) {
@@ -71,12 +73,12 @@ function subDariUrl() {
   return SUB[id] ? id : null;
 }
 
-export async function halamanDataDasar(wadah) {
+export async function halamanDataDasar(wadah, route = {}) {
   const { user, role, tenantId } = getState();
   if (!user) return () => {};
 
   // Belum ada sub-rute → alihkan ke default.
-  const sub = subDariUrl();
+  const sub = subDariUrl(route);
   if (!sub) {
     navigate('/datadasar/profil');
     return () => {};

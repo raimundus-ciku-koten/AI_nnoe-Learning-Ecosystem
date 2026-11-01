@@ -355,6 +355,7 @@ from unnest(array[
   'online_exams',
   'online_exam_items',
   'online_exam_attempts',
+  'lesson_journals',
   'trial_registrations'
 ]) as feature(name)
 

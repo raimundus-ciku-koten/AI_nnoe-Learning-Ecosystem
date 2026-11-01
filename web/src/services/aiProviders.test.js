@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { routeAiRequest } from './aiProviders.js';
+import {
+  aturUlangPengaturanLokalAI,
+  muatPengaturanLokalAI,
+  routeAiRequest,
+  simpanPengaturanLokalAI,
+} from './aiProviders.js';
 
 describe('privacy-aware AI providers', () => {
   afterEach(() => {
@@ -19,6 +24,59 @@ describe('privacy-aware AI providers', () => {
     });
     expect(result).toMatchObject({ provider: 'local', model: 'local-test', text: 'Siap.' });
     expect(String(fetch.mock.calls[0][0])).toBe('http://127.0.0.1:11434/api/chat');
+  });
+
+  it('uses locally saved model, output-token and timeout settings without cloud fallback', async () => {
+    const storage = new Map();
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value),
+      removeItem: (key) => storage.delete(key),
+    });
+    const fetch = vi.fn(async (_url, options) => {
+      expect(JSON.parse(options.body)).toMatchObject({
+        model: 'ainnoe-qwen',
+        options: { num_predict: -1 },
+        metadata: { product: 'AI_nnoe' },
+      });
+      return Response.json({ model: 'ainnoe-qwen', message: { content: 'Siap.' } });
+    });
+    vi.stubGlobal('fetch', fetch);
+    const saved = simpanPengaturanLokalAI({
+      endpoint: 'http://localhost:11434',
+      model: 'ainnoe-qwen',
+      timeoutSeconds: 240,
+      outputTokens: -1,
+    });
+
+    await expect(routeAiRequest({
+      workflow: 'planning',
+      prompt: 'Draf lokal.',
+      sensitivity: 'sensitive',
+    })).resolves.toMatchObject({ provider: 'local', model: 'ainnoe-qwen', text: 'Siap.' });
+    expect(saved.timeoutSeconds).toBe(240);
+    expect(muatPengaturanLokalAI()).toEqual(saved);
+    expect(String(fetch.mock.calls[0][0])).toBe('http://localhost:11434/api/chat');
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(aturUlangPengaturanLokalAI().model).toBe('llama3.2');
+  });
+
+  it('rejects non-local endpoints, unsafe model names, and unbounded timeouts', () => {
+    const storage = new Map();
+    vi.stubGlobal('localStorage', {
+      getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value),
+      removeItem: (key) => storage.delete(key),
+    });
+    const defaults = muatPengaturanLokalAI();
+    expect(() => simpanPengaturanLokalAI({ ...defaults, endpoint: 'https://example.com' }))
+      .toThrow('localhost');
+    expect(() => simpanPengaturanLokalAI({ ...defaults, model: '../other-model' }))
+      .toThrow('Nama model');
+    expect(() => simpanPengaturanLokalAI({ ...defaults, timeoutSeconds: 0 }))
+      .toThrow('15–600 detik');
+    expect(() => simpanPengaturanLokalAI({ ...defaults, outputTokens: 32 }))
+      .toThrow('minimal 128 token');
   });
 
   it('never falls back to cloud for sensitive content', async () => {

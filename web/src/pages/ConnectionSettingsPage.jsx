@@ -9,7 +9,12 @@ import {
   resolveSyncConflict,
   syncGoogleService,
 } from '../services/connectionApi.js';
-import { routeAiRequest } from '../services/aiProviders.js';
+import {
+  aturUlangPengaturanLokalAI,
+  muatPengaturanLokalAI,
+  routeAiRequest,
+  simpanPengaturanLokalAI,
+} from '../services/aiProviders.js';
 import { hapusMutasiAntreanItem } from '../services/offlineSync.js';
 import '../styles/connection-settings.css';
 
@@ -61,6 +66,7 @@ export default function ConnectionSettingsPage() {
   const [localAiStatus, setLocalAiStatus] = useState('');
   const [localAiError, setLocalAiError] = useState('');
   const [localAiBusy, setLocalAiBusy] = useState(false);
+  const [localAiSettings, setLocalAiSettings] = useState(null);
   const [conflictBusy, setConflictBusy] = useState('');
   const [aiPreference, setAiPreference] = useState(() => {
     try {
@@ -93,6 +99,12 @@ export default function ConnectionSettingsPage() {
 
   useEffect(() => {
     let active = true;
+    try {
+      setLocalAiSettings(muatPengaturanLokalAI());
+    } catch (cause) {
+      console.error('[connection-settings] Pengaturan AI lokal tidak dapat dimuat:', cause);
+      setLocalAiError(cause?.message || 'Pengaturan AI_nnoe lokal tidak dapat dimuat.');
+    }
     getConnectionStatus().then((result) => {
       if (!active) return;
       setConnections(result.connections || []);
@@ -110,6 +122,38 @@ export default function ConnectionSettingsPage() {
     });
     return () => { active = false; };
   }, [location.search, user?.uid]);
+
+  function simpanPengaturanAiLokal() {
+    if (!localAiSettings || localAiBusy) return;
+    setLocalAiBusy(true);
+    setLocalAiError('');
+    setLocalAiStatus('');
+    try {
+      setLocalAiSettings(simpanPengaturanLokalAI(localAiSettings));
+      setLocalAiStatus('Pengaturan AI_nnoe disimpan hanya pada penyimpanan lokal browser ini.');
+    } catch (cause) {
+      console.error('[connection-settings] Pengaturan AI lokal tidak dapat disimpan:', cause);
+      setLocalAiError(cause?.message || 'Pengaturan AI_nnoe lokal tidak dapat disimpan.');
+    } finally {
+      setLocalAiBusy(false);
+    }
+  }
+
+  function resetPengaturanAiLokal() {
+    if (localAiBusy) return;
+    setLocalAiBusy(true);
+    setLocalAiError('');
+    setLocalAiStatus('');
+    try {
+      setLocalAiSettings(aturUlangPengaturanLokalAI());
+      setLocalAiStatus('Pengaturan AI_nnoe dikembalikan ke nilai bawaan.');
+    } catch (cause) {
+      console.error('[connection-settings] Pengaturan AI lokal tidak dapat diatur ulang:', cause);
+      setLocalAiError(cause?.message || 'Pengaturan AI_nnoe lokal tidak dapat diatur ulang.');
+    } finally {
+      setLocalAiBusy(false);
+    }
+  }
 
   async function connect(service) {
     setBusy(`connect-${service}`);
@@ -338,6 +382,64 @@ export default function ConnectionSettingsPage() {
             <span className="connection-settings__badge">Default · lokal</span>
           </div>
           <p>Prompt diproses pada Ollama di perangkat ini. Pastikan Ollama berjalan dan mengizinkan origin aplikasi pada konfigurasi CORS.</p>
+          <p>
+            “Tanpa batas keluaran aplikasi” meminta model lokal menghasilkan keluaran tanpa batas token
+            yang ditetapkan aplikasi. Batas konteks model, memori, kecepatan, dan kemampuan perangkat
+            tetap berlaku; permintaan tetap memiliki batas waktu keselamatan.
+          </p>
+          {localAiSettings ? (
+            <div className="connection-settings__local-ai-fields">
+              <label className="connection-settings__field">
+                Endpoint localhost
+                <input
+                  type="url"
+                  value={localAiSettings.endpoint}
+                  maxLength={300}
+                  autoComplete="url"
+                  onChange={(event) => setLocalAiSettings((current) => ({ ...current, endpoint: event.target.value }))}
+                />
+              </label>
+              <label className="connection-settings__field">
+                Model lokal
+                <input
+                  type="text"
+                  value={localAiSettings.model}
+                  maxLength={100}
+                  autoComplete="off"
+                  onChange={(event) => setLocalAiSettings((current) => ({ ...current, model: event.target.value }))}
+                />
+              </label>
+              <label className="connection-settings__field">
+                Batas waktu (detik, 15–600)
+                <input
+                  type="number"
+                  min="15"
+                  max="600"
+                  step="1"
+                  value={localAiSettings.timeoutSeconds}
+                  onChange={(event) => setLocalAiSettings((current) => ({ ...current, timeoutSeconds: event.target.value }))}
+                />
+              </label>
+              <label className="connection-settings__field">
+                Keluaran maksimum (token; -1 = tanpa batas keluaran aplikasi)
+                <input
+                  type="number"
+                  min="-1"
+                  step="1"
+                  value={localAiSettings.outputTokens}
+                  onChange={(event) => setLocalAiSettings((current) => ({ ...current, outputTokens: event.target.value }))}
+                />
+              </label>
+              <div className="connection-settings__actions">
+                <button type="button" disabled={localAiBusy} onClick={simpanPengaturanAiLokal}>
+                  Simpan pengaturan lokal
+                </button>
+                <button type="button" className="is-secondary" disabled={localAiBusy} onClick={resetPengaturanAiLokal}>
+                  Atur ulang
+                </button>
+              </div>
+            </div>
+          ) : <p role="status">Memuat pengaturan AI_nnoe lokal…</p>}
           <div className="connection-settings__actions">
             <button type="button" disabled={localAiBusy} onClick={testLocalAi}>
               {localAiBusy ? 'Memeriksa…' : 'Uji AI lokal'}

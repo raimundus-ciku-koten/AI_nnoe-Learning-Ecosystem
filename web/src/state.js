@@ -44,6 +44,42 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
+export function shallowEqual(left, right) {
+  if (Object.is(left, right)) return true;
+  if (!left || !right || typeof left !== 'object' || typeof right !== 'object') return false;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length
+    && keys.every((key) => Object.prototype.hasOwnProperty.call(right, key)
+      && Object.is(left[key], right[key]));
+}
+
+export function subscribeSelector(selector, fn, equal = Object.is) {
+  let selected = selector(snapshot);
+  const notify = () => {
+    const next = selector(snapshot);
+    if (equal(selected, next)) return;
+    selected = next;
+    fn(next);
+  };
+  listeners.add(notify);
+  return () => listeners.delete(notify);
+}
+
+export function pilihStateAuth(current = snapshot) {
+  return {
+    user: current.user,
+    profile: current.profile,
+    role: current.role,
+    activeRole: current.activeRole,
+    roles: current.roles,
+    tenantId: current.tenantId,
+    isDemo: current.isDemo,
+    trialExpiresAt: current.trialExpiresAt,
+    passwordRecovery: current.passwordRecovery,
+    authReady: current.authReady,
+  };
+}
+
 export function getSnapshot() {
   return snapshot;
 }

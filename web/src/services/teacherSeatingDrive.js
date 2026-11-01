@@ -2,7 +2,7 @@ import {
   daftarDenahTerenkripsiDrive,
   unggahBerkasTerenkripsiDrive,
 } from './googleWorkspace.js';
-import { bersihkanDenah } from '../pages/dataDasar/denahLogika.js';
+import { bersihkanDenah } from '../domain/denah.js';
 
 const PLAN_FIELDS = ['baris', 'diperbarui', 'jumlahKelompok', 'kelas', 'kolom', 'kelompok', 'kursi'];
 const MAX_PLANS = 300;

@@ -112,6 +112,12 @@
   font-weight: 600;
 }
 
+.connection-settings__local-ai-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: .8rem 1rem;
+}
+
 .connection-settings__field input,
 .connection-settings__field select,
 .connection-settings__field textarea {

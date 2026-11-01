@@ -1,0 +1,112 @@
+.lesson-journal-page {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.lesson-journal-header { margin-bottom: 1.25rem; }
+.lesson-journal-header h1 { margin: .25rem 0; }
+.lesson-journal-header > p:last-child { max-width: 70ch; color: var(--muted, #596579); }
+.lesson-journal-kicker { display: flex; align-items: center; gap: .5rem; color: var(--brand-700, #176b67); font-weight: 700; }
+.lesson-journal-editor, .lesson-journal-item, .lesson-journal-notice, .lesson-journal-attendance-note {
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+}
+.lesson-journal-section-heading, .lesson-journal-history-heading, .lesson-journal-item-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.lesson-journal-section-heading h2, .lesson-journal-history h2 { margin-top: 0; }
+.lesson-journal-section-heading p, .lesson-journal-history-heading p { color: #536272; }
+.lesson-journal-draft-indicator {
+  max-width: 28rem;
+  color: #155b3a;
+  font-size: .9rem;
+}
+.lesson-journal-editor form { display: grid; gap: 1rem; }
+.lesson-journal-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .8rem;
+}
+.lesson-journal-page label { display: grid; gap: .4rem; font-weight: 650; }
+.lesson-journal-page input, .lesson-journal-page textarea, .lesson-journal-page select {
+  width: 100%;
+  min-height: 2.7rem;
+  padding: .65rem .75rem;
+  border: 1px solid #cbd5df;
+  border-radius: .6rem;
+  background: #fff;
+  color: #17212b;
+  font: inherit;
+}
+.lesson-journal-page textarea { resize: vertical; }
+.lesson-journal-wide { grid-column: 1 / -1; }
+.lesson-journal-counter { color: #536272; font-size: .82rem; font-weight: 400; }
+.lesson-journal-local-note, .lesson-journal-history-note {
+  color: #536272;
+  font-size: .9rem;
+}
+.lesson-journal-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+.lesson-journal-actions button {
+  min-height: 2.6rem;
+  padding: .55rem .9rem;
+  border: 1px solid var(--brand-700, #176b67);
+  border-radius: .6rem;
+  background: var(--brand-700, #176b67);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lesson-journal-actions button:disabled { opacity: .6; cursor: wait; }
+.lesson-journal-actions .is-secondary { background: #fff; color: #234; border-color: #9aa8b7; }
+.lesson-journal-actions .is-danger { background: #fff; color: #a42323; border-color: #d7a5a5; }
+.lesson-journal-actions button:focus-visible,
+.lesson-journal-page input:focus-visible,
+.lesson-journal-page textarea:focus-visible,
+.lesson-journal-page select:focus-visible {
+  outline: 3px solid #176b67;
+  outline-offset: 2px;
+}
+.lesson-journal-message { padding: .8rem 1rem; border-radius: .65rem; }
+.lesson-journal-message.is-error { color: #7b2020; background: #fff0f0; }
+.lesson-journal-message.is-success { color: #155b3a; background: #eaf8f0; }
+.lesson-journal-attendance-note { margin-top: 1rem; color: #435163; }
+.lesson-journal-history { display: grid; gap: .8rem; margin-top: 1.5rem; }
+.lesson-journal-history-heading { align-items: end; }
+.lesson-journal-history-heading p { margin-bottom: 0; }
+.lesson-journal-filters { display: flex; gap: .8rem; }
+.lesson-journal-filters label { min-width: 10rem; }
+.lesson-journal-list { display: grid; gap: .8rem; }
+.lesson-journal-item h3 { margin: .8rem 0; white-space: pre-wrap; }
+.lesson-journal-item p { margin: .45rem 0; }
+.lesson-journal-meta, .lesson-journal-updated { color: #526273; font-size: .88rem; }
+.lesson-journal-preserve { white-space: pre-wrap; overflow-wrap: anywhere; }
+.lesson-journal-status {
+  display: inline-flex;
+  margin-top: .35rem;
+  padding: .2rem .55rem;
+  border-radius: 999px;
+  font-size: .82rem;
+  font-weight: 700;
+}
+.lesson-journal-status.is-draft { background: #fff3d4; color: #6a4b00; }
+.lesson-journal-status.is-final { background: #eaf8f0; color: #155b3a; }
+.lesson-journal-empty { padding: 1rem; color: #536272; }
+.lesson-journal-notice a { font-weight: 700; }
+
+@media (max-width: 760px) {
+  .lesson-journal-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lesson-journal-section-heading, .lesson-journal-history-heading, .lesson-journal-item-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .lesson-journal-filters { flex-wrap: wrap; }
+}
+
+@media (max-width: 480px) {
+  .lesson-journal-fields { grid-template-columns: 1fr; }
+  .lesson-journal-filters, .lesson-journal-filters label { width: 100%; }
+}

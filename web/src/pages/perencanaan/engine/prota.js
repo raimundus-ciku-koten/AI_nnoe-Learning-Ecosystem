@@ -112,8 +112,17 @@ export function sumberBelajarModul(atp, unit, prota, prosem) {
   };
 }
 
+function ringkasAnggaran(jumlahUnit, totalJP, jpPertemuan) {
+  if (!(totalJP >= BATAS.TOTAL_JP_MIN)) return { ok: false, alasan: 'TOTAL_JP_TERLALU_KECIL' };
+  if (jumlahUnit < 1) return { ok: false, alasan: 'TIDAK_ADA_UNIT' };
+  const uhTotal = jpPertemuan * jumlahUnit;
+  const sisaTP = totalJP - uhTotal;
+  if (sisaTP < jumlahUnit) return { ok: false, alasan: 'JP_TIDAK_CUKUP' };
+  return { ok: true, jpPertemuan, uhTotal, sisaTP };
+}
+
 /**
- * Anggaran waktu: berapa JP ulangan harian per unit dan sisa untuk TP.
+ * Anggaran Prota legacy: satu UH per unit, JP per UH diturunkan dari hari belajar.
  * @param {number} jumlahUnit
  * @param {number} totalJP
  * @param {number} jpPerPekan
@@ -121,15 +130,22 @@ export function sumberBelajarModul(atp, unit, prota, prosem) {
  * @returns {{ok:true, jpPertemuan:number, uhTotal:number, sisaTP:number}|{ok:false, alasan:string}}
  */
 export function hitungAnggaran(jumlahUnit, totalJP, jpPerPekan, jumlahHari) {
-  if (!(totalJP >= BATAS.TOTAL_JP_MIN)) return { ok: false, alasan: 'TOTAL_JP_TERLALU_KECIL' };
-  if (jumlahUnit < 1) return { ok: false, alasan: 'TIDAK_ADA_UNIT' };
   const hari = Math.max(1, jumlahHari || 1);
   let jpPertemuan = Math.max(1, Math.round((jpPerPekan || 2) / hari));
   while (jpPertemuan > 1 && jpPertemuan * jumlahUnit > totalJP / 3) jpPertemuan--;
-  const uhTotal = jpPertemuan * jumlahUnit;
-  const sisaTP = totalJP - uhTotal;
-  if (sisaTP < jumlahUnit) return { ok: false, alasan: 'JP_TIDAK_CUKUP' };
-  return { ok: true, jpPertemuan, uhTotal, sisaTP };
+  return ringkasAnggaran(jumlahUnit, totalJP, jpPertemuan);
+}
+
+/**
+ * Anggaran ATP mengikuti mode legacy `perUnit`: satu UH per unit sebesar JP per pekan.
+ * @param {number} jumlahUnit
+ * @param {number} totalJP
+ * @param {number} jpPerPekan
+ * @returns {{ok:true, jpPertemuan:number, uhTotal:number, sisaTP:number}|{ok:false, alasan:string}}
+ */
+export function hitungAnggaranAtp(jumlahUnit, totalJP, jpPerPekan) {
+  const jpPertemuan = Math.max(1, Number.parseInt(jpPerPekan, 10) || 2);
+  return ringkasAnggaran(jumlahUnit, totalJP, jpPertemuan);
 }
 
 /**
@@ -138,12 +154,11 @@ export function hitungAnggaran(jumlahUnit, totalJP, jpPerPekan, jumlahHari) {
  * @param {Atp} atp
  * @param {number} totalJP
  * @param {number} jpPerPekan
- * @param {number} jumlahHari
  * @returns {{ok:true, atp:Atp, anggaran:Object}|{ok:false, alasan:string}}
  */
-export function selaraskanJpAtp(atp, totalJP, jpPerPekan, jumlahHari) {
+export function selaraskanJpAtp(atp, totalJP, jpPerPekan) {
   const unit = (atp?.unit ?? []).filter((u) => (u.tp ?? []).length > 0);
-  const ang = hitungAnggaran(unit.length, totalJP, jpPerPekan, jumlahHari);
+  const ang = hitungAnggaranAtp(unit.length, totalJP, jpPerPekan);
   if (!ang.ok) return ang;
 
   const bobotUnit = unit.map((u) => u.tp.reduce((s, t) => s + (t.jp > 0 ? t.jp : 0), 0));

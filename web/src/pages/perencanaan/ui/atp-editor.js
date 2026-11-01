@@ -10,19 +10,28 @@ import { h, kosongkan, angka } from './dom.js';
 import { t } from '../i18n/index.js';
 import { BATAS } from '../constants.js';
 import { bersihkanTeks } from '../engine/validator.js';
-import { hitungAnggaran, jumlahJpTp, normKode, selaraskanJpAtp } from '../engine/prota.js';
+import { hitungAnggaranAtp, jumlahJpTp, normKode, selaraskanJpAtp } from '../engine/prota.js';
 
 /**
  * @param {Object} o
  * @param {Object} o.atp payload ATP awal
  * @param {number} o.totalJP
  * @param {number} o.jpPerPekan
- * @param {number} o.jumlahHari
  * @param {(atp:Object) => void} o.onChange dipanggil setiap draft berubah (untuk mengaktifkan tombol simpan)
  * @returns {{el:HTMLElement, ambil:() => Object}}
  */
-export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }) {
+export function buatAtpEditor({ atp, totalJP, jpPerPekan, onChange }) {
   let draft = structuredClone(atp);
+  draft.rasionalisasi ??= '';
+  draft.unit = (draft.unit ?? []).map((unit) => ({
+    ...unit,
+    tujuanUnit: unit.tujuanUnit ?? '',
+    kataKunci: unit.kataKunci ?? [],
+    isiProsesPembelajaran: unit.isiProsesPembelajaran ?? '',
+    dimensiProfil: unit.dimensiProfil ?? [],
+    glosarium: unit.glosarium ?? [],
+    tp: (unit.tp ?? []).map((tp) => ({ strategiAsesmen: '', ...tp })),
+  }));
   /** @type {{u:number, i:number, baru:boolean}|null} */
   let sedangUbah = null;
   let galatBaris = '';
@@ -35,11 +44,13 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
   const berubah = () => { onChange(structuredClone(draft)); gambar(); };
 
   const renumber = () => draft.unit.forEach((u, i) => { u.no = i + 1; });
+  const daftarBaris = (value, maxItems, maxText) => value.split(/\r?\n/)
+    .map((item) => bersihkanTeks(item, maxText)).filter(Boolean).slice(0, maxItems);
 
   /* ----------------------------- Ringkasan JP ----------------------------- */
   function ringkasan() {
     const unitIsi = draft.unit.filter((u) => u.tp.length);
-    const ang = hitungAnggaran(unitIsi.length, totalJP, jpPerPekan, jumlahHari);
+    const ang = hitungAnggaranAtp(unitIsi.length, totalJP, jpPerPekan);
     const jpTp = jumlahJpTp(draft);
     if (!ang.ok) return h('p', { class: 'kotak kotak-galat', role: 'alert' }, t(`galat.${ang.alasan}`));
     const cocok = jpTp === ang.sisaTP;
@@ -48,7 +59,7 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
       cocok ? null : h('button', {
         type: 'button', class: 'tombol tombol-kecil',
         onClick: () => {
-          const r = selaraskanJpAtp(draft, totalJP, jpPerPekan, jumlahHari);
+          const r = selaraskanJpAtp(draft, totalJP, jpPerPekan);
           if (r.ok) { draft = r.atp; sedangUbah = null; berubah(); }
         }
       }, t('atpEditor.selaraskan')));
@@ -60,6 +71,7 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
       h('td', null, tp.kode),
       h('td', null, tp.rumusan),
       h('td', null, tp.materi),
+      h('td', null, tp.strategiAsesmen || ''),
       h('td', { class: 'angka' }, String(tp.jp)),
       h('td', { class: 'aksi' },
         h('button', { type: 'button', class: 'tombol tombol-kecil tombol-sekunder', disabled: sedangUbah !== null,
@@ -74,6 +86,9 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
     const kode = h('input', { type: 'text', value: tp.kode, maxlength: 20, 'aria-label': t('atp.kode'), required: true });
     const rumusan = h('textarea', { rows: 3, maxlength: 1200, 'aria-label': t('atp.tp'), required: true }, tp.rumusan);
     const materi = h('input', { type: 'text', value: tp.materi, maxlength: BATAS.TEKS_SEDANG, 'aria-label': t('atp.materi') });
+    const strategiAsesmen = h('textarea', {
+      rows: 3, maxlength: 800, 'aria-label': t('atp.strategiAsesmen'),
+    }, tp.strategiAsesmen ?? '');
     const jp = h('input', { type: 'number', value: tp.jp || 1, min: 1, max: 99, step: 1, inputmode: 'numeric', 'aria-label': t('atp.jp') });
     const pesan = h('p', { class: 'galat-baris', role: 'alert' }, galatBaris);
 
@@ -88,7 +103,14 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
       else if (!r) galat = t('atpEditor.galatRumusan');
       else if (!Number.isInteger(j) || j < 1) galat = t('atpEditor.galatJp');
       if (galat) { pesan.textContent = galat; galatBaris = galat; (galat === t('atpEditor.galatRumusan') ? rumusan : galat === t('atpEditor.galatJp') ? jp : kode).focus(); return; }
-      draft.unit[ui].tp[ti] = { kode: k, rumusan: r, materi: m, jp: j };
+      draft.unit[ui].tp[ti] = {
+        ...draft.unit[ui].tp[ti],
+        kode: k,
+        rumusan: r,
+        materi: m,
+        strategiAsesmen: bersihkanTeks(strategiAsesmen.value, 800),
+        jp: j,
+      };
       sedangUbah = null; galatBaris = '';
       berubah();
     };
@@ -103,7 +125,8 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
     };
 
     const tr = h('tr', { class: 'baris-ubah', onKeydown: tekanKunci },
-      h('td', null, kode), h('td', null, rumusan, pesan), h('td', null, materi), h('td', null, jp),
+      h('td', null, kode), h('td', null, rumusan, pesan), h('td', null, materi),
+      h('td', null, strategiAsesmen), h('td', null, jp),
       h('td', { class: 'aksi' },
         h('button', { type: 'button', class: 'tombol tombol-kecil', onClick: simpan }, t('umum.simpan')),
         h('button', { type: 'button', class: 'tombol tombol-kecil tombol-sekunder', onClick: batal }, t('umum.batal'))));
@@ -125,6 +148,40 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
     const semester = h('select', { 'aria-label': t('atpEditor.semesterUnit', { no: u.no }), onChange: (e) => { draft.unit[ui].semester = Number(e.target.value); berubah(); } },
       h('option', { value: 1, selected: u.semester === 1 }, t('umum.ganjil')),
       h('option', { value: 2, selected: u.semester === 2 }, t('umum.genap')));
+    const area = (label, value, rows, onValue) => {
+      const input = h('textarea', {
+        rows,
+        maxlength: 2400,
+        'aria-label': label,
+        onChange: (event) => {
+          onValue(event.target.value);
+          berubah();
+        },
+      }, value);
+      return h('label', { class: 'atp-metadata-field' }, label, input);
+    };
+    const metadata = h('div', { class: 'atp-metadata-editor' },
+      area(t('atp.tujuanUnit'), u.tujuanUnit, 2, (value) => {
+        draft.unit[ui].tujuanUnit = bersihkanTeks(value, 800);
+      }),
+      area(t('atp.kataKunci'), u.kataKunci.join('\n'), 2, (value) => {
+        draft.unit[ui].kataKunci = daftarBaris(value, 12, 120);
+      }),
+      area(t('atp.prosesPembelajaran'), u.isiProsesPembelajaran, 4, (value) => {
+        draft.unit[ui].isiProsesPembelajaran = bersihkanTeks(value, 2400);
+      }),
+      area(t('atp.dimensiProfil'), u.dimensiProfil.join('\n'), 2, (value) => {
+        draft.unit[ui].dimensiProfil = daftarBaris(value, 8, 160);
+      }),
+      area(t('atp.glosariumPetunjuk'), u.glosarium.map((item) => `${item.istilah}: ${item.makna}`).join('\n'), 3, (value) => {
+        draft.unit[ui].glosarium = daftarBaris(value, 20, 401).map((line) => {
+          const separator = line.indexOf(':');
+          return {
+            istilah: bersihkanTeks(separator < 0 ? line : line.slice(0, separator), 100),
+            makna: bersihkanTeks(separator < 0 ? '' : line.slice(separator + 1), 300),
+          };
+        }).filter((item) => item.istilah);
+      }));
 
     const baris = u.tp.map((tp, ti) => (sedangUbah && sedangUbah.u === ui && sedangUbah.i === ti
       ? barisUbah(u, ui, tp, ti) : barisLihat(u, ui, tp, ti)));
@@ -139,12 +196,15 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
           h('caption', { class: 'sr-saja' }, t('atpEditor.tabelUnit', { no: u.no, nama: u.nama })),
           h('thead', null, h('tr', null,
             h('th', { scope: 'col' }, t('atp.kode')), h('th', { scope: 'col' }, t('atp.tp')),
-            h('th', { scope: 'col' }, t('atp.materi')), h('th', { scope: 'col' }, t('atp.jp')),
+            h('th', { scope: 'col' }, t('atp.materi')),
+            h('th', { scope: 'col' }, t('atp.strategiAsesmen')),
+            h('th', { scope: 'col' }, t('atp.jp')),
             h('th', { scope: 'col' }, t('umum.aksi')))),
-          h('tbody', null, baris.length ? baris : h('tr', null, h('td', { colspan: 5, class: 'kosong' }, t('atpEditor.unitKosong')))))),
+          h('tbody', null, baris.length ? baris : h('tr', null, h('td', { colspan: 6, class: 'kosong' }, t('atpEditor.unitKosong')))))),
+      metadata,
       h('button', { type: 'button', class: 'tombol tombol-kecil tombol-sekunder', disabled: sedangUbah !== null || u.tp.length >= BATAS.TP_MAKS,
         onClick: () => {
-          draft.unit[ui].tp.push({ kode: '', rumusan: '', materi: '', jp: 1 });
+          draft.unit[ui].tp.push({ kode: '', rumusan: '', materi: '', strategiAsesmen: '', jp: 1 });
           sedangUbah = { u: ui, i: draft.unit[ui].tp.length - 1, baru: true };
           gambar();
         } }, `+ ${t('atpEditor.tambahTp')}`));
@@ -152,7 +212,18 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
 
   function gambar() {
     kosongkan(akar);
-    akar.append(ringkasan(), ...draft.unit.map(bagianUnit),
+    const rasionalisasi = h('label', { class: 'atp-metadata-field' },
+      t('atp.rasionalisasi'),
+      h('textarea', {
+        rows: 3,
+        maxlength: 3000,
+        'aria-label': t('atp.rasionalisasi'),
+        onChange: (event) => {
+          draft.rasionalisasi = bersihkanTeks(event.target.value, 3000);
+          berubah();
+        },
+      }, draft.rasionalisasi));
+    akar.append(ringkasan(), rasionalisasi, ...draft.unit.map(bagianUnit),
       h('button', { type: 'button', class: 'tombol tombol-sekunder', disabled: sedangUbah !== null || draft.unit.length >= BATAS.UNIT_MAKS,
         onClick: () => {
           const akhir = draft.unit[draft.unit.length - 1];
@@ -161,6 +232,11 @@ export function buatAtpEditor({ atp, totalJP, jpPerPekan, jumlahHari, onChange }
             nama: t('atpEditor.unitBaru'),
             elemen: akhir?.elemen ?? draft.cp[0]?.elemen ?? '',
             semester: akhir?.semester ?? 1,
+            tujuanUnit: '',
+            kataKunci: [],
+            isiProsesPembelajaran: '',
+            dimensiProfil: [],
+            glosarium: [],
             tp: [],
           });
           berubah();

@@ -15,31 +15,68 @@ const COMMON_RULES = [
 ].join('\n- ');
 const dataBlock = (value) => `<DATA>\n${JSON.stringify(value)}\n</DATA>`;
 
-export function promptAtp({ mapel, kelas, fase, cp, totalJP, jpPerPekan }) {
-  const jumlahTp = Math.max(6, Math.min(40, Math.round(totalJP / 7)));
-  const jumlahUnit = Math.max(2, Math.min(10, Math.round(jumlahTp / 3.5)));
+const KODE_TP_LETTER = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const validKodeAtp = (kode) => /^(?:[A-Z]|Z\d+)\.\d+$/.test(kode);
+
+export function kontrakKodeAtp({ cp = [], totalJP = 0, jpPerPekan = 4, kodePerElemen = [] } = {}) {
+  const tersimpan = Array.isArray(kodePerElemen) &&
+    kodePerElemen.length === cp.length &&
+    kodePerElemen.every((item, index) =>
+      item?.elemen === cp[index]?.elemen &&
+      Array.isArray(item.kode) &&
+      item.kode.length > 0 &&
+      item.kode.every((kode) => validKodeAtp(kode)));
+  if (tersimpan) return kodePerElemen.map((item) => ({ elemen: item.elemen, kode: [...item.kode] }));
+
+  const elemen = Array.isArray(cp) ? cp : [];
+  const perkiraan = Math.round(Number(totalJP) / (Math.max(1, Number(jpPerPekan) || 4) * 3 * Math.max(1, elemen.length)));
+  const jumlahTp = Math.max(3, Math.min(6, perkiraan || 4));
+  return elemen.map((item, index) => {
+    const huruf = KODE_TP_LETTER[index] || `Z${index}`;
+    return {
+      elemen: item.elemen,
+      kode: Array.from({ length: jumlahTp }, (_, nomor) => `${huruf}.${nomor + 1}`),
+    };
+  });
+}
+
+export function promptAtp({
+  mapel, kelas, fase, cp, totalJP, jpPerPekan, kodePerElemen,
+}) {
+  const kontrak = kontrakKodeAtp({ cp, totalJP, jpPerPekan, kodePerElemen });
+  const daftarKontrak = kontrak.map((item) =>
+    `- ${item.elemen}: ${item.kode.join(', ')}`).join('\n');
   return `${ROLE}
 
-TUGAS: susun Alur Tujuan Pembelajaran (ATP) untuk mata pelajaran dan kelas pada blok DATA.
+TUGAS: susun Alur Tujuan Pembelajaran (ATP) berdasarkan CP resmi dan data RPE pada blok DATA.
 
-ATURAN:
+ATURAN WAJIB:
 - ${COMMON_RULES}
-- Bentuk JSON: {"cp":[{"elemen":string,"cp":string}],"unit":[{"no":int,"nama":string,"elemen":string,"semester":1|2,"tp":[{"kode":string,"rumusan":string,"materi":string,"jp":int}]}]}
-- "cp" adalah sumber resmi yang diberikan di DATA: salin seluruh nama elemen dan rumusan CP PERSIS tanpa meringkas, mengubah, menambah, atau menghilangkan isi.
-- Setiap nilai "unit[].elemen" harus persis sama dengan salah satu nama elemen pada sumber CP.
-- Sekitar ${jumlahUnit} unit dan ${jumlahTp} TP secara keseluruhan; urutan unit berjenjang dari konsep dasar ke penerapan.
-- Kode TP berformat "<huruf fase>.<nomor urut>" (mis. "E.1", "E.2"), unik, berurutan lintas unit.
-- Rumusan TP terukur, diawali kata kerja operasional (Bloom), satu kompetensi per TP.
-- "semester": unit awal semester 1, unit akhir semester 2; kedua semester harus terisi dan urutan tidak boleh turun.
-- "jp": bilangan bulat ≥ 1, perkiraan relatif beban TP (total akan diselaraskan oleh sistem ke ${totalJP} JP; jangan menyesuaikan sendiri).
+- Kembalikan hanya JSON dengan struktur:
+{"rasionalisasi":string,"cp":[{"elemen":string,"cp":string}],"unit":[{"no":int,"nama":string,"elemen":string,"semester":1|2,"tujuanUnit":string,"kataKunci":[string],"isiProsesPembelajaran":string,"dimensiProfil":[string],"glosarium":[{"istilah":string,"makna":string}],"tp":[{"kode":string,"rumusan":string,"materi":string,"jp":int,"strategiAsesmen":string}]}]}
+- Salin seluruh elemen dan rumusan CP PERSIS dari sumber; jangan meringkas atau mengubah.
+- Buat TEPAT satu unit untuk setiap elemen CP, dengan urutan yang sama. Jangan menambah elemen/unit.
+- Kode TP wajib mengikuti kontrak berikut persis dan semua kode harus dipakai tepat satu kali:
+${daftarKontrak}
+- Setiap TP terukur, memakai kata kerja operasional dan konteks penerapan yang sesuai mapel/fase.
+- "semester" harus berurutan dari Ganjil ke Genap; gunakan kedua semester jika jumlah unit memungkinkan.
+- JP harus bilangan bulat positif dan proporsional terhadap beban TP. Total final akan diselaraskan sistem dengan RPE; jangan mengarang total.
+- "rasionalisasi" berisi 1–2 paragraf yang menjelaskan urutan unit dan kesinambungan belajar.
+- Isi tujuan unit, kata kunci, proses pembelajaran, dimensi profil lulusan, glosarium, materi, dan strategi asesmen harus relevan dengan CP/TP; jangan mengarang identitas, tanggal, peraturan, atau sumber.
+- Semua unit harus memiliki metadata wajib dan setiap TP harus memiliki strategi asesmen yang konkret.
+- Semua teks keluaran selain kode dan angka menggunakan Bahasa Indonesia baku.
 
 ${dataBlock({
     mapel: safe(mapel, 120),
-    kelas: safe(kelas, 20),
-    fase: safe(fase, 2),
-    cp: cp.map((item) => ({ elemen: safe(item.elemen, 120), cp: safe(item.cp, 3000) })),
+    kelas: safe(kelas, 30),
+    fase: safe(fase, 4),
+    cp: (Array.isArray(cp) ? cp : []).map((item) => ({
+      elemen: safe(item.elemen, 120),
+      cp: safe(item.cp, 3000),
+    })),
     totalJP,
     jpPerPekan,
+    kontrakKodeTp: kontrak.map((item) => ({ elemen: item.elemen, kode: item.kode })),
   })}`;
 }
 

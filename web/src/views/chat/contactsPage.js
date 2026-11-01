@@ -13,7 +13,7 @@
  */
 import { h, clear, initials } from '../../utils/dom.js';
 import { getState, subscribe } from '../../state.js';
-import { navigate } from '../../router.js';
+import { navigate } from '../../utils/navigation.js';
 import { toast } from '../../utils/toast.js';
 import { LABEL_PERAN } from '../../ui.js';
 import { pesanGalatChat } from '../../utils/chatUtil.js';

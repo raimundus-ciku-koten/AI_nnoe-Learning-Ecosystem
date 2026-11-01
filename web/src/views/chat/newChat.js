@@ -5,7 +5,7 @@
  */
 import { h, clear, initials } from '../../utils/dom.js';
 import { getState } from '../../state.js';
-import { navigate } from '../../router.js';
+import { navigate } from '../../utils/navigation.js';
 import { toast } from '../../utils/toast.js';
 import { buatGrup } from '../../services/chat.js';
 import { muatDirektori } from '../../services/contacts.js';
