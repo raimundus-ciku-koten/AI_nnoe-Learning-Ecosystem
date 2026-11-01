@@ -18,6 +18,8 @@ describe('privacy-aware AI providers', () => {
       message: { content: 'Siap.' },
     }));
     vi.stubGlobal('fetch', fetch);
+    const settings = muatPengaturanLokalAI('user-1');
+    expect(settings.fallbackModel).not.toBe(settings.model);
     const result = await routeAiRequest({
       uid: 'user-1',
       workflow: 'assistant',

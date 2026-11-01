@@ -1,8 +1,11 @@
 const LOCAL_SETTINGS_KEY = 'ainnoe.ai.local.settings.v2';
+const DEFAULT_PRIMARY_MODEL = import.meta.env?.VITE_LOCAL_AI_MODEL?.trim() || 'llama3.2:3b';
+const DEFAULT_FALLBACK_MODEL = import.meta.env?.VITE_LOCAL_AI_FALLBACK_MODEL?.trim()
+  || (DEFAULT_PRIMARY_MODEL === 'llama3.2:1b' ? 'llama3.2:3b' : 'llama3.2:1b');
 const DEFAULT_LOCAL_SETTINGS = Object.freeze({
   endpoint: import.meta.env?.VITE_LOCAL_AI_ENDPOINT?.trim() || 'http://127.0.0.1:11434',
-  model: import.meta.env?.VITE_LOCAL_AI_MODEL?.trim() || 'llama3.2:3b',
-  fallbackModel: 'llama3.2:1b',
+  model: DEFAULT_PRIMARY_MODEL,
+  fallbackModel: DEFAULT_FALLBACK_MODEL,
   timeoutSeconds: 120,
   outputTokens: -1,
 });
