@@ -187,6 +187,36 @@ describe('privacy-aware AI providers', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it('uses the configured local backup for Modul Siswa and validates its response', async () => {
+    const fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('primary unavailable'))
+      .mockResolvedValueOnce(Response.json({
+        model: 'llama3.2:1b',
+        message: { content: '{"markdown":"Bagian modul yang lengkap dan terverifikasi."}' },
+      }));
+    vi.stubGlobal('fetch', fetch);
+    const result = await routeAiRequest({
+      uid: 'user-1',
+      workflow: 'modul_siswa',
+      prompt: 'Susun bagian Modul Siswa.',
+      validateResponse: (text) => {
+        const parsed = JSON.parse(text);
+        if (!parsed.markdown) throw new Error('Bagian kosong.');
+        return parsed;
+      },
+    });
+
+    expect(result).toMatchObject({
+      provider: 'local',
+      model: 'llama3.2:1b',
+      fallbackUsed: true,
+      validated: { markdown: 'Bagian modul yang lengkap dan terverifikasi.' },
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetch.mock.calls[0][1].body).model).toBe('llama3.2:3b');
+    expect(JSON.parse(fetch.mock.calls[1][1].body).model).toBe('llama3.2:1b');
+  });
+
   it('reports both local model failures and does not retry non-question workflows', async () => {
     const fetch = vi.fn()
       .mockRejectedValueOnce(new Error('primary unavailable'))
@@ -207,6 +237,16 @@ describe('privacy-aware AI providers', () => {
       prompt: 'Balas.',
     })).rejects.toThrow('Pastikan Ollama berjalan');
     expect(fetch).toHaveBeenCalledTimes(1);
+
+    fetch.mockClear();
+    fetch.mockRejectedValueOnce(new Error('primary unavailable'))
+      .mockRejectedValueOnce(new Error('backup unavailable'));
+    await expect(routeAiRequest({
+      uid: 'user-1',
+      workflow: 'modul_siswa',
+      prompt: 'Susun bagian modul.',
+    })).rejects.toThrow(/Model utama gagal:.*Model cadangan Modul Siswa juga gagal/);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it('does not start a fallback request after the user cancels generation', async () => {

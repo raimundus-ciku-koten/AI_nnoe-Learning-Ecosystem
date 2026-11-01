@@ -103,6 +103,7 @@ const HalamanJurnal = lazy(() => import('../pages/LessonJournalPage.jsx'));
 const HalamanGoogleWorkspace = lazy(() => import('../pages/GoogleWorkspacePage.jsx'));
 const HalamanPengaturanKoneksi = lazy(() => import('../pages/ConnectionSettingsPage.jsx'));
 const HalamanBankSoal = lazy(() => import('../pages/QuestionBankPage.jsx'));
+const HalamanModulSiswa = lazy(() => import('../pages/StudentModulePage.jsx'));
 const HalamanUjianOnline = lazy(() => import('../pages/OnlineAssessmentPage.jsx'));
 const HalamanNilaiUjianSiswa = lazy(() => import('../pages/OnlineAssessmentResultsPage.jsx'));
 const HalamanCover = lazy(() => import('../pages/CoverGeneratorPage.jsx'));
@@ -208,6 +209,7 @@ function RouteWrapper() {
         <Route path="/pengaturan/api-ai" element={<PrivateShell><HalamanPengaturanKoneksi /></PrivateShell>} />
         <Route path="/pengaturan/koneksi" element={<PrivateShell><HalamanPengaturanKoneksi /></PrivateShell>} />
         <Route path="/asesmen/bank-soal" element={<PrivateShell><HalamanBankSoal /></PrivateShell>} />
+        <Route path="/perangkat/modul-siswa" element={<PrivateShell><HalamanModulSiswa /></PrivateShell>} />
         <Route path="/asesmen/ujian-online" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/ujian" element={<PrivateShell><HalamanUjianOnline /></PrivateShell>} />
         <Route path="/siswa/nilai" element={<PrivateShell><HalamanNilaiUjianSiswa /></PrivateShell>} />

@@ -9,7 +9,11 @@ const DEFAULT_LOCAL_SETTINGS = Object.freeze({
   timeoutSeconds: 120,
   outputTokens: -1,
 });
-const WORKFLOWS = new Set(['planning', 'assistant', 'questions']);
+const WORKFLOWS = new Set(['planning', 'assistant', 'questions', 'modul_siswa']);
+const FALLBACK_WORKFLOWS = Object.freeze({
+  questions: 'Bank Soal',
+  modul_siswa: 'Modul Siswa',
+});
 
 function requireUser(uid) {
   const userId = String(uid || '').trim();
@@ -147,7 +151,8 @@ export async function routeAiRequest({ uid, workflow, prompt, signal, validateRe
     const result = await askLocal(settings, prompt, workflow, signal, settings.model);
     return validateLocalResult(result, validateResponse);
   } catch (primaryError) {
-    if (signal?.aborted || workflow !== 'questions' || !settings.fallbackModel) throw primaryError;
+    const fallbackLabel = FALLBACK_WORKFLOWS[workflow];
+    if (signal?.aborted || !fallbackLabel || !settings.fallbackModel) throw primaryError;
     try {
       const result = await askLocal(settings, prompt, workflow, signal, settings.fallbackModel);
       return {
@@ -158,7 +163,7 @@ export async function routeAiRequest({ uid, workflow, prompt, signal, validateRe
       if (signal?.aborted) throw fallbackError;
       const message = (error) => error instanceof Error ? error.message : 'Kesalahan tidak diketahui.';
       throw new Error(
-        `Model utama gagal: ${message(primaryError)} Model cadangan Bank Soal juga gagal: ${message(fallbackError)}. Periksa model lokal atau susun soal secara manual.`,
+        `Model utama gagal: ${message(primaryError)} Model cadangan ${fallbackLabel} juga gagal: ${message(fallbackError)}. Periksa model lokal atau coba kembali.`,
         { cause: fallbackError },
       );
     }

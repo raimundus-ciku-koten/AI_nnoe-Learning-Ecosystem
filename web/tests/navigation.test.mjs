@@ -28,6 +28,7 @@ test('submenu perencanaan lama tersedia dengan rute sesuai dokumen', () => {
     assert.equal(rute.get(label), `?jenis=${jenis}`);
   }
   assert.equal(rute.get('Peta Sebaran TP'), '?jenis=atp&tampilan=peta');
+  assert.ok(item.some((entry) => entry.label === 'Modul Ajar Untuk Siswa' && entry.path === '/perangkat/modul-siswa'));
   assert.ok(item.some((entry) => entry.label === 'Hasil Perencanaan' && entry.path === '/hasil/perencanaan'));
   assert.ok(item.some((entry) => entry.label === 'Cover Perangkat' && entry.path === '/perangkat/cover'));
 });
